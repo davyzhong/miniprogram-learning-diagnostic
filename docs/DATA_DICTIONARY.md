@@ -43,6 +43,10 @@
 | `subject` | String | 是 | — | 学科标识：`'math'` \| `'chinese'` \| `'english'` | `"math"` |
 | `subjectName` | String | 是 | — | 学科中文名（冗余，便于展示） | `"数学"` |
 | `totalReports` | Number | 是 | `0` | 该学科历史报告总数，analyzePhotos 用 `_.inc(1)` 累加 | `5` |
+| `currentSummary` | String | 是 | `''` | 面向家长的当前综合诊断摘要 | `"应用题建模持续出现，建议优先训练"` |
+| `currentBottlenecks` | Array\<Object\> | 是 | `[]` | 当前综合诊断卡点，状态仅为需要验证/持续出现/已有改善 | 见设计规格 |
+| `nextAction` | String | 是 | `"拍照诊断"` | 当前建议的主要行动 | `"生成验证试卷"` |
+| `latestEffectiveReportId` | String | 是 | `''` | 最近一次成功更新综合诊断的报告 ID | `"665a1b2c..."` |
 | `pendingBottlenecks` | Array\<Object\> | 是 | `[]` | 待验证的学习卡点列表 | 见下方子结构 |
 | `improvedBottlenecks` | Array\<Object\> | 是 | `[]` | 已改善的学习卡点列表 | 见下方子结构 |
 | `currentAnalysisId` | String | 是 | `''` | 当前正在分析的 reportId，空串表示空闲 | `"665a1b2c..."` |
@@ -92,6 +96,11 @@
 | `errorDetails` | Array\<Object\> | 是 | `[]` | 错题详情列表 | 见下方子结构 |
 | `previousReportId` | String | 否 | `''` | 对比的上一份已完成报告 ID（验证模式） | `"665a1b2c..."` |
 | `comparisonSummary` | String | 是 | `''` | 与上次报告的对比总结 | `"2 个学习卡点已改善，1 个仍需继续验证..."` |
+| `verificationTargets` | Array\<String\> | 是 | `[]` | 本次验证试卷的目标卡点编码 | `["LP-001"]` |
+| `verificationEvidence` | Array\<Object\> | 是 | `[]` | 按目标卡点汇总的验证作答证据；只有完整且全对才确认改善 | 见下方子结构 |
+| `isEffective` | Boolean | 是 | `false` | 是否允许参与综合诊断和最近变化 | `true` |
+| `changeSummary` | String | 是 | `''` | 面向家长的一句话变化描述 | `"发现分数运算卡点"` |
+| `profileAppliedAt` | Date | 否 | — | 成功应用到综合诊断的时间 | `ISODate("2026-06-12T...")` |
 | `pdfFileId` | String | 否 | — | 报告 PDF 的云存储 fileID（generateReportPDF 写入） | `"cloud://xxx/report.pdf"` |
 | `error` | String | 否 | — | status='failed' 时的错误原因 | `"图片分析失败，请稍后重试"` |
 | `completedAt` | Date | 否 | — | 分析完成时间 | `ISODate("2025-06-01T10:32:00Z")` |
@@ -132,6 +141,17 @@
 | `lpCode` | String | 关联卡点编码（≤30 字） | `"LP-002"` |
 | `rootCause` | String | 根因（≤300 字） | `"未找到公分母直接相加"` |
 | `suggestion` | String | 改进建议（≤300 字） | `"先求最小公倍数再通分"` |
+
+#### verificationEvidence 子结构
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `lpCode` | String | 验证目标卡点编码 | `"LP-001"` |
+| `expectedQuestionCount` | Number | 验证试卷中该卡点的预期题数 | `3` |
+| `attemptedQuestionCount` | Number | OCR 明确识别到已经作答的题数 | `3` |
+| `incorrectQuestionCount` | Number | 已识别作答中的错题数 | `0` |
+| `complete` | Boolean | 是否已识别全部预期作答 | `true` |
+| `allCorrect` | Boolean | 是否在完整识别前提下全部正确 | `true` |
 
 **代码来源**：`uploadAndAnalyze/index.js` 创建初始记录；`analyzePhotos/index.js` 填充分析结果；`generateReportPDF/index.js` 回写 pdfFileId
 

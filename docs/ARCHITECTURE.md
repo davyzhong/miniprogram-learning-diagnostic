@@ -142,8 +142,9 @@ paper-preview 页面 → 预览/下载 PDF → 线下答题
     │
     ▼
 analyzePhotos 额外执行：
-    ├── getVerificationTargets() → 从 papers.bottleneckTargets 获取
-    ├── compareBottlenecks(上次bottlenecks, 本次bottlenecks, targets)
+    ├── getVerificationPaper() → 获取目标卡点和各卡点预期题数
+    ├── aggregateVerificationEvidence() → 汇总清晰作答数和错题数
+    ├── compareBottlenecks(上次bottlenecks, 本次bottlenecks, 已完整通过的目标)
     └── buildComparisonSummary() → 改善/持续/新发现统计
     │
     ▼

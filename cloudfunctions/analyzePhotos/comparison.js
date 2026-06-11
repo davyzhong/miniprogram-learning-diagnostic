@@ -11,7 +11,7 @@ function compareBottlenecks(previousBottlenecks = [], currentBottlenecks = [], v
     if (previous) {
       const previousCount = Number(previous.errorCount) || 0
       const currentCount = Number(current.errorCount) || 0
-      if (currentCount < previousCount) status = 'improved'
+      if (verifiedSet.has(current.lpCode) && currentCount === 0) status = 'improved'
       else if (currentCount > previousCount) status = 'worsened'
       else status = 'persisting'
     }
@@ -20,8 +20,7 @@ function compareBottlenecks(previousBottlenecks = [], currentBottlenecks = [], v
   }
 
   for (const previous of previousBottlenecks) {
-    const isInVerificationScope = verifiedSet.size === 0 || verifiedSet.has(previous.lpCode)
-    if (isInVerificationScope && !currentByCode.has(previous.lpCode)) {
+    if (verifiedSet.has(previous.lpCode) && !currentByCode.has(previous.lpCode)) {
       compared.push({
         ...previous,
         errorCount: 0,

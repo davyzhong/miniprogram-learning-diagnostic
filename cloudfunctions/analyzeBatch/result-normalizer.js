@@ -26,6 +26,16 @@ function normalizeErrorDetails(items) {
   }));
 }
 
+function normalizeVerificationEvidence(items) {
+  return items
+    .filter(item => item && typeof item.lpCode === 'string')
+    .map(item => ({
+      lpCode: cleanText(item.lpCode, 30),
+      attemptedQuestionCount: Math.max(0, Number(item.attemptedQuestionCount) || 0),
+      incorrectQuestionCount: Math.max(0, Number(item.incorrectQuestionCount) || 0),
+    }))
+}
+
 function normalizePageResults(result, expectedPageCount) {
   if (!result || typeof result !== 'object' || !Array.isArray(result.pageResults)) {
     throw new Error('AI 返回的数据结构无效');
@@ -43,12 +53,16 @@ function normalizePageResults(result, expectedPageCount) {
     seenIndexes.add(imageIndex);
     const bottlenecks = normalizeBottlenecks(Array.isArray(page.bottlenecks) ? page.bottlenecks : []);
     const errorDetails = normalizeErrorDetails(Array.isArray(page.errorDetails) ? page.errorDetails : []);
+    const verificationEvidence = normalizeVerificationEvidence(
+      Array.isArray(page.verificationEvidence) ? page.verificationEvidence : []
+    );
     return {
       imageIndex,
       ocrSummary: cleanText(page.ocrSummary, 1000),
       summary: cleanText(page.summary, 200),
       bottlenecks,
       errorDetails,
+      verificationEvidence,
       totalErrors: errorDetails.length,
     };
   }).sort((a, b) => a.imageIndex - b.imageIndex);

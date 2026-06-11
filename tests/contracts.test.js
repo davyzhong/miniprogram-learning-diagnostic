@@ -198,7 +198,7 @@ test('photo analysis stores per-image OCR summaries and duplicate state', () => 
 test('duplicate photos are retained but excluded from diagnostic aggregation', () => {
   const analyzer = read('cloudfunctions/analyzePhotos/index.js')
   assert.match(analyzer, /filter\(page => !page\.isDuplicate\)/)
-  assert.match(analyzer, /if \(uniquePages\.length > 0\)/)
+  assert.match(analyzer, /if \(profileSummary\.isEffective\)/)
   assert.match(analyzer, /本次照片均疑似重复，未更新学习卡点/)
 })
 

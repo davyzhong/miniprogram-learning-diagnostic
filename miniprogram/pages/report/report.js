@@ -56,7 +56,9 @@ Page({
       try {
         var profile = await cloud.getSubjectProfile(report.studentId, report.subject)
         if (profile) {
-          pendingCount = (profile.pendingBottlenecks || []).length
+          pendingCount = Array.isArray(profile.currentBottlenecks)
+            ? profile.currentBottlenecks.filter(item => item.status !== 'improved').length
+            : (profile.pendingBottlenecks || []).length
         }
       } catch (e) { console.error('获取学科档案失败:', e) }
 
@@ -123,6 +125,14 @@ Page({
       path: '/pages/report/report?id=' + this.data.reportId,
       imageUrl: ''
     }
+  },
+
+  onViewSources() {
+    const report = this.data.report
+    const subjectName = { math: '数学', chinese: '语文', english: '英语' }[report.subject] || ''
+    wx.navigateTo({
+      url: `/pages/upload-history/upload-history?studentId=${report.studentId}&subject=${report.subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(report.studentName || '')}`
+    })
   },
 
   // ========== 轮询逻辑 ==========

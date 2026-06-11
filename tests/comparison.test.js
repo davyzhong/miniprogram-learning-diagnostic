@@ -6,19 +6,17 @@ const {
   buildComparisonSummary
 } = require('../cloudfunctions/analyzePhotos/comparison')
 
-test('marks removed historical bottlenecks as improved', () => {
+test('does not mark removed historical bottlenecks as improved without explicit evidence', () => {
   const previous = [
     { lpCode: 'LP-001', lpName: '计算错误', errorCount: 3, severity: 'high' }
   ]
 
   const result = compareBottlenecks(previous, [])
 
-  assert.equal(result.length, 1)
-  assert.equal(result[0].status, 'improved')
-  assert.equal(result[0].errorCount, 0)
+  assert.equal(result.length, 0)
 })
 
-test('marks lower, higher, equal and new error counts correctly', () => {
+test('marks lower counts as persisting until explicit verification passes', () => {
   const previous = [
     { lpCode: 'LP-001', lpName: '计算错误', errorCount: 3 },
     { lpCode: 'LP-002', lpName: '分数运算', errorCount: 1 },
@@ -35,7 +33,7 @@ test('marks lower, higher, equal and new error counts correctly', () => {
     compareBottlenecks(previous, current).map(item => [item.lpCode, item])
   )
 
-  assert.equal(byCode['LP-001'].status, 'improved')
+  assert.equal(byCode['LP-001'].status, 'persisting')
   assert.equal(byCode['LP-002'].status, 'worsened')
   assert.equal(byCode['LP-003'].status, 'persisting')
   assert.equal(byCode['LP-004'].status, 'new')
