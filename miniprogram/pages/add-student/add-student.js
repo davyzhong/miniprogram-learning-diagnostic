@@ -1,5 +1,5 @@
 // pages/add-student/add-student.js
-const app = getApp()
+const cloud = require('../../utils/cloud')
 
 Page({
   data: {
@@ -15,7 +15,8 @@ Page({
       '#ed64a6', // 粉
       '#38b2ac', // 青
     ],
-    canSave: false
+    canSave: false,
+    saving: false
   },
 
   onNameInput(e) {
@@ -47,43 +48,18 @@ Page({
 
   async onSave() {
     const { name, grade, avatarColor } = this.data
-    if (!name.trim() || grade === null) return
+    if (!name.trim() || grade === null || this.data.saving) return
 
+    this.setData({ saving: true })
     wx.showLoading({ title: '保存中...' })
 
     try {
-      // 1. 创建学生记录
-      const studentRes = await app.db.collection('students').add({
-        data: {
-          name: name.trim(),
-          grade: grade,
-          avatarColor: avatarColor,
-          totalReports: 0,
-          createdAt: app.db.serverDate(),
-          updatedAt: app.db.serverDate()
-        }
+      await cloud.createStudentWithProfiles({
+        name: name.trim(),
+        grade,
+        avatarColor,
+        totalReports: 0
       })
-
-      const studentId = studentRes._id
-
-      // 2. 为该学生创建三个学科的 subjectProfiles 记录
-      const subjects = ['math', 'chinese', 'english']
-      const subjectNames = { math: '数学', chinese: '语文', english: '英语' }
-      for (const sub of subjects) {
-        await app.db.collection('subjectProfiles').add({
-          data: {
-            studentId: studentId,
-            subject: sub,
-            subjectName: subjectNames[sub],
-            totalReports: 0,
-            pendingBottlenecks: [],
-            improvedBottlenecks: [],
-            analysisStatus: '',
-            createdAt: app.db.serverDate(),
-            updatedAt: app.db.serverDate()
-          }
-        })
-      }
 
       wx.hideLoading()
       wx.showToast({ title: '添加成功', icon: 'success' })
@@ -94,6 +70,8 @@ Page({
       console.error('保存学生失败', err)
       wx.hideLoading()
       wx.showToast({ title: '保存失败：' + (err.message || '未知错误'), icon: 'none' })
+    } finally {
+      this.setData({ saving: false })
     }
   }
 })

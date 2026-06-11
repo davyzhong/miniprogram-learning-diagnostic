@@ -156,10 +156,10 @@
   margin-bottom: 20rpx;
 }
 
-.action-btn {
+.action-bar .action-btn {
   flex: 1;
-  font-size: 28rpx !important;
-  padding: 18rpx 0 !important;
+  font-size: 28rpx;
+  padding: 18rpx 0;
 }
 
 /* ========== 底部按钮 ========== */
@@ -175,14 +175,14 @@
   z-index: 100;
 }
 
-.btn-main {
-  background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%) !important;
-  color: #ffffff !important;
-  border-radius: 16rpx !important;
-  font-size: 32rpx !important;
-  font-weight: 600 !important;
-  padding: 24rpx 0 !important;
-  border: none !important;
+.bottom-bar .btn-main {
+  background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%);
+  color: #ffffff;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  padding: 24rpx 0;
+  border: none;
   width: 100%;
   line-height: 1.4;
 }

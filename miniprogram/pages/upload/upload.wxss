@@ -211,6 +211,6 @@
 }
 
 .bottom-bar button[disabled] {
-  background: #a0aec0 !important;
-  color: #ffffff !important;
+  background: #a0aec0;
+  color: #ffffff;
 }

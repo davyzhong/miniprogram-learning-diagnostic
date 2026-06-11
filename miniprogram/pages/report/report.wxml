@@ -131,6 +131,8 @@
   <!-- 底部操作 -->
   <view class="bottom-actions">
     <button class="btn-secondary action-btn" bindtap="onShare">分享报告</button>
-    <button class="btn-secondary action-btn" bindtap="onDownloadPDF">下载 PDF</button>
+    <button class="btn-secondary action-btn" bindtap="onDownloadPDF" disabled="{{generatingPdf}}">
+      {{generatingPdf ? '生成中...' : '下载 PDF'}}
+    </button>
   </view>
 </view>

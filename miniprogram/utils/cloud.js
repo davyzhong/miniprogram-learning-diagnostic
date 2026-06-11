@@ -2,6 +2,26 @@
 
 const db = wx.cloud.database()
 
+function normalizeError(error, fallbackMessage) {
+  const message = error && error.message ? error.message : fallbackMessage
+  const normalized = new Error(message || '操作失败，请稍后重试')
+  normalized.code = error && (error.code || error.errCode)
+  return normalized
+}
+
+async function callFunction(name, data) {
+  try {
+    const res = await wx.cloud.callFunction({ name, data })
+    const result = res.result || {}
+    if (result.success === false) {
+      throw new Error(result.error || '云函数执行失败')
+    }
+    return result
+  } catch (error) {
+    throw normalizeError(error, '云函数调用失败')
+  }
+}
+
 /**
  * 获取所有学生列表
  */
@@ -36,6 +56,63 @@ async function addStudent(data) {
   return res._id
 }
 
+async function createStudentWithProfiles(data) {
+  const studentId = await addStudent(data)
+  const subjectNames = { math: '数学', chinese: '语文', english: '英语' }
+  const now = db.serverDate()
+
+  for (const subject of Object.keys(subjectNames)) {
+    await db.collection('subjectProfiles').add({
+      data: {
+        studentId,
+        subject,
+        subjectName: subjectNames[subject],
+        totalReports: 0,
+        pendingBottlenecks: [],
+        improvedBottlenecks: [],
+        currentAnalysisId: '',
+        analysisStatus: '',
+        createdAt: now,
+        updatedAt: now
+      }
+    })
+  }
+
+  return studentId
+}
+
+async function getSubjectProfiles(studentId) {
+  const res = await db.collection('subjectProfiles').where({ studentId }).get()
+  return res.data
+}
+
+async function getSubjectProfile(studentId, subject) {
+  const res = await db.collection('subjectProfiles').where({ studentId, subject }).limit(1).get()
+  return res.data[0] || null
+}
+
+async function ensureSubjectProfile(studentId, subject, subjectName = '') {
+  const existing = await getSubjectProfile(studentId, subject)
+  if (existing) return existing
+
+  const now = db.serverDate()
+  const res = await db.collection('subjectProfiles').add({
+    data: {
+      studentId,
+      subject,
+      subjectName,
+      totalReports: 0,
+      pendingBottlenecks: [],
+      improvedBottlenecks: [],
+      currentAnalysisId: '',
+      analysisStatus: '',
+      createdAt: now,
+      updatedAt: now
+    }
+  })
+  return { _id: res._id, studentId, subject, subjectName }
+}
+
 /**
  * 上传照片到云存储
  * @param {string} filePath - 本地文件路径
@@ -56,12 +133,19 @@ async function uploadPhoto(filePath, studentId, batchId) {
 /**
  * 获取学生的所有报告
  */
-async function getReports(studentId) {
+async function getReports(studentId, subject, limit = 20) {
+  const filter = subject ? { studentId, subject } : { studentId }
   const res = await db.collection('reports')
-    .where({ studentId })
+    .where(filter)
     .orderBy('createdAt', 'desc')
+    .limit(limit)
     .get()
   return res.data
+}
+
+async function getLatestReport(studentId, subject) {
+  const reports = await getReports(studentId, subject, 1)
+  return reports[0] || null
 }
 
 /**
@@ -72,13 +156,13 @@ async function getReport(reportId) {
   return res.data
 }
 
-/**
- * 获取某批次的照片
- */
-async function getPhotos(studentId, batchId) {
-  const res = await db.collection('photos')
-    .where({ studentId, batchId })
-    .get()
+async function getPapers(filter) {
+  const res = await db.collection('papers').where(filter).get()
+  return res.data
+}
+
+async function getPaper(paperId) {
+  const res = await db.collection('papers').doc(paperId).get()
   return res.data
 }
 
@@ -87,22 +171,14 @@ async function getPhotos(studentId, batchId) {
  * @param {object} params - { fileIDs, studentId, subject, mode, paperId }
  */
 async function callUploadAndAnalyze(params) {
-  const res = await wx.cloud.callFunction({
-    name: 'uploadAndAnalyze',
-    data: params
-  })
-  return res.result
+  return callFunction('uploadAndAnalyze', params)
 }
 
 /**
  * 调用云函数：分析照片（由 uploadAndAnalyze 内部触发，一般不直接调用）
  */
 async function callAnalyzePhotos(params) {
-  const res = await wx.cloud.callFunction({
-    name: 'analyzePhotos',
-    data: params
-  })
-  return res.result
+  return callFunction('analyzePhotos', params)
 }
 
 /**
@@ -110,11 +186,7 @@ async function callAnalyzePhotos(params) {
  * @param {object} params - { studentId, subject, type, targets }
  */
 async function callGeneratePaper(params) {
-  const res = await wx.cloud.callFunction({
-    name: 'generatePaper',
-    data: params
-  })
-  return res.result
+  return callFunction('generatePaper', params)
 }
 
 /**
@@ -122,21 +194,25 @@ async function callGeneratePaper(params) {
  * @param {object} params - { reportId }
  */
 async function callGenerateReportPDF(params) {
-  const res = await wx.cloud.callFunction({
-    name: 'generateReportPDF',
-    data: params
-  })
-  return res.result
+  return callFunction('generateReportPDF', params)
 }
 
 module.exports = {
+  normalizeError,
+  callFunction,
   getStudents,
   getStudent,
   addStudent,
+  createStudentWithProfiles,
+  getSubjectProfiles,
+  getSubjectProfile,
+  ensureSubjectProfile,
   uploadPhoto,
   getReports,
+  getLatestReport,
   getReport,
-  getPhotos,
+  getPapers,
+  getPaper,
   callUploadAndAnalyze,
   callAnalyzePhotos,
   callGeneratePaper,

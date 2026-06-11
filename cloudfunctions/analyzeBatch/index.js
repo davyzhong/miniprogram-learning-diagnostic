@@ -4,6 +4,7 @@ const tcb = require('@cloudbase/node-sdk');
 const cloud = require('wx-server-sdk');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
+const SUBJECTS = new Set(['math', 'chinese', 'english']);
 
 // 初始化 CloudBase AI SDK
 const app = tcb.init({
@@ -121,7 +122,32 @@ function parseResult(aiText) {
   try {
     // 去掉可能的 ```json ``` 包裹
     const cleaned = aiText.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
-    return JSON.parse(cleaned);
+    const result = JSON.parse(cleaned);
+    if (!result || typeof result !== 'object' || !Array.isArray(result.bottlenecks) || !Array.isArray(result.errorDetails)) {
+      throw new Error('AI 返回的数据结构无效');
+    }
+
+    result.bottlenecks = result.bottlenecks
+      .filter(item => item && typeof item.lpCode === 'string' && typeof item.lpName === 'string')
+      .map(item => ({
+        lpCode: item.lpCode.slice(0, 30),
+        lpName: item.lpName.slice(0, 80),
+        errorCount: Math.max(0, Number(item.errorCount) || 0),
+        severity: ['high', 'medium', 'low'].includes(item.severity) ? item.severity : 'medium',
+        rootCause: String(item.rootCause || '').slice(0, 300),
+        suggestion: String(item.suggestion || '').slice(0, 300),
+      }));
+    result.errorDetails = result.errorDetails.slice(0, 100).map(item => ({
+      questionContent: String(item.questionContent || '').slice(0, 500),
+      studentAnswer: String(item.studentAnswer || '').slice(0, 300),
+      correctAnswer: String(item.correctAnswer || '').slice(0, 300),
+      lpCode: String(item.lpCode || '').slice(0, 30),
+      rootCause: String(item.rootCause || '').slice(0, 300),
+      suggestion: String(item.suggestion || '').slice(0, 300),
+    }));
+    result.totalErrors = result.errorDetails.length;
+    result.summary = String(result.summary || '').slice(0, 200);
+    return result;
   } catch (err) {
     throw new Error(`解析AI返回失败：${err.message}，原始内容：${aiText.substr(0, 200)}`);
   }
@@ -137,6 +163,12 @@ exports.main = async (event) => {
 
   if (fileIDs.length > 5) {
     return { success: false, error: '单次最多处理5张图片' };
+  }
+  if (fileIDs.some(fileID => typeof fileID !== 'string' || !fileID.startsWith('cloud://'))) {
+    return { success: false, error: '图片参数无效' };
+  }
+  if (!SUBJECTS.has(subject)) {
+    return { success: false, error: '学科参数无效' };
   }
 
   try {
@@ -168,6 +200,6 @@ exports.main = async (event) => {
     return { success: true, data: result };
   } catch (err) {
     console.error('analyzeBatch 失败：', err);
-    return { success: false, error: err.message, stack: err.stack };
+    return { success: false, error: '图片分析失败，请稍后重试' };
   }
 };

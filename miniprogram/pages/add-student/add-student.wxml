@@ -49,8 +49,8 @@
 
   <!-- 提交按钮 -->
   <view class="bottom-bar">
-    <button class="btn-primary btn-save" bindtap="onSave" disabled="{{!canSave}}">
-      保存
+    <button class="btn-primary btn-save" bindtap="onSave" disabled="{{!canSave || saving}}">
+      {{saving ? '保存中...' : '保存'}}
     </button>
   </view>
 </view>

@@ -1,5 +1,5 @@
 // pages/subject-select/subject-select.js
-const app = getApp()
+const cloud = require('../../utils/cloud')
 
 Page({
   data: {
@@ -10,7 +10,8 @@ Page({
       { key: 'math',    name: '数学', icon: '📐', totalReports: 0, pendingCount: 0 },
       { key: 'chinese', name: '语文', icon: '📖', totalReports: 0, pendingCount: 0 },
       { key: 'english', name: '英语', icon: '🔤', totalReports: 0, pendingCount: 0 },
-    ]
+    ],
+    enteringSubject: ''
   },
 
   onLoad(options) {
@@ -31,15 +32,11 @@ Page({
 
   async loadSubjectProfiles() {
     const { studentId, subjects } = this.data
-    const db = app.db
-
     try {
-      const res = await db.collection('subjectProfiles')
-        .where({ studentId: studentId })
-        .get()
+      const profiles = await cloud.getSubjectProfiles(studentId)
 
       const map = {}
-      res.data.forEach(p => {
+      profiles.forEach(p => {
         map[p.subject] = p
       })
 
@@ -67,41 +64,14 @@ Page({
   async onSubjectTap(e) {
     const { key, name } = e.currentTarget.dataset
     const { studentId, studentName, grade } = this.data
+    if (this.data.enteringSubject) return
 
+    this.setData({ enteringSubject: key })
     wx.showLoading({ title: '加载中...' })
 
     try {
-      const db = app.db
-
       // 确保 subjectProfile 存在
-      const res = await db.collection('subjectProfiles')
-        .where({
-          studentId: studentId,
-          subject: key
-        })
-        .get()
-
-      let subjectProfileId = ''
-
-      if (res.data.length === 0) {
-        // 首次进入，创建档案
-        const addRes = await db.collection('subjectProfiles').add({
-          data: {
-            studentId: studentId,
-            subject: key,
-            totalReports: 0,
-            pendingBottlenecks: [],
-            improvedBottlenecks: [],
-            currentAnalysisId: '',
-            analysisStatus: '',
-            createdAt: db.serverDate(),
-            updatedAt: db.serverDate()
-          }
-        })
-        subjectProfileId = addRes._id
-      } else {
-        subjectProfileId = res.data[0]._id
-      }
+      await cloud.ensureSubjectProfile(studentId, key, name)
 
       wx.hideLoading()
 
@@ -113,6 +83,8 @@ Page({
       console.error('进入学科失败', err)
       wx.hideLoading()
       wx.showToast({ title: '进入失败', icon: 'none' })
+    } finally {
+      this.setData({ enteringSubject: '' })
     }
   }
 })

@@ -1,5 +1,5 @@
 // pages/generate-verification/generate-verification.js
-const app = getApp()
+const cloud = require('../../utils/cloud')
 
 Page({
   data: {
@@ -9,6 +9,7 @@ Page({
     bottlenecks: [],   // pendingBottlenecks 列表
     selectedCount: 0,
     generating: false,
+    previewing: false,
     loading: true
   },
 
@@ -33,23 +34,16 @@ Page({
     wx.showLoading({ title: '加载中...' })
 
     try {
-      const db = app.db
-      const res = await db.collection('subjectProfiles')
-        .where({ studentId, subject })
-        .get()
+      const profile = await cloud.getSubjectProfile(studentId, subject)
 
       let bottlenecks = []
-      if (res.data.length > 0) {
-        bottlenecks = (res.data[0].pendingBottlenecks || []).map(b => ({
+      if (profile) {
+        bottlenecks = (profile.pendingBottlenecks || []).map(b => ({
           ...b,
-          selected: b.severity === 'high'  // 默认选高优先级
+          selected: b.severity === 'high',
+          sinceDateText: this.formatDate(b.sinceDate)
         }))
       }
-
-      // 格式化日期
-      bottlenecks.forEach(b => {
-        b.sinceDateText = this.formatDate(b.sinceDate)
-      })
 
       const selectedCount = bottlenecks.filter(b => b.selected).length
 
@@ -87,34 +81,34 @@ Page({
   async onPreview() {
     const { studentId, subject, bottlenecks } = this.data
     const selected = bottlenecks.filter(b => b.selected)
-    if (selected.length === 0) return
+    if (selected.length === 0 || this.data.previewing) return
 
+    this.setData({ previewing: true })
     wx.showLoading({ title: '生成预览...' })
 
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'generatePaper',
-        data: {
-          studentId,
-          subject,
-          type: 'verification',
-          bottleneckCodes: selected.map(b => b.lpCode),
-          preview: true   // 返回临时 URL，不存档
-        }
+      const result = await cloud.callGeneratePaper({
+        studentId,
+        subject,
+        type: 'verification',
+        targets: selected.map(b => b.lpCode),
+        preview: true
       })
 
       wx.hideLoading()
 
-      if (res.result && res.result.fileID) {
+      if (result.pdfFileId) {
         // 跳转到试卷预览页
         wx.navigateTo({
-          url: `/pages/paper-preview/paper-preview?fileId=${encodeURIComponent(res.result.fileID)}&type=verification`
+          url: `/pages/paper-preview/paper-preview?fileId=${encodeURIComponent(result.pdfFileId)}&type=verification`
         })
       }
     } catch (err) {
       console.error('预览失败', err)
       wx.hideLoading()
       wx.showToast({ title: '预览失败', icon: 'none' })
+    } finally {
+      this.setData({ previewing: false })
     }
   },
 
@@ -128,25 +122,22 @@ Page({
     wx.showLoading({ title: '生成试卷...' })
 
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'generatePaper',
-        data: {
-          studentId,
-          subject,
-          type: 'verification',
-          bottleneckCodes: selected.map(b => b.lpCode),
-          preview: false
-        }
+      const result = await cloud.callGeneratePaper({
+        studentId,
+        subject,
+        type: 'verification',
+        targets: selected.map(b => b.lpCode),
+        preview: false
       })
 
       wx.hideLoading()
 
-      if (res.result && res.result.paperId) {
+      if (result.paperId) {
         wx.showToast({ title: '生成成功', icon: 'success' })
         // 跳转到试卷预览/打印页
         setTimeout(() => {
           wx.navigateTo({
-            url: `/pages/paper-preview/paper-preview?paperId=${res.result.paperId}`
+            url: `/pages/paper-preview/paper-preview?paperId=${result.paperId}`
           })
         }, 1000)
       }

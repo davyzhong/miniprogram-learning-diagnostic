@@ -1,5 +1,5 @@
 // pages/default-paper/default-paper.js
-const app = getApp()
+const cloud = require('../../utils/cloud')
 
 // 默认试卷配置（每个年级 2 套）
 const PAPER_CONFIG = {
@@ -39,7 +39,8 @@ Page({
     grades: [1, 2, 3, 4, 5, 6],
     papers: [],
     generating: false,
-    generatingKey: ''
+    generatingKey: '',
+    previewingKey: ''
   },
 
   onLoad(options) {
@@ -70,22 +71,18 @@ Page({
     const { grade, studentId, subject } = this.data
     if (!grade) return
 
-    const papers = PAPER_CONFIG[grade] || []
-    const db = app.db
-
+    const papers = (PAPER_CONFIG[grade] || []).map(paper => ({ ...paper }))
     // 检查每套试卷是否已生成
     for (let i = 0; i < papers.length; i++) {
       try {
-        const res = await db.collection('papers')
-          .where({
-            studentId,
-            subject,
-            type: 'default-diagnosis',
-            grade: Number(grade),
-            key: papers[i].key
-          })
-          .get()
-        papers[i] = { ...papers[i], exists: res.data.length > 0, paperId: res.data[0]?._id || '' }
+        const matches = await cloud.getPapers({
+          studentId,
+          subject,
+          type: 'default-diagnosis',
+          grade: Number(grade),
+          paperKey: papers[i].key
+        })
+        papers[i] = { ...papers[i], exists: matches.length > 0, paperId: matches[0]?._id || '' }
       } catch (err) {
         papers[i] = { ...papers[i], exists: false, paperId: '' }
       }
@@ -97,63 +94,65 @@ Page({
   // 预览 PDF
   async onPreview(e) {
     const key = e.currentTarget.dataset.key
-    const { studentId, subject, grade } = this.data
+    const { studentId, subject, grade, papers, previewingKey } = this.data
+    if (previewingKey) return
+    const selectedPaper = papers.find(paper => paper.key === key)
+    this.setData({ previewingKey: key })
     wx.showLoading({ title: '生成预览...' })
 
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'generatePaper',
-        data: {
-          studentId,
-          subject,
-          type: 'default-diagnosis',
-          grade: Number(grade),
-          key,
-          preview: true
-        }
+      const result = await cloud.callGeneratePaper({
+        studentId,
+        subject,
+        type: 'default-diagnosis',
+        grade: Number(grade),
+        paperKey: key,
+        questionCount: selectedPaper ? selectedPaper.questionCount : 12,
+        preview: true
       })
       wx.hideLoading()
-      if (res.result && res.result.fileID) {
+      if (result.pdfFileId) {
         wx.navigateTo({
-          url: `/pages/paper-preview/paper-preview?fileId=${encodeURIComponent(res.result.fileID)}&type=preview`
+          url: `/pages/paper-preview/paper-preview?fileId=${encodeURIComponent(result.pdfFileId)}&type=preview`
         })
       }
     } catch (err) {
       console.error('预览失败', err)
       wx.hideLoading()
       wx.showToast({ title: '预览失败', icon: 'none' })
+    } finally {
+      this.setData({ previewingKey: '' })
     }
   },
 
   // 使用这套试卷（生成并跳转）
   async onUsePaper(e) {
     const key = e.currentTarget.dataset.key
-    const { studentId, subject, subjectName, studentName, grade, generating } = this.data
+    const { studentId, subject, grade, generating, papers } = this.data
     if (generating) return
+    const selectedPaper = papers.find(paper => paper.key === key)
 
     this.setData({ generating: true, generatingKey: key })
     wx.showLoading({ title: '生成试卷...' })
 
     try {
-      const res = await wx.cloud.callFunction({
-        name: 'generatePaper',
-        data: {
-          studentId,
-          subject,
-          type: 'default-diagnosis',
-          grade: Number(grade),
-          key,
-          preview: false
-        }
+      const result = await cloud.callGeneratePaper({
+        studentId,
+        subject,
+        type: 'default-diagnosis',
+        grade: Number(grade),
+        paperKey: key,
+        questionCount: selectedPaper ? selectedPaper.questionCount : 12,
+        preview: false
       })
 
       wx.hideLoading()
 
-      if (res.result && res.result.paperId) {
+      if (result.paperId) {
         wx.showToast({ title: '生成成功', icon: 'success' })
         setTimeout(() => {
           wx.navigateTo({
-            url: `/pages/paper-preview/paper-preview?paperId=${res.result.paperId}`
+            url: `/pages/paper-preview/paper-preview?paperId=${result.paperId}`
           })
         }, 1000)
       }

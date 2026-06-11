@@ -2,12 +2,12 @@
 // 根据报告数据生成 A4 PDF，上传云存储
 const pdfkit = require('pdfkit');
 const cloud = require('wx-server-sdk');
-const db = cloud.database();
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
+const db = cloud.database();
 
 // ========== 配置常量（请修改为你的实际配置） ==========
 const CONFIG = {
@@ -160,6 +160,10 @@ exports.main = async (event) => {
       return { success: false, error: '报告不存在' };
     }
     const reportData = reportRes.data;
+    const currentOpenId = cloud.getWXContext().OPENID;
+    if (reportData._openid && reportData._openid !== currentOpenId) {
+      return { success: false, error: '无权访问该报告' };
+    }
 
     // 2. 生成 PDF
     console.log('开始生成 PDF，reportId：', reportId);
@@ -188,6 +192,6 @@ exports.main = async (event) => {
     };
   } catch (err) {
     console.error('generateReportPDF 失败：', err);
-    return { success: false, error: err.message, stack: err.stack };
+    return { success: false, error: '报告 PDF 生成失败，请稍后重试' };
   }
 };

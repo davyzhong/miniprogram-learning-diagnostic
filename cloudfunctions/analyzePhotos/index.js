@@ -1,10 +1,12 @@
 // analyzePhotos/index.js
 // 主控函数：拆分批次、串行调用 analyzeBatch、合并结果、更新数据库、推送通知
 const cloud = require('wx-server-sdk');
+const { compareBottlenecks, buildComparisonSummary } = require('./comparison');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
+const SUBJECTS = new Set(['math', 'chinese', 'english']);
 
 // ========== 合并多批次结果 ==========
 function mergeBatchResults(batchResults, subject) {
@@ -59,7 +61,7 @@ function mergeBatchResults(batchResults, subject) {
 }
 
 // ========== 更新 subjectProfiles ==========
-async function updateSubjectProfile(studentId, subject, mergedResult) {
+async function updateSubjectProfile(studentId, subject, mergedResult, mode) {
   const profileRes = await db.collection('subjectProfiles')
     .where({ studentId, subject })
     .get();
@@ -70,14 +72,28 @@ async function updateSubjectProfile(studentId, subject, mergedResult) {
   }
 
   const profile = profileRes.data[0];
-  const pending = profile.pendingBottlenecks || [];
-  const newBottlenecks = mergedResult.bottlenecks || [];
+  const pendingByCode = new Map(
+    (profile.pendingBottlenecks || []).map(item => [item.lpCode, { ...item }])
+  );
+  const improvedByCode = new Map(
+    (profile.improvedBottlenecks || []).map(item => [item.lpCode, { ...item }])
+  );
 
-  // 合并 pendingBottlenecks（新发现的卡点加入 pending）
-  for (const bn of newBottlenecks) {
-    const exists = pending.find(p => p.lpCode === bn.lpCode);
-    if (!exists) {
-      pending.push({
+  for (const bn of mergedResult.bottlenecks || []) {
+    if (mode === 'verification' && bn.status === 'improved') {
+      improvedByCode.set(bn.lpCode, {
+        lpCode: bn.lpCode,
+        lpName: bn.lpName,
+        improvedDate: new Date(),
+      });
+      if ((Number(bn.errorCount) || 0) === 0) {
+        pendingByCode.delete(bn.lpCode);
+        continue;
+      }
+    }
+
+    if (!pendingByCode.has(bn.lpCode)) {
+      pendingByCode.set(bn.lpCode, {
         lpCode: bn.lpCode,
         lpName: bn.lpName,
         severity: bn.severity,
@@ -88,30 +104,88 @@ async function updateSubjectProfile(studentId, subject, mergedResult) {
 
   await db.collection('subjectProfiles').doc(profile._id).update({
     data: {
-      pendingBottlenecks: pending,
+      pendingBottlenecks: Array.from(pendingByCode.values()),
+      improvedBottlenecks: Array.from(improvedByCode.values()),
+      totalReports: _.inc(1),
       analysisStatus: null,
+      currentAnalysisId: '',
       updatedAt: new Date(),
     },
   });
+}
+
+async function getPreviousReport(studentId, subject) {
+  const res = await db.collection('reports')
+    .where({
+      studentId,
+      subject,
+      status: 'completed',
+    })
+    .orderBy('createdAt', 'desc')
+    .limit(1)
+    .get();
+
+  return res.data[0] || null;
+}
+
+async function getVerificationTargets(report) {
+  if (!report.paperId) return [];
+  const paperRes = await db.collection('papers').doc(report.paperId).get();
+  const paper = paperRes.data;
+  if (!paper || paper.studentId !== report.studentId || (paper._openid && report._openid && paper._openid !== report._openid)) {
+    throw new Error('关联验证试卷归属不一致');
+  }
+  return Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : [];
 }
 
 // ========== 推送订阅消息（预留，暂未实现 sendSubscribeMessage 云函数） ==========
 async function sendNotification(studentId, reportId, subject) {
   // TODO: 订阅消息推送需要用户在小程序前端授权后才能发送。
   // 目前 sendSubscribeMessage 云函数尚未创建，此处仅记录日志，不发起调用。
-  const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
-  console.log(`[sendNotification] 分析完成通知（待实现）：studentId=${studentId}, reportId=${reportId}, subject=${subjectName}`);
+  return { studentId, reportId, subject };
 }
 
 // ========== 主函数 ==========
 exports.main = async (event) => {
-  const { reportId, fileIDs, subject = 'math', studentId, mode = 'diagnosis' } = event;
+  const { reportId } = event;
+  let taskId = '';
 
-  if (!reportId || !fileIDs || !Array.isArray(fileIDs)) {
-    return { success: false, error: '参数错误：需要 reportId 和 fileIDs 数组' };
+  if (!reportId) {
+    return { success: false, error: '缺少 reportId' };
   }
 
   try {
+    const reportRes = await db.collection('reports').doc(reportId).get();
+    const report = reportRes.data;
+    const currentOpenId = cloud.getWXContext().OPENID;
+
+    if (!report) {
+      return { success: false, error: '报告不存在' };
+    }
+    if (report._openid && currentOpenId && report._openid !== currentOpenId) {
+      return { success: false, error: '无权访问该报告' };
+    }
+
+    const fileIDs = report.imageFileIds || [];
+    const subject = SUBJECTS.has(report.subject) ? report.subject : 'math';
+    const studentId = report.studentId;
+    const mode = report.type === 'verification' ? 'verification' : 'diagnosis';
+
+    if (fileIDs.length === 0) {
+      return { success: false, error: '报告中没有待分析图片' };
+    }
+    if (report.status === 'completed') {
+      return { success: true, reportId, message: '报告已经分析完成' };
+    }
+
+    const existingTask = await db.collection('analysisTasks')
+      .where({ reportId })
+      .limit(1)
+      .get();
+    if (existingTask.data.length > 0 && ['processing', 'completed'].includes(existingTask.data[0].status)) {
+      return { success: true, reportId, message: '分析任务已经启动' };
+    }
+
     // 1. 拆分批次（每批最多 5 张）
     const batchSize = 5;
     const batches = [];
@@ -133,10 +207,11 @@ exports.main = async (event) => {
         mode,
         subject,
         studentId,
+        _openid: report._openid || currentOpenId,
         createdAt: new Date(),
       },
     });
-    const taskId = taskRes._id;
+    taskId = taskRes._id;
 
     // 3. 串行处理每个批次
     const batchResults = [];
@@ -163,9 +238,27 @@ exports.main = async (event) => {
         batchResults.push({ success: false, error: err.message });
       }
     }
+    if (batchResults.some(result => !result || !result.success)) {
+      throw new Error('存在未完成的图片分析批次');
+    }
 
     // 4. 合并结果
     const merged = mergeBatchResults(batchResults, subject);
+    let previousReport = null;
+    let comparisonSummary = '';
+
+    if (mode === 'verification') {
+      previousReport = await getPreviousReport(studentId, subject);
+      const verificationTargets = await getVerificationTargets(report);
+      merged.bottlenecks = compareBottlenecks(
+        previousReport ? previousReport.bottlenecks : [],
+        merged.bottlenecks,
+        verificationTargets
+      );
+      comparisonSummary = buildComparisonSummary(merged.bottlenecks);
+    } else {
+      merged.bottlenecks = merged.bottlenecks.map(item => ({ ...item, status: 'found' }));
+    }
 
     // 5. 更新 reports 集合
     await db.collection('reports').doc(reportId).update({
@@ -175,12 +268,14 @@ exports.main = async (event) => {
         totalErrors: merged.totalErrors,
         bottlenecks: merged.bottlenecks,
         errorDetails: merged.errorDetails,
+        previousReportId: previousReport ? previousReport._id : '',
+        comparisonSummary,
         completedAt: merged.completedAt,
       },
     });
 
     // 6. 更新 subjectProfiles
-    await updateSubjectProfile(studentId, subject, merged);
+    await updateSubjectProfile(studentId, subject, merged, mode);
 
     // 7. 更新 analysisTasks 状态
     await db.collection('analysisTasks').doc(taskId).update({
@@ -203,10 +298,15 @@ exports.main = async (event) => {
     // 更新 reports 状态为 failed
     if (reportId) {
       await db.collection('reports').doc(reportId).update({
-        data: { status: 'failed', error: err.message, updatedAt: new Date() },
+        data: { status: 'failed', error: '图片分析失败，请稍后重试', updatedAt: new Date() },
+      }).catch(() => {});
+    }
+    if (taskId) {
+      await db.collection('analysisTasks').doc(taskId).update({
+        data: { status: 'failed', error: '图片分析失败，请稍后重试', completedAt: new Date() },
       }).catch(() => {});
     }
 
-    return { success: false, error: err.message, reportId };
+    return { success: false, error: '图片分析失败，请稍后重试', reportId };
   }
 };

@@ -68,8 +68,8 @@
 
   <!-- 底部按钮 -->
   <view class="bottom-bar">
-    <button class="btn-secondary" bindtap="onPreview" disabled="{{selectedCount === 0}}">
-      预览 PDF
+    <button class="btn-secondary" bindtap="onPreview" disabled="{{selectedCount === 0 || previewing}}">
+      {{previewing ? '预览生成中...' : '预览 PDF'}}
     </button>
     <button
       class="btn-primary"

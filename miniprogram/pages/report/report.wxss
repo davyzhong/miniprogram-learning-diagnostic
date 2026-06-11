@@ -249,11 +249,11 @@
   color: #718096;
 }
 
-.next-step-btn {
+.next-step-card .next-step-btn {
   margin-top: 20rpx;
-  background: #38a169 !important;
-  color: #ffffff !important;
-  border: none !important;
+  background: #38a169;
+  color: #ffffff;
+  border: none;
 }
 
 /* ========== 对比总结 ========== */
@@ -271,10 +271,10 @@
   padding: 20rpx 28rpx;
 }
 
-.action-btn {
+.bottom-actions .action-btn {
   flex: 1;
-  font-size: 28rpx !important;
-  padding: 18rpx 0 !important;
+  font-size: 28rpx;
+  padding: 18rpx 0;
 }
 
 /* ========== 分析进度 ========== */
@@ -286,7 +286,7 @@
   text-align: center;
 }
 
-.ananlyzing-hint text:first-child {
+.analyzing-hint text:first-child {
   display: block;
   font-size: 26rpx;
   color: #92400e;
@@ -308,7 +308,7 @@
   transition: width 0.3s ease;
 }
 
-.ananlyzing-tip {
+.analyzing-tip {
   display: block;
   font-size: 22rpx;
   color: #78716c;
