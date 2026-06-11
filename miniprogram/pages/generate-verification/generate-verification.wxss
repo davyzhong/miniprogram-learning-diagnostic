@@ -1,0 +1,223 @@
+/* pages/generate-verification/generate-verification.wxss */
+
+.page {
+  min-height: 100vh;
+  background: #f7fafc;
+  padding-bottom: 200rpx;
+}
+
+/* ========== 顶部说明 ========== */
+.tip-bar {
+  display: flex;
+  align-items: flex-start;
+  background: #f0fff4;
+  border-radius: 0 0 20rpx 20rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.tip-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.tip-content {
+  flex: 1;
+}
+
+.tip-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #276749;
+  margin-bottom: 4rpx;
+}
+
+.tip-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+/* ========== 卡点列表 ========== */
+.bottleneck-list {
+  padding: 0 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.bottleneck-item {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+  border: 2rpx solid transparent;
+  transition: all 0.15s;
+}
+
+.bottleneck-item.selected {
+  border-color: #38a169;
+  background: #f0fff4;
+}
+
+/* 复选框 */
+.checkbox {
+  width: 40rpx;
+  height: 40rpx;
+  border: 3rpx solid #cbd5e0;
+  border-radius: 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 16rpx;
+  font-size: 24rpx;
+  color: #ffffff;
+  transition: all 0.15s;
+}
+
+.checkbox.checked {
+  background: #38a169;
+  border-color: #38a169;
+}
+
+/* 卡点信息 */
+.bottleneck-info {
+  flex: 1;
+}
+
+.bottleneck-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 4rpx;
+}
+
+.lp-code {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #276749;
+  background: #c6f6d5;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  margin-right: 10rpx;
+  flex-shrink: 0;
+}
+
+.lp-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1a202c;
+  flex: 1;
+}
+
+.severity-badge {
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.severity-high   { background: #fed7d7; color: #9b2c2c; }
+.severity-medium { background: #fefcbf; color: #975a16; }
+.severity-low    { background: #c6f6d5; color: #276749; }
+
+.bottleneck-date {
+  font-size: 22rpx;
+  color: #a0aec0;
+}
+
+/* 空状态 */
+.empty-tip {
+  text-align: center;
+  padding: 80rpx 40rpx;
+}
+
+.empty-tip .empty-icon {
+  display: block;
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+}
+
+.empty-tip .empty-text {
+  display: block;
+  font-size: 30rpx;
+  color: #718096;
+  margin-bottom: 8rpx;
+}
+
+.empty-tip .empty-hint {
+  display: block;
+  font-size: 26rpx;
+  color: #a0aec0;
+}
+
+/* ========== 试卷预览摘要 ========== */
+.preview-card {
+  margin: 0 28rpx 20rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+}
+
+.preview-stats {
+  display: flex;
+  justify-content: space-around;
+  padding: 8rpx 0;
+}
+
+.preview-stat {
+  text-align: center;
+}
+
+.preview-num {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: #1a202c;
+  line-height: 1.2;
+}
+
+.preview-label {
+  display: block;
+  font-size: 22rpx;
+  color: #a0aec0;
+  margin-top: 4rpx;
+}
+
+/* ========== 底部按钮 ========== */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 16rpx;
+  padding: 20rpx 28rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  background: #ffffff;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+
+.bottom-bar .btn-secondary,
+.bottom-bar .btn-primary {
+  flex: 1;
+  font-size: 28rpx !important;
+  padding: 20rpx 0 !important;
+}
+
+.bottom-bar .btn-primary {
+  background: linear-gradient(135deg, #276749 0%, #38a169 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.bottom-bar .btn-primary[disabled] {
+  background: #a0aec0 !important;
+}

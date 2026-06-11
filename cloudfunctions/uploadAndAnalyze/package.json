@@ -1,0 +1,9 @@
+{
+  "name": "uploadAndAnalyze",
+  "version": "1.0.0",
+  "description": "入口函数：接收fileIDs，创建reports记录，触发后台分析",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

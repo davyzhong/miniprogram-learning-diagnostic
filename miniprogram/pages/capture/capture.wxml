@@ -1,0 +1,62 @@
+<view class="page-container">
+
+  <!-- 顶部提示区 -->
+  <view class="tips-box">
+    <view class="tips-title">拍照要求</view>
+    <view class="tips-item">1. 试卷平铺在桌面上，保持平整</view>
+    <view class="tips-item">2. 光线充足，确保文字清晰可见</view>
+    <view class="tips-item">3. 一张试卷拍一张照片，不要拼接</view>
+    <view class="tips-item">4. 避免阴影遮挡和反光</view>
+  </view>
+
+  <!-- 照片数量提示 -->
+  <view class="photo-count" wx:if="{{photos.length > 0}}">
+    已选 {{photos.length}} 张照片
+  </view>
+
+  <!-- 照片预览网格 -->
+  <view class="photo-grid">
+    <view class="photo-item" wx:for="{{photos}}" wx:key="tempFilePath">
+      <image
+        class="photo-image"
+        src="{{item.tempFilePath}}"
+        mode="aspectFill"
+        bindtap="onPreviewPhoto"
+        data-index="{{index}}"
+      />
+      <view
+        class="photo-delete"
+        catchtap="onRemovePhoto"
+        data-index="{{index}}"
+      >x</view>
+    </view>
+  </view>
+
+  <!-- 底部操作栏 -->
+  <view class="action-bar">
+    <view class="action-row">
+      <button class="btn btn-camera" bindtap="onTakePhoto">
+        <text class="btn-icon">📷</text> 拍照
+      </button>
+      <button class="btn btn-album" bindtap="onChooseFromAlbum">
+        <text class="btn-icon">🖼</text> 从相册选择
+      </button>
+    </view>
+    <button
+      class="btn btn-analyze"
+      bindtap="onStartAnalysis"
+      disabled="{{photos.length === 0 || uploading || analyzing}}"
+    >
+      开始分析
+    </button>
+  </view>
+
+  <!-- 分析进度遮罩 -->
+  <view class="loading-mask" wx:if="{{uploading || analyzing}}">
+    <view class="loading-content">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">{{progressText}}</text>
+    </view>
+  </view>
+
+</view>

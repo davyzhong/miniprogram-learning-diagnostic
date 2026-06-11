@@ -1,0 +1,176 @@
+/* pages/default-paper/default-paper.wxss */
+
+.page {
+  min-height: 100vh;
+  background: #f7fafc;
+  padding-bottom: 60rpx;
+}
+
+/* ========== 顶部说明 ========== */
+.tip-bar {
+  display: flex;
+  align-items: flex-start;
+  background: #fffaf0;
+  border-radius: 0 0 20rpx 20rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.tip-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.tip-content {
+  flex: 1;
+}
+
+.tip-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #c05621;
+  margin-bottom: 4rpx;
+}
+
+.tip-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+/* ========== 年级选择 ========== */
+.grade-row {
+  display: flex;
+  gap: 16rpx;
+  padding: 0 28rpx;
+  margin-bottom: 24rpx;
+  flex-wrap: wrap;
+}
+
+.grade-btn {
+  padding: 14rpx 28rpx;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  background: #edf2f7;
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.grade-btn.active {
+  background: #c05621;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ========== 试卷列表 ========== */
+.paper-list {
+  padding: 0 28rpx;
+}
+
+.paper-card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+.paper-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.paper-name {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1a202c;
+  flex: 1;
+}
+
+.paper-badge {
+  font-size: 20rpx;
+  background: #c6f6d5;
+  color: #276749;
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+  font-weight: 600;
+}
+
+.paper-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4rpx;
+  margin-bottom: 16rpx;
+}
+
+.meta-item {
+  font-size: 24rpx;
+  color: #718096;
+}
+
+.meta-dot {
+  color: #cbd5e0;
+  margin: 0 4rpx;
+}
+
+.paper-actions {
+  display: flex;
+  gap: 16rpx;
+}
+
+.paper-btn {
+  flex: 1;
+  font-size: 26rpx !important;
+  padding: 16rpx 0 !important;
+}
+
+/* ========== 空状态 ========== */
+.empty-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx 40rpx;
+}
+
+.empty-tip .empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+}
+
+.empty-tip .empty-text {
+  font-size: 30rpx;
+  color: #718096;
+  margin-bottom: 8rpx;
+}
+
+.empty-tip .empty-hint {
+  font-size: 26rpx;
+  color: #a0aec0;
+}
+
+/* ========== 底部提示 ========== */
+.bottom-tip {
+  display: flex;
+  align-items: center;
+  margin: 24rpx 28rpx;
+  padding: 16rpx 20rpx;
+  background: #fffff0;
+  border-radius: 10rpx;
+}
+
+.bottom-icon {
+  font-size: 28rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.bottom-text {
+  font-size: 24rpx;
+  color: #975a16;
+  line-height: 1.4;
+}

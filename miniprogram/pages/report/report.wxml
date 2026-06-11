@@ -1,0 +1,136 @@
+<!--pages/report/report.wxml-->
+<view class="page">
+  <!-- 顶部标题 -->
+  <view class="report-header {{isVerification ? 'header-verify' : 'header-diagnosis'}}">
+    <text class="report-type">{{isVerification ? '验证报告' : '诊断报告'}}</text>
+    <text class="report-date">{{dateText}}</text>
+    <text class="report-summary">{{report.summary}}</text>
+
+    <!-- 分析进行中 -->
+    <view class="analyzing-hint" wx:if="{{report.status === 'analyzing'}}">
+      <text>{{analysisStatusText || 'AI 分析中...'}}</text>
+      <view class="progress-bar">
+        <view class="progress-fill" style="width: {{analysisProgress || 0}}%;"></view>
+      </view>
+      <text class="analyzing-tip">完成后将自动刷新</text>
+    </view>
+  </view>
+
+  <!-- 区块 A：统计概览 -->
+  <view class="card stats-card">
+    <view class="section-title">诊断概览</view>
+    <view class="stats-grid">
+      <view class="stat-cell">
+        <text class="stat-num">{{report.totalErrors || 0}}</text>
+        <text class="stat-label">错题数</text>
+      </view>
+      <view class="stat-cell">
+        <text class="stat-num">{{bottleneckCount}}</text>
+        <text class="stat-label">卡点数</text>
+      </view>
+      <view class="stat-cell" wx:if="{{isVerification}}">
+        <text class="stat-num improved-color">{{improvedCount}}</text>
+        <text class="stat-label">已改善</text>
+      </view>
+      <view class="stat-cell" wx:if="{{isVerification}}">
+        <text class="stat-num worsened-color">{{worsenedCount}}</text>
+        <text class="stat-label">需加强</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 区块 B：卡点排行 -->
+  <view class="card" wx:if="{{hasBottlenecks}}">
+    <view class="section-title">卡点分布</view>
+    <view
+      class="bottleneck-item"
+      wx:for="{{bottleneckList}}"
+      wx:key="lpCode"
+    >
+      <view class="bottleneck-header">
+        <text class="lp-code">{{item.lpCode}}</text>
+        <text class="lp-name">{{item.lpName}}</text>
+        <view class="severity-badge severity-{{item.severity}}">
+          <text wx:if="{{item.severity === 'high'}}">高</text>
+          <text wx:elif="{{item.severity === 'medium'}}">中</text>
+          <text wx:else>低</text>
+        </view>
+        <text class="bottleneck-count">{{item.errorCount}} 题</text>
+      </view>
+
+      <!-- 验证报告：状态标记 -->
+      <view class="status-tag status-improved" wx:if="{{item.status === 'improved'}}">🟢 已改善</view>
+      <view class="status-tag status-worsened" wx:if="{{item.status === 'worsened'}}">🔴 需加强</view>
+      <view class="status-tag status-new" wx:if="{{item.status === 'new'}}">🆕 新增</view>
+      <view class="status-tag status-ongoing" wx:if="{{item.status === 'persisting'}}">⚪ 持续</view>
+
+      <!-- 进度条 -->
+      <view class="bottleneck-bar">
+        <view class="bottleneck-fill" style="width:{{item.barWidth}}%;"></view>
+      </view>
+
+      <view class="bottleneck-suggestion" wx:if="{{item.suggestion}}">
+        💡 {{item.suggestion}}
+      </view>
+    </view>
+  </view>
+
+  <!-- 区块 C：错题详情 -->
+  <view class="card" wx:if="{{hasErrorDetails}}">
+    <view class="section-title">错题详情</view>
+    <view
+      class="error-item"
+      wx:for="{{errorDetailList}}"
+      wx:key="index"
+      bindtap="onToggleError"
+      data-index="{{index}}"
+    >
+      <view class="error-question">
+        <text class="error-index">{{item.displayIndex}}</text>
+        <text class="error-content">{{item.questionContent}}</text>
+      </view>
+      <view class="error-expand" wx:if="{{item.expanded}}">
+        <view class="error-row">
+          <text class="error-label">学生答案：</text>
+          <text class="error-value wrong">{{item.studentAnswer}}</text>
+        </view>
+        <view class="error-row">
+          <text class="error-label">正确答案：</text>
+          <text class="error-value correct">{{item.correctAnswer}}</text>
+        </view>
+        <view class="error-row" wx:if="{{item.rootCause}}">
+          <text class="error-label">根因分析：</text>
+          <text class="error-value">{{item.rootCause}}</text>
+        </view>
+      </view>
+      <text class="expand-hint">{{item.expanded ? '收起' : '展开详情'}}</text>
+    </view>
+  </view>
+
+  <!-- 区块 D：下一步（仅诊断报告） -->
+  <view class="card next-step-card" wx:if="{{showNextStep}}">
+    <view class="section-title">下一步</view>
+    <view class="next-step-content">
+      <text class="next-step-icon">📝</text>
+      <view class="next-step-info">
+        <text class="next-step-title">生成验证试卷</text>
+        <text class="next-step-desc">针对 {{pendingCount}} 个卡点生成 3 道验证题/卡点</text>
+      </view>
+    </view>
+    <button class="btn-secondary next-step-btn" bindtap="onGenerateVerification">
+      生成验证试卷
+    </button>
+  </view>
+
+  <!-- 验证报告总结 -->
+  <view class="card" wx:if="{{isVerification && report.comparisonSummary}}">
+    <view class="section-title">对比总结</view>
+    <view class="comparison-summary">{{report.comparisonSummary}}</view>
+  </view>
+
+  <!-- 底部操作 -->
+  <view class="bottom-actions">
+    <button class="btn-secondary action-btn" bindtap="onShare">分享报告</button>
+    <button class="btn-secondary action-btn" bindtap="onDownloadPDF">下载 PDF</button>
+  </view>
+</view>

@@ -1,0 +1,72 @@
+<!--pages/upload/upload.wxml-->
+<view class="page">
+  <!-- 顶部说明 -->
+  <view class="tip-bar">
+    <text class="tip-icon">💡</text>
+    <view class="tip-content">
+      <text class="tip-title">{{pageTitle}}</text>
+      <text class="tip-desc">{{pageDesc}}</text>
+    </view>
+  </view>
+
+  <!-- 拍照提示 -->
+  <view class="photo-tips">
+    <text class="tip-item">📸 光线充足</text>
+    <text class="tip-item">📄 试卷铺平</text>
+    <text class="tip-item">✍️ 字迹清晰</text>
+    <text class="tip-item">🔴 红笔可见</text>
+  </view>
+
+  <!-- 照片网格 -->
+  <view class="photo-grid">
+    <!-- 已选照片 -->
+    <view
+      class="photo-slot has-image"
+      wx:for="{{images}}"
+      wx:key="index"
+    >
+      <image class="preview-img" src="{{item.tempPath}}" mode="aspectFill" />
+      <view class="delete-btn" catchtap="onDeleteImage" data-index="{{index}}">✕</view>
+    </view>
+
+    <!-- 添加按钮 -->
+    <view
+      class="photo-slot add-slot"
+      wx:if="{{images.length < 20}}"
+      bindtap="onChooseImage"
+    >
+      <text class="add-icon">+</text>
+      <text class="add-text">拍照/相册</text>
+    </view>
+  </view>
+
+  <view class="image-count">已选 {{images.length}}/20 张</view>
+
+  <!-- 上传进度 -->
+  <view class="upload-progress" wx:if="{{uploading}}">
+    <view class="progress-info">
+      <text>上传中 {{uploadedCount}}/{{images.length}}</text>
+      <text>{{uploadProgress}}%</text>
+    </view>
+    <view class="progress-bar">
+      <view class="progress-fill" style="width:{{uploadProgress}}%;"></view>
+    </view>
+  </view>
+
+  <!-- 异步提示 -->
+  <view class="async-tip">
+    <text class="async-icon">⏳</text>
+    <text class="async-text">上传完成后即可返回，AI 将在后台分析，完成后推送通知</text>
+  </view>
+
+  <!-- 底部按钮 -->
+  <view class="bottom-bar">
+    <button
+      class="btn-primary {{canSubmit ? '' : 'btn-disabled'}}"
+      bindtap="onSubmit"
+      disabled="{{!canSubmit || uploading}}"
+    >
+      {{submitBtnText}}
+    </button>
+  </view>
+</view>

@@ -1,0 +1,192 @@
+/* pages/paper-preview/paper-preview.wxss */
+
+.page {
+  min-height: 100vh;
+  background: #f7fafc;
+  padding-bottom: 200rpx;
+}
+
+/* ========== 试卷标签 ========== */
+.paper-tags {
+  display: flex;
+  gap: 12rpx;
+  padding: 20rpx 28rpx;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: 22rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 8rpx;
+  font-weight: 600;
+}
+
+.tag-verification {
+  background: #c6f6d5;
+  color: #276749;
+}
+
+.tag-diagnosis {
+  background: #ebf8ff;
+  color: #2b6cb0;
+}
+
+.tag-default {
+  background: #fefcbf;
+  color: #975a16;
+}
+
+.tag-subject {
+  background: #e9d8fd;
+  color: #553c9a;
+}
+
+.tag-student {
+  background: #fed7d7;
+  color: #9b2c2c;
+}
+
+/* ========== A4 预览区 ========== */
+.preview-area {
+  padding: 0 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.a4-frame {
+  background: #ffffff;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.a4-inner {
+  padding: 60rpx 40rpx;
+  min-height: 400rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 未加载状态 */
+.a4-placeholder {
+  text-align: center;
+}
+
+.a4-icon {
+  display: block;
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+  opacity: 0.6;
+}
+
+.a4-text {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #4a5568;
+  margin-bottom: 8rpx;
+}
+
+.a4-hint {
+  display: block;
+  font-size: 24rpx;
+  color: #a0aec0;
+}
+
+/* 已加载状态 */
+.a4-loaded {
+  text-align: center;
+  padding: 40rpx 0;
+}
+
+.a4-success-icon {
+  display: block;
+  font-size: 60rpx;
+  margin-bottom: 12rpx;
+}
+
+.a4-success-text {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #38a169;
+  margin-bottom: 8rpx;
+}
+
+.a4-pages {
+  display: block;
+  font-size: 24rpx;
+  color: #718096;
+}
+
+/* ========== 试卷信息 ========== */
+.paper-info {
+  margin: 0 28rpx 20rpx;
+}
+
+.info-row {
+  display: flex;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #edf2f7;
+}
+
+.info-row:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-size: 26rpx;
+  color: #718096;
+  width: 160rpx;
+  flex-shrink: 0;
+}
+
+.info-value {
+  font-size: 26rpx;
+  color: #1a202c;
+  flex: 1;
+}
+
+/* ========== 操作按钮 ========== */
+.action-bar {
+  display: flex;
+  gap: 16rpx;
+  padding: 0 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.action-btn {
+  flex: 1;
+  font-size: 28rpx !important;
+  padding: 18rpx 0 !important;
+}
+
+/* ========== 底部按钮 ========== */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20rpx 28rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  background: #ffffff;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+
+.btn-main {
+  background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%) !important;
+  color: #ffffff !important;
+  border-radius: 16rpx !important;
+  font-size: 32rpx !important;
+  font-weight: 600 !important;
+  padding: 24rpx 0 !important;
+  border: none !important;
+  width: 100%;
+  line-height: 1.4;
+}
+
+.btn-main::after {
+  border: none;
+}

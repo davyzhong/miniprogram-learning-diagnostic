@@ -1,0 +1,126 @@
+<view class="page-container">
+
+  <!-- Loading -->
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中...</text>
+  </view>
+
+  <!-- 内容区 -->
+  <view wx:elif="{{student}}" class="content">
+
+    <!-- 学生信息卡片 -->
+    <view class="student-card">
+      <view class="avatar-circle">
+        <text class="avatar-text">{{student.avatarText}}</text>
+      </view>
+      <view class="student-info">
+        <text class="student-name">{{student.name}}</text>
+        <view class="info-row">
+          <text class="info-label">学校</text>
+          <text class="info-value">{{student.school || '未填写'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">年级</text>
+          <text class="info-value">{{student.grade || '未填写'}}</text>
+        </view>
+        <view class="info-row">
+          <text class="info-label">建档时间</text>
+          <text class="info-value">{{student.createdAtStr}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 操作按钮栏 -->
+    <view class="action-bar">
+      <button class="btn-primary" bindtap="onCapture">
+        <text class="btn-icon">📷</text>
+        <text>拍照上传</text>
+      </button>
+    </view>
+
+    <!-- 最新报告摘要 -->
+    <view wx:if="{{latestReport}}" class="section">
+      <view class="section-header">
+        <text class="section-title">最新报告</text>
+        <text class="section-date">{{latestReport.dateStr}}</text>
+      </view>
+
+      <view class="report-summary-card">
+        <!-- 卡点全景表（简版） -->
+        <view class="summary-table">
+          <view class="table-header">
+            <text class="col-category">类别</text>
+            <text class="col-freq">频次</text>
+            <text class="col-severity">严重程度</text>
+          </view>
+          <view wx:for="{{latestReport.summary.table}}" wx:key="category" class="table-row">
+            <text class="col-category">{{item.category}}</text>
+            <text class="col-freq">{{item.frequency}}</text>
+            <text class="col-severity severity-{{item.severityLevel}}">{{item.severityText}}</text>
+          </view>
+        </view>
+
+        <!-- TOP 3 优先级卡点 -->
+        <view wx:if="{{latestReport.summary.topBugs.length > 0}}" class="top-bugs">
+          <text class="top-bugs-title">TOP 3 优先卡点</text>
+          <view wx:for="{{latestReport.summary.topBugs}}" wx:key="index" class="bug-item bug-priority-{{item.priority}}">
+            <view class="bug-index">{{index + 1}}</view>
+            <view class="bug-content">
+              <text class="bug-name">{{item.name}}</text>
+              <text class="bug-desc">{{item.description}}</text>
+            </view>
+          </view>
+        </view>
+
+        <button class="btn-outline" bindtap="onViewLatestReport">查看完整报告</button>
+      </view>
+    </view>
+
+    <!-- 历史报告列表 -->
+    <view class="section">
+      <view class="section-header">
+        <text class="section-title">历史报告</text>
+        <text class="section-count">共 {{reports.length}} 份</text>
+      </view>
+
+      <view wx:if="{{reports.length > 0}}" class="report-list">
+        <view
+          wx:for="{{reports}}"
+          wx:key="_id"
+          class="report-item"
+          bindtap="onViewReport"
+          data-id="{{item._id}}"
+        >
+          <view class="report-item-left">
+            <text class="report-date">{{item.dateStr}}</text>
+            <view class="report-meta">
+              <text class="meta-tag">{{item.photoCount}} 张图片</text>
+              <text class="meta-tag">{{item.bugCount}} 个卡点</text>
+            </view>
+          </view>
+          <view class="report-item-right">
+            <text wx:if="{{item.trend}}" class="trend-text">{{item.trend}}</text>
+            <text class="arrow">›</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 空状态 -->
+      <view wx:else class="empty-state">
+        <view class="empty-icon">📋</view>
+        <text class="empty-title">还没有诊断报告</text>
+        <text class="empty-desc">点击「拍照上传」开始第一次诊断</text>
+        <button class="btn-primary btn-small" bindtap="onCapture">立即拍照</button>
+      </view>
+    </view>
+
+  </view>
+
+  <!-- 错误 / 无数据 -->
+  <view wx:else class="empty-state">
+    <text class="empty-title">数据加载失败</text>
+    <button class="btn-outline btn-small" bindtap="loadData">重新加载</button>
+  </view>
+
+</view>

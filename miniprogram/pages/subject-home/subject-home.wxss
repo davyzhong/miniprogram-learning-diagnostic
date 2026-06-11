@@ -1,0 +1,320 @@
+/* pages/subject-home/subject-home.wxss */
+
+.page {
+  min-height: 100vh;
+  background: #f7fafc;
+  padding-bottom: 60rpx;
+}
+
+/* ========== 顶部信息 ========== */
+.top-bar {
+  background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%);
+  padding: 48rpx 32rpx 40rpx;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+}
+
+.page-chinese .top-bar {
+  background: linear-gradient(135deg, #1c4532 0%, #276749 100%);
+}
+
+.page-english .top-bar {
+  background: linear-gradient(135deg, #7b341e 0%, #c05621 100%);
+}
+
+.back {
+  font-size: 28rpx;
+  margin-right: 20rpx;
+  opacity: 0.9;
+}
+
+.top-info {
+  flex: 1;
+}
+
+.subject-label {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  margin-bottom: 4rpx;
+}
+
+.student-name {
+  display: block;
+  font-size: 26rpx;
+  opacity: 0.85;
+  margin-bottom: 2rpx;
+}
+
+.grade-label {
+  display: block;
+  font-size: 24rpx;
+  opacity: 0.7;
+}
+
+/* ========== 统计条 ========== */
+.stats-bar {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  margin: -20rpx 28rpx 24rpx;
+  border-radius: 20rpx;
+  padding: 28rpx 0;
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.08);
+  position: relative;
+  z-index: 10;
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-num {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1a202c;
+  line-height: 1.2;
+}
+
+.pending-num {
+  color: #dd6b20;
+}
+
+.improved-num {
+  color: #38a169;
+}
+
+.stat-label {
+  display: block;
+  font-size: 22rpx;
+  color: #a0aec0;
+  margin-top: 4rpx;
+}
+
+.stat-divider {
+  width: 1rpx;
+  height: 48rpx;
+  background: #e2e8f0;
+}
+
+/* ========== 三入口 ========== */
+.entries {
+  padding: 0 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 16rpx;
+  padding-left: 4rpx;
+}
+
+.entry-card {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s;
+}
+
+.entry-card:active {
+  transform: scale(0.985);
+}
+
+.entry-icon-wrap {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.entry-icon-a { background: #ebf8ff; }
+.entry-icon-b { background: #f0fff4; }
+.entry-icon-c { background: #fffaf0; }
+
+.entry-icon {
+  font-size: 40rpx;
+}
+
+.entry-info {
+  flex: 1;
+  margin-left: 20rpx;
+}
+
+.entry-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 4rpx;
+}
+
+.entry-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #a0aec0;
+}
+
+.entry-badge {
+  display: inline-block;
+  background: #fffaf0;
+  color: #dd6b20;
+  font-size: 22rpx;
+  font-weight: 600;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  margin-top: 6rpx;
+}
+
+.entry-arrow {
+  font-size: 36rpx;
+  color: #cbd5e0;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+}
+
+/* ========== 分析中状态卡片 ========== */
+.analyzing-card {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin: 0 28rpx 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  border-left: 6rpx solid #dd6b20;
+}
+
+.analyzing-icon {
+  font-size: 44rpx;
+  margin-right: 16rpx;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.analyzing-info {
+  flex: 1;
+}
+
+.analyzing-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #dd6b20;
+  margin-bottom: 8rpx;
+}
+
+.progress-bar {
+  height: 10rpx;
+  background: #fed7d7;
+  border-radius: 5rpx;
+  overflow: hidden;
+  margin-bottom: 6rpx;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #dd6b20;
+  border-radius: 5rpx;
+  transition: width 0.5s ease;
+}
+
+.analyzing-desc {
+  display: block;
+  font-size: 22rpx;
+  color: #a0aec0;
+}
+
+/* ========== 最近记录 ========== */
+.records {
+  padding: 0 28rpx;
+}
+
+.record-item {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  margin-bottom: 12rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.03);
+}
+
+.record-icon-wrap {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 12rpx;
+  background: #f7fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.record-icon {
+  font-size: 32rpx;
+}
+
+.record-info {
+  flex: 1;
+  margin-left: 16rpx;
+}
+
+.record-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 4rpx;
+}
+
+.record-meta {
+  display: block;
+  font-size: 24rpx;
+  color: #a0aec0;
+}
+
+.record-arrow {
+  font-size: 32rpx;
+  color: #cbd5e0;
+  flex-shrink: 0;
+}
+
+/* ========== 空记录 ========== */
+.empty-records {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 80rpx 40rpx;
+}
+
+.empty-records .empty-icon {
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+}
+
+.empty-records .empty-text {
+  font-size: 30rpx;
+  color: #718096;
+  margin-bottom: 8rpx;
+}
+
+.empty-records .empty-hint {
+  font-size: 26rpx;
+  color: #a0aec0;
+}

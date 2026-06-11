@@ -1,0 +1,24 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/add-student/add-student",
+    "pages/subject-select/subject-select",
+    "pages/subject-home/subject-home",
+    "pages/upload/upload",
+    "pages/report/report",
+    "pages/generate-verification/generate-verification",
+    "pages/default-paper/default-paper",
+    "pages/paper-preview/paper-preview"
+  ],
+  "window": {
+    "backgroundTextStyle": "dark",
+    "navigationBarBackgroundColor": "#1a365d",
+    "navigationBarTitleText": "学习诊断",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f7fafc"
+  },
+  "cloud": true,
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

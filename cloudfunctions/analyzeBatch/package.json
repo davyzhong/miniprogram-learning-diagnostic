@@ -1,0 +1,10 @@
+{
+  "name": "analyzeBatch",
+  "version": "1.1.0",
+  "description": "单批次分析（最多5张图片），调用 CloudBase AI 返回结构化JSON",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "@cloudbase/node-sdk": "^3.16.0"
+  }
+}

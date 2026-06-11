@@ -1,0 +1,216 @@
+/* pages/upload/upload.wxss */
+
+.page {
+  min-height: 100vh;
+  background: #f7fafc;
+  padding-bottom: 180rpx;
+}
+
+/* ========== 顶部说明 ========== */
+.tip-bar {
+  display: flex;
+  align-items: flex-start;
+  background: #ebf8ff;
+  border-radius: 0 0 20rpx 20rpx;
+  padding: 24rpx 28rpx;
+  margin-bottom: 20rpx;
+}
+
+.tip-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.tip-content {
+  flex: 1;
+}
+
+.tip-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #2b6cb0;
+  margin-bottom: 4rpx;
+}
+
+.tip-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+/* ========== 拍照提示 ========== */
+.photo-tips {
+  display: flex;
+  justify-content: space-around;
+  padding: 16rpx 28rpx;
+  margin-bottom: 12rpx;
+}
+
+.tip-item {
+  font-size: 22rpx;
+  color: #718096;
+}
+
+/* ========== 照片网格 ========== */
+.photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 20rpx;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.photo-slot {
+  width: calc(25% - 9rpx);
+  aspect-ratio: 1;
+  border-radius: 12rpx;
+  overflow: hidden;
+  position: relative;
+}
+
+.photo-slot.has-image {
+  border: 2rpx solid #e2e8f0;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.delete-btn {
+  position: absolute;
+  top: 4rpx;
+  right: 4rpx;
+  width: 40rpx;
+  height: 40rpx;
+  background: rgba(0, 0, 0, 0.55);
+  color: #ffffff;
+  font-size: 24rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.add-slot {
+  border: 3rpx dashed #cbd5e0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #f7fafc;
+}
+
+.add-icon {
+  font-size: 48rpx;
+  color: #a0aec0;
+  line-height: 1;
+  margin-bottom: 4rpx;
+}
+
+.add-text {
+  font-size: 20rpx;
+  color: #a0aec0;
+}
+
+.image-count {
+  text-align: center;
+  font-size: 24rpx;
+  color: #a0aec0;
+  margin-bottom: 20rpx;
+}
+
+/* ========== 上传进度 ========== */
+.upload-progress {
+  margin: 0 28rpx 20rpx;
+  background: #ffffff;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 24rpx;
+  color: #4a5568;
+  margin-bottom: 10rpx;
+}
+
+.progress-bar {
+  height: 10rpx;
+  background: #edf2f7;
+  border-radius: 5rpx;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2b6cb0, #3182ce);
+  border-radius: 5rpx;
+  transition: width 0.3s ease;
+}
+
+/* ========== 异步提示 ========== */
+.async-tip {
+  display: flex;
+  align-items: center;
+  margin: 0 28rpx 28rpx;
+  padding: 16rpx 20rpx;
+  background: #fffff0;
+  border-radius: 10rpx;
+}
+
+.async-icon {
+  font-size: 28rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.async-text {
+  font-size: 24rpx;
+  color: #975a16;
+  line-height: 1.4;
+}
+
+/* ========== 底部按钮 ========== */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20rpx 28rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  background: #ffffff;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
+  z-index: 100;
+}
+
+.bottom-bar button {
+  background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%);
+  color: #ffffff;
+  border-radius: 16rpx;
+  font-size: 32rpx;
+  font-weight: 600;
+  padding: 24rpx 0;
+  border: none;
+  width: 100%;
+  line-height: 1.4;
+}
+
+.bottom-bar button::after { border: none; }
+
+.bottom-bar button.btn-disabled {
+  background: #a0aec0;
+  color: #ffffff;
+}
+
+.bottom-bar button[disabled] {
+  background: #a0aec0 !important;
+  color: #ffffff !important;
+}
