@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序测试矩阵
 
-> 更新日期：2026-06-11
+> 更新日期：2026-06-12
 > 范围：`PRD.md`、`PROJECT_PLAN.md` 中的 MVP P0 功能
-> 自动化结果：`npm test` → 100/100 通过；`npm run check` → 40 个 JS 文件语法正确
+> 自动化结果：`npm test` → 117/117 通过；`npm run check` → 46 个 JS 文件语法正确
 
 ## 1. 自动化验证命令
 
@@ -23,7 +23,8 @@ npm run test:coverage   # node --test --experimental-test-coverage tests/*.test.
 | 同名照片软提示、OCR 摘要去重、历史照片查看 | `photo-dedup.test.js`、`cloud-functions.test.js`、`page-flows.test.js` | 已覆盖，包括全部重复时不更新卡点 |
 | 分批 AI 分析、进度任务、报告和学科档案更新 | `cloud-functions.test.js`、`analyze-batch-result.test.js` | 已覆盖，包括 5+1 分批、逐页结果完整性和失败结果拒绝 |
 | 诊断报告、错题详情、卡点统计 | `report-presenter.test.js`、`page-flows.test.js` | 已覆盖 |
-| 验证报告改善/加重/新增/持续比较 | `comparison.test.js`、`cloud-functions.test.js` | 已覆盖 |
+| 当前综合诊断三状态、最近变化和旧数据兼容 | `profile-summary.test.js`、`subject-home-presenter.test.js`、`cloud-functions.test.js` | 已覆盖 |
+| 验证报告与改善证据判定 | `comparison.test.js`、`verification-evidence.test.js`、`cloud-functions.test.js` | 已覆盖；只有全部预期题目清晰作答且全对才确认改善 |
 | 验证试卷选择、生成、PDF 下载、答题上传 | `page-flows.test.js`、`cloud-functions.test.js` | 已覆盖；真实 AI 题目质量和打印效果需人工验收 |
 | 默认诊断试卷选择、年级、缓存复用、答题上传 | `page-flows.test.js`、`cloud-functions.test.js` | 同一学生复用已覆盖；跨学生复用未实现 |
 | 报告 PDF 生成和下载 | `cloud-functions.test.js`、`page-flows.test.js` | 已覆盖；真实中文字体和 A4 排版需人工验收 |
@@ -31,7 +32,7 @@ npm run test:coverage   # node --test --experimental-test-coverage tests/*.test.
 | 页面注册、四件套文件和 WXML 事件绑定 | `project-integrity.test.js` | 已覆盖 |
 | 数据归属校验、参数白名单、无堆栈返回 | `cloud-functions.test.js`、`contracts.test.js` | 已覆盖主要云函数入口 |
 | 覆盖缺口补全（边界与回归） | `coverage-gap.test.js` | 已覆盖历史修复的回归场景 |
-| 端到端真实图片链路 | `e2e-real-image.test.js`（独立脚本） | 串通上传 → AI 分析 → 报告生成；需单独运行，不计入 `npm test` |
+| 端到端真实图片链路 | `e2e-real-image.test.js` | 本地校验真实图片文件；CloudBase AI 缺少本地凭据时自动跳过云端步骤 |
 
 ## 3. 尚未完成的设计能力
 
@@ -40,7 +41,6 @@ npm run test:coverage   # node --test --experimental-test-coverage tests/*.test.
 | 微信订阅消息 | P0，分析完成后推送 | `analyzePhotos/sendNotification` 仍为空实现 |
 | 上传与分析完全解耦 | 创建任务后立即返回，分析独立执行 | `uploadAndAnalyze` 仍同步等待 `analyzePhotos`；客户端仅在 20 秒超时后返回 |
 | 默认试卷跨学生缓存 | 不同学生可复用同一套默认试卷 PDF | 当前试卷记录按 `studentId` 查询和归属，尚未实现共享模板 |
-| 验证结论证据完整性 | 每个目标卡点都应有可核对的验证题作答证据 | 当前按"本次未识别出该卡点错误"判定改善，尚未区分答对、空白、模糊或 OCR 漏识别 |
 
 ## 4. 云端与真机验收清单
 
@@ -62,17 +62,20 @@ npm run test:coverage   # node --test --experimental-test-coverage tests/*.test.
 |---|---|---|
 | `tests/helpers/page-harness.js` | 执行真实小程序页面控制器 | — |
 | `tests/helpers/cloud-function-harness.js` | 执行真实云函数并模拟数据库、存储和函数调用 | — |
-| `tests/analyze-batch-result.test.js` | analyzeBatch 结果标准化 | 2 |
-| `tests/cloud-functions.test.js` | 云函数集成流程、权限和边界 | 16 |
+| `tests/analyze-batch-result.test.js` | analyzeBatch 结果标准化 | 3 |
+| `tests/cloud-functions.test.js` | 云函数集成流程、权限和边界 | 17 |
 | `tests/comparison.test.js` | 验证报告对比算法 | 4 |
-| `tests/contracts.test.js` | 跨模块契约和已修复缺陷回归保护 | 19 |
+| `tests/contracts.test.js` | 跨模块契约和已修复缺陷回归保护 | 20 |
 | `tests/coverage-gap.test.js` | 覆盖缺口补全 | 7 |
 | `tests/data-layer.test.js` | 统一数据访问层 | 8 |
-| `tests/e2e-real-image.test.js` | 端到端真实图片测试脚本（独立运行） | 3（手工步骤） |
+| `tests/e2e-real-image.test.js` | 端到端真实图片测试脚本 | 1（含云端条件步骤） |
 | `tests/page-flows.test.js` | 页面主流程与错误恢复 | 21 |
 | `tests/photo-dedup.test.js` | OCR 去重算法 | 3 |
 | `tests/poller.test.js` | 通用轮询器 | 4 |
 | `tests/project-integrity.test.js` | 页面文件和事件绑定完整性 | 2 |
-| `tests/report-presenter.test.js` | 报告视图预计算 | 4 |
+| `tests/report-presenter.test.js` | 报告视图预计算 | 6 |
+| `tests/profile-summary.test.js` | 当前综合诊断状态规则 | 6 |
+| `tests/subject-home-presenter.test.js` | 学科主页综合诊断视图 | 4 |
+| `tests/verification-evidence.test.js` | 验证试卷证据完整性 | 2 |
 | `tests/util.test.js` | 工具函数 | 9 |
-| **合计** | | **100 + e2e 脚本** |
+| **合计** | | **117** |

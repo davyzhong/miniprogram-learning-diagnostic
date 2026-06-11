@@ -29,3 +29,26 @@ test('rejects missing, duplicate or out-of-range image indexes', () => {
     /图片序号无效/
   )
 })
+
+test('normalizes verification evidence counts without trusting completion flags', () => {
+  const result = normalizePageResults({
+    pageResults: [{
+      imageIndex: 1,
+      bottlenecks: [],
+      errorDetails: [],
+      verificationEvidence: [{
+        lpCode: 'LP-001',
+        attemptedQuestionCount: '3',
+        incorrectQuestionCount: -1,
+        complete: true,
+        allCorrect: true
+      }]
+    }]
+  }, 1)
+
+  assert.deepEqual(result.pageResults[0].verificationEvidence, [{
+    lpCode: 'LP-001',
+    attemptedQuestionCount: 3,
+    incorrectQuestionCount: 0
+  }])
+})

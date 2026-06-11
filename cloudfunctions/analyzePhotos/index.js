@@ -3,6 +3,8 @@
 const cloud = require('wx-server-sdk');
 const { compareBottlenecks, buildComparisonSummary } = require('./comparison');
 const { markDuplicatePages } = require('./photo-dedup');
+const { buildProfileSummary } = require('./profile-summary');
+const { aggregateVerificationEvidence, buildVerificationPlan } = require('./verification-evidence');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -63,51 +65,44 @@ function mergeBatchResults(batchResults, subject) {
 }
 
 // ========== 更新 subjectProfiles ==========
-async function updateSubjectProfile(studentId, subject, mergedResult, mode) {
+async function getSubjectProfile(studentId, subject) {
   const profileRes = await db.collection('subjectProfiles')
     .where({ studentId })
     .get();
-  const profile = profileRes.data.find(item => item.subject === subject);
+  return profileRes.data.find(item => item.subject === subject) || null;
+}
 
+async function updateSubjectProfile(profile, profileSummary, reportId) {
   if (!profile) {
-    console.warn('未找到 subjectProfile：', studentId, subject);
+    console.warn('未找到 subjectProfile');
     return;
   }
 
-  const pendingByCode = new Map(
-    (profile.pendingBottlenecks || []).map(item => [item.lpCode, { ...item }])
-  );
-  const improvedByCode = new Map(
-    (profile.improvedBottlenecks || []).map(item => [item.lpCode, { ...item }])
-  );
-
-  for (const bn of mergedResult.bottlenecks || []) {
-    if (mode === 'verification' && bn.status === 'improved') {
-      improvedByCode.set(bn.lpCode, {
-        lpCode: bn.lpCode,
-        lpName: bn.lpName,
-        improvedDate: new Date(),
-      });
-      if ((Number(bn.errorCount) || 0) === 0) {
-        pendingByCode.delete(bn.lpCode);
-        continue;
-      }
-    }
-
-    if (!pendingByCode.has(bn.lpCode)) {
-      pendingByCode.set(bn.lpCode, {
-        lpCode: bn.lpCode,
-        lpName: bn.lpName,
-        severity: bn.severity,
-        sinceDate: new Date(),
-      });
-    }
-  }
+  const pendingBottlenecks = profileSummary.currentBottlenecks
+    .filter(item => item.status !== 'improved')
+    .map(item => ({
+      lpCode: item.lpCode,
+      lpName: item.lpName,
+      severity: item.severity || 'medium',
+      sinceDate: item.firstSeenAt || new Date(),
+    }));
+  const improvedBottlenecks = profileSummary.currentBottlenecks
+    .filter(item => item.status === 'improved')
+    .map(item => ({
+      lpCode: item.lpCode,
+      lpName: item.lpName,
+      improvedDate: item.lastSeenAt || new Date(),
+    }));
 
   await db.collection('subjectProfiles').doc(profile._id).update({
     data: {
-      pendingBottlenecks: Array.from(pendingByCode.values()),
-      improvedBottlenecks: Array.from(improvedByCode.values()),
+      currentSummary: profileSummary.currentSummary,
+      currentBottlenecks: profileSummary.currentBottlenecks,
+      nextAction: profileSummary.nextAction,
+      latestEffectiveReportId: reportId,
+      diagnosisUpdatedAt: new Date(),
+      pendingBottlenecks,
+      improvedBottlenecks,
       totalReports: _.inc(1),
       analysisStatus: null,
       currentAnalysisId: '',
@@ -161,7 +156,7 @@ async function getHistoricalPhotos(studentId, subject) {
   return res.data.flatMap(item => Array.isArray(item.imageFiles) ? item.imageFiles : []);
 }
 
-async function getVerificationTargets(report) {
+async function getVerificationPaper(report) {
   if (!report.paperId) {
     throw new Error('验证报告没有关联验证试卷');
   }
@@ -174,7 +169,7 @@ async function getVerificationTargets(report) {
   if (paper.type !== 'verification' || targets.length === 0) {
     throw new Error('关联验证试卷没有有效学习卡点');
   }
-  return targets;
+  return { paper, targets, plan: buildVerificationPlan(paper) };
 }
 
 // ========== 推送订阅消息（预留，暂未实现 sendSubscribeMessage 云函数） ==========
@@ -211,11 +206,22 @@ exports.main = async (event) => {
     const studentId = report.studentId;
     const mode = report.type === 'verification' ? 'verification' : 'diagnosis';
 
+    if (report.status === 'completed') {
+      if (report.isEffective && !report.profileAppliedAt) {
+        const profile = await getSubjectProfile(studentId, subject);
+        if (profile && profile.latestEffectiveReportId !== reportId) {
+          const profileSummary = buildProfileSummary(profile, report, report.completedAt || new Date());
+          await updateSubjectProfile(profile, profileSummary, reportId);
+        }
+        await db.collection('reports').doc(reportId).update({
+          data: { profileAppliedAt: new Date() },
+        });
+      }
+      return { success: true, reportId, message: '报告已经分析完成' };
+    }
+    const verificationPaper = mode === 'verification' ? await getVerificationPaper(report) : null;
     if (fileIDs.length === 0) {
       return { success: false, error: '报告中没有待分析图片' };
-    }
-    if (report.status === 'completed') {
-      return { success: true, reportId, message: '报告已经分析完成' };
     }
 
     const existingTasksRes = await db.collection('analysisTasks')
@@ -277,6 +283,7 @@ exports.main = async (event) => {
             subject,
             batchIndex: i,
             reportId,
+            verificationPlan: verificationPaper ? verificationPaper.plan : [],
           },
         });
         batchResults.push(res.result);
@@ -322,6 +329,7 @@ exports.main = async (event) => {
       };
     });
     let previousReport = null;
+    let verificationTargets = [];
     let comparisonSummary = '';
 
     if (uniquePages.length === 0) {
@@ -329,16 +337,30 @@ exports.main = async (event) => {
       comparisonSummary = '本次照片均疑似重复，未更新学习卡点。';
     } else if (mode === 'verification') {
       previousReport = await getPreviousReport(studentId, subject);
-      const verificationTargets = await getVerificationTargets(report);
+      verificationTargets = verificationPaper.targets;
+      const verificationEvidence = aggregateVerificationEvidence(verificationPaper.plan, uniquePages);
+      const passedCodes = verificationEvidence.filter(item => item.complete && item.allCorrect).map(item => item.lpCode);
       merged.bottlenecks = compareBottlenecks(
         previousReport ? previousReport.bottlenecks : [],
         merged.bottlenecks,
-        verificationTargets
+        passedCodes
       );
       comparisonSummary = buildComparisonSummary(merged.bottlenecks);
+      merged.verificationEvidence = verificationEvidence;
     } else {
       merged.bottlenecks = merged.bottlenecks.map(item => ({ ...item, status: 'found' }));
     }
+
+    const profile = await getSubjectProfile(studentId, subject);
+    const profileSummary = buildProfileSummary(profile || {}, {
+      _id: reportId,
+      type: mode,
+      totalErrors: merged.totalErrors,
+      bottlenecks: merged.bottlenecks,
+      verificationTargets,
+      verificationEvidence: merged.verificationEvidence || [],
+      allPhotosDuplicate: uniquePages.length === 0,
+    }, new Date());
 
     // 5. 更新 reports 集合
     await db.collection('reports').doc(reportId).update({
@@ -351,13 +373,20 @@ exports.main = async (event) => {
         imageFiles,
         previousReportId: previousReport ? previousReport._id : '',
         comparisonSummary,
+        verificationTargets,
+        verificationEvidence: merged.verificationEvidence || [],
+        isEffective: profileSummary.isEffective,
+        changeSummary: profileSummary.changeSummary,
         completedAt: merged.completedAt,
       },
     });
 
     // 6. 更新 subjectProfiles
-    if (uniquePages.length > 0) {
-      await updateSubjectProfile(studentId, subject, merged, mode);
+    if (profileSummary.isEffective) {
+      await updateSubjectProfile(profile, profileSummary, reportId);
+      await db.collection('reports').doc(reportId).update({
+        data: { profileAppliedAt: new Date() },
+      });
     } else {
       await clearSubjectProfileAnalysis(studentId, subject);
     }

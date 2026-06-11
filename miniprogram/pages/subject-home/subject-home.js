@@ -2,6 +2,7 @@
 const cloud = require('../../utils/cloud')
 const { formatRelativeTime } = require('../../utils/util')
 const { createPoller } = require('../../utils/poller')
+const { buildSubjectHomeView } = require('./subject-home-presenter')
 
 Page({
   data: {
@@ -12,8 +13,15 @@ Page({
     grade: '',
 
     totalReports: 0,
+    persistingCount: 0,
     pendingCount: 0,
     improvedCount: 0,
+    currentSummary: '',
+    nextAction: '',
+    currentBottlenecks: [],
+    recentChanges: [],
+    hasDiagnosis: false,
+    isFirstUse: true,
 
     analysisStatus: '',   // '' | 'analyzing'
     analysisStatusText: '',
@@ -66,16 +74,12 @@ Page({
     try {
       const p = await cloud.getSubjectProfile(studentId, subject)
       if (p) {
-        const pendingCount = (p.pendingBottlenecks || []).length
-        const improvedCount = (p.improvedBottlenecks || []).length
-
+        this._profile = p
         this.setData({
-          totalReports: p.totalReports || 0,
-          pendingCount,
-          improvedCount,
           analysisStatus: p.analysisStatus || '',
           currentAnalysisId: p.currentAnalysisId || '',
         })
+        this.applyDashboardView()
       }
     } catch (err) {
       console.error('加载学科档案失败', err)
@@ -87,18 +91,16 @@ Page({
     const { studentId, subject } = this.data
     try {
       const reports = await cloud.getReports(studentId, subject, 20)
-      const records = reports.map(r => ({
-        _id: r._id,
-        type: r.type || 'diagnosis',
-        bottleneckCount: (r.bottlenecks || []).length,
-        status: r.status || 'completed',
-        dateText: formatRelativeTime(r.createdAt)
-      }))
-
-      this.setData({ records })
+      this._reports = reports
+      this.applyDashboardView()
     } catch (err) {
       console.error('加载记录失败', err)
     }
+  },
+
+  applyDashboardView() {
+    const view = buildSubjectHomeView(this._profile || {}, this._reports || [], formatRelativeTime)
+    this.setData({ ...view, records: view.recentChanges })
   },
 
   // ========== 检查分析状态（启动轮询） ==========
@@ -199,6 +201,11 @@ Page({
     wx.navigateTo({
       url: `/pages/report/report?id=${id}`
     })
+  },
+
+  onPrimaryAction() {
+    if (this.data.isFirstUse) this.onDiagnosisTap()
+    else this.onVerificationTap()
   },
 
   onAnalysisCardTap() {

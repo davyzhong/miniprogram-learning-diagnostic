@@ -242,7 +242,12 @@ test('analyzePhotos splits batches, excludes duplicate pages and updates the pro
   assert.equal(report.imageFiles[0].isDuplicate, true)
   assert.equal(report.totalErrors, 5)
   assert.equal(report.bottlenecks[0].errorCount, 5)
+  assert.equal(report.isEffective, true)
+  assert.match(report.changeSummary, /计算/)
+  assert.ok(report.profileAppliedAt)
   assert.equal(profile.totalReports, 2)
+  assert.equal(profile.currentBottlenecks[0].status, 'needs_verification')
+  assert.match(profile.currentSummary, /计算/)
   assert.equal(profile.analysisStatus, null)
   assert.equal(db.dump('analysisTasks')[0].status, 'completed')
 })
@@ -319,6 +324,92 @@ test('analyzePhotos completes an all-duplicate upload without changing learning 
   assert.deepEqual(profile.pendingBottlenecks, [{ lpCode: 'LP-001', lpName: '计算' }])
   assert.equal(profile.analysisStatus, null)
   assert.equal(profile.currentAnalysisId, '')
+})
+
+test('analyzePhotos only marks a verification target improved from complete correct evidence', async () => {
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-old',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      createdAt: '2026-06-10T10:00:00Z',
+      bottlenecks: [{ lpCode: 'LP-001', lpName: '计算', errorCount: 2 }]
+    }, {
+      _id: 'report-verify',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'verification',
+      status: 'analyzing',
+      createdAt: '2026-06-11T10:00:00Z',
+      imageFileIds: ['cloud://answer-1'],
+      imageFiles: [{ fileID: 'cloud://answer-1' }],
+      paperId: 'paper-1'
+    }],
+    papers: [{
+      _id: 'paper-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      type: 'verification',
+      bottleneckTargets: ['LP-001'],
+      questions: [{ lpCode: 'LP-001' }, { lpCode: 'LP-001' }, { lpCode: 'LP-001' }]
+    }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      totalReports: 1,
+      currentBottlenecks: [{
+        lpCode: 'LP-001',
+        lpName: '计算',
+        status: 'needs_verification'
+      }]
+    }],
+    analysisTasks: []
+  })
+  const cloud = createCloudMock({
+    db,
+    callFunction: async payload => ({
+      result: {
+        success: true,
+        data: {
+          pageResults: [{
+            fileID: payload.data.fileIDs[0],
+            imageIndex: 1,
+            ocrSummary: '三道计算验证题均已作答',
+            totalErrors: 0,
+            bottlenecks: [],
+            errorDetails: [],
+            verificationEvidence: [{
+              lpCode: 'LP-001',
+              attemptedQuestionCount: 3,
+              incorrectQuestionCount: 0
+            }]
+          }]
+        }
+      }
+    })
+  })
+  const handler = loadModule('cloudfunctions/analyzePhotos/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({ reportId: 'report-verify' })
+  const report = db.dump('reports').find(item => item._id === 'report-verify')
+  const profile = db.dump('subjectProfiles')[0]
+  const analyzeBatchCall = cloud.calls.find(call => call.name === 'callFunction')
+
+  assert.equal(result.success, true)
+  assert.deepEqual(analyzeBatchCall.payload.data.verificationPlan, [{
+    lpCode: 'LP-001',
+    expectedQuestionCount: 3
+  }])
+  assert.equal(report.verificationEvidence[0].allCorrect, true)
+  assert.equal(report.bottlenecks[0].status, 'improved')
+  assert.equal(profile.currentBottlenecks[0].status, 'improved')
 })
 
 test('analyzePhotos fails a verification report that has no valid verification targets', async () => {

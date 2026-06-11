@@ -60,3 +60,23 @@ test('bar width falls back to a non-NaN value when errorCount is missing', () =>
   assert.ok(view.bottleneckList.every(item => Number.isFinite(item.barWidth)))
   assert.deepEqual(view.bottleneckList.map(item => item.barWidth), [0, 0])
 })
+
+test('builds a directly readable report headline and source summary', () => {
+  const view = buildReportView({
+    type: 'diagnosis',
+    changeSummary: '发现分数运算卡点',
+    summary: '旧摘要',
+    imageFiles: [{ fileID: 'one' }, { fileID: 'two' }],
+    bottlenecks: [{ lpCode: 'LP-001', lpName: '分数运算', status: 'found', errorCount: 2 }]
+  })
+
+  assert.equal(view.headline, '发现分数运算卡点')
+  assert.equal(view.sourceImageCount, 2)
+  assert.equal(view.bottleneckList[0].statusText, '需要验证')
+  assert.equal(view.bottleneckList[0].statusClass, 'pending')
+})
+
+test('report headline falls back to comparison summary then summary', () => {
+  assert.equal(buildReportView({ comparisonSummary: '单位换算已有改善' }).headline, '单位换算已有改善')
+  assert.equal(buildReportView({ summary: '本次诊断摘要' }).headline, '本次诊断摘要')
+})

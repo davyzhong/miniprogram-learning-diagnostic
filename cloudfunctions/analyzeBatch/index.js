@@ -14,7 +14,7 @@ const app = tcb.init({
 });
 
 // ========== 构建 Prompt ==========
-function buildPrompt(subject) {
+function buildPrompt(subject, verificationPlan = []) {
   const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
 
   const bugTaxonomy = {
@@ -46,10 +46,15 @@ function buildPrompt(subject) {
 
   const taxonomy = bugTaxonomy[subject] || bugTaxonomy.math;
 
+  const verificationInstruction = verificationPlan.length > 0
+    ? `\n## 验证试卷判定\n这是验证试卷。请按卡点统计清晰可见且已经作答的题目数量和其中的错题数量：\n${verificationPlan.map(item => `- ${item.lpCode}：整份试卷预期 ${item.expectedQuestionCount} 道`).join('\n')}\n未作答、被遮挡或无法确认的题目不得计入 attemptedQuestionCount。`
+    : '';
+
   return `你是一位资深${subjectName}教师，专门分析小学生的错题根因。
 
 ## 任务
 分析上传的${subjectName}试卷/作业照片，识别所有错题，对每个错题给出根因分析。
+${verificationInstruction}
 
 ## 颜色规则（非常重要）
 - 黑色字迹：学生原始作答
@@ -79,6 +84,11 @@ function buildPrompt(subject) {
         "lpCode": "LP-001",
         "rootCause": "具体根因（一句话）",
         "suggestion": "改进建议（一句话）"
+      }],
+      "verificationEvidence": [{
+        "lpCode": "LP-001",
+        "attemptedQuestionCount": 3,
+        "incorrectQuestionCount": 0
       }]
     }
   ]
@@ -93,12 +103,13 @@ ${taxonomy.map(t => `- ${t.code}：${t.name}——${t.desc}`).join('\n')}
 3. 只分析清晰可见的错题，模糊不清的题目跳过
 4. 每一张图片都必须返回一个 pageResults 项，即使本页没有错题
 5. ocrSummary 应包含足够区分本页内容的信息，但不要逐字抄录整页
-6. 返回纯JSON，不要有任何其他文字`;
+6. 非验证试卷的 verificationEvidence 返回空数组
+7. 返回纯JSON，不要有任何其他文字`;
 }
 
 // ========== 调用 CloudBase AI（多模态） ==========
-async function callAI(imageUrls, subject) {
-  const prompt = buildPrompt(subject);
+async function callAI(imageUrls, subject, verificationPlan) {
+  const prompt = buildPrompt(subject, verificationPlan);
 
   // 构造 messages（CloudBase AI 多模态格式）
   const content = [
@@ -135,7 +146,7 @@ function parseResult(aiText, expectedPageCount) {
 
 // ========== 主函数 ==========
 exports.main = async (event) => {
-  const { fileIDs, subject = 'math', batchIndex = 0, reportId = '' } = event;
+  const { fileIDs, subject = 'math', batchIndex = 0, reportId = '', verificationPlan = [] } = event;
 
   if (!fileIDs || !Array.isArray(fileIDs) || fileIDs.length === 0) {
     return { success: false, error: 'fileIDs 不能为空' };
@@ -149,6 +160,17 @@ exports.main = async (event) => {
   }
   if (!SUBJECTS.has(subject)) {
     return { success: false, error: '学科参数无效' };
+  }
+  if (!Array.isArray(verificationPlan)
+    || verificationPlan.length > 5
+    || verificationPlan.some(item =>
+      !item
+      || !/^LP-[A-Z0-9-]{1,24}$/.test(item.lpCode)
+      || !Number.isInteger(item.expectedQuestionCount)
+      || item.expectedQuestionCount < 1
+      || item.expectedQuestionCount > 20
+    )) {
+    return { success: false, error: '验证计划参数无效' };
   }
 
   try {
@@ -170,7 +192,7 @@ exports.main = async (event) => {
 
     // 2. 调用 CloudBase AI
     console.log('调用 CloudBase AI 分析...');
-    const aiText = await callAI(imageUrls, subject);
+    const aiText = await callAI(imageUrls, subject, verificationPlan);
 
     // 3. 解析结果
     const result = parseResult(aiText, availableFileIDs.length);

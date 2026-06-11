@@ -30,7 +30,7 @@
 |------|------|------|
 | `npm test` | 运行所有 `tests/*.test.js` | 等价于 `node --test tests/*.test.js` |
 | `npm run test:coverage` | 运行测试并收集覆盖率 | 使用 V8 原生覆盖，输出到 stdout |
-| `npm run check` | 静态语法检查 | 执行 `scripts/check-js.js`，扫描 40 个 JS 文件 |
+| `npm run check` | 静态语法检查 | 执行 `scripts/check-js.js`，扫描当前全部 JS 文件 |
 | `npm run verify` | 完整本地验证 | `npm test && npm run check`，提交前必跑 |
 
 常用场景：
@@ -49,7 +49,7 @@ node --inspect-brk --test tests/page-flows.test.js
 npm run test:coverage
 ```
 
-注意：`tests/e2e-real-image.test.js` 是独立脚本，需要真实云开发环境和图片资源，**不计入 `npm test`**。详见该文件头部注释。
+注意：`tests/e2e-real-image.test.js` 会进入 `npm test`；本地没有 CloudBase 凭据时，仅验证真实图片文件并跳过云端 AI 步骤。
 
 ## 3. 测试文件说明
 
@@ -58,15 +58,15 @@ npm run test:coverage
 | `analyze-batch-result.test.js` | `analyzeBatch/result-normalizer.js` 字段截断、严重度归一 | 2 |
 | `cloud-functions.test.js` | 6 个云函数的集成流程、权限校验、边界条件 | 16 |
 | `comparison.test.js` | 验证报告对比算法（improved/worsened/new/persisting） | 4 |
-| `contracts.test.js` | 跨模块契约、命名一致性、已修复缺陷回归保护 | 19 |
+| `contracts.test.js` | 跨模块契约、命名一致性、已修复缺陷回归保护 | 20 |
 | `coverage-gap.test.js` | 历史修复的回归场景、轮询器/数据层边界分支 | 7 |
 | `data-layer.test.js` | `miniprogram/utils/cloud.js` 统一数据访问层 | 8 |
-| `e2e-real-image.test.js` | 端到端真实图片链路脚本（独立运行） | 3（手工步骤） |
+| `e2e-real-image.test.js` | 端到端真实图片链路脚本 | 1（含云端条件步骤） |
 | `page-flows.test.js` | 10 个页面的主流程、错误恢复、导航跳转 | 21 |
 | `photo-dedup.test.js` | OCR 摘要去重算法（含完全重复分支） | 3 |
 | `poller.test.js` | 通用轮询器 `utils/poller.js` | 4 |
 | `project-integrity.test.js` | 页面四件套完整性、WXML 事件绑定匹配 | 2 |
-| `report-presenter.test.js` | 报告视图预计算与展示文本 | 4 |
+| `report-presenter.test.js` | 报告视图预计算与展示文本 | 6 |
 | `util.test.js` | 时间格式化等纯工具函数 | 9 |
 | **合计** | | **99 + e2e 脚本** |
 
