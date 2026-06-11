@@ -35,9 +35,11 @@ Page({
 
   onShow() {
     if (this.data.studentId) {
-      this.loadProfile()
+      // loadProfile 完成后再检查是否需要启动轮询
+      this.loadProfile().then(() => {
+        this.checkAnalysisStatus()
+      })
       this.loadRecords()
-      this.checkAnalysisStatus()
     }
   },
 
@@ -111,7 +113,9 @@ Page({
 
   // ========== 检查分析状态（启动轮询） ==========
   checkAnalysisStatus() {
-    // 如果 analysisStatus 是 'analyzing'，启动轮询（每 10 秒查一次 reports 状态）
+    // 如果已经在轮询中，不要重复启动
+    if (this._pollTimer) return
+
     const { analysisStatus } = this.data
     if (analysisStatus === 'analyzing') {
       this._pollCount = 0

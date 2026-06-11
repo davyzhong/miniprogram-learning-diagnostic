@@ -126,7 +126,7 @@ Page({
 
       wx.hideLoading()
 
-      // 2. 调用云函数（设置 15 秒超时，不等待分析结果）
+      // 2. 调用云函数（前端设置 15s 超时，但云函数会在服务端继续运行直到分析完成）
       console.log('[upload] 提交云函数，studentId：', studentId, '，fileIDs：', fileIds)
       wx.cloud.callFunction({
         name: 'uploadAndAnalyze',
@@ -137,13 +137,12 @@ Page({
           mode,
           paperId: paperId || '',
         },
-        timeout: 15000,  // 15 秒超时
+        timeout: 15000,  // 前端 15 秒超时，超时后云函数仍在服务端继续运行
         success: (res) => {
           console.log('[upload] 云函数返回：', JSON.stringify(res.result))
           if (res.result && res.result.success) {
-            wx.showToast({ title: '已提交分析，请返回查看进度', icon: 'none', duration: 2500 })
+            wx.showToast({ title: '诊断完成', icon: 'success', duration: 2000 })
           } else {
-            // 平台级错误可能用 errMsg/errCode，我们自己的错误用 error
             let errMsg = '未知错误'
             if (res.result) {
               if (res.result.error) errMsg = res.result.error
@@ -156,11 +155,11 @@ Page({
         },
         fail: (err) => {
           console.error('[upload] 云函数调用失败：', err)
-          // 超时或失败都提示用户去学科主页查看进度
-          wx.showToast({ title: '网络超时，请返回查看', icon: 'none', duration: 2500 })
+          // 超时是正常的——云函数在服务端继续运行，返回学科主页后可查看进度
+          wx.showToast({ title: '已提交，AI分析中，请返回查看', icon: 'none', duration: 3000 })
         },
         complete: () => {
-          // 3. 返回学科主页
+          // 返回学科主页（轮询会自动检查状态）
           setTimeout(() => {
             wx.navigateBack()
           }, 2000)

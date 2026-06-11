@@ -1,10 +1,10 @@
 // analyzePhotos/index.js
 // 主控函数：拆分批次、串行调用 analyzeBatch、合并结果、更新数据库、推送通知
 const cloud = require('wx-server-sdk');
-const db = cloud.database();
-const _ = db.command;
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
+const db = cloud.database();
+const _ = db.command;
 
 // ========== 合并多批次结果 ==========
 function mergeBatchResults(batchResults, subject) {

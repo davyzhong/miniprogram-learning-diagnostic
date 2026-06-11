@@ -81,20 +81,23 @@ exports.main = async (event, context) => {
       // 不中断流程
     }
 
-    // 4. 异步触发 analyzePhotos（直接调用，不 await，不阻塞返回）
-    // ⚠️ 微信云函数中不能用 setImmediate，主函数返回后异步代码不会执行！
-    // 必须直接发起调用，Promise 创建时就会发出 HTTP 请求
-    console.log('[uploadAndAnalyze] 开始触发 analyzePhotos...');
-    cloud.callFunction({
-      name: 'analyzePhotos',
-      data: { reportId, fileIDs, subject, studentId, mode },
-    }).then(res => {
-      console.log('[uploadAndAnalyze] analyzePhotos 调用成功：', JSON.stringify(res.result));
-    }).catch(err => {
+    // 4. 调用 analyzePhotos 并等待完成
+    // ⚠️ 微信云函数中，主函数 return 后进程终止，fire-and-forget 调用不会执行！
+    // 必须用 await 确保请求真正发出并完成
+    // 前端 timeout 15s 会超时，但云函数在服务端会继续运行直到完成
+    console.log('[uploadAndAnalyze] 开始调用 analyzePhotos...');
+    try {
+      const analyzeRes = await cloud.callFunction({
+        name: 'analyzePhotos',
+        data: { reportId, fileIDs, subject, studentId, mode },
+      });
+      console.log('[uploadAndAnalyze] analyzePhotos 完成：', JSON.stringify(analyzeRes.result));
+    } catch (err) {
       console.error('[uploadAndAnalyze] analyzePhotos 调用失败：', err.message);
-    });
+      // 分析失败不阻塞返回，reportId 仍返回给前端
+    }
 
-    // 5. 立即返回 reportId
+    // 5. 返回 reportId
     console.log('[uploadAndAnalyze] 返回成功，reportId：', reportId);
     return {
       success: true,
