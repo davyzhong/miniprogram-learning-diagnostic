@@ -97,9 +97,10 @@ async function generateQuestionsWithAI(student, subject, type, targets, paperKey
   if (type === 'verification' && targets && targets.length > 0) {
     // 从数据库查询卡点名称
     const profileRes = await db.collection('subjectProfiles')
-      .where({ studentId: student._id, subject })
+      .where({ studentId: student._id })
       .get();
-    const pending = profileRes.data[0]?.pendingBottlenecks || [];
+    const profile = profileRes.data.find(item => item.subject === subject);
+    const pending = profile?.pendingBottlenecks || [];
     const targetMap = {};
     for (const p of pending) {
       targetMap[p.lpCode] = cleanPromptText(p.lpName, 80);

@@ -74,11 +74,12 @@ exports.main = async (event, context) => {
     // 3. 更新 subjectProfiles 的 analysisStatus
     try {
       const profileRes = await db.collection('subjectProfiles')
-        .where({ studentId, subject })
+        .where({ studentId })
         .get();
+      const profile = profileRes.data.find(item => item.subject === subject);
 
-      if (profileRes.data.length > 0) {
-        await db.collection('subjectProfiles').doc(profileRes.data[0]._id).update({
+      if (profile) {
+        await db.collection('subjectProfiles').doc(profile._id).update({
           data: { analysisStatus: 'analyzing', currentAnalysisId: reportId, updatedAt: new Date() },
         });
         console.log('[uploadAndAnalyze] 已更新学科档案状态为 analyzing');
@@ -90,12 +91,22 @@ exports.main = async (event, context) => {
       // 不中断流程
     }
 
-    // 4. 立即返回 reportId，由前端启动独立的 analyzePhotos 云函数调用。
-    console.log('[uploadAndAnalyze] 返回成功，reportId：', reportId);
+    // 4. 在服务端可靠启动分析。客户端超时或页面卸载不会中断服务端调用链。
+    console.log('[uploadAndAnalyze] 服务端启动 analyzePhotos，reportId：', reportId);
+    const analyzeRes = await cloud.callFunction({
+      name: 'analyzePhotos',
+      data: { reportId },
+    });
+    if (!analyzeRes.result || analyzeRes.result.success === false) {
+      throw new Error(analyzeRes.result && analyzeRes.result.error
+        ? analyzeRes.result.error
+        : '图片分析启动失败');
+    }
+
     return {
       success: true,
       reportId,
-      message: '分析任务已创建，请在学科主页查看进度',
+      message: '分析完成',
     };
   } catch (err) {
     console.error('[uploadAndAnalyze] 失败：', err.message, err.stack);

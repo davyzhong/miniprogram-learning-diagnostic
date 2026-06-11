@@ -9,10 +9,16 @@
     <!-- 分析进行中 -->
     <view class="analyzing-hint" wx:if="{{report.status === 'analyzing'}}">
       <text>{{analysisStatusText || 'AI 分析中...'}}</text>
-      <view class="progress-bar">
+      <view class="progress-bar" wx:if="{{hasAnalysisProgress}}">
         <view class="progress-fill" style="width: {{analysisProgress || 0}}%;"></view>
       </view>
-      <text class="analyzing-tip">完成后将自动刷新</text>
+      <text class="analyzing-tip" wx:if="{{!analysisTaskMissing}}">完成后将自动刷新</text>
+      <button
+        class="retry-analysis-btn"
+        wx:if="{{analysisTaskMissing}}"
+        bindtap="onRetryAnalysis"
+        disabled="{{retryingAnalysis}}"
+      >{{retryingAnalysis ? '正在重新启动...' : '重新分析'}}</button>
     </view>
   </view>
 

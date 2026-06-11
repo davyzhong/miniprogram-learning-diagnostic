@@ -1,5 +1,5 @@
 {
-  "name": "wx-server-sdk",
+  "name": "getAnalysisProgress",
   "version": "1.0.0",
   "description": "getAnalysisProgress cloud function",
   "main": "index.js",

@@ -71,15 +71,13 @@
   </view>
 
   <!-- 分析中状态卡片 -->
-  <view class="analyzing-card" wx:if="{{analysisStatus}}">
+  <view class="analyzing-card" wx:if="{{analysisStatus}}" bindtap="onAnalysisCardTap">
     <view class="analyzing-icon">⏳</view>
     <view class="analyzing-info">
       <text class="analyzing-title">诊断分析中</text>
-      <view class="progress-bar">
-        <view class="progress-fill" style="width:{{analysisProgress}}%;"></view>
-      </view>
-      <text class="analyzing-desc">{{analysisProgress}}% · {{analysisStatusText}}</text>
+      <text class="analyzing-desc">{{analysisStatusText || 'AI 后台分析中，点击查看详情'}}</text>
     </view>
+    <text class="entry-arrow">›</text>
   </view>
 
   <!-- 最近记录 -->

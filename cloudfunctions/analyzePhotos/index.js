@@ -7,6 +7,7 @@ cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
+const STALE_TASK_MS = 10 * 60 * 1000;
 
 // ========== 合并多批次结果 ==========
 function mergeBatchResults(batchResults, subject) {
@@ -63,15 +64,15 @@ function mergeBatchResults(batchResults, subject) {
 // ========== 更新 subjectProfiles ==========
 async function updateSubjectProfile(studentId, subject, mergedResult, mode) {
   const profileRes = await db.collection('subjectProfiles')
-    .where({ studentId, subject })
+    .where({ studentId })
     .get();
+  const profile = profileRes.data.find(item => item.subject === subject);
 
-  if (profileRes.data.length === 0) {
+  if (!profile) {
     console.warn('未找到 subjectProfile：', studentId, subject);
     return;
   }
 
-  const profile = profileRes.data[0];
   const pendingByCode = new Map(
     (profile.pendingBottlenecks || []).map(item => [item.lpCode, { ...item }])
   );
@@ -114,6 +115,23 @@ async function updateSubjectProfile(studentId, subject, mergedResult, mode) {
   });
 }
 
+async function clearSubjectProfileAnalysis(studentId, subject) {
+  if (!studentId || !subject) return;
+  const profileRes = await db.collection('subjectProfiles')
+    .where({ studentId })
+    .get();
+  const profile = profileRes.data.find(item => item.subject === subject);
+  if (!profile) return;
+
+  await db.collection('subjectProfiles').doc(profile._id).update({
+    data: {
+      analysisStatus: null,
+      currentAnalysisId: '',
+      updatedAt: new Date(),
+    },
+  });
+}
+
 async function getPreviousReport(studentId, subject) {
   const res = await db.collection('reports')
     .where({
@@ -149,6 +167,7 @@ async function sendNotification(studentId, reportId, subject) {
 exports.main = async (event) => {
   const { reportId } = event;
   let taskId = '';
+  let report = null;
 
   if (!reportId) {
     return { success: false, error: '缺少 reportId' };
@@ -156,7 +175,7 @@ exports.main = async (event) => {
 
   try {
     const reportRes = await db.collection('reports').doc(reportId).get();
-    const report = reportRes.data;
+    report = reportRes.data;
     const currentOpenId = cloud.getWXContext().OPENID;
 
     if (!report) {
@@ -178,12 +197,24 @@ exports.main = async (event) => {
       return { success: true, reportId, message: '报告已经分析完成' };
     }
 
-    const existingTask = await db.collection('analysisTasks')
+    const existingTasksRes = await db.collection('analysisTasks')
       .where({ reportId })
-      .limit(1)
       .get();
-    if (existingTask.data.length > 0 && ['processing', 'completed'].includes(existingTask.data[0].status)) {
-      return { success: true, reportId, message: '分析任务已经启动' };
+    const existingTasks = existingTasksRes.data
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const processingTask = existingTasks.find(task => task.status === 'processing');
+    if (processingTask) {
+      const age = Date.now() - new Date(processingTask.createdAt).getTime();
+      if (age < STALE_TASK_MS) {
+        return { success: true, reportId, message: '分析任务已经启动' };
+      }
+      await db.collection('analysisTasks').doc(processingTask._id).update({
+        data: {
+          status: 'failed',
+          error: '分析任务超时，允许重新启动',
+          completedAt: new Date(),
+        },
+      });
     }
 
     // 1. 拆分批次（每批最多 5 张）
@@ -305,6 +336,9 @@ exports.main = async (event) => {
       await db.collection('analysisTasks').doc(taskId).update({
         data: { status: 'failed', error: '图片分析失败，请稍后重试', completedAt: new Date() },
       }).catch(() => {});
+    }
+    if (report) {
+      await clearSubjectProfileAnalysis(report.studentId, report.subject).catch(() => {});
     }
 
     return { success: false, error: '图片分析失败，请稍后重试', reportId };
