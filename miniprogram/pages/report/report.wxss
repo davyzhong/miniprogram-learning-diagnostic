@@ -1,0 +1,316 @@
+/* pages/report/report.wxss */
+
+.page {
+  min-height: 100vh;
+  background: #f7fafc;
+  padding-bottom: 40rpx;
+}
+
+/* ========== 顶部标题 ========== */
+.report-header {
+  padding: 48rpx 32rpx 40rpx;
+  color: #ffffff;
+}
+
+.header-diagnosis {
+  background: linear-gradient(135deg, #1a365d 0%, #2b6cb0 100%);
+}
+
+.header-verify {
+  background: linear-gradient(135deg, #1c4532 0%, #276749 100%);
+}
+
+.report-type {
+  display: block;
+  font-size: 26rpx;
+  opacity: 0.8;
+  margin-bottom: 8rpx;
+}
+
+.report-date {
+  display: block;
+  font-size: 24rpx;
+  opacity: 0.7;
+  margin-bottom: 16rpx;
+}
+
+.report-summary {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* ========== 统计卡片 ========== */
+.stats-card {
+  margin: -20rpx 28rpx 20rpx;
+  position: relative;
+  z-index: 10;
+}
+
+.stats-grid {
+  display: flex;
+  justify-content: space-around;
+  padding: 8rpx 0;
+}
+
+.stat-cell {
+  text-align: center;
+  flex: 1;
+}
+
+.stat-cell .stat-num {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1a202c;
+  line-height: 1.2;
+}
+
+.stat-cell .stat-label {
+  display: block;
+  font-size: 22rpx;
+  color: #a0aec0;
+  margin-top: 4rpx;
+}
+
+.improved-color { color: #38a169; }
+.worsened-color { color: #e53e3e; }
+
+/* ========== 卡点分布 ========== */
+.bottleneck-item {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #edf2f7;
+}
+
+.bottleneck-item:last-child { border-bottom: none; }
+
+.bottleneck-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+
+.lp-code {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #2b6cb0;
+  background: #ebf8ff;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.lp-name {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.severity-badge {
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 6rpx;
+  font-weight: 600;
+  margin-right: 12rpx;
+  flex-shrink: 0;
+}
+
+.severity-high   { background: #fed7d7; color: #9b2c2c; }
+.severity-medium { background: #fefcbf; color: #975a16; }
+.severity-low    { background: #c6f6d5; color: #276749; }
+
+.bottleneck-count {
+  font-size: 24rpx;
+  color: #718096;
+  flex-shrink: 0;
+}
+
+/* 状态标签 - 用 class 区分不同状态颜色 */
+.status-tag { display: inline-block; font-size: 22rpx; font-weight: 600; padding: 2rpx 12rpx; border-radius: 6rpx; margin-bottom: 10rpx; }
+.status-improved { background: #c6f6d5; color: #276749; }
+.status-worsened { background: #fed7d7; color: #9b2c2c; }
+.status-new      { background: #e9d8fd; color: #553c9a; }
+.status-ongoing  { background: #e2e8f0; color: #4a5568; }
+
+/* 进度条 */
+.bottleneck-bar {
+  height: 10rpx;
+  background: #edf2f7;
+  border-radius: 5rpx;
+  overflow: hidden;
+  margin-bottom: 8rpx;
+}
+
+.bottleneck-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2b6cb0, #3182ce);
+  border-radius: 5rpx;
+  transition: width 0.4s ease;
+}
+
+/* 修复建议 */
+.bottleneck-suggestion {
+  font-size: 24rpx;
+  color: #dd6b20;
+  line-height: 1.4;
+  margin-top: 4rpx;
+}
+
+/* ========== 错题详情 ========== */
+.error-item {
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #edf2f7;
+}
+
+.error-item:last-child { border-bottom: none; }
+
+.error-question {
+  display: flex;
+  font-size: 28rpx;
+  color: #1a202c;
+  line-height: 1.5;
+}
+
+.error-index {
+  margin-right: 8rpx;
+  color: #718096;
+  flex-shrink: 0;
+}
+
+.error-content {
+  flex: 1;
+}
+
+.error-expand {
+  margin-top: 12rpx;
+  padding: 16rpx;
+  background: #f7fafc;
+  border-radius: 10rpx;
+}
+
+.error-row {
+  display: flex;
+  margin-bottom: 8rpx;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+
+.error-label {
+  color: #718096;
+  flex-shrink: 0;
+  margin-right: 8rpx;
+}
+
+.error-value.wrong   { color: #e53e3e; }
+.error-value.correct { color: #38a169; }
+
+.expand-hint {
+  display: block;
+  text-align: center;
+  font-size: 24rpx;
+  color: #4299e1;
+  margin-top: 8rpx;
+}
+
+/* ========== 下一步卡片 ========== */
+.next-step-card {
+  border-left: 6rpx solid #38a169;
+}
+
+.next-step-content {
+  display: flex;
+  align-items: center;
+}
+
+.next-step-icon {
+  font-size: 44rpx;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.next-step-info {
+  flex: 1;
+}
+
+.next-step-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #276749;
+  margin-bottom: 4rpx;
+}
+
+.next-step-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #718096;
+}
+
+.next-step-btn {
+  margin-top: 20rpx;
+  background: #38a169 !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+/* ========== 对比总结 ========== */
+.comparison-summary {
+  font-size: 28rpx;
+  color: #4a5568;
+  line-height: 1.6;
+  padding: 8rpx 0;
+}
+
+/* ========== 底部操作 ========== */
+.bottom-actions {
+  display: flex;
+  gap: 20rpx;
+  padding: 20rpx 28rpx;
+}
+
+.action-btn {
+  flex: 1;
+  font-size: 28rpx !important;
+  padding: 18rpx 0 !important;
+}
+
+/* ========== 分析进度 ========== */
+.analyzing-hint {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  background: #fefce8;
+  border-radius: 12rpx;
+  text-align: center;
+}
+
+.ananlyzing-hint text:first-child {
+  display: block;
+  font-size: 26rpx;
+  color: #92400e;
+  margin-bottom: 12rpx;
+}
+
+.progress-bar {
+  height: 12rpx;
+  background: #e5e7eb;
+  border-radius: 6rpx;
+  overflow: hidden;
+  margin: 0 20rpx;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #3b82f6;
+  border-radius: 6rpx;
+  transition: width 0.3s ease;
+}
+
+.ananlyzing-tip {
+  display: block;
+  font-size: 22rpx;
+  color: #78716c;
+  margin-top: 8rpx;
+}

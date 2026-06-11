@@ -1,0 +1,37 @@
+<!--pages/subject-select/subject-select.wxml-->
+<view class="page">
+  <!-- 顶部提示 -->
+  <view class="tip-bar">
+    <text class="tip-text">为 {{studentName}} 选择诊断学科</text>
+  </view>
+
+  <!-- 学科卡片列表 -->
+  <view class="subject-list">
+    <view
+      class="subject-card subject-card-{{item.key}}"
+      wx:for="{{subjects}}"
+      wx:key="key"
+      bindtap="onSubjectTap"
+      data-key="{{item.key}}"
+      data-name="{{item.name}}"
+    >
+      <!-- 图标 -->
+      <view class="subject-icon-wrap">
+        <text class="subject-icon">{{item.icon}}</text>
+      </view>
+
+      <!-- 文字信息 -->
+      <view class="subject-info">
+        <text class="subject-name">{{item.name}}</text>
+        <view class="subject-meta">
+          <text class="meta-item">诊断 {{item.totalReports}} 次</text>
+          <text class="meta-dot" wx:if="{{item.pendingCount > 0}}">·</text>
+          <text class="meta-item pending" wx:if="{{item.pendingCount > 0}}">{{item.pendingCount}} 个待验证</text>
+        </view>
+      </view>
+
+      <!-- 箭头 -->
+      <text class="arrow">›</text>
+    </view>
+  </view>
+</view>

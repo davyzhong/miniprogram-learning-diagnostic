@@ -1,0 +1,64 @@
+<!--pages/paper-preview/paper-preview.wxml-->
+<view class="page">
+  <!-- 试卷标签 -->
+  <view class="paper-tags">
+    <view class="tag tag-{{paperType}}">{{typeText}}</view>
+    <view class="tag tag-subject">{{subjectName}}</view>
+    <view class="tag tag-student">{{studentName}}</view>
+  </view>
+
+  <!-- A4 预览区 -->
+  <view class="preview-area">
+    <view class="a4-frame">
+      <view class="a4-inner">
+        <view class="a4-placeholder" wx:if="{{!pdfReady}}">
+          <text class="a4-icon">📄</text>
+          <text class="a4-text">A4 试卷预览</text>
+          <text class="a4-hint">点击"下载 PDF"查看完整试卷</text>
+        </view>
+        <view class="a4-loaded" wx:if="{{pdfReady}}">
+          <text class="a4-success-icon">✅</text>
+          <text class="a4-success-text">PDF 已准备好</text>
+          <text class="a4-pages">共 {{pages}} 页 · A4 纸张</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 试卷信息 -->
+  <view class="paper-info card">
+    <view class="info-row">
+      <text class="info-label">试卷名称</text>
+      <text class="info-value">{{paperName}}</text>
+    </view>
+    <view class="info-row" wx:if="{{questionCount > 0}}">
+      <text class="info-label">题目数量</text>
+      <text class="info-value">{{questionCount}} 题</text>
+    </view>
+    <view class="info-row" wx:if="{{estimatedMinutes > 0}}">
+      <text class="info-label">预计用时</text>
+      <text class="info-value">约 {{estimatedMinutes}} 分钟</text>
+    </view>
+    <view class="info-row" wx:if="{{bottleneckTargets.length > 0}}">
+      <text class="info-label">覆盖卡点</text>
+      <text class="info-value">{{bottleneckText}}</text>
+    </view>
+  </view>
+
+  <!-- 操作按钮 -->
+  <view class="action-bar">
+    <button class="btn-secondary action-btn" bindtap="onDownload">
+      下载 PDF
+    </button>
+    <button class="btn-primary action-btn" bindtap="onSharePrint">
+      分享打印
+    </button>
+  </view>
+
+  <!-- 主按钮：拍照上传 -->
+  <view class="bottom-bar">
+    <button class="btn-primary btn-main" bindtap="onUpload">
+      {{uploadBtnText}}
+    </button>
+  </view>
+</view>

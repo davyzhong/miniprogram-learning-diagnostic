@@ -1,0 +1,19 @@
+# Node modules - cloud functions
+cloudfunctions/**/node_modules/
+cloudfunctions_old_backup/
+
+# WeChat DevTools private config (contains personal settings, not for version control)
+project.private.config.json
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environment / secrets
+.env
+.env.local
+*.pem

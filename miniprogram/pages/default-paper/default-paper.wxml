@@ -1,0 +1,63 @@
+<!--pages/default-paper/default-paper.wxml-->
+<view class="page">
+  <!-- 说明 -->
+  <view class="tip-bar">
+    <text class="tip-icon">📄</text>
+    <view class="tip-content">
+      <text class="tip-title">默认诊断试卷</text>
+      <text class="tip-desc">没有现成试卷？选一套标准题来做诊断</text>
+    </view>
+  </view>
+
+  <!-- 年级选择 -->
+  <view class="section-title">选择年级</view>
+  <view class="grade-row">
+    <view
+      class="grade-btn {{grade === item ? 'active' : ''}}"
+      wx:for="{{grades}}"
+      wx:key="*this"
+      data-grade="{{item}}"
+      bindtap="onGradeTap"
+    >{{item}}年级</view>
+  </view>
+
+  <!-- 试卷列表（A/B 卷） -->
+  <view class="paper-list" wx:if="{{grade}}">
+    <view class="section-title">选择试卷</view>
+
+    <view class="paper-card" wx:for="{{papers}}" wx:key="key">
+      <view class="paper-header">
+        <text class="paper-name">{{item.name}}</text>
+        <view class="paper-badge" wx:if="{{item.exists}}">已生成</view>
+      </view>
+      <view class="paper-meta">
+        <text class="meta-item">覆盖 {{item.bottleneckCount}} 个卡点</text>
+        <text class="meta-dot">·</text>
+        <text class="meta-item">{{item.questionCount}} 题</text>
+        <text class="meta-dot">·</text>
+        <text class="meta-item">约{{item.estimatedMinutes}}分钟</text>
+      </view>
+      <view class="paper-meta">
+        <text class="meta-item">A4 {{item.pages}} 页</text>
+      </view>
+
+      <view class="paper-actions">
+        <button class="btn-secondary paper-btn" bindtap="onPreview" data-key="{{item.key}}">预览 PDF</button>
+        <button class="btn-primary paper-btn" bindtap="onUsePaper" data-key="{{item.key}}" disabled="{{generating}}">
+          {{generating && generatingKey === item.key ? '生成中...' : '使用这套试卷'}}
+        </button>
+      </view>
+    </view>
+  </view>
+
+  <view class="empty-tip" wx:if="{{!grade}}">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">请先选择年级</text>
+  </view>
+
+  <!-- 底部提示 -->
+  <view class="bottom-tip">
+    <text class="bottom-icon">💡</text>
+    <text class="bottom-text">建议先打印让孩子在纸上作答，完成后拍照上传</text>
+  </view>
+</view>

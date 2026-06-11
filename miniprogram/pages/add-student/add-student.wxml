@@ -1,0 +1,56 @@
+<!--pages/add-student/add-student.wxml-->
+<view class="page">
+  <view class="form">
+    <!-- 姓名 -->
+    <view class="form-item">
+      <text class="label">学生姓名</text>
+      <input
+        class="input"
+        placeholder="请输入学生姓名"
+        value="{{name}}"
+        bindinput="onNameInput"
+        maxlength="10"
+      />
+    </view>
+
+    <!-- 年级 -->
+    <view class="form-item">
+      <text class="label">年级</text>
+      <view class="grade-options">
+        <view
+          class="grade-btn {{grade === item ? 'active' : ''}}"
+          wx:for="{{grades}}"
+          wx:key="*this"
+          data-grade="{{item}}"
+          bindtap="onGradeTap"
+        >
+          {{item}}年级
+        </view>
+      </view>
+    </view>
+
+    <!-- 头像颜色预览 -->
+    <view class="form-item">
+      <text class="label">头像颜色</text>
+      <view class="color-options">
+        <view
+          class="color-dot {{avatarColor === item ? 'active' : ''}}"
+          wx:for="{{colorOptions}}"
+          wx:key="*this"
+          style="background:{{item}};"
+          data-color="{{item}}"
+          bindtap="onColorTap"
+        >
+          <text wx:if="{{avatarColor === item}}" class="check">✓</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 提交按钮 -->
+  <view class="bottom-bar">
+    <button class="btn-primary btn-save" bindtap="onSave" disabled="{{!canSave}}">
+      保存
+    </button>
+  </view>
+</view>

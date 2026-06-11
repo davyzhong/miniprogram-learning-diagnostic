@@ -1,0 +1,112 @@
+<!--pages/subject-home/subject-home.wxml-->
+<view class="page page-{{subject}}">
+  <!-- 顶部信息 -->
+  <view class="top-bar">
+    <view class="back" bindtap="onBack">‹ 返回</view>
+    <view class="top-info">
+      <text class="subject-label">{{subjectName}}</text>
+      <text class="student-name">{{studentName}}</text>
+      <text class="grade-label" wx:if="{{grade}}">{{grade}}年级</text>
+    </view>
+  </view>
+
+  <!-- 统计条 -->
+  <view class="stats-bar">
+    <view class="stat-item">
+      <text class="stat-num">{{totalReports}}</text>
+      <text class="stat-label">历史报告</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-num pending-num">{{pendingCount}}</text>
+      <text class="stat-label">待验证卡点</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-num improved-num">{{improvedCount}}</text>
+      <text class="stat-label">已改善</text>
+    </view>
+  </view>
+
+  <!-- 三入口 -->
+  <view class="entries">
+    <view class="section-title">开始诊断</view>
+
+    <!-- 入口 A：拍照诊断 -->
+    <view class="entry-card" bindtap="onDiagnosisTap">
+      <view class="entry-icon-wrap entry-icon-a">
+        <text class="entry-icon">📷</text>
+      </view>
+      <view class="entry-info">
+        <text class="entry-title">拍照诊断</text>
+        <text class="entry-desc">上传已有试卷照片，AI 识别错题并分析卡点</text>
+      </view>
+      <text class="entry-arrow">›</text>
+    </view>
+
+    <!-- 入口 B：生成验证试卷 -->
+    <view class="entry-card" bindtap="onVerificationTap">
+      <view class="entry-icon-wrap entry-icon-b">
+        <text class="entry-icon">📝</text>
+      </view>
+      <view class="entry-info">
+        <text class="entry-title">生成验证试卷</text>
+        <text class="entry-desc">基于历史卡点自动出题，验证改善情况</text>
+        <text class="entry-badge" wx:if="{{pendingCount > 0}}">{{pendingCount}} 个待验证</text>
+      </view>
+      <text class="entry-arrow">›</text>
+    </view>
+
+    <!-- 入口 C：默认诊断试卷 -->
+    <view class="entry-card" bindtap="onDefaultPaperTap">
+      <view class="entry-icon-wrap entry-icon-c">
+        <text class="entry-icon">📄</text>
+      </view>
+      <view class="entry-info">
+        <text class="entry-title">默认诊断试卷</text>
+        <text class="entry-desc">没有试卷？选一套标准题来做诊断</text>
+      </view>
+      <text class="entry-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 分析中状态卡片 -->
+  <view class="analyzing-card" wx:if="{{analysisStatus}}">
+    <view class="analyzing-icon">⏳</view>
+    <view class="analyzing-info">
+      <text class="analyzing-title">诊断分析中</text>
+      <view class="progress-bar">
+        <view class="progress-fill" style="width:{{analysisProgress}}%;"></view>
+      </view>
+      <text class="analyzing-desc">{{analysisProgress}}% · {{analysisStatusText}}</text>
+    </view>
+  </view>
+
+  <!-- 最近记录 -->
+  <view class="records" wx:if="{{records.length > 0}}">
+    <view class="section-title">最近记录</view>
+    <view
+      class="record-item"
+      wx:for="{{records}}"
+      wx:key="_id"
+      bindtap="onRecordTap"
+      data-id="{{item._id}}"
+    >
+      <view class="record-icon-wrap">
+        <text class="record-icon">{{item.type === 'verification' ? '✅' : '📊'}}</text>
+      </view>
+      <view class="record-info">
+        <text class="record-title">{{item.type === 'verification' ? '验证报告' : '诊断报告'}}</text>
+        <text class="record-meta">{{item.dateText}} · {{item.bottleneckCount}} 个卡点</text>
+      </view>
+      <text class="record-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 空记录 -->
+  <view class="empty-records" wx:if="{{records.length === 0 && !analysisStatus}}">
+    <text class="empty-icon">📋</text>
+    <text class="empty-text">暂无诊断记录</text>
+    <text class="empty-hint">点击上方入口开始第一次诊断</text>
+  </view>
+</view>

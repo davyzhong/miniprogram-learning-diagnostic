@@ -1,0 +1,10 @@
+{
+  "name": "generateReportPDF",
+  "version": "1.0.0",
+  "description": "根据报告数据生成 A4 PDF，上传云存储",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "pdfkit": "^0.13.0"
+  }
+}

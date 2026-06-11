@@ -1,0 +1,9 @@
+{
+  "name": "analyzePhotos",
+  "version": "1.0.0",
+  "description": "主控函数：拆分批次、串行调用 analyzeBatch、合并结果、更新数据库、推送通知",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

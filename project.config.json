@@ -1,0 +1,36 @@
+{
+  "appid": "wxfd705adf17992394",
+  "projectname": "learning-diagnostic",
+  "miniprogramRoot": "miniprogram/",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "setting": {
+    "urlCheck": true,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "coverView": true,
+    "checkInvalidKey": true,
+    "checkSiteMap": true,
+    "uploadWithSourceMap": true,
+    "compileHotReLoad": false,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "appid": "wxfd705adf17992394",
+  "projectname": "learning-diagnostic",
+  "cloudfunctionTemplateRoot": "",
+  "cloudbaseRoot": "cloud1-d6gneg68m5a7a3876",
+  "condition": {},
+  "compileType": "miniprogram",
+  "simulatorPluginLibVersion": {},
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "editorSetting": {}
+}

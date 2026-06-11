@@ -1,0 +1,57 @@
+<!--pages/index/index.wxml-->
+<view class="page">
+  <!-- 顶部标题 -->
+  <view class="header">
+    <text class="header-title">学习诊断</text>
+    <text class="header-sub">选择学生开始诊断</text>
+  </view>
+
+  <!-- 学生列表 -->
+  <view class="student-list" wx:if="{{students.length > 0}}">
+    <view
+      class="student-card"
+      wx:for="{{students}}"
+      wx:key="_id"
+      bindtap="onStudentTap"
+      data-id="{{item._id}}"
+      data-name="{{item.name}}"
+      data-grade="{{item.grade}}"
+    >
+      <!-- 头像 -->
+      <view class="avatar" style="background:{{item.avatarColor}};">
+        <text class="avatar-text">{{item.avatarText}}</text>
+      </view>
+
+      <!-- 信息 -->
+      <view class="info">
+        <view class="name-row">
+          <text class="name">{{item.name}}</text>
+          <text class="grade-tag">{{item.gradeText}}</text>
+        </view>
+        <view class="meta">
+          <text wx:if="{{item.totalReports > 0}}">已诊断 {{item.totalReports}} 次</text>
+          <text wx:else>暂无诊断记录</text>
+          <text class="dot" wx:if="{{item.lastReportAt}}">·</text>
+          <text wx:if="{{item.lastReportAt}}">{{item.lastReportAt}}</text>
+        </view>
+      </view>
+
+      <!-- 箭头 -->
+      <text class="arrow">›</text>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view class="empty-state" wx:else>
+    <text class="icon">📋</text>
+    <text class="text">还没有添加学生</text>
+    <text class="sub-text">点击下方按钮添加第一个学生</text>
+  </view>
+
+  <!-- 底部添加按钮 -->
+  <view class="bottom-bar">
+    <button class="btn-primary btn-add" bindtap="onAddStudent">
+      + 添加学生
+    </button>
+  </view>
+</view>
