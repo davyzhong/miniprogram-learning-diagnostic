@@ -3,15 +3,15 @@
 const db = wx.cloud.database()
 
 function normalizeError(error, fallbackMessage) {
-  const message = error && error.message ? error.message : fallbackMessage
+  const message = error && (error.message || error.errMsg) ? (error.message || error.errMsg) : fallbackMessage
   const normalized = new Error(message || '操作失败，请稍后重试')
   normalized.code = error && (error.code || error.errCode)
   return normalized
 }
 
-async function callFunction(name, data) {
+async function callFunction(name, data, options = {}) {
   try {
-    const res = await wx.cloud.callFunction({ name, data })
+    const res = await wx.cloud.callFunction({ name, data, ...options })
     const result = res.result || {}
     if (result.success === false) {
       throw new Error(result.error || '云函数执行失败')
@@ -20,6 +20,10 @@ async function callFunction(name, data) {
   } catch (error) {
     throw normalizeError(error, '云函数调用失败')
   }
+}
+
+function isTimeoutError(error) {
+  return /timeout|timed out|超时/i.test(String(error && error.message ? error.message : error))
 }
 
 /**
@@ -87,8 +91,8 @@ async function getSubjectProfiles(studentId) {
 }
 
 async function getSubjectProfile(studentId, subject) {
-  const res = await db.collection('subjectProfiles').where({ studentId, subject }).limit(1).get()
-  return res.data[0] || null
+  const profiles = await getSubjectProfiles(studentId)
+  return profiles.find(profile => profile.subject === subject) || null
 }
 
 async function ensureSubjectProfile(studentId, subject, subjectName = '') {
@@ -170,8 +174,8 @@ async function getPaper(paperId) {
  * 调用云函数：上传并触发分析（主入口）
  * @param {object} params - { fileIDs, studentId, subject, mode, paperId }
  */
-async function callUploadAndAnalyze(params) {
-  return callFunction('uploadAndAnalyze', params)
+async function callUploadAndAnalyze(params, options) {
+  return callFunction('uploadAndAnalyze', params, options)
 }
 
 /**
@@ -197,8 +201,13 @@ async function callGenerateReportPDF(params) {
   return callFunction('generateReportPDF', params)
 }
 
+async function getAnalysisProgress(reportId) {
+  return callFunction('getAnalysisProgress', { reportId })
+}
+
 module.exports = {
   normalizeError,
+  isTimeoutError,
   callFunction,
   getStudents,
   getStudent,
@@ -217,4 +226,5 @@ module.exports = {
   callAnalyzePhotos,
   callGeneratePaper,
   callGenerateReportPDF,
+  getAnalysisProgress,
 }

@@ -22,6 +22,9 @@ Page({
     showNextStep: false,
     analysisStatusText: '',
     analysisProgress: 0,
+    hasAnalysisProgress: false,
+    analysisTaskMissing: false,
+    retryingAnalysis: false,
     generatingPdf: false
   },
 
@@ -126,8 +129,17 @@ Page({
   startPolling(reportId) {
     if (this._poller) this._poller.stop()
     this._poller = createPoller({
-      request: () => cloud.getReport(reportId),
-      onValue: (report, attempt) => {
+      request: async () => {
+        const report = await cloud.getReport(reportId)
+        let progress = null
+        if (report && report.status === 'analyzing') {
+          try {
+            progress = await cloud.getAnalysisProgress(reportId)
+          } catch (e) { /* task may not exist yet */ }
+        }
+        return { report, progress }
+      },
+      onValue: ({ report, progress }, attempt) => {
         if (!report) return true
         if (report.status === 'completed') {
           wx.showToast({ title: '诊断完成', icon: 'success' })
@@ -140,9 +152,18 @@ Page({
           this.setData({ analysisStatusText: '分析失败' })
           return false
         }
+        const hasAnalysisProgress = !!(progress && progress.totalBatches > 0)
+        const analysisTaskMissing = !hasAnalysisProgress && (
+          attempt >= 2 || Date.now() - new Date(report.createdAt).getTime() > 60000
+        )
+        const actualProgress = hasAnalysisProgress
+          ? Math.round(progress.completedBatches / progress.totalBatches * 100)
+          : 0
         this.setData({
-          analysisStatusText: 'AI 分析中...',
-          analysisProgress: Math.min(attempt * 10, 90)
+          analysisStatusText: analysisTaskMissing ? '分析任务未启动' : 'AI 分析中...',
+          analysisProgress: Math.min(actualProgress, 90),
+          hasAnalysisProgress,
+          analysisTaskMissing
         })
         return true
       },
@@ -153,6 +174,26 @@ Page({
       }
     })
     this._poller.start()
+  },
+
+  onRetryAnalysis() {
+    if (this.data.retryingAnalysis) return
+    this.setData({
+      retryingAnalysis: true,
+      analysisTaskMissing: false,
+      analysisStatusText: '正在重新启动分析...'
+    })
+
+    cloud.callAnalyzePhotos({ reportId: this.data.reportId })
+      .then(() => this.loadReport(this.data.reportId))
+      .catch(err => {
+        console.error('重新分析失败', err)
+        this.setData({
+          analysisTaskMissing: true,
+          analysisStatusText: '重新启动失败，请再次尝试'
+        })
+      })
+      .finally(() => this.setData({ retryingAnalysis: false }))
   },
 
   // ========== 下载 PDF ==========

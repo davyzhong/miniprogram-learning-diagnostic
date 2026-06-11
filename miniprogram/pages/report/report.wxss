@@ -314,3 +314,18 @@
   color: #78716c;
   margin-top: 8rpx;
 }
+
+.retry-analysis-btn {
+  margin-top: 12rpx;
+  background: #ffffff;
+  color: #b45309;
+  border: 2rpx solid #f59e0b;
+  border-radius: 10rpx;
+  font-size: 24rpx;
+  line-height: 1.4;
+  padding: 12rpx 24rpx;
+}
+
+.retry-analysis-btn::after {
+  border: none;
+}

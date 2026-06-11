@@ -17,7 +17,7 @@ Page({
 
     analysisStatus: '',   // '' | 'analyzing'
     analysisStatusText: '',
-    analysisProgress: 0,
+    currentAnalysisId: '',
 
     records: []
   },
@@ -74,6 +74,7 @@ Page({
           pendingCount,
           improvedCount,
           analysisStatus: p.analysisStatus || '',
+          currentAnalysisId: p.currentAnalysisId || '',
         })
       }
     } catch (err) {
@@ -115,8 +116,17 @@ Page({
   startReportPolling() {
     const { studentId, subject } = this.data
     this._poller = createPoller({
-      request: () => cloud.getLatestReport(studentId, subject),
-      onValue: (report, attempt) => {
+      request: async () => {
+        const report = await cloud.getLatestReport(studentId, subject)
+        let progress = null
+        if (report && report.status === 'analyzing') {
+          try {
+            progress = await cloud.getAnalysisProgress(report._id)
+          } catch (e) { /* task may not exist yet */ }
+        }
+        return { report, progress }
+      },
+      onValue: ({ report, progress }, attempt) => {
         if (!report) return true
         if (report.status === 'completed') {
           wx.showToast({ title: '诊断完成', icon: 'success' })
@@ -124,26 +134,27 @@ Page({
           this.loadRecords()
           this.setData({
             analysisStatus: '',
-            analysisProgress: 100,
+            currentAnalysisId: '',
             analysisStatusText: '分析完成'
           })
           return false
         }
         if (report.status === 'failed') {
           wx.showToast({ title: '分析失败，请重试', icon: 'none' })
-          this.setData({ analysisStatus: '', analysisProgress: 0, analysisStatusText: '' })
+          this.setData({ analysisStatus: '', currentAnalysisId: '', analysisStatusText: '' })
           return false
         }
         this.setData({
-          analysisProgress: Math.min(attempt * 10, 90),
-          analysisStatusText: 'AI 分析中...'
+          analysisStatusText: progress && progress.totalBatches > 0
+            ? `AI 正在分析第 ${Math.min(progress.completedBatches + 1, progress.totalBatches)}/${progress.totalBatches} 批`
+            : 'AI 后台分析中，点击查看详情'
         })
         return true
       },
       onError: err => console.error('轮询报告状态失败', err),
       onTimeout: () => {
         wx.showToast({ title: '分析时间较长，请稍后查看', icon: 'none' })
-        this.setData({ analysisStatus: '', analysisProgress: 0, analysisStatusText: '' })
+        this.setData({ analysisStatus: '', currentAnalysisId: '', analysisStatusText: '' })
       }
     })
     this._poller.start()
@@ -178,6 +189,13 @@ Page({
     const { id } = e.currentTarget.dataset
     wx.navigateTo({
       url: `/pages/report/report?id=${id}`
+    })
+  },
+
+  onAnalysisCardTap() {
+    if (!this.data.currentAnalysisId) return
+    wx.navigateTo({
+      url: `/pages/report/report?id=${this.data.currentAnalysisId}`
     })
   },
 

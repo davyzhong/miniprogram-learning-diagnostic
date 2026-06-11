@@ -81,9 +81,11 @@
    - `uploadAndAnalyze`
    - `generatePaper`
    - `generateReportPDF`
+   - `getAnalysisProgress`
 
 ### 注意：
-- `analyzePhotos` 的执行超时时间默认是 60 秒，建议在云端配置里改成 **300 秒**（支持最大 900 秒）
+- `uploadAndAnalyze` 会在服务端可靠调用 `analyzePhotos`，两者执行超时建议在云端配置为 **900 秒**
+- 小程序等待 20 秒后会返回学科主页，服务端继续完成分析
 - 每个云函数的 `package.json` 都已写好，云端会自动安装依赖
 
 ---
@@ -108,6 +110,26 @@
   "write": "doc._openid == auth.openid"
 }
 ```
+
+### 数据库索引
+
+开发者工具显示 `cloud://createindex?... Error: timeout` 时，不需要反复点击快速创建链接。请进入：
+
+`云开发控制台 → 数据库 → 对应集合 → 索引管理 → 新建索引`
+
+创建以下复合索引。若集合安全规则限制为创建者读取，将 `_openid` 放在末尾：
+
+| 集合 | 索引字段 | 排序 |
+|------|----------|------|
+| `students` | `createdAt`, `_openid` | 降序、升序 |
+| `subjectProfiles` | `studentId`, `_openid` | 升序、升序 |
+| `reports` | `studentId`, `subject`, `createdAt`, `_openid` | 升序、升序、降序、升序 |
+| `reports` | `studentId`, `subject`, `status`, `createdAt`, `_openid` | 升序、升序、升序、降序、升序 |
+| `papers` | `studentId`, `subject`, `type`, `grade`, `paperKey`, `_openid` | 全部升序 |
+
+`subjectProfiles` 现在仅按 `studentId` 查询，再从最多三条学科档案中筛选 `subject`，因此不再依赖原来的 `studentId + subject + _openid` 三字段复合索引。若安全规则要求按创建者读取，仍应创建上表中的 `studentId + _openid` 索引。
+
+创建索引后通常需要等待几十秒到数分钟生效，再重新编译小程序。
 
 ---
 
@@ -156,6 +178,11 @@
 - 确认云函数已部署到云端
 - 确认 `project.config.json` 里的 `cloudfunctionRoot` 配置正确
 
+### Q5：开发者工具提示 `cloud://createindex?... Error: timeout`？
+- 不需要反复点击快速创建链接
+- 按「数据库索引」章节在云开发控制台手动创建索引
+- 确认小程序代码与全部云函数均已重新部署
+
 ---
 
 ## 九、目录结构检查
@@ -181,7 +208,8 @@ miniprogram-learning-diagnostic/
 │   ├── analyzePhotos/        ✅
 │   ├── uploadAndAnalyze/     ✅
 │   ├── generatePaper/        ✅
-│   └── generateReportPDF/    ✅
+│   ├── generateReportPDF/    ✅
+│   └── getAnalysisProgress/  ✅
 ├── project.config.json        ✅
 ├── PROJECT_PLAN.md          ✅
 ├── PRD.md                   ✅
