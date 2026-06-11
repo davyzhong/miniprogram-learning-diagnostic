@@ -95,32 +95,12 @@ async function updateSubjectProfile(studentId, subject, mergedResult) {
   });
 }
 
-// ========== 推送订阅消息 ==========
+// ========== 推送订阅消息（预留，暂未实现 sendSubscribeMessage 云函数） ==========
 async function sendNotification(studentId, reportId, subject) {
-  try {
-    const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
-
-    // 获取用户的 openID（从 reports 集合里取 _openid）
-    const reportRes = await db.collection('reports').doc(reportId).get();
-    const openId = reportRes.data._openid;
-
-    if (!openId) {
-      console.warn('未找到 openId，跳过推送');
-      return;
-    }
-
-    await cloud.callFunction({
-      name: 'sendSubscribeMessage',  // 需要单独创建一个云函数来发订阅消息
-      data: {
-        openId,
-        reportId,
-        subjectName,
-      },
-    });
-  } catch (err) {
-    console.error('推送失败：', err);
-    // 推送失败不阻塞主流程
-  }
+  // TODO: 订阅消息推送需要用户在小程序前端授权后才能发送。
+  // 目前 sendSubscribeMessage 云函数尚未创建，此处仅记录日志，不发起调用。
+  const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
+  console.log(`[sendNotification] 分析完成通知（待实现）：studentId=${studentId}, reportId=${reportId}, subject=${subjectName}`);
 }
 
 // ========== 主函数 ==========

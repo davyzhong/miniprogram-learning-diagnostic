@@ -83,7 +83,19 @@ async function getPhotos(studentId, batchId) {
 }
 
 /**
- * 调用云函数：分析照片
+ * 调用云函数：上传并触发分析（主入口）
+ * @param {object} params - { fileIDs, studentId, subject, mode, paperId }
+ */
+async function callUploadAndAnalyze(params) {
+  const res = await wx.cloud.callFunction({
+    name: 'uploadAndAnalyze',
+    data: params
+  })
+  return res.result
+}
+
+/**
+ * 调用云函数：分析照片（由 uploadAndAnalyze 内部触发，一般不直接调用）
  */
 async function callAnalyzePhotos(params) {
   const res = await wx.cloud.callFunction({
@@ -94,22 +106,24 @@ async function callAnalyzePhotos(params) {
 }
 
 /**
- * 调用云函数：生成报告
+ * 调用云函数：生成验证/诊断试卷 PDF
+ * @param {object} params - { studentId, subject, type, targets }
  */
-async function callGenerateReport(params) {
+async function callGeneratePaper(params) {
   const res = await wx.cloud.callFunction({
-    name: 'generateReport',
+    name: 'generatePaper',
     data: params
   })
   return res.result
 }
 
 /**
- * 调用云函数：获取学生完整数据
+ * 调用云函数：生成报告 PDF
+ * @param {object} params - { reportId }
  */
-async function callGetStudentData(params) {
+async function callGenerateReportPDF(params) {
   const res = await wx.cloud.callFunction({
-    name: 'getStudentData',
+    name: 'generateReportPDF',
     data: params
   })
   return res.result
@@ -123,7 +137,8 @@ module.exports = {
   getReports,
   getReport,
   getPhotos,
+  callUploadAndAnalyze,
   callAnalyzePhotos,
-  callGenerateReport,
-  callGetStudentData
+  callGeneratePaper,
+  callGenerateReportPDF,
 }
