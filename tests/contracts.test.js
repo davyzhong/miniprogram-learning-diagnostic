@@ -133,14 +133,19 @@ test('analysis is started reliably by the server entrypoint', () => {
   assert.match(entrypoint, /cloud\.callFunction\(\{\s*name:\s*'analyzePhotos'/s)
 })
 
-test('expected upload analysis timeout is not logged as an upload failure', () => {
-  const uploadPage = read('miniprogram/pages/upload/upload.js')
-  const timeoutBranch = uploadPage.indexOf('if (analysisSubmitted && cloud.isTimeoutError(err))')
-  const uploadErrorLog = uploadPage.indexOf("console.error('上传或提交分析失败', err)")
+test('uploadAndAnalyze fires analyzePhotos without awaiting', () => {
+  const entrypoint = read('cloudfunctions/uploadAndAnalyze/index.js')
+  // 不 await，使用 .catch 而非 await + 结果校验
+  assert.match(entrypoint, /cloud\.callFunction\(\{\s*name:\s*'analyzePhotos'/s)
+  assert.doesNotMatch(entrypoint, /const analyzeRes = await cloud\.callFunction/)
+  assert.match(entrypoint, /\.catch\(err\s*=>/)
+})
 
-  assert.ok(timeoutBranch > -1, 'upload page should handle expected analysis timeout')
-  assert.ok(uploadErrorLog > timeoutBranch, 'upload failure should only be logged after excluding expected timeout')
-  assert.match(uploadPage, /AI将在后台分析/)
+test('upload page does not set a callFunction timeout for analysis', () => {
+  const uploadPage = read('miniprogram/pages/upload/upload.js')
+  assert.doesNotMatch(uploadPage, /timeout:\s*20000/)
+  assert.doesNotMatch(uploadPage, /isTimeoutError/)
+  assert.doesNotMatch(uploadPage, /AI将在后台分析/)
 })
 
 test('expected retry analysis timeout is treated as background processing', () => {

@@ -83,15 +83,13 @@ test('upload selection warns about duplicate filenames but keeps the images', ()
   assert.equal(wx.calls.find(call => call.name === 'showToast').payload.title, '发现同名照片，仍可继续上传')
 })
 
-test('upload submits file metadata and treats analysis timeout as background work', async () => {
+test('upload submits file metadata and navigates back on success', async () => {
   let submitted = null
-  const timeout = new Error('timeout')
   const cloud = {
     callUploadAndAnalyze: async payload => {
       submitted = payload
-      throw timeout
-    },
-    isTimeoutError: error => error === timeout
+      return { success: true, reportId: 'report-1' }
+    }
   }
   const wx = createWxMock()
   const { page } = loadPage('miniprogram/pages/upload/upload.js', {
@@ -112,8 +110,7 @@ test('upload submits file metadata and treats analysis timeout as background wor
     [{ fileName: 'paper.jpg', fileSize: 100 }]
   )
   assert.equal(page.data.uploadProgress, 100)
-  assert.equal(page.data.uploading, false)
-  assert.equal(wx.calls.find(call => call.name === 'showToast').payload.title, '已提交，AI将在后台分析')
+  assert.equal(wx.calls.find(call => call.name === 'showToast').payload.title, '已提交，AI 正在分析')
   assert.ok(wx.calls.some(call => call.name === 'navigateBack'))
 })
 

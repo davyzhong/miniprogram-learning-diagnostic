@@ -115,22 +115,17 @@ exports.main = async (event, context) => {
       // 不中断流程
     }
 
-    // 4. 在服务端可靠启动分析。客户端超时或页面卸载不会中断服务端调用链。
+    // 4. Fire-and-forget：不 await，立即返回。分析在后台独立执行。
     console.log('[uploadAndAnalyze] 服务端启动 analyzePhotos，reportId：', reportId);
-    const analyzeRes = await cloud.callFunction({
+    cloud.callFunction({
       name: 'analyzePhotos',
       data: { reportId },
-    });
-    if (!analyzeRes.result || analyzeRes.result.success === false) {
-      throw new Error(analyzeRes.result && analyzeRes.result.error
-        ? analyzeRes.result.error
-        : '图片分析启动失败');
-    }
+    }).catch(err => console.error('[uploadAndAnalyze] analyzePhotos 启动失败:', err.message));
 
     return {
       success: true,
       reportId,
-      message: '分析完成',
+      message: '分析已启动',
     };
   } catch (err) {
     console.error('[uploadAndAnalyze] 失败：', err.message, err.stack);
