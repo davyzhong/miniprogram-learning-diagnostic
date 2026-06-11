@@ -87,6 +87,7 @@ Page({
 
   // 工具函数：简单 hash
   hashCode(str) {
+    if (!str) return 0
     let hash = 0
     for (let i = 0; i < str.length; i++) {
       const char = str.charCodeAt(i)

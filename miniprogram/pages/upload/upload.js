@@ -134,6 +134,12 @@ Page({
     })
   },
 
+  // ========== 图片加载失败 ==========
+  onImageLoadError(e) {
+    const idx = e.currentTarget.dataset.index
+    wx.showToast({ title: '第' + (idx + 1) + '张图片加载失败', icon: 'none' })
+  },
+
   // ========== 提交上传 ==========
   async onSubmit() {
     if (this.data.uploading) return
@@ -175,7 +181,7 @@ Page({
         paperId: paperId || ''
       }, { timeout: 20000 })
 
-      wx.showToast({ title: '分析完成', icon: 'success', duration: 2000 })
+      wx.showToast({ title: '已提交，AI 正在分析', icon: 'success', duration: 2000 })
       setTimeout(() => wx.navigateBack(), 1200)
     } catch (err) {
       wx.hideLoading()

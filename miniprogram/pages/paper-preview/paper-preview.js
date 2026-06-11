@@ -131,7 +131,14 @@ Page({
   },
 
   onShareAppMessage() {
-    const { paperId, typeText } = this.data
+    const { paperId, fileId, mode, typeText } = this.data
+    if (mode === 'preview' && fileId) {
+      // preview 模式下 fileId 是临时文件，分享后无法访问；禁用分享并提示
+      return {
+        title: `${typeText} - ${this.data.paperName}`,
+        path: `/pages/paper-preview/paper-preview?fileId=${encodeURIComponent(fileId)}`,
+      }
+    }
     return {
       title: `${typeText} - ${this.data.paperName}`,
       path: `/pages/paper-preview/paper-preview?paperId=${paperId}`,

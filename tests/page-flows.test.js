@@ -436,3 +436,140 @@ test('report generates, downloads and opens its printable PDF', async () => {
   assert.equal(page.data.generatingPdf, false)
   assert.equal(wx.calls.find(call => call.name === 'openDocument').payload.filePath, '/tmp/report.pdf')
 })
+
+test('subject home resets analysis state and reloads data when polling completes or fails', async () => {
+  let pollOptions = null
+  let profileLoads = 0
+  let recordLoads = 0
+  const cloud = {
+    getSubjectProfile: async () => ({
+      totalReports: 3,
+      pendingBottlenecks: [{ lpCode: 'LP-001' }],
+      improvedBottlenecks: []
+    }),
+    getReports: async () => [],
+    getReport: async () => ({ _id: 'active-report', status: 'analyzing' }),
+    getAnalysisProgress: async () => ({ completedBatches: 0, totalBatches: 1 })
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/subject-home/subject-home.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatRelativeTime: () => '' },
+      '../../utils/poller': {
+        createPoller: options => {
+          pollOptions = options
+          return { start() {}, stop() {}, isRunning: () => false }
+        }
+      }
+    }
+  })
+  // override loaders to count invocations
+  page.loadProfile = async () => { profileLoads += 1 }
+  page.loadRecords = async () => { recordLoads += 1 }
+  page.setData({ studentId: 'student-1', subject: 'math', currentAnalysisId: 'active-report' })
+
+  page.startReportPolling()
+  // simulate completion
+  const continueAfterComplete = await pollOptions.onValue(
+    { report: { _id: 'active-report', status: 'completed' }, progress: null },
+    1
+  )
+  assert.equal(continueAfterComplete, false)
+  assert.equal(page.data.analysisStatus, '')
+  assert.equal(page.data.currentAnalysisId, '')
+  assert.equal(page.data.analysisStatusText, '分析完成')
+  assert.equal(profileLoads, 1)
+  assert.equal(recordLoads, 1)
+  assert.ok(wx.calls.some(call => call.name === 'showToast' && call.payload.title === '诊断完成'))
+
+  // reset counters and simulate failure branch
+  profileLoads = 0
+  recordLoads = 0
+  wx.calls.length = 0
+  const continueAfterFailure = await pollOptions.onValue(
+    { report: { _id: 'active-report', status: 'failed' }, progress: null },
+    2
+  )
+  assert.equal(continueAfterFailure, false)
+  assert.equal(page.data.analysisStatus, '')
+  assert.equal(page.data.currentAnalysisId, '')
+  assert.equal(page.data.analysisStatusText, '')
+  assert.equal(profileLoads, 0)
+  assert.ok(wx.calls.some(call => call.name === 'showToast' && /失败/.test(call.payload.title)))
+
+  // timeout branch clears state without reloading
+  wx.calls.length = 0
+  pollOptions.onTimeout()
+  assert.equal(page.data.analysisStatus, '')
+  assert.equal(page.data.currentAnalysisId, '')
+  assert.equal(page.data.analysisStatusText, '')
+  assert.ok(wx.calls.some(call => call.name === 'showToast' && /稍后/.test(call.payload.title)))
+})
+
+test('upload history degrades gracefully when some temporary URLs are empty', async () => {
+  const cloud = {
+    getReports: async () => [{
+      _id: 'report-1',
+      type: 'diagnosis',
+      createdAt: '2026-06-11T10:00:00Z',
+      imageFiles: [
+        { fileID: 'cloud://ok', fileName: 'a.jpg', ocrSummary: 'OK' },
+        { fileID: 'cloud://expired', fileName: 'b.jpg', ocrSummary: 'OLD' }
+      ]
+    }],
+    getTempFileURLs: async () => [
+      { fileID: 'cloud://ok', tempFileURL: 'https://temp/ok' },
+      { fileID: 'cloud://expired', tempFileURL: '' }
+    ]
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '2026年6月11日 10:00' }
+    }
+  })
+  page.setData({ studentId: 'student-1', subject: 'math' })
+
+  await page.loadHistory()
+  assert.equal(page.data.loading, false)
+  assert.equal(page.data.groups[0].photos[0].tempFileURL, 'https://temp/ok')
+  assert.equal(page.data.groups[0].photos[1].tempFileURL, '')
+
+  // previewing the expired photo shows a toast and does not crash
+  page.onPreviewPhoto({ currentTarget: { dataset: { groupIndex: 0, photoIndex: 1 } } })
+  const expiredToast = wx.calls.find(call => call.name === 'showToast' && /无法预览/.test(call.payload.title))
+  assert.ok(expiredToast)
+  assert.equal(wx.calls.some(call => call.name === 'previewImage'), false)
+
+  // previewing the valid photo filters out the empty URL from the urls list
+  page.onPreviewPhoto({ currentTarget: { dataset: { groupIndex: 0, photoIndex: 0 } } })
+  const previewCall = wx.calls.find(call => call.name === 'previewImage')
+  assert.deepEqual(previewCall.payload.urls, ['https://temp/ok'])
+  assert.equal(previewCall.payload.current, 'https://temp/ok')
+})
+
+test('upload history surfaces load errors without leaving the loading flag stuck', async () => {
+  const cloud = {
+    getReports: async () => { throw new Error('network down') },
+    getTempFileURLs: async () => []
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '' }
+    }
+  })
+  page.setData({ studentId: 'student-1', subject: 'math' })
+
+  await page.loadHistory()
+  assert.equal(page.data.loading, false)
+  assert.deepEqual(page.data.groups, [])
+  const errorToast = wx.calls.find(call => call.name === 'showToast' && /加载失败/.test(call.payload.title))
+  assert.ok(errorToast)
+})

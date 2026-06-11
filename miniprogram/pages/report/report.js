@@ -58,7 +58,7 @@ Page({
         if (profile) {
           pendingCount = (profile.pendingBottlenecks || []).length
         }
-      } catch (e) { /* ignore */ }
+      } catch (e) { console.error('获取学科档案失败:', e) }
 
       this.setData({
         report: report,
@@ -145,7 +145,6 @@ Page({
         if (report.status === 'completed') {
           wx.showToast({ title: '诊断完成', icon: 'success' })
           this.loadReport(reportId)
-          this.setData({ analysisStatusText: '分析完成', analysisProgress: 100 })
           return false
         }
         if (report.status === 'failed') {
