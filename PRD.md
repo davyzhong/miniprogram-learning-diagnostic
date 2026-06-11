@@ -33,7 +33,7 @@
 
 ---
 
-## 3. 页面设计（共 9 页）
+## 3. 页面设计（共 10 页）
 
 ### Page 1：首页（学生列表）
 
@@ -75,6 +75,7 @@
 | 入口 A | **拍照诊断**：上传已有试卷照片，AI 识别错题并分析卡点 |
 | 入口 B | **生成验证试卷**：基于历史卡点自动出题，验证改善情况（显示待验证卡点列表） |
 | 入口 C | **默认诊断试卷**：没有试卷？选一套标准题来做诊断 |
+| 入口 D | **上传历史**：查看原始照片、OCR 摘要和疑似重复记录 |
 | 底部 | 最近记录列表（区分诊断报告和验证报告，显示日期、卡点数、状态） |
 | 分析中卡片 | 如有正在分析的任务，显示进度条和"分析中"状态 |
 
@@ -82,6 +83,7 @@
 - 点入口 A → 进入 Page 4（场景参数：`mode=diagnosis`）
 - 点入口 B → 进入 Page 7
 - 点入口 C → 进入 Page 8
+- 点入口 D → 进入 Page 4A
 - 点记录项 → 进入 Page 6
 - 点"分析中"卡片 → 显示当前分析进度
 
@@ -115,6 +117,13 @@
 - 不预留 Lonsid 智能笔 UI，MVP 只做拍照上传
 - 上传完成后立即返回 Page 3，触发云函数异步分析
 - 去掉"AI 分析中"独立页面，改为在 Page 3 显示分析状态
+- 历史中出现同名文件时只做轻提示，不阻止上传；最终由 OCR 摘要判断是否疑似重复
+
+### Page 4A：上传历史页
+
+**路由**：`pages/upload-history/upload-history`
+
+按诊断报告分组展示所有历史上传照片。每张照片可预览原图，并显示文件名、OCR 识别摘要和“疑似重复”标记。疑似重复照片仍保留在历史中，但不重复计入诊断报告的错题和学习卡点统计。若一次上传全部为疑似重复照片，本次记录不更新学习卡点或改善结论。旧报告没有 OCR 摘要时，仍展示原始照片。
 
 ---
 
@@ -260,6 +269,15 @@
   sourceType: String,     // 'photo' | 'paper' | 'default-paper'
   status: String,         // 'analyzing' | 'completed' | 'failed'
   imageFileIds: [String], // 云存储文件 ID 列表
+  imageFiles: [{          // 每张照片的历史与 OCR 去重信息
+    fileID: String,
+    fileName: String,
+    fileSize: Number,
+    ocrSummary: String,
+    contentFingerprint: String,
+    isDuplicate: Boolean,
+    duplicateOf: String
+  }],
   paperId: String,        // 关联的试卷 ID（验证/默认试卷上传时有值）
   
   // 分析结果
@@ -376,7 +394,7 @@ cloudfunctions/
   analyzeBatch/        # 单批次分析（5张），被 analyzePhotos 调用
   analyzePhotos/       # 主管控：拆分批次、串行调用 analyzeBatch、合并结果
   generatePaper/       # 生成验证/默认试卷 + A4 PDF
-  generateReport/      # 生成报告 PDF（用于分享/下载）
+  generateReportPDF/   # 生成报告 PDF（用于分享/下载）
 ```
 
 ---
@@ -411,6 +429,7 @@ cloudfunctions/
     "pages/subject-select/subject-select",
     "pages/subject-home/subject-home",
     "pages/upload/upload",
+    "pages/upload-history/upload-history",
     "pages/report/report",
     "pages/generate-verification/generate-verification",
     "pages/default-paper/default-paper",
@@ -419,7 +438,7 @@ cloudfunctions/
 }
 ```
 
-共 8 个页面（Page 5 已移除）。
+共 10 个注册页面（包含添加学生页和上传历史页，Page 5 已移除）。
 
 ---
 

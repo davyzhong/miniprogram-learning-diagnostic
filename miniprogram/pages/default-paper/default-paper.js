@@ -131,6 +131,12 @@ Page({
     const { studentId, subject, grade, generating, papers } = this.data
     if (generating) return
     const selectedPaper = papers.find(paper => paper.key === key)
+    if (selectedPaper && selectedPaper.exists && selectedPaper.paperId) {
+      wx.navigateTo({
+        url: `/pages/paper-preview/paper-preview?paperId=${selectedPaper.paperId}`
+      })
+      return
+    }
 
     this.setData({ generating: true, generatingKey: key })
     wx.showLoading({ title: '生成试卷...' })

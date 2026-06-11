@@ -169,7 +169,8 @@ Page({
     if (paper.type === 'default-diagnosis') {
       const grade = paper.grade || ''
       const key = paper.paperKey || ''
-      return `${grade}年级 ${key.toUpperCase()} 卷`
+      const variant = key.split('_').pop().toUpperCase()
+      return `${grade}年级 ${variant} 卷`
     }
     return '诊断试卷'
   }

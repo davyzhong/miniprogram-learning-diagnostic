@@ -1,6 +1,11 @@
 // pages/upload/upload.js
 const cloud = require('../../utils/cloud')
 
+function getFileName(filePath, index) {
+  const cleanPath = String(filePath || '').split('?')[0]
+  return cleanPath.split('/').pop() || `照片${index + 1}.jpg`
+}
+
 // 场景配置
 const MODE_CONFIG = {
   diagnosis: {
@@ -36,6 +41,7 @@ Page({
     uploadedCount: 0,
     uploadProgress: 0,
     submitBtnText: '上传并开始分析',
+    existingFileNames: [],
   },
 
   onLoad(options) {
@@ -56,6 +62,19 @@ Page({
     })
 
     wx.setNavigationBarTitle({ title: cfg.title })
+    this.loadExistingFileNames()
+  },
+
+  async loadExistingFileNames() {
+    try {
+      const reports = await cloud.getReports(this.data.studentId, this.data.subject, 20)
+      const existingFileNames = reports.flatMap(report => (
+        Array.isArray(report.imageFiles) ? report.imageFiles.map(photo => photo.fileName).filter(Boolean) : []
+      ))
+      this.setData({ existingFileNames })
+    } catch (err) {
+      console.warn('读取历史照片文件名失败', err)
+    }
   },
 
   // ========== 选择图片 ==========
@@ -73,17 +92,32 @@ Page({
       sourceType: ['album', 'camera'],
       sizeType: ['compressed'],
       success: (res) => {
-        const newImages = res.tempFiles.map(f => ({
-          tempPath: f.tempFilePath,
-          fileId: '',
-          uploaded: false
-        }))
+        const knownNames = new Set([
+          ...this.data.existingFileNames,
+          ...images.map(image => image.fileName)
+        ])
+        const newImages = res.tempFiles.map((f, index) => {
+          const fileName = getFileName(f.tempFilePath, images.length + index)
+          const nameDuplicate = knownNames.has(fileName)
+          knownNames.add(fileName)
+          return {
+            tempPath: f.tempFilePath,
+            fileName,
+            fileSize: Number(f.size) || 0,
+            nameDuplicate,
+            fileId: '',
+            uploaded: false
+          }
+        })
         const updated = images.concat(newImages)
         this.setData({
           images: updated,
           canSubmit: updated.length > 0,
           submitBtnText: '上传并开始分析 (' + updated.length + '张)'
         })
+        if (newImages.some(image => image.nameDuplicate)) {
+          wx.showToast({ title: '发现同名照片，仍可继续上传', icon: 'none' })
+        }
       }
     })
   },
@@ -131,6 +165,10 @@ Page({
       analysisSubmitted = true
       await cloud.callUploadAndAnalyze({
         fileIDs: fileIds,
+        imageMetas: images.map(image => ({
+          fileName: image.fileName,
+          fileSize: image.fileSize
+        })),
         studentId,
         subject,
         mode,
@@ -140,13 +178,13 @@ Page({
       wx.showToast({ title: '分析完成', icon: 'success', duration: 2000 })
       setTimeout(() => wx.navigateBack(), 1200)
     } catch (err) {
-      console.error('上传失败', err)
       wx.hideLoading()
       this.setData({ uploading: false })
       if (analysisSubmitted && cloud.isTimeoutError(err)) {
         wx.showToast({ title: '已提交，AI将在后台分析', icon: 'none', duration: 2500 })
         setTimeout(() => wx.navigateBack(), 1200)
       } else {
+        console.error('上传或提交分析失败', err)
         wx.showToast({ title: err.message || '上传失败，请重试', icon: 'none' })
       }
     }

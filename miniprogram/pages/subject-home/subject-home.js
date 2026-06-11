@@ -114,10 +114,12 @@ Page({
 
   // ========== 轮询报告状态 ==========
   startReportPolling() {
-    const { studentId, subject } = this.data
+    const { studentId, subject, currentAnalysisId } = this.data
     this._poller = createPoller({
       request: async () => {
-        const report = await cloud.getLatestReport(studentId, subject)
+        const report = currentAnalysisId
+          ? await cloud.getReport(currentAnalysisId)
+          : await cloud.getLatestReport(studentId, subject)
         let progress = null
         if (report && report.status === 'analyzing') {
           try {
@@ -180,6 +182,13 @@ Page({
     const { studentId, subject, subjectName, studentName, grade } = this.data
     wx.navigateTo({
       url: `/pages/default-paper/default-paper?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}&grade=${grade}`
+    })
+  },
+
+  onUploadHistoryTap() {
+    const { studentId, subject, subjectName, studentName } = this.data
+    wx.navigateTo({
+      url: `/pages/upload-history/upload-history?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}`
     })
   },
 

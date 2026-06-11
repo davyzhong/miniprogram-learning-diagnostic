@@ -75,14 +75,16 @@ miniprogram-learning-diagnostic/
 │       ├── report/                 # Page 6：诊断/验证报告
 │       ├── generate-verification/  # Page 7：验证试卷生成
 │       ├── default-paper/          # Page 8：默认诊断试卷选择
-│       └── paper-review/          # Page 9：试卷预览/打印
+│       ├── upload-history/         # Page 4A：上传历史
+│       └── paper-preview/          # Page 9：试卷预览/打印
 │
 └── cloudfunctions/                  # 云函数（后端）
     ├── uploadAndAnalyze/           # 上传完成后的入口，创建分析任务
     ├── analyzePhotos/              # 主控：拆分批次、串行调用分析
     ├── analyzeBatch/               # 单批次分析（5张），被 analyzePhotos 调用
     ├── generatePaper/              # 生成验证/默认试卷 + A4 PDF
-    └── generateReport/            # 生成报告 PDF（用于分享/下载）
+    ├── generateReportPDF/          # 生成报告 PDF（用于分享/下载）
+    └── getAnalysisProgress/        # 查询分析任务进度
 ```
 
 **文件总数**: 32 个
@@ -279,7 +281,9 @@ miniprogram-learning-diagnostic/
 
 ## 四、AI 分析流程（异步架构）
 
-### 4.1 核心原则：上传与分析完全解耦
+### 4.1 目标架构：上传与分析完全解耦
+
+当前实现已经支持任务记录、分批分析、轮询和客户端 20 秒超时返回，但 `uploadAndAnalyze` 仍同步等待 `analyzePhotos`。以下流程是目标架构，不代表已经全部完成：
 
 ```
 用户操作（小程序端）          云函数（后台异步）
@@ -340,21 +344,15 @@ System Prompt 包含：
 
 ---
 
-## 五、环境变量配置
+## 五、环境与模型配置
 
-### 5.1 analyzePhotos 云函数
+`analyzeBatch` 和 `generatePaper` 通过 `@cloudbase/node-sdk` 使用当前云开发环境的 CloudBase AI 能力。部署前需在该环境开通代码中使用的模型。
+
+`generatePaper` 和 `generateReportPDF` 需要配置：
 
 | 变量名 | 必填 | 说明 | 示例值 |
 |--------|------|------|--------|
-| `TENCENT_SECRET_ID` | 是 | 腾讯云 SecretId | `AKIDxxxxxxxxxxxxxx` |
-| `TENCENT_SECRET_KEY` | 是 | 腾讯云 SecretKey | `xxxxxxxxxxxxxxxx` |
-| `HUNYUAN_MODEL` | 否 | 模型名称，默认 `hy3-preview` | `hy3-preview` |
-
-密钥获取地址：[console.cloud.tencent.com/cam/capi](https://console.cloud.tencent.com/cam/capi)
-
-### 5.2 generateReport / getStudentData 云函数
-
-无额外环境变量，仅依赖 `wx-server-sdk`。
+| `FONT_FILE_ID` | 是 | 云存储中的中文字体 | `cloud://xxxxx/SimHei.ttf` |
 
 ---
 
@@ -368,7 +366,7 @@ System Prompt 包含：
 | **云函数（5个）** | ✅ | `uploadAndAnalyze` / `analyzePhotos` / `analyzeBatch` / `generatePaper` / `generateReportPDF` |
 | **PRD.md** | ✅ | 完整产品设计文档（v2.0） |
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 环境变量 + 云函数部署） |
-| **异步架构** | ✅ | 上传与分析解耦，`uploadAndAnalyze` 立即返回，云函数后台处理 |
+| **分析任务与轮询** | ⚠️ | 已有任务记录、分批分析和客户端超时返回；`uploadAndAnalyze` 仍同步等待 `analyzePhotos`，尚未完全解耦 |
 | **轮询逻辑** | ✅ | `subject-home` + `report` 页面支持轮询分析状态（每10秒） |
 | **学科隔离** | ✅ | 数/语/英三科独立档案，每次操作前先选科目 |
 | **20张照片支持** | ✅ | `upload` 页面支持最多20张，`analyzePhotos` 自动分批（5张/批） |
@@ -378,23 +376,24 @@ System Prompt 包含：
 | 步骤 | 状态 | 说明 |
 |------|------|------|
 | 配置云开发环境 ID | ⬜ | 在微信开发者工具里开通云开发，获取 envID，更新到 `project.config.json` |
-| 配置环境变量 | ⬜ | `SECRET_ID` + `SECRET_KEY`（TC3签名）或 `AI_API_KEY`（Bearer Token）；`FONT_FILE_ID`（中文字体） |
+| 配置环境变量 | ⬜ | 为 `generatePaper` 和 `generateReportPDF` 配置 `FONT_FILE_ID` |
 | 上传中文字体 | ⬜ | 将 `SimHei.ttf` 上传到云存储，获取 `fileID`，配置到 `FONT_FILE_ID` |
 | 部署云函数 | ⬜ | 微信开发者工具 → 右键云函数目录 → "上传并部署：云端安装依赖" |
 | 创建数据库集合 | ⬜ | `students` / `subjectProfiles` / `reports` / `papers` / `analysisTasks` |
 | 配置数据库安全规则 | ⬜ | 每个集合设置：仅创建者可读写 |
 | 真机测试 | ⬜ | 添加学生 → 上传试卷 → AI分析 → 查看报告 → 生成验证试卷 |
-| 微信订阅消息（可选） | ⬜ | 申请模板，配置推送 |
+| 微信订阅消息 | ⬜ | PRD 中为 P0；当前 `sendNotification` 仍为空实现，需申请模板并完成授权、发送和跳转 |
+| 默认试卷跨学生缓存 | ⬜ | 当前只复用同一学生已生成的试卷，尚未实现共享模板 |
+| 自动化与真机验收 | ⚠️ | 本地自动化见 `docs/TEST_MATRIX.md`；真实 AI、相机、云存储、打印和消息仍需真机验证 |
 
 ---
 
 ## 七、部署操作步骤（详细）
 
-### Step 1: 获取腾讯云密钥
+### Step 1: 开通 CloudBase AI 并上传字体
 
-1. 浏览器打开 `https://console.cloud.tencent.com/cam/capi`
-2. 登录腾讯云账号
-3. 点"新建密钥"，复制 **SecretId** 和 **SecretKey**
+1. 在当前云开发环境中确认 CloudBase AI 可用，并开通代码使用的模型
+2. 将中文字体上传到云存储，记录 `FONT_FILE_ID`
 
 ### Step 2: 上传云函数
 
@@ -403,16 +402,15 @@ System Prompt 包含：
 1. 左侧文件树找到 `cloudfunctions/analyzePhotos`
 2. **右键** → "上传并部署：云端安装依赖（不上传 node_modules）"
 3. 等待控制台显示"上传成功"
-4. 对 `generateReport` 和 `getStudentData` 重复
+4. 对 `cloudfunctions/` 下全部六个云函数重复
 
 ### Step 3: 配置环境变量
 
 1. 点顶部"云开发"按钮 → 进入控制台
-2. "云函数" → `analyzePhotos` → "配置"标签
+2. "云函数" → `generatePaper` → "配置"标签
 3. "环境变量" → 添加：
-   - `TENCENT_SECRET_ID` = Step 1 的 SecretId
-   - `TENCENT_SECRET_KEY` = Step 1 的 SecretKey
-4. 保存
+   - `FONT_FILE_ID` = Step 1 上传字体得到的 fileID
+4. 保存，并为 `generateReportPDF` 配置相同变量
 
 ### Step 4: 编译测试
 

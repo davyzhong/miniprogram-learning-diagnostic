@@ -9,11 +9,7 @@ const os = require('os');
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 
-// ========== 配置常量（请修改为你的实际配置） ==========
-const CONFIG = {
-  // PDF 中文字体（从云存储下载）— 已填写你的字体 fileID
-  FONT_FILE_ID: 'cloud://cloud1-d6gneg68m5a7a3876.636c-cloud1-d6gneg68m5a7a3876-1441789686/SimHei.ttf',
-};
+const FONT_FILE_ID = process.env.FONT_FILE_ID || '';
 
 // ========== 获取中文字体（从云存储下载，缓存到临时目录） ==========
 async function getChineseFont() {
@@ -22,7 +18,7 @@ async function getChineseFont() {
     return fontPath;
   }
 
-  const fontFileID = CONFIG.FONT_FILE_ID;
+  const fontFileID = FONT_FILE_ID;
   if (!fontFileID) {
     console.warn('未配置 FONT_FILE_ID，中文可能无法正常显示');
     return null;
@@ -41,7 +37,7 @@ async function getChineseFont() {
 
 // ========== 生成 PDF ==========
 async function generatePDF(reportData) {
-  const doc = new pdfkit({ size: 'A4', margin: 50 });
+  const doc = new pdfkit({ size: 'A4', margin: 50, bufferPages: true });
   const buffers = [];
   doc.on('data', buffers.push.bind(buffers));
 

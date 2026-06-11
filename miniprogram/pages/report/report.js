@@ -99,6 +99,7 @@ Page({
     var report = this.data.report
     var studentId = report.studentId
     var subject = report.subject
+    var subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || ''
 
     // 获取卡点列表，传给验证试卷生成页
     var bottlenecks = (report.bottlenecks || [])
@@ -106,7 +107,7 @@ Page({
       .join(',')
 
     wx.navigateTo({
-      url: '/pages/generate-verification/generate-verification?studentId=' + studentId + '&subject=' + subject + '&bottlenecks=' + encodeURIComponent(bottlenecks)
+      url: '/pages/generate-verification/generate-verification?studentId=' + studentId + '&subject=' + subject + '&subjectName=' + encodeURIComponent(subjectName) + '&bottlenecks=' + encodeURIComponent(bottlenecks)
     })
   },
 
@@ -184,14 +185,22 @@ Page({
       analysisStatusText: '正在重新启动分析...'
     })
 
-    cloud.callAnalyzePhotos({ reportId: this.data.reportId })
+    cloud.callAnalyzePhotos({ reportId: this.data.reportId }, { timeout: 20000 })
       .then(() => this.loadReport(this.data.reportId))
       .catch(err => {
-        console.error('重新分析失败', err)
-        this.setData({
-          analysisTaskMissing: true,
-          analysisStatusText: '重新启动失败，请再次尝试'
-        })
+        if (cloud.isTimeoutError(err)) {
+          this.setData({
+            analysisTaskMissing: false,
+            analysisStatusText: '分析已重新启动，正在后台处理'
+          })
+          this.startPolling(this.data.reportId)
+        } else {
+          console.error('重新分析失败', err)
+          this.setData({
+            analysisTaskMissing: true,
+            analysisStatusText: '重新启动失败，请再次尝试'
+          })
+        }
       })
       .finally(() => this.setData({ retryingAnalysis: false }))
   },

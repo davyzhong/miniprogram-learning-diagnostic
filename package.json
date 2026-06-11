@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node scripts/check-js.js"
+    "test:coverage": "node --test --experimental-test-coverage tests/*.test.js",
+    "check": "node scripts/check-js.js",
+    "verify": "npm test && npm run check"
   }
 }

@@ -2,13 +2,14 @@
 // 单批次分析（最多5张图片），调用 CloudBase AI 返回结构化JSON
 const tcb = require('@cloudbase/node-sdk');
 const cloud = require('wx-server-sdk');
+const { normalizePageResults } = require('./result-normalizer');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 
 // 初始化 CloudBase AI SDK
 const app = tcb.init({
-  env: 'cloud1-d6gneg68m5a7a3876',
+  env: tcb.SYMBOL_CURRENT_ENV,
   timeout: 60000
 });
 
@@ -56,28 +57,29 @@ function buildPrompt(subject) {
 - 红色字迹/符号：老师/家长批改标记
 
 ## 输出格式（严格JSON，不要加\`\`\`json\`\`\`包裹）
-返回一个JSON对象，格式如下：
+按图片分别返回结果。图片顺序与上传顺序一致，imageIndex 从 1 开始。返回一个JSON对象，格式如下：
 {
-  "summary": "一句话总结本次诊断发现（50字内）",
-  "totalErrors": 12,
-  "bottlenecks": [
+  "pageResults": [
     {
-      "lpCode": "LP-001",
-      "lpName": "计算错误（加减乘除）",
-      "errorCount": 4,
-      "severity": "high",
-      "rootCause": "进位加法不熟练，连续进位时容易遗漏",
-      "suggestion": "每天练习20道三位数进位加法，连续7天"
-    }
-  ],
-  "errorDetails": [
-    {
-      "questionContent": "题目内容（简要）",
-      "studentAnswer": "学生答案",
-      "correctAnswer": "正确答案",
-      "lpCode": "LP-001",
-      "rootCause": "具体根因（一句话）",
-      "suggestion": "改进建议（一句话）"
+      "imageIndex": 1,
+      "ocrSummary": "本页可用于判断是否重复的题目、学生答案和批改信息摘要（300字内）",
+      "summary": "本页诊断总结（50字内）",
+      "bottlenecks": [{
+        "lpCode": "LP-001",
+        "lpName": "计算错误（加减乘除）",
+        "errorCount": 1,
+        "severity": "high",
+        "rootCause": "进位加法不熟练",
+        "suggestion": "练习连续进位"
+      }],
+      "errorDetails": [{
+        "questionContent": "题目内容（简要）",
+        "studentAnswer": "学生答案",
+        "correctAnswer": "正确答案",
+        "lpCode": "LP-001",
+        "rootCause": "具体根因（一句话）",
+        "suggestion": "改进建议（一句话）"
+      }]
     }
   ]
 }
@@ -89,7 +91,9 @@ ${taxonomy.map(t => `- ${t.code}：${t.name}——${t.desc}`).join('\n')}
 1. severity 只能是 "high" / "medium" / "low"
 2. 如果错题无法归类到现有体系，使用 "LP-XXX" 作为新卡点代码，并在 lpName 中描述
 3. 只分析清晰可见的错题，模糊不清的题目跳过
-4. 返回纯JSON，不要有任何其他文字`;
+4. 每一张图片都必须返回一个 pageResults 项，即使本页没有错题
+5. ocrSummary 应包含足够区分本页内容的信息，但不要逐字抄录整页
+6. 返回纯JSON，不要有任何其他文字`;
 }
 
 // ========== 调用 CloudBase AI（多模态） ==========
@@ -118,36 +122,12 @@ async function callAI(imageUrls, subject) {
 }
 
 // ========== 解析 AI 返回 ==========
-function parseResult(aiText) {
+function parseResult(aiText, expectedPageCount) {
   try {
     // 去掉可能的 ```json ``` 包裹
     const cleaned = aiText.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
     const result = JSON.parse(cleaned);
-    if (!result || typeof result !== 'object' || !Array.isArray(result.bottlenecks) || !Array.isArray(result.errorDetails)) {
-      throw new Error('AI 返回的数据结构无效');
-    }
-
-    result.bottlenecks = result.bottlenecks
-      .filter(item => item && typeof item.lpCode === 'string' && typeof item.lpName === 'string')
-      .map(item => ({
-        lpCode: item.lpCode.slice(0, 30),
-        lpName: item.lpName.slice(0, 80),
-        errorCount: Math.max(0, Number(item.errorCount) || 0),
-        severity: ['high', 'medium', 'low'].includes(item.severity) ? item.severity : 'medium',
-        rootCause: String(item.rootCause || '').slice(0, 300),
-        suggestion: String(item.suggestion || '').slice(0, 300),
-      }));
-    result.errorDetails = result.errorDetails.slice(0, 100).map(item => ({
-      questionContent: String(item.questionContent || '').slice(0, 500),
-      studentAnswer: String(item.studentAnswer || '').slice(0, 300),
-      correctAnswer: String(item.correctAnswer || '').slice(0, 300),
-      lpCode: String(item.lpCode || '').slice(0, 30),
-      rootCause: String(item.rootCause || '').slice(0, 300),
-      suggestion: String(item.suggestion || '').slice(0, 300),
-    }));
-    result.totalErrors = result.errorDetails.length;
-    result.summary = String(result.summary || '').slice(0, 200);
-    return result;
+    return normalizePageResults(result, expectedPageCount);
   } catch (err) {
     throw new Error(`解析AI返回失败：${err.message}，原始内容：${aiText.substr(0, 200)}`);
   }
@@ -175,13 +155,16 @@ exports.main = async (event) => {
     // 1. 将 fileID 转成临时 URL
     console.log('获取图片临时链接...');
     const tempRes = await cloud.getTempFileURL({ fileList: fileIDs });
-    const imageUrls = tempRes.fileList
-      .filter(f => f.tempFileURL)
-      .map(f => f.tempFileURL);
-
-    if (imageUrls.length === 0) {
-      return { success: false, error: '无法获取图片临时链接' };
+    const tempUrlByFileID = new Map(
+      (tempRes.fileList || [])
+        .filter(file => file.fileID && file.tempFileURL)
+        .map(file => [file.fileID, file.tempFileURL])
+    );
+    if (fileIDs.some(fileID => !tempUrlByFileID.has(fileID))) {
+      return { success: false, error: '部分图片无法读取，请重新上传' };
     }
+    const availableFileIDs = fileIDs.slice();
+    const imageUrls = availableFileIDs.map(fileID => tempUrlByFileID.get(fileID));
 
     console.log(`成功获取 ${imageUrls.length} 张图片的临时链接`);
 
@@ -190,9 +173,13 @@ exports.main = async (event) => {
     const aiText = await callAI(imageUrls, subject);
 
     // 3. 解析结果
-    const result = parseResult(aiText);
+    const result = parseResult(aiText, availableFileIDs.length);
 
     // 4. 补充字段
+    result.pageResults = result.pageResults.map((page, index) => ({
+      ...page,
+      fileID: availableFileIDs[page.imageIndex - 1] || availableFileIDs[index] || '',
+    })).filter(page => page.fileID);
     result.batchIndex = batchIndex;
     result.analyzedFileIDs = fileIDs;
     result.timestamp = Date.now();

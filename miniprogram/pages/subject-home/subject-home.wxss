@@ -142,6 +142,7 @@
 .entry-icon-a { background: #ebf8ff; }
 .entry-icon-b { background: #f0fff4; }
 .entry-icon-c { background: #fffaf0; }
+.entry-icon-d { background: #f7fafc; color: #4a5568; }
 
 .entry-icon {
   font-size: 40rpx;

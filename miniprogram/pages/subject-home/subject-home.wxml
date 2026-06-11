@@ -68,6 +68,17 @@
       </view>
       <text class="entry-arrow">›</text>
     </view>
+
+    <view class="entry-card" bindtap="onUploadHistoryTap">
+      <view class="entry-icon-wrap entry-icon-d">
+        <text class="entry-icon">▧</text>
+      </view>
+      <view class="entry-info">
+        <text class="entry-title">上传历史</text>
+        <text class="entry-desc">查看原始照片、识别摘要和疑似重复记录</text>
+      </view>
+      <text class="entry-arrow">›</text>
+    </view>
   </view>
 
   <!-- 分析中状态卡片 -->

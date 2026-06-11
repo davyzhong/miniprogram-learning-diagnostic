@@ -5,6 +5,7 @@
     "pages/subject-select/subject-select",
     "pages/subject-home/subject-home",
     "pages/upload/upload",
+    "pages/upload-history/upload-history",
     "pages/report/report",
     "pages/generate-verification/generate-verification",
     "pages/default-paper/default-paper",

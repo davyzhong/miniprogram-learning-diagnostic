@@ -97,6 +97,17 @@
   line-height: 1;
 }
 
+.name-warning {
+  position: absolute;
+  left: 4rpx;
+  bottom: 4rpx;
+  background: rgba(192, 86, 33, 0.9);
+  border-radius: 6rpx;
+  color: #ffffff;
+  font-size: 18rpx;
+  padding: 3rpx 7rpx;
+}
+
 .add-slot {
   border: 3rpx dashed #cbd5e0;
   display: flex;

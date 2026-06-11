@@ -29,32 +29,15 @@
 
 ---
 
-## 二、环境变量配置
+## 二、CloudBase AI 与环境变量配置
 
-在微信开发者工具里，进入「云开发」控制台 → 「设置」→ 「环境变量」，添加以下变量：
+`analyzeBatch` 和 `generatePaper` 使用当前云开发环境中的 CloudBase AI 能力，不读取 `SECRET_ID`、`SECRET_KEY`、`AI_API_KEY` 或 `AI_API_URL`。部署前需确认当前云开发环境已经开通代码中使用的模型。
 
-### 方案 A：TC3 签名认证（推荐）
+在微信开发者工具里，进入「云开发」控制台 → 「云函数」→ 对应函数 → 「环境变量」，为 `generatePaper` 和 `generateReportPDF` 添加：
+
 | 变量名 | 说明 | 示例 |
 |--------|------|------|
-| `SECRET_ID` | 腾讯云 SecretId | `AKIDxxxxxxxx` |
-| `SECRET_KEY` | 腾讯云 SecretKey | `xxxxxxxxxxxx` |
-| `AI_API_URL` | 混元 API 地址 | `https://api.hunyuan.cloud.tencent.com/hyllm/v1/chat/completions` |
-| `AI_MODEL` | 混元模型名 | `hunyuan-vision` 或 `hunyuan-turbo` |
 | `FONT_FILE_ID` | 云存储中的中文字体文件 ID | `cloud://xxxxx/SimHei.ttf` |
-
-### 方案 B：Bearer Token 认证（简单）
-| 变量名 | 说明 | 示例 |
-|--------|------|------|
-| `AI_API_KEY` | 混元 API Key（Bearer 格式） | `TC3xxxxxxxxxxxx` 或 `sk-xxxxxxxx` |
-| `AI_API_URL` | 混元 API 地址 | `https://api.hunyuan.cloud.tencent.com/hyllm/v1/chat/completions` |
-| `AI_MODEL` | 混元模型名 | `hunyuan-vision` |
-| `FONT_FILE_ID` | 云存储中的中文字体文件 ID | `cloud://xxxxx/SimHei.ttf` |
-
-### 如何获取混元 API Key？
-1. 登录腾讯云控制台：https://console.cloud.tencent.com/
-2. 进入「混元大模型」→ 「API 密钥管理」
-3. 创建密钥（SecretId + SecretKey）或直接获取 API Key
-4. 将密钥配置到环境变量中
 
 ---
 
@@ -85,7 +68,8 @@
 
 ### 注意：
 - `uploadAndAnalyze` 会在服务端可靠调用 `analyzePhotos`，两者执行超时建议在云端配置为 **900 秒**
-- 小程序等待 20 秒后会返回学科主页，服务端继续完成分析
+- 小程序等待 20 秒后会按后台处理中返回学科主页。当前 `uploadAndAnalyze` 仍同步等待 `analyzePhotos`，因此两个函数都建议配置为 900 秒，并需重点执行超时真机验收
+- `analyzeBatch` 按图片返回 OCR 摘要；`analyzePhotos` 使用归一化摘要标记疑似重复照片，并只汇总唯一页面
 - 每个云函数的 `package.json` 都已写好，云端会自动安装依赖
 
 ---
@@ -133,9 +117,9 @@
 
 ---
 
-## 六、微信订阅消息配置（可选）
+## 六、微信订阅消息配置（尚未实现）
 
-如果要使用「分析完成后推送通知」功能：
+PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sendNotification` 仍为空实现。完成订阅授权、模板配置和发送云函数后，再执行以下平台配置：
 
 1. 登录微信公众平台：https://mp.weixin.qq.com/
 2. 进入「功能」→ 「订阅消息」
@@ -161,9 +145,9 @@
 
 ## 八、常见问题
 
-### Q1：云函数调用失败，报错 `invalid credential`？
-- 检查环境变量 `SECRET_ID` / `SECRET_KEY` / `AI_API_KEY` 是否配置正确
-- 确认混元 API 密钥是否已开通、是否有余额
+### Q1：CloudBase AI 调用失败？
+- 确认当前云开发环境已开通 CloudBase AI 和代码中使用的模型
+- 查看 `analyzeBatch` 或 `generatePaper` 云函数日志中的模型调用错误
 
 ### Q2：PDF 中文显示乱码？
 - 检查 `FONT_FILE_ID` 环境变量是否配置
@@ -192,13 +176,14 @@
 miniprogram-learning-diagnostic/
 ├── miniprogram/
 │   ├── app.js                 ✅
-│   ├── app.json               ✅（9 个页面路径）
+│   ├── app.json               ✅（10 个页面路径）
 │   ├── app.wxss               ✅
-│   └── pages/                ✅（9 个页面）
+│   └── pages/                ✅（10 个页面）
 │       ├── index/
 │       ├── subject-select/
 │       ├── subject-home/
 │       ├── upload/
+│       ├── upload-history/
 │       ├── report/
 │       ├── generate-verification/
 │       ├── default-paper/

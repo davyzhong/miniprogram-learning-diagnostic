@@ -160,6 +160,16 @@ async function getReport(reportId) {
   return res.data
 }
 
+async function getTempFileURLs(fileIDs) {
+  const uniqueFileIDs = Array.from(new Set((fileIDs || []).filter(Boolean)))
+  const results = []
+  for (let i = 0; i < uniqueFileIDs.length; i += 50) {
+    const res = await wx.cloud.getTempFileURL({ fileList: uniqueFileIDs.slice(i, i + 50) })
+    results.push(...(res.fileList || []))
+  }
+  return results
+}
+
 async function getPapers(filter) {
   const res = await db.collection('papers').where(filter).get()
   return res.data
@@ -181,8 +191,8 @@ async function callUploadAndAnalyze(params, options) {
 /**
  * 调用云函数：分析照片（由 uploadAndAnalyze 内部触发，一般不直接调用）
  */
-async function callAnalyzePhotos(params) {
-  return callFunction('analyzePhotos', params)
+async function callAnalyzePhotos(params, options) {
+  return callFunction('analyzePhotos', params, options)
 }
 
 /**
@@ -220,6 +230,7 @@ module.exports = {
   getReports,
   getLatestReport,
   getReport,
+  getTempFileURLs,
   getPapers,
   getPaper,
   callUploadAndAnalyze,
