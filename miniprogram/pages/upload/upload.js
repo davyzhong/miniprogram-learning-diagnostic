@@ -148,7 +148,6 @@ Page({
 
     this.setData({ uploading: true, uploadedCount: 0, uploadProgress: 0, submitBtnText: '上传中...' })
 
-    let analysisSubmitted = false
     try {
       wx.showLoading({ title: '上传中...' })
 
@@ -167,8 +166,7 @@ Page({
 
       wx.hideLoading()
 
-      // 2. 云函数在服务端创建报告并可靠启动分析。
-      analysisSubmitted = true
+      // 2. 云函数创建报告并 fire-and-forget 启动分析（秒回）
       await cloud.callUploadAndAnalyze({
         fileIDs: fileIds,
         imageMetas: images.map(image => ({
@@ -179,20 +177,15 @@ Page({
         subject,
         mode,
         paperId: paperId || ''
-      }, { timeout: 20000 })
+      })
 
       wx.showToast({ title: '已提交，AI 正在分析', icon: 'success', duration: 2000 })
       setTimeout(() => wx.navigateBack(), 1200)
     } catch (err) {
       wx.hideLoading()
       this.setData({ uploading: false })
-      if (analysisSubmitted && cloud.isTimeoutError(err)) {
-        wx.showToast({ title: '已提交，AI将在后台分析', icon: 'none', duration: 2500 })
-        setTimeout(() => wx.navigateBack(), 1200)
-      } else {
-        console.error('上传或提交分析失败', err)
-        wx.showToast({ title: err.message || '上传失败，请重试', icon: 'none' })
-      }
+      console.error('上传或提交分析失败', err)
+      wx.showToast({ title: err.message || '上传失败，请重试', icon: 'none' })
     }
   },
 
