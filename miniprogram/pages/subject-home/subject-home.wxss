@@ -27,6 +27,11 @@
   font-size: 28rpx;
   margin-right: 20rpx;
   opacity: 0.9;
+  padding: 20rpx 30rpx;
+  min-height: 88rpx;
+  min-width: 88rpx;
+  display: flex;
+  align-items: center;
 }
 
 .top-info {

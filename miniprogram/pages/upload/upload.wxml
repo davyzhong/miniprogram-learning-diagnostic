@@ -23,9 +23,9 @@
     <view
       class="photo-slot has-image"
       wx:for="{{images}}"
-      wx:key="index"
+      wx:key="tempPath"
     >
-      <image class="preview-img" src="{{item.tempPath}}" mode="aspectFill" />
+      <image class="preview-img" src="{{item.tempPath}}" mode="aspectFill" binderror="onImageLoadError" data-index="{{index}}" />
       <view class="name-warning" wx:if="{{item.nameDuplicate}}">同名</view>
       <view class="delete-btn" catchtap="onDeleteImage" data-index="{{index}}">✕</view>
     </view>

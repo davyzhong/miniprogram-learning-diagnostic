@@ -180,6 +180,7 @@ miniprogram-learning-diagnostic/
 │   ├── app.wxss               ✅
 │   └── pages/                ✅（10 个页面）
 │       ├── index/
+│       ├── add-student/
 │       ├── subject-select/
 │       ├── subject-home/
 │       ├── upload/
@@ -195,10 +196,14 @@ miniprogram-learning-diagnostic/
 │   ├── generatePaper/        ✅
 │   ├── generateReportPDF/    ✅
 │   └── getAnalysisProgress/  ✅
+├── tests/                    ✅（13 个测试文件 + helpers，100 用例）
+├── scripts/check-js.js       ✅（40 文件语法检查）
 ├── project.config.json        ✅
+├── package.json              ✅（npm scripts: test / test:coverage / check / verify）
 ├── PROJECT_PLAN.md          ✅
-├── PRD.md                   ✅
-└── SETUP.md                ✅（本文件）
+├── PRD.md                   ✅（v2.2）
+├── SETUP.md                ✅（本文件）
+└── docs/TEST_MATRIX.md     ✅
 ```
 
 ---

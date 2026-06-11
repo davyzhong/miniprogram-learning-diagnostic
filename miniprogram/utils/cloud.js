@@ -1,6 +1,10 @@
 // utils/cloud.js - 云函数调用封装
 
-const db = wx.cloud.database()
+let _db = null
+function getDb() {
+  if (!_db) _db = wx.cloud.database()
+  return _db
+}
 
 function normalizeError(error, fallbackMessage) {
   const message = error && (error.message || error.errMsg) ? (error.message || error.errMsg) : fallbackMessage
@@ -30,7 +34,7 @@ function isTimeoutError(error) {
  * 获取所有学生列表
  */
 async function getStudents() {
-  const res = await db.collection('students')
+  const res = await getDb().collection('students')
     .orderBy('createdAt', 'desc')
     .get()
   return res.data
@@ -40,7 +44,7 @@ async function getStudents() {
  * 获取单个学生信息
  */
 async function getStudent(studentId) {
-  const res = await db.collection('students').doc(studentId).get()
+  const res = await getDb().collection('students').doc(studentId).get()
   return res.data
 }
 
@@ -48,8 +52,8 @@ async function getStudent(studentId) {
  * 添加学生
  */
 async function addStudent(data) {
-  const now = db.serverDate()
-  const res = await db.collection('students').add({
+  const now = getDb().serverDate()
+  const res = await getDb().collection('students').add({
     data: {
       ...data,
       createdAt: now,
@@ -63,10 +67,10 @@ async function addStudent(data) {
 async function createStudentWithProfiles(data) {
   const studentId = await addStudent(data)
   const subjectNames = { math: '数学', chinese: '语文', english: '英语' }
-  const now = db.serverDate()
+  const now = getDb().serverDate()
 
   for (const subject of Object.keys(subjectNames)) {
-    await db.collection('subjectProfiles').add({
+    await getDb().collection('subjectProfiles').add({
       data: {
         studentId,
         subject,
@@ -86,7 +90,7 @@ async function createStudentWithProfiles(data) {
 }
 
 async function getSubjectProfiles(studentId) {
-  const res = await db.collection('subjectProfiles').where({ studentId }).get()
+  const res = await getDb().collection('subjectProfiles').where({ studentId }).get()
   return res.data
 }
 
@@ -99,8 +103,8 @@ async function ensureSubjectProfile(studentId, subject, subjectName = '') {
   const existing = await getSubjectProfile(studentId, subject)
   if (existing) return existing
 
-  const now = db.serverDate()
-  const res = await db.collection('subjectProfiles').add({
+  const now = getDb().serverDate()
+  const res = await getDb().collection('subjectProfiles').add({
     data: {
       studentId,
       subject,
@@ -139,7 +143,7 @@ async function uploadPhoto(filePath, studentId, batchId) {
  */
 async function getReports(studentId, subject, limit = 20) {
   const filter = subject ? { studentId, subject } : { studentId }
-  const res = await db.collection('reports')
+  const res = await getDb().collection('reports')
     .where(filter)
     .orderBy('createdAt', 'desc')
     .limit(limit)
@@ -156,7 +160,7 @@ async function getLatestReport(studentId, subject) {
  * 获取单个报告详情
  */
 async function getReport(reportId) {
-  const res = await db.collection('reports').doc(reportId).get()
+  const res = await getDb().collection('reports').doc(reportId).get()
   return res.data
 }
 
@@ -171,12 +175,12 @@ async function getTempFileURLs(fileIDs) {
 }
 
 async function getPapers(filter) {
-  const res = await db.collection('papers').where(filter).get()
+  const res = await getDb().collection('papers').where(filter).get()
   return res.data
 }
 
 async function getPaper(paperId) {
-  const res = await db.collection('papers').doc(paperId).get()
+  const res = await getDb().collection('papers').doc(paperId).get()
   return res.data
 }
 

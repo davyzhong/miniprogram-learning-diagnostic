@@ -19,3 +19,44 @@ test('builds verification report counters and chart widths', () => {
   assert.deepEqual(view.bottleneckList.map(item => item.barWidth), [100, 50])
   assert.equal(view.errorDetailList[0].displayIndex, '1.')
 })
+
+test('diagnosis report zeroes improvement counters and shows next step when bottlenecks exist', () => {
+  const view = buildReportView({
+    type: 'diagnosis',
+    bottlenecks: [
+      { lpCode: 'LP-001', errorCount: 3, status: 'found' }
+    ],
+    errorDetails: []
+  })
+
+  assert.equal(view.isVerification, false)
+  assert.equal(view.improvedCount, 0)
+  assert.equal(view.worsenedCount, 0)
+  assert.equal(view.showNextStep, true)
+  assert.equal(view.hasBottlenecks, true)
+  assert.equal(view.hasErrorDetails, false)
+})
+
+test('empty bottleneck and detail lists render without NaN widths', () => {
+  const view = buildReportView({ type: 'diagnosis' })
+
+  assert.equal(view.hasBottlenecks, false)
+  assert.deepEqual(view.bottleneckList, [])
+  assert.equal(view.hasErrorDetails, false)
+  assert.deepEqual(view.errorDetailList, [])
+  assert.equal(view.showNextStep, false)
+  assert.equal(view.bottleneckList.some(item => Number.isNaN(item.barWidth)), false)
+})
+
+test('bar width falls back to a non-NaN value when errorCount is missing', () => {
+  const view = buildReportView({
+    type: 'verification',
+    bottlenecks: [
+      { lpCode: 'LP-001' },
+      { lpCode: 'LP-002', errorCount: 0 }
+    ]
+  })
+
+  assert.ok(view.bottleneckList.every(item => Number.isFinite(item.barWidth)))
+  assert.deepEqual(view.bottleneckList.map(item => item.barWidth), [0, 0])
+})

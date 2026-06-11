@@ -1,16 +1,17 @@
 # 学习卡点诊断小程序测试矩阵
 
-> 更新日期：2026-06-11  
+> 更新日期：2026-06-11
 > 范围：`PRD.md`、`PROJECT_PLAN.md` 中的 MVP P0 功能
+> 自动化结果：`npm test` → 100/100 通过；`npm run check` → 40 个 JS 文件语法正确
 
 ## 1. 自动化验证命令
 
 ```bash
-npm run verify
-npm run test:coverage
+npm run verify          # npm test && npm run check
+npm run test:coverage   # node --test --experimental-test-coverage tests/*.test.js
 ```
 
-自动化测试使用 Node.js 内置测试运行器，执行真实页面控制器、数据访问层和云函数主流程；微信 API、数据库、CloudBase AI 和 PDF 引擎在测试中使用可控替身。
+自动化测试使用 Node.js 内置测试运行器（`node:test`），执行真实页面控制器、数据访问层和云函数主流程；微信 API、数据库、CloudBase AI 和 PDF 引擎在测试中使用可控替身。
 
 ## 2. P0 功能追踪
 
@@ -29,6 +30,8 @@ npm run test:coverage
 | 分析超时、任务缺失和手动重试 | `poller.test.js`、`page-flows.test.js`、`contracts.test.js` | 客户端恢复路径已覆盖 |
 | 页面注册、四件套文件和 WXML 事件绑定 | `project-integrity.test.js` | 已覆盖 |
 | 数据归属校验、参数白名单、无堆栈返回 | `cloud-functions.test.js`、`contracts.test.js` | 已覆盖主要云函数入口 |
+| 覆盖缺口补全（边界与回归） | `coverage-gap.test.js` | 已覆盖历史修复的回归场景 |
+| 端到端真实图片链路 | `e2e-real-image.test.js`（独立脚本） | 串通上传 → AI 分析 → 报告生成；需单独运行，不计入 `npm test` |
 
 ## 3. 尚未完成的设计能力
 
@@ -37,7 +40,7 @@ npm run test:coverage
 | 微信订阅消息 | P0，分析完成后推送 | `analyzePhotos/sendNotification` 仍为空实现 |
 | 上传与分析完全解耦 | 创建任务后立即返回，分析独立执行 | `uploadAndAnalyze` 仍同步等待 `analyzePhotos`；客户端仅在 20 秒超时后返回 |
 | 默认试卷跨学生缓存 | 不同学生可复用同一套默认试卷 PDF | 当前试卷记录按 `studentId` 查询和归属，尚未实现共享模板 |
-| 验证结论证据完整性 | 每个目标卡点都应有可核对的验证题作答证据 | 当前按“本次未识别出该卡点错误”判定改善，尚未区分答对、空白、模糊或 OCR 漏识别 |
+| 验证结论证据完整性 | 每个目标卡点都应有可核对的验证题作答证据 | 当前按"本次未识别出该卡点错误"判定改善，尚未区分答对、空白、模糊或 OCR 漏识别 |
 
 ## 4. 云端与真机验收清单
 
@@ -55,12 +58,21 @@ npm run test:coverage
 
 ## 5. 测试文件说明
 
-| 文件 | 目的 |
-|---|---|
-| `tests/helpers/page-harness.js` | 执行真实小程序页面控制器 |
-| `tests/helpers/cloud-function-harness.js` | 执行真实云函数并模拟数据库、存储和函数调用 |
-| `tests/page-flows.test.js` | 页面主流程与错误恢复 |
-| `tests/cloud-functions.test.js` | 云函数集成流程、权限和边界 |
-| `tests/data-layer.test.js` | 统一数据访问层 |
-| `tests/project-integrity.test.js` | 页面文件和事件绑定完整性 |
-| `tests/contracts.test.js` | 跨模块契约和已修复缺陷回归保护 |
+| 文件 | 目的 | 用例数 |
+|---|---|---|
+| `tests/helpers/page-harness.js` | 执行真实小程序页面控制器 | — |
+| `tests/helpers/cloud-function-harness.js` | 执行真实云函数并模拟数据库、存储和函数调用 | — |
+| `tests/analyze-batch-result.test.js` | analyzeBatch 结果标准化 | 2 |
+| `tests/cloud-functions.test.js` | 云函数集成流程、权限和边界 | 16 |
+| `tests/comparison.test.js` | 验证报告对比算法 | 4 |
+| `tests/contracts.test.js` | 跨模块契约和已修复缺陷回归保护 | 19 |
+| `tests/coverage-gap.test.js` | 覆盖缺口补全 | 7 |
+| `tests/data-layer.test.js` | 统一数据访问层 | 8 |
+| `tests/e2e-real-image.test.js` | 端到端真实图片测试脚本（独立运行） | 3（手工步骤） |
+| `tests/page-flows.test.js` | 页面主流程与错误恢复 | 21 |
+| `tests/photo-dedup.test.js` | OCR 去重算法 | 3 |
+| `tests/poller.test.js` | 通用轮询器 | 4 |
+| `tests/project-integrity.test.js` | 页面文件和事件绑定完整性 | 2 |
+| `tests/report-presenter.test.js` | 报告视图预计算 | 4 |
+| `tests/util.test.js` | 工具函数 | 9 |
+| **合计** | | **100 + e2e 脚本** |

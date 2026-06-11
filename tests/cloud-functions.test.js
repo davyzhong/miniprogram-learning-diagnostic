@@ -539,3 +539,74 @@ test('generateReportPDF uploads and stores the generated file for its owner', as
   assert.match(result.pdfFileId, /^cloud:\/\/reports\//)
   assert.equal(db.dump('reports')[0].pdfFileId, result.pdfFileId)
 })
+
+test('uploadAndAnalyze rejects paper mode without a paperId', async () => {
+  // paper 模式语义上必须关联试卷；当前实现没有强制校验。此测试记录该行为，
+  // 若未来增加校验，断言应改为 success:false + 明确错误文案。
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    subjectProfiles: [{ _id: 'profile-1', studentId: 'student-1', subject: 'math' }],
+    reports: []
+  })
+  const cloud = createCloudMock({ db })
+  const handler = loadModule('cloudfunctions/uploadAndAnalyze/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({
+    fileIDs: ['cloud://photo-1'],
+    studentId: 'student-1',
+    subject: 'math',
+    mode: 'paper'
+  })
+
+  // Known gap: server currently accepts paper mode without paperId and falls back to sourceType='photo'.
+  assert.equal(result.success, true)
+  assert.equal(db.dump('reports')[0].sourceType, 'photo')
+  assert.equal(db.dump('reports')[0].paperId, '')
+})
+
+test('analyzePhotos marks task and profile as failed when a batch returns failure', async () => {
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'analyzing',
+      createdAt: '2026-06-11T10:00:00Z',
+      imageFileIds: ['cloud://photo-1'],
+      imageFiles: [{ fileID: 'cloud://photo-1' }]
+    }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      analysisStatus: 'analyzing',
+      currentAnalysisId: 'report-1',
+      pendingBottlenecks: [{ lpCode: 'LP-001', lpName: '计算' }],
+      improvedBottlenecks: []
+    }],
+    analysisTasks: []
+  })
+  const cloud = createCloudMock({
+    db,
+    callFunction: async () => ({ result: { success: false, error: 'AI 服务繁忙' } })
+  })
+  const handler = loadModule('cloudfunctions/analyzePhotos/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({ reportId: 'report-1' })
+  const report = db.dump('reports').find(item => item._id === 'report-1')
+  const profile = db.dump('subjectProfiles')[0]
+  const task = db.dump('analysisTasks')[0]
+
+  assert.equal(result.success, false)
+  assert.equal(report.status, 'failed')
+  assert.equal(task.status, 'failed')
+  assert.equal(profile.analysisStatus, null)
+  assert.equal(profile.currentAnalysisId, '')
+  assert.deepEqual(profile.pendingBottlenecks, [{ lpCode: 'LP-001', lpName: '计算' }])
+})
