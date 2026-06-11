@@ -26,6 +26,7 @@
       wx:key="index"
     >
       <image class="preview-img" src="{{item.tempPath}}" mode="aspectFill" />
+      <view class="name-warning" wx:if="{{item.nameDuplicate}}">同名</view>
       <view class="delete-btn" catchtap="onDeleteImage" data-index="{{index}}">✕</view>
     </view>
 

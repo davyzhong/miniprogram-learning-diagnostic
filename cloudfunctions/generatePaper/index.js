@@ -14,12 +14,12 @@ const TYPES = new Set(['verification', 'default-diagnosis']);
 
 // 初始化 CloudBase AI SDK
 const app = tcb.init({
-  env: 'cloud1-d6gneg68m5a7a3876',
+  env: tcb.SYMBOL_CURRENT_ENV,
   timeout: 60000
 });
 
 // PDF 中文字体 fileID
-const FONT_FILE_ID = 'cloud://cloud1-d6gneg68m5a7a3876.636c-cloud1-d6gneg68m5a7a3876-1441789686/SimHei.ttf';
+const FONT_FILE_ID = process.env.FONT_FILE_ID || '';
 
 // ========== 获取中文字体（从云存储下载，缓存到临时目录） ==========
 async function getChineseFont() {
@@ -83,10 +83,10 @@ function normalizeQuestionsData(data, expectedCount) {
   };
 }
 
-async function generateQuestionsWithAI(student, subject, type, targets, paperKey, questionCount) {
+async function generateQuestionsWithAI(student, subject, type, targets, paperKey, questionCount, selectedGrade) {
   // 获取学生信息（用于个性化）
   const studentName = cleanPromptText(student.name, 30);
-  const grade = Number(student.grade) || 0;
+  const grade = Number(selectedGrade) || Number(student.grade) || 0;
   const expectedCount = type === 'verification' ? targets.length * 3 : questionCount;
 
   const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
@@ -214,6 +214,7 @@ exports.main = async (event) => {
     preview = false,
     paperKey = '',
     questionCount = 12,
+    grade = 0,
   } = event;
 
   if (!studentId) {
@@ -227,6 +228,9 @@ exports.main = async (event) => {
   }
   if (type === 'verification' && targets.length === 0) {
     return { success: false, error: '验证试卷至少需要一个学习卡点' };
+  }
+  if (type === 'default-diagnosis' && ![1, 2, 3, 4, 5, 6].includes(Number(grade) || 0)) {
+    return { success: false, error: '默认诊断试卷需要选择有效年级' };
   }
   const normalizedQuestionCount = Math.min(20, Math.max(6, Number(questionCount) || 12));
 
@@ -249,7 +253,8 @@ exports.main = async (event) => {
       type,
       targets,
       paperKey,
-      normalizedQuestionCount
+      normalizedQuestionCount,
+      type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0
     );
 
     // 2. 生成 PDF
@@ -281,7 +286,7 @@ exports.main = async (event) => {
         studentId,
         subject,
         type,
-        grade: Number(student.grade) || Number(event.grade) || 0,
+        grade: type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0,
         paperKey: cleanPromptText(paperKey, 20),
         bottleneckTargets: targets,
         questions: questionsData.questions || [],

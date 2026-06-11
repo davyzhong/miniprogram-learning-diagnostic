@@ -2,6 +2,7 @@
 // 主控函数：拆分批次、串行调用 analyzeBatch、合并结果、更新数据库、推送通知
 const cloud = require('wx-server-sdk');
 const { compareBottlenecks, buildComparisonSummary } = require('./comparison');
+const { markDuplicatePages } = require('./photo-dedup');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -140,20 +141,40 @@ async function getPreviousReport(studentId, subject) {
       status: 'completed',
     })
     .orderBy('createdAt', 'desc')
-    .limit(1)
+    .limit(20)
     .get();
 
-  return res.data[0] || null;
+  return res.data.find(item => Array.isArray(item.bottlenecks) && item.bottlenecks.length > 0) || null;
+}
+
+async function getHistoricalPhotos(studentId, subject) {
+  const res = await db.collection('reports')
+    .where({
+      studentId,
+      subject,
+      status: 'completed',
+    })
+    .orderBy('createdAt', 'desc')
+    .limit(20)
+    .get();
+
+  return res.data.flatMap(item => Array.isArray(item.imageFiles) ? item.imageFiles : []);
 }
 
 async function getVerificationTargets(report) {
-  if (!report.paperId) return [];
+  if (!report.paperId) {
+    throw new Error('验证报告没有关联验证试卷');
+  }
   const paperRes = await db.collection('papers').doc(report.paperId).get();
   const paper = paperRes.data;
   if (!paper || paper.studentId !== report.studentId || (paper._openid && report._openid && paper._openid !== report._openid)) {
     throw new Error('关联验证试卷归属不一致');
   }
-  return Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : [];
+  const targets = Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : [];
+  if (paper.type !== 'verification' || targets.length === 0) {
+    throw new Error('关联验证试卷没有有效学习卡点');
+  }
+  return targets;
 }
 
 // ========== 推送订阅消息（预留，暂未实现 sendSubscribeMessage 云函数） ==========
@@ -273,12 +294,40 @@ exports.main = async (event) => {
       throw new Error('存在未完成的图片分析批次');
     }
 
-    // 4. 合并结果
-    const merged = mergeBatchResults(batchResults, subject);
+    // 4. 按图片识别重复内容，保留照片记录但只汇总唯一页面
+    const pageResults = batchResults.flatMap(result => result.data.pageResults || []);
+    if (pageResults.length === 0) {
+      throw new Error('AI 未返回逐页分析结果');
+    }
+    const historicalPhotos = await getHistoricalPhotos(studentId, subject);
+    const markedPages = markDuplicatePages(pageResults, historicalPhotos);
+    const uniquePages = markedPages.filter(page => !page.isDuplicate);
+    const merged = mergeBatchResults(
+      uniquePages.map(page => ({ success: true, data: page })),
+      subject
+    );
+    const initialImageFiles = Array.isArray(report.imageFiles) ? report.imageFiles : [];
+    const pageByFileID = new Map(markedPages.map(page => [page.fileID, page]));
+    const imageFiles = fileIDs.map((fileID, index) => {
+      const initial = initialImageFiles.find(item => item.fileID === fileID) || {};
+      const page = pageByFileID.get(fileID) || {};
+      return {
+        fileID,
+        fileName: initial.fileName || `照片${index + 1}`,
+        fileSize: Number(initial.fileSize) || 0,
+        ocrSummary: page.ocrSummary || '',
+        contentFingerprint: page.contentFingerprint || '',
+        isDuplicate: Boolean(page.isDuplicate),
+        duplicateOf: page.duplicateOf || '',
+      };
+    });
     let previousReport = null;
     let comparisonSummary = '';
 
-    if (mode === 'verification') {
+    if (uniquePages.length === 0) {
+      merged.summary = '本次照片均疑似重复，未更新学习卡点';
+      comparisonSummary = '本次照片均疑似重复，未更新学习卡点。';
+    } else if (mode === 'verification') {
       previousReport = await getPreviousReport(studentId, subject);
       const verificationTargets = await getVerificationTargets(report);
       merged.bottlenecks = compareBottlenecks(
@@ -299,6 +348,7 @@ exports.main = async (event) => {
         totalErrors: merged.totalErrors,
         bottlenecks: merged.bottlenecks,
         errorDetails: merged.errorDetails,
+        imageFiles,
         previousReportId: previousReport ? previousReport._id : '',
         comparisonSummary,
         completedAt: merged.completedAt,
@@ -306,7 +356,11 @@ exports.main = async (event) => {
     });
 
     // 6. 更新 subjectProfiles
-    await updateSubjectProfile(studentId, subject, merged, mode);
+    if (uniquePages.length > 0) {
+      await updateSubjectProfile(studentId, subject, merged, mode);
+    } else {
+      await clearSubjectProfileAnalysis(studentId, subject);
+    }
 
     // 7. 更新 analysisTasks 状态
     await db.collection('analysisTasks').doc(taskId).update({

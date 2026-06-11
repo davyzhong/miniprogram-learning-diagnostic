@@ -38,11 +38,16 @@ Page({
 
       let bottlenecks = []
       if (profile) {
-        bottlenecks = (profile.pendingBottlenecks || []).map(b => ({
-          ...b,
-          selected: b.severity === 'high',
-          sinceDateText: this.formatDate(b.sinceDate)
-        }))
+        let selectedHighCount = 0
+        bottlenecks = (profile.pendingBottlenecks || []).map(b => {
+          const selected = b.severity === 'high' && selectedHighCount < 5
+          if (selected) selectedHighCount += 1
+          return {
+            ...b,
+            selected,
+            sinceDateText: this.formatDate(b.sinceDate)
+          }
+        })
       }
 
       const selectedCount = bottlenecks.filter(b => b.selected).length

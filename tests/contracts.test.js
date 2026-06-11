@@ -30,6 +30,13 @@ test('report PDF download uses pdfFileId consistently', () => {
   assert.match(report, /result\.pdfFileId/)
 })
 
+test('multi-page report PDF buffers pages before adding page numbers', () => {
+  const backend = read('cloudfunctions/generateReportPDF/index.js')
+  assert.match(backend, /bufferPages:\s*true/)
+  assert.match(backend, /bufferedPageRange\(\)/)
+  assert.match(backend, /switchToPage\(/)
+})
+
 test('cloud SDK is initialized before database access', () => {
   for (const relativePath of [
     'cloudfunctions/generatePaper/index.js',
@@ -40,6 +47,26 @@ test('cloud SDK is initialized before database access', () => {
       source.indexOf('cloud.init(') < source.indexOf('cloud.database()'),
       `${relativePath} must initialize cloud before database access`
     )
+  }
+})
+
+test('cloud functions use deployment configuration instead of a hard-coded environment or font', () => {
+  for (const relativePath of [
+    'cloudfunctions/analyzeBatch/index.js',
+    'cloudfunctions/generatePaper/index.js'
+  ]) {
+    const source = read(relativePath)
+    assert.match(source, /tcb\.SYMBOL_CURRENT_ENV/)
+    assert.doesNotMatch(source, /cloud1-d6gneg68m5a7a3876/)
+  }
+
+  for (const relativePath of [
+    'cloudfunctions/generatePaper/index.js',
+    'cloudfunctions/generateReportPDF/index.js'
+  ]) {
+    const source = read(relativePath)
+    assert.match(source, /process\.env\.FONT_FILE_ID/)
+    assert.doesNotMatch(source, /cloud:\/\/cloud1-d6gneg68m5a7a3876/)
   }
 })
 
@@ -106,6 +133,23 @@ test('analysis is started reliably by the server entrypoint', () => {
   assert.match(entrypoint, /cloud\.callFunction\(\{\s*name:\s*'analyzePhotos'/s)
 })
 
+test('expected upload analysis timeout is not logged as an upload failure', () => {
+  const uploadPage = read('miniprogram/pages/upload/upload.js')
+  const timeoutBranch = uploadPage.indexOf('if (analysisSubmitted && cloud.isTimeoutError(err))')
+  const uploadErrorLog = uploadPage.indexOf("console.error('上传或提交分析失败', err)")
+
+  assert.ok(timeoutBranch > -1, 'upload page should handle expected analysis timeout')
+  assert.ok(uploadErrorLog > timeoutBranch, 'upload failure should only be logged after excluding expected timeout')
+  assert.match(uploadPage, /AI将在后台分析/)
+})
+
+test('expected retry analysis timeout is treated as background processing', () => {
+  const reportPage = read('miniprogram/pages/report/report.js')
+  assert.match(reportPage, /callAnalyzePhotos\(\{ reportId: this\.data\.reportId \}, \{ timeout: 20000 \}\)/)
+  assert.match(reportPage, /cloud\.isTimeoutError\(err\)/)
+  assert.match(reportPage, /分析已重新启动，正在后台处理/)
+})
+
 test('analyzing UI only renders a progress bar for real task progress', () => {
   const subjectHome = read('miniprogram/pages/subject-home/subject-home.wxml')
   const report = read('miniprogram/pages/report/report.wxml')
@@ -131,4 +175,40 @@ test('removed pages and style overrides stay removed', () => {
   for (const file of wxssFiles) {
     assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /!important/, `${file} should not use !important`)
   }
+})
+
+test('photo analysis stores per-image OCR summaries and duplicate state', () => {
+  const batch = read('cloudfunctions/analyzeBatch/index.js')
+  const analyzer = read('cloudfunctions/analyzePhotos/index.js')
+  const upload = read('cloudfunctions/uploadAndAnalyze/index.js')
+
+  assert.match(batch, /pageResults/)
+  assert.match(batch, /ocrSummary/)
+  assert.match(analyzer, /markDuplicatePages/)
+  assert.match(analyzer, /imageFiles/)
+  assert.match(upload, /imageFiles/)
+  assert.match(upload, /imageMetas/)
+})
+
+test('duplicate photos are retained but excluded from diagnostic aggregation', () => {
+  const analyzer = read('cloudfunctions/analyzePhotos/index.js')
+  assert.match(analyzer, /filter\(page => !page\.isDuplicate\)/)
+  assert.match(analyzer, /if \(uniquePages\.length > 0\)/)
+  assert.match(analyzer, /本次照片均疑似重复，未更新学习卡点/)
+})
+
+test('upload history page is registered and linked from subject home', () => {
+  const appConfig = JSON.parse(read('miniprogram/app.json'))
+  const subjectHome = read('miniprogram/pages/subject-home/subject-home.js')
+
+  assert.ok(appConfig.pages.includes('pages/upload-history/upload-history'))
+  assert.match(subjectHome, /onUploadHistoryTap/)
+  assert.equal(fs.existsSync(path.join(root, 'miniprogram/pages/upload-history/upload-history.js')), true)
+})
+
+test('upload filename duplicates only produce a soft warning', () => {
+  const upload = read('miniprogram/pages/upload/upload.js')
+  assert.match(upload, /nameDuplicate/)
+  assert.match(upload, /发现同名照片，仍可继续上传/)
+  assert.doesNotMatch(upload, /if\s*\([^)]*nameDuplicate[^)]*\)\s*return/)
 })

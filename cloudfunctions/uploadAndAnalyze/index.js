@@ -9,7 +9,7 @@ const MODES = new Set(['diagnosis', 'verification', 'paper', 'default-paper']);
 
 // ========== 主函数 ==========
 exports.main = async (event, context) => {
-  const { fileIDs, studentId, subject = 'math', mode = 'diagnosis', paperId = '' } = event;
+  const { fileIDs, imageMetas = [], studentId, subject = 'math', mode = 'diagnosis', paperId = '' } = event;
 
   if (!fileIDs || !Array.isArray(fileIDs) || fileIDs.length === 0) {
     console.error('[uploadAndAnalyze] fileIDs 无效：', fileIDs);
@@ -26,6 +26,9 @@ exports.main = async (event, context) => {
   if (!SUBJECTS.has(subject) || !MODES.has(mode)) {
     return { success: false, error: '学科或分析模式无效' };
   }
+  if (mode === 'verification' && !paperId) {
+    return { success: false, error: '验证分析必须关联验证试卷' };
+  }
 
   try {
     // 1. 获取学生信息（用于报告显示）
@@ -38,14 +41,34 @@ exports.main = async (event, context) => {
     if (student._openid && student._openid !== currentOpenId) {
       return { success: false, error: '无权访问该学生' };
     }
+    let sourceType = 'photo';
     if (paperId) {
       const paperRes = await db.collection('papers').doc(paperId).get();
       const paper = paperRes.data;
       if (!paper || paper.studentId !== studentId || (paper._openid && paper._openid !== currentOpenId)) {
         return { success: false, error: '关联试卷不存在或无权访问' };
       }
+      if (mode === 'verification' && paper.type !== 'verification') {
+        return { success: false, error: '验证分析必须关联验证试卷' };
+      }
+      if (mode !== 'verification' && paper.type === 'verification') {
+        return { success: false, error: '验证试卷必须使用验证分析模式' };
+      }
+      sourceType = paper.type === 'default-diagnosis' ? 'default-paper' : 'paper';
     }
     const studentName = String(student.name || '未知学生').slice(0, 30);
+    const imageFiles = fileIDs.map((fileID, index) => {
+      const meta = imageMetas[index] || {};
+      return {
+        fileID,
+        fileName: String(meta.fileName || `照片${index + 1}`).slice(0, 120),
+        fileSize: Math.max(0, Number(meta.fileSize) || 0),
+        ocrSummary: '',
+        contentFingerprint: '',
+        isDuplicate: false,
+        duplicateOf: '',
+      };
+    });
 
     // 2. 创建 reports 记录（status='analyzing'）
     console.log('[uploadAndAnalyze] 创建报告记录...');
@@ -55,9 +78,10 @@ exports.main = async (event, context) => {
       studentName,
       subject,
       type: mode === 'verification' ? 'verification' : 'diagnosis',
-      sourceType: paperId ? 'paper' : 'photo',
+      sourceType,
       status: 'analyzing',
       imageFileIds: fileIDs,
+      imageFiles,
       paperId: paperId || '',
       summary: '',
       totalErrors: 0,
