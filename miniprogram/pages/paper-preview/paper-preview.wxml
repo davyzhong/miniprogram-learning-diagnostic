@@ -47,8 +47,8 @@
 
   <!-- 操作按钮 -->
   <view class="action-bar">
-    <button class="btn-secondary action-btn" bindtap="onDownload">
-      下载 PDF
+    <button class="btn-secondary action-btn" bindtap="onDownload" disabled="{{downloading}}">
+      {{downloading ? '下载中...' : '下载 PDF'}}
     </button>
     <button class="btn-primary action-btn" bindtap="onSharePrint">
       分享打印
@@ -56,7 +56,7 @@
   </view>
 
   <!-- 主按钮：拍照上传 -->
-  <view class="bottom-bar">
+  <view class="bottom-bar" wx:if="{{mode === 'paper'}}">
     <button class="btn-primary btn-main" bindtap="onUpload">
       {{uploadBtnText}}
     </button>

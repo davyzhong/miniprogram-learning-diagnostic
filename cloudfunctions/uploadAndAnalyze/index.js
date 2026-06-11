@@ -4,11 +4,11 @@ const cloud = require('wx-server-sdk');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
+const SUBJECTS = new Set(['math', 'chinese', 'english']);
+const MODES = new Set(['diagnosis', 'verification', 'paper', 'default-paper']);
 
 // ========== 主函数 ==========
 exports.main = async (event, context) => {
-  console.log('[uploadAndAnalyze] 收到事件：', JSON.stringify(event));
-
   const { fileIDs, studentId, subject = 'math', mode = 'diagnosis', paperId = '' } = event;
 
   if (!fileIDs || !Array.isArray(fileIDs) || fileIDs.length === 0) {
@@ -20,31 +20,42 @@ exports.main = async (event, context) => {
     console.error('[uploadAndAnalyze] studentId 为空');
     return { success: false, error: '缺少 studentId' };
   }
+  if (fileIDs.length > 20 || fileIDs.some(fileID => typeof fileID !== 'string' || !fileID.startsWith('cloud://'))) {
+    return { success: false, error: '图片参数无效' };
+  }
+  if (!SUBJECTS.has(subject) || !MODES.has(mode)) {
+    return { success: false, error: '学科或分析模式无效' };
+  }
 
   try {
     // 1. 获取学生信息（用于报告显示）
-    console.log('[uploadAndAnalyze] 查询学生：', studentId);
-    let studentName = '未知学生';
-    try {
-      const studentRes = await db.collection('students').doc(studentId).get();
-      if (studentRes.data) {
-        studentName = studentRes.data.name || '未知学生';
-        console.log('[uploadAndAnalyze] 找到学生：', studentName);
-      }
-    } catch (e) {
-      console.warn('[uploadAndAnalyze] 未找到学生记录，继续创建报告：', e.message);
-      // 不中断流程，继续创建报告
+    const currentOpenId = cloud.getWXContext().OPENID;
+    const studentRes = await db.collection('students').doc(studentId).get();
+    const student = studentRes.data;
+    if (!student) {
+      return { success: false, error: '学生不存在' };
     }
+    if (student._openid && student._openid !== currentOpenId) {
+      return { success: false, error: '无权访问该学生' };
+    }
+    if (paperId) {
+      const paperRes = await db.collection('papers').doc(paperId).get();
+      const paper = paperRes.data;
+      if (!paper || paper.studentId !== studentId || (paper._openid && paper._openid !== currentOpenId)) {
+        return { success: false, error: '关联试卷不存在或无权访问' };
+      }
+    }
+    const studentName = String(student.name || '未知学生').slice(0, 30);
 
     // 2. 创建 reports 记录（status='analyzing'）
     console.log('[uploadAndAnalyze] 创建报告记录...');
     const reportData = {
-      // _openid 由数据库自动注入，不需要手动设置
+      _openid: currentOpenId,
       studentId,
       studentName,
       subject,
       type: mode === 'verification' ? 'verification' : 'diagnosis',
-      sourceType: mode === 'paper' ? 'paper' : (mode === 'default-paper' ? 'default-paper' : 'photo'),
+      sourceType: paperId ? 'paper' : 'photo',
       status: 'analyzing',
       imageFileIds: fileIDs,
       paperId: paperId || '',
@@ -56,8 +67,6 @@ exports.main = async (event, context) => {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    console.log('[uploadAndAnalyze] 报告数据：', JSON.stringify(reportData));
-
     const reportRes = await db.collection('reports').add({ data: reportData });
     const reportId = reportRes._id;
     console.log('[uploadAndAnalyze] 报告已创建，ID：', reportId);
@@ -70,7 +79,7 @@ exports.main = async (event, context) => {
 
       if (profileRes.data.length > 0) {
         await db.collection('subjectProfiles').doc(profileRes.data[0]._id).update({
-          data: { analysisStatus: 'analyzing', updatedAt: new Date() },
+          data: { analysisStatus: 'analyzing', currentAnalysisId: reportId, updatedAt: new Date() },
         });
         console.log('[uploadAndAnalyze] 已更新学科档案状态为 analyzing');
       } else {
@@ -81,23 +90,7 @@ exports.main = async (event, context) => {
       // 不中断流程
     }
 
-    // 4. 调用 analyzePhotos 并等待完成
-    // ⚠️ 微信云函数中，主函数 return 后进程终止，fire-and-forget 调用不会执行！
-    // 必须用 await 确保请求真正发出并完成
-    // 前端 timeout 15s 会超时，但云函数在服务端会继续运行直到完成
-    console.log('[uploadAndAnalyze] 开始调用 analyzePhotos...');
-    try {
-      const analyzeRes = await cloud.callFunction({
-        name: 'analyzePhotos',
-        data: { reportId, fileIDs, subject, studentId, mode },
-      });
-      console.log('[uploadAndAnalyze] analyzePhotos 完成：', JSON.stringify(analyzeRes.result));
-    } catch (err) {
-      console.error('[uploadAndAnalyze] analyzePhotos 调用失败：', err.message);
-      // 分析失败不阻塞返回，reportId 仍返回给前端
-    }
-
-    // 5. 返回 reportId
+    // 4. 立即返回 reportId，由前端启动独立的 analyzePhotos 云函数调用。
     console.log('[uploadAndAnalyze] 返回成功，reportId：', reportId);
     return {
       success: true,
@@ -106,6 +99,6 @@ exports.main = async (event, context) => {
     };
   } catch (err) {
     console.error('[uploadAndAnalyze] 失败：', err.message, err.stack);
-    return { success: false, error: err.message || '未知错误' };
+    return { success: false, error: '创建分析任务失败，请稍后重试' };
   }
 };

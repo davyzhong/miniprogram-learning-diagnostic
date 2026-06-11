@@ -1,10 +1,13 @@
 // pages/paper-preview/paper-preview.js
-const app = getApp()
+const cloud = require('../../utils/cloud')
 
 Page({
   data: {
     mode: '',           // '' | 'preview' (from temp fileId)
     paperId: '',
+    studentId: '',
+    subject: 'math',
+    grade: '',
     fileId: '',        // cloud file ID (for preview mode)
     pdfFileId: '',     // paper's pdfFileId (for paperId mode)
 
@@ -19,6 +22,7 @@ Page({
     bottleneckText: '',  // 预拼接的卡点文本
 
     pdfReady: false,
+    downloading: false,
     uploadBtnText: '作答完成，拍照上传'
   },
 
@@ -43,9 +47,7 @@ Page({
     wx.showLoading({ title: '加载中...' })
 
     try {
-      const db = app.db
-      const res = await db.collection('papers').doc(paperId).get()
-      const p = res.data
+      const p = await cloud.getPaper(paperId)
 
       if (!p) {
         wx.hideLoading()
@@ -58,6 +60,9 @@ Page({
 
       this.setData({
         paperId: p._id,
+        studentId: p.studentId || '',
+        subject: p.subject || 'math',
+        grade: p.grade || '',
         pdfFileId: p.pdfFileId || '',
         typeText: isVerification ? '验证试卷' : '诊断试卷',
         subjectName: this.getSubjectName(p.subject),
@@ -91,7 +96,9 @@ Page({
       wx.showToast({ title: 'PDF 未生成', icon: 'none' })
       return
     }
+    if (this.data.downloading) return
 
+    this.setData({ downloading: true })
     wx.showLoading({ title: '下载中...' })
 
     try {
@@ -103,7 +110,7 @@ Page({
       wx.openDocument({
         filePath: res.tempFilePath,
         showMenu: true,
-        success: () => console.log('打开 PDF 成功'),
+        success: () => {},
         fail: (err) => {
           console.error('打开 PDF 失败', err)
           wx.showToast({ title: '打开失败', icon: 'none' })
@@ -113,6 +120,8 @@ Page({
       console.error('下载失败', err)
       wx.hideLoading()
       wx.showToast({ title: '下载失败', icon: 'none' })
+    } finally {
+      this.setData({ downloading: false })
     }
   },
 
@@ -131,20 +140,12 @@ Page({
 
   // 拍照上传
   onUpload() {
-    const { paperId, mode, pdfFileId, fileId } = this.data
+    const { paperId, studentId, subject, studentName, subjectName, grade } = this.data
     const isVerification = this.data.typeText === '验证试卷'
     const uploadMode = isVerification ? 'verification' : 'paper'
 
-    let url = `/pages/upload/upload?mode=${uploadMode}`
+    let url = `/pages/upload/upload?mode=${uploadMode}&studentId=${studentId}&subject=${subject}&studentName=${encodeURIComponent(studentName || '')}&subjectName=${encodeURIComponent(subjectName || '')}&grade=${grade || ''}`
     if (paperId) url += `&paperId=${paperId}`
-
-    // 传递学生信息
-    const pages = getCurrentPages()
-    const prevPage = pages[pages.length - 2]
-    if (prevPage && prevPage.data) {
-      const { studentId, subject, studentName, subjectName, grade } = prevPage.data
-      if (studentId) url += `&studentId=${studentId}&subject=${subject || 'math'}&studentName=${encodeURIComponent(studentName || '')}&subjectName=${encodeURIComponent(subjectName || '')}&grade=${grade || ''}`
-    }
 
     wx.navigateTo({ url })
   },
@@ -158,9 +159,8 @@ Page({
   async getStudentName(studentId) {
     if (!studentId) return ''
     try {
-      const db = app.db
-      const res = await db.collection('students').doc(studentId).get()
-      return res.data ? res.data.name : ''
+      const student = await cloud.getStudent(studentId)
+      return student ? student.name : ''
     } catch (e) { return '' }
   },
 
@@ -168,7 +168,7 @@ Page({
     if (paper.type === 'verification') return '验证试卷'
     if (paper.type === 'default-diagnosis') {
       const grade = paper.grade || ''
-      const key = paper.key || ''
+      const key = paper.paperKey || ''
       return `${grade}年级 ${key.toUpperCase()} 卷`
     }
     return '诊断试卷'

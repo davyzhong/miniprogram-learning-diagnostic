@@ -42,7 +42,9 @@
       </view>
 
       <view class="paper-actions">
-        <button class="btn-secondary paper-btn" bindtap="onPreview" data-key="{{item.key}}">预览 PDF</button>
+        <button class="btn-secondary paper-btn" bindtap="onPreview" data-key="{{item.key}}" disabled="{{previewingKey}}">
+          {{previewingKey === item.key ? '预览生成中...' : '预览 PDF'}}
+        </button>
         <button class="btn-primary paper-btn" bindtap="onUsePaper" data-key="{{item.key}}" disabled="{{generating}}">
           {{generating && generatingKey === item.key ? '生成中...' : '使用这套试卷'}}
         </button>

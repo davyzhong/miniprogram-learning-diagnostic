@@ -123,10 +123,10 @@
   gap: 16rpx;
 }
 
-.paper-btn {
+.paper-actions .paper-btn {
   flex: 1;
-  font-size: 26rpx !important;
-  padding: 16rpx 0 !important;
+  font-size: 26rpx;
+  padding: 16rpx 0;
 }
 
 /* ========== 空状态 ========== */

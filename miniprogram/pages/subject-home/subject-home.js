@@ -1,5 +1,7 @@
 // pages/subject-home/subject-home.js
-const app = getApp()
+const cloud = require('../../utils/cloud')
+const { formatRelativeTime } = require('../../utils/util')
+const { createPoller } = require('../../utils/poller')
 
 Page({
   data: {
@@ -61,15 +63,9 @@ Page({
   // ========== 加载学科档案 ==========
   async loadProfile() {
     const { studentId, subject } = this.data
-    const db = app.db
-
     try {
-      const res = await db.collection('subjectProfiles')
-        .where({ studentId, subject })
-        .get()
-
-      if (res.data.length > 0) {
-        const p = res.data[0]
+      const p = await cloud.getSubjectProfile(studentId, subject)
+      if (p) {
         const pendingCount = (p.pendingBottlenecks || []).length
         const improvedCount = (p.improvedBottlenecks || []).length
 
@@ -88,21 +84,14 @@ Page({
   // ========== 加载历史记录 ==========
   async loadRecords() {
     const { studentId, subject } = this.data
-    const db = app.db
-
     try {
-      const res = await db.collection('reports')
-        .where({ studentId, subject })
-        .orderBy('createdAt', 'desc')
-        .limit(20)
-        .get()
-
-      const records = res.data.map(r => ({
+      const reports = await cloud.getReports(studentId, subject, 20)
+      const records = reports.map(r => ({
         _id: r._id,
         type: r.type || 'diagnosis',
         bottleneckCount: (r.bottlenecks || []).length,
         status: r.status || 'completed',
-        dateText: this.formatTime(r.createdAt)
+        dateText: formatRelativeTime(r.createdAt)
       }))
 
       this.setData({ records })
@@ -114,38 +103,22 @@ Page({
   // ========== 检查分析状态（启动轮询） ==========
   checkAnalysisStatus() {
     // 如果已经在轮询中，不要重复启动
-    if (this._pollTimer) return
+    if (this._poller && this._poller.isRunning()) return
 
     const { analysisStatus } = this.data
     if (analysisStatus === 'analyzing') {
-      this._pollCount = 0
-      this.pollReportStatus()
+      this.startReportPolling()
     }
   },
 
   // ========== 轮询报告状态 ==========
-  pollReportStatus() {
-    if (this._pollTimer) clearTimeout(this._pollTimer)
-
-    const poll = async () => {
-      try {
-        const { studentId, subject } = this.data
-        const db = app.db
-
-        // 查询最新的 reports 记录
-        const res = await db.collection('reports')
-          .where({ studentId, subject })
-          .orderBy('createdAt', 'desc')
-          .limit(1)
-          .get()
-
-        if (res.data.length === 0) return
-
-        const report = res.data[0]
-        const status = report.status
-
-        if (status === 'completed') {
-          // 分析完成
+  startReportPolling() {
+    const { studentId, subject } = this.data
+    this._poller = createPoller({
+      request: () => cloud.getLatestReport(studentId, subject),
+      onValue: (report, attempt) => {
+        if (!report) return true
+        if (report.status === 'completed') {
           wx.showToast({ title: '诊断完成', icon: 'success' })
           this.loadProfile()
           this.loadRecords()
@@ -154,44 +127,26 @@ Page({
             analysisProgress: 100,
             analysisStatusText: '分析完成'
           })
-          return
+          return false
         }
-
-        if (status === 'failed') {
+        if (report.status === 'failed') {
           wx.showToast({ title: '分析失败，请重试', icon: 'none' })
-          this.setData({
-            analysisStatus: '',
-            analysisProgress: 0,
-            analysisStatusText: ''
-          })
-          return
+          this.setData({ analysisStatus: '', analysisProgress: 0, analysisStatusText: '' })
+          return false
         }
-
-        // 仍在分析中，更新进度（估算）
-        this._pollCount = (this._pollCount || 0) + 1
-        const estimatedProgress = Math.min(this._pollCount * 10, 90)  // 最多显示 90%
         this.setData({
-          analysisProgress: estimatedProgress,
+          analysisProgress: Math.min(attempt * 10, 90),
           analysisStatusText: 'AI 分析中...'
         })
-
-        // 继续轮询（最多 30 次 = 5 分钟）
-        if (this._pollCount < 30) {
-          this._pollTimer = setTimeout(poll, 10000)  // 10 秒
-        } else {
-          wx.showToast({ title: '分析时间较长，请稍后查看', icon: 'none' })
-          this.setData({
-            analysisStatus: '',
-            analysisProgress: 0,
-            analysisStatusText: ''
-          })
-        }
-      } catch (err) {
-        console.error('轮询报告状态失败', err)
+        return true
+      },
+      onError: err => console.error('轮询报告状态失败', err),
+      onTimeout: () => {
+        wx.showToast({ title: '分析时间较长，请稍后查看', icon: 'none' })
+        this.setData({ analysisStatus: '', analysisProgress: 0, analysisStatusText: '' })
       }
-    }
-
-    poll()
+    })
+    this._poller.start()
   },
 
   // ========== 入口点击 ==========
@@ -232,29 +187,11 @@ Page({
     wx.navigateBack({ delta: 1 })
   },
 
-  // ========== 工具函数 ==========
-
-  formatTime(ts) {
-    if (!ts) return ''
-    const d = new Date(ts)
-    const now = new Date()
-    const diff = (now - d) / 1000
-
-    if (diff < 60) return '刚刚'
-    if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
-    if (diff < 172800) return '昨天'
-
-    const month = d.getMonth() + 1
-    const day = d.getDate()
-    return `${month}月${day}日`
-  },
-
   onHide() {
-    if (this._pollTimer) clearTimeout(this._pollTimer)
+    if (this._poller) this._poller.stop()
   },
 
   onUnload() {
-    if (this._pollTimer) clearTimeout(this._pollTimer)
+    if (this._poller) this._poller.stop()
   }
 })

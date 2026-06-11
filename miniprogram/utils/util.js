@@ -22,6 +22,25 @@ function formatDateTime(date) {
   return `${d} ${h}:${min}`
 }
 
+function formatRelativeTime(date, now = new Date()) {
+  if (!date) return ''
+  const value = new Date(date)
+  const diff = (new Date(now) - value) / 1000
+
+  if (diff < 60) return '刚刚'
+  if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
+  if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
+  if (diff < 172800) return '昨天'
+  return `${value.getMonth() + 1}月${value.getDate()}日`
+}
+
+function formatChineseDateTime(date) {
+  if (!date) return ''
+  const value = new Date(date)
+  const minutes = String(value.getMinutes()).padStart(2, '0')
+  return `${value.getFullYear()}年${value.getMonth() + 1}月${value.getDate()}日 ${value.getHours()}:${minutes}`
+}
+
 /**
  * 严重程度对应的样式类
  */
@@ -95,6 +114,8 @@ function showError(title = '操作失败') {
 module.exports = {
   formatDate,
   formatDateTime,
+  formatRelativeTime,
+  formatChineseDateTime,
   severityBadgeClass,
   getCategoryName,
   trendIcon,
