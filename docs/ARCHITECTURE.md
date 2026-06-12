@@ -31,7 +31,7 @@
 │  ┌──────────┐  ┌────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │ index    │→│ subject-   │→│ upload /      │→│ report       │  │
 │  │ 学习档案  │  │ home       │  │ generate-*   │  │ 报告展示      │  │
-│  │ 首页      │  │ 学科详情    │  │ default-paper│  │ 卡点/错题/PDF │  │
+│  │ 首页      │  │ 学科工作台  │  │ 出卷配置/PDF  │  │ 卡点/错题/PDF │  │
 │  └──────────┘  └────────────┘  └──────────────┘  └──────────────┘  │
 │       ↑              ↑               ↑                  ↑          │
 │       └──────────────┴───────────────┴──────────────────┘          │
@@ -116,12 +116,13 @@ report 页面：createPoller 每 10s 轮询 getAnalysisProgress
 ### 流程 B：验证试卷
 
 ```
-subject-home 页面 → 点击"验证试卷"
+subject-home 学科工作台 → 点击主任务或待处理队列
     │
     ▼
 generate-verification 页面
     ├── getSubjectProfile() → 获取 pendingBottlenecks
-    ├── 用户勾选要验证的卡点
+    ├── targetCode 存在时预选单个学习卡点，否则按严重度默认选择
+    ├── 展示出卷配置（卡点数、题量、预计用时、A4 页数）
     └── callGeneratePaper({ type:'verification', targets:[...] })
               │
               ▼
@@ -189,7 +190,7 @@ report 页面展示诊断结果（不执行验证对比逻辑）
 ```
 index（首页 - 学习档案）
   ├── navigateTo → add-student（管理孩子/添加学生）
-  ├── navigateTo → subject-home（学习观察/学科入口）
+  ├── navigateTo → subject-home（重点提示/学科入口）
   ├── navigateTo → upload-history（学习记录）
   ├── navigateTo → report?id=xxx（最近报告）
   ├── navigateTo → paper-preview?paperId=xxx（最近试卷）
@@ -198,9 +199,9 @@ index（首页 - 学习档案）
 subject-select（学科入口兼容页）
   └── navigateTo → subject-home（学科主页）
 
-subject-home（学科主页）
+subject-home（学科工作台）
   ├── navigateTo → upload?mode=diagnosis（拍照诊断）
-  ├── navigateTo → generate-verification（生成验证试卷）
+  ├── navigateTo → generate-verification（生成验证试卷，可带 targetCode）
   ├── navigateTo → default-paper（默认诊断试卷）
   ├── navigateTo → upload-history（学习记录）
   ├── navigateTo → report?id=xxx（查看报告）
@@ -216,7 +217,7 @@ upload-history（学习记录）
 report（报告详情）
   └── navigateTo → generate-verification（带卡点参数）
 
-generate-verification（验证试卷生成）
+generate-verification（验证试卷出卷配置）
   └── navigateTo → paper-preview?fileId=xxx 或 ?paperId=xxx
 
 default-paper（默认诊断试卷）
@@ -230,14 +231,14 @@ paper-preview（试卷预览）
 
 | 页面路径 | 功能 | 核心依赖 |
 |----------|------|----------|
-| `pages/index/index` | 学习档案首页：综合摘要、样本覆盖、学习观察、学习记录、下一步建议 | cloud.getStudents, getSubjectProfiles, getReports, getPapers, index-presenter |
+| `pages/index/index` | 学习档案首页：综合摘要、样本覆盖、重点提示、学习记录、下一步建议 | cloud.getStudents, getSubjectProfiles, getReports, getPapers, index-presenter |
 | `pages/add-student/add-student` | 新增学生 + 自动创建三科档案 | cloud.createStudentWithProfiles |
 | `pages/subject-select/subject-select` | 学科入口兼容页 | cloud.getSubjectProfiles, ensureSubjectProfile |
-| `pages/subject-home/subject-home` | 学科主页：三入口 + 状态轮询 + 历史 | cloud.getSubjectProfile, getReports, getLatestReport, getAnalysisProgress; poller |
+| `pages/subject-home/subject-home` | 学科工作台：主任务、待处理队列、工具入口、状态轮询 | cloud.getSubjectProfile, getReports, getLatestReport, getAnalysisProgress; poller |
 | `pages/upload/upload` | 拍照/选图 + 上传 + 触发分析 | cloud.uploadPhoto, callUploadAndAnalyze, getReports |
 | `pages/upload-history/upload-history` | 学习记录时间线 | cloud.getReports, getPapers, getTempFileURLs |
 | `pages/report/report` | 报告详情 + 分析进度轮询 + PDF 生成 | cloud.getReport, getSubjectProfile, getAnalysisProgress, callAnalyzePhotos, callGenerateReportPDF; poller |
-| `pages/generate-verification/generate-verification` | 选卡点 → 生成验证试卷 | cloud.getSubjectProfile, callGeneratePaper |
+| `pages/generate-verification/generate-verification` | 出卷配置器：选择范围 → 生成验证试卷 | cloud.getSubjectProfile, callGeneratePaper |
 | `pages/default-paper/default-paper` | 选年级 → 生成/选择默认诊断试卷 | cloud.getPapers, callGeneratePaper |
 | `pages/paper-preview/paper-preview` | 预览/下载试卷 PDF，记录已下载状态 | cloud.getPaper, getStudent |
 

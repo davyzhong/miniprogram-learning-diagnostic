@@ -87,7 +87,7 @@ test('learning profile home loads the active student summary', async () => {
 
   await page.loadStudents()
   assert.equal(page.data.home.studentName, '钟青羽')
-  assert.match(page.data.home.observations[0].title, /数学/)
+  assert.match(page.data.home.priorityHighlights[0].title, /数学/)
   assert.equal(page.data.activeStudentId, 'student-1')
 })
 
@@ -107,6 +107,75 @@ test('subject selection ensures a profile before entering the subject home', asy
   assert.deepEqual(ensured, ['student-1', 'math', '数学'])
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/subject-home\/subject-home/)
   assert.equal(page.data.enteringSubject, '')
+})
+
+test('subject home loads a compact action workbench', async () => {
+  const cloud = {
+    getSubjectProfile: async () => ({
+      totalReports: 1,
+      currentBottlenecks: [
+        { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification', errorCount: 3 },
+        { lpCode: 'LP-004', lpName: '单位换算错误', status: 'improved' }
+      ]
+    }),
+    getReports: async () => [{
+      _id: 'report-1',
+      status: 'completed',
+      isEffective: true,
+      createdAt: '2026-06-12T14:20:00+08:00',
+      changeSummary: '发现计算基础卡点'
+    }]
+  }
+  const { page } = loadPage('miniprogram/pages/subject-home/subject-home.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatRelativeTime: () => '今天' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {}, isRunning: () => false }) }
+    }
+  })
+  page.onLoad({
+    studentId: 'student-1',
+    subject: 'math',
+    subjectName: encodeURIComponent('数学'),
+    studentName: encodeURIComponent('钟青羽'),
+    grade: '6'
+  })
+
+  await page.loadProfile()
+  await page.loadRecords()
+
+  assert.equal(page.data.subjectTitle, '数学工作台')
+  assert.equal(page.data.primaryTask.actionType, 'verification')
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.taskQueue.map(item => item.displayName))), ['计算基础'])
+  assert.ok(page.data.tools.some(item => item.key === 'latestReport'))
+})
+
+test('subject home task and primary actions open the focused workflow', () => {
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/subject-home/subject-home.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': {},
+      '../../utils/util': { formatRelativeTime: () => '' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {}, isRunning: () => false }) }
+    }
+  })
+  page.setData({
+    studentId: 'student-1',
+    subject: 'math',
+    subjectName: '数学',
+    studentName: '钟青羽',
+    grade: '6',
+    primaryTask: { actionType: 'verification' }
+  })
+
+  page.onTaskTap({ currentTarget: { dataset: { code: 'LP-001' } } })
+  page.onPrimaryAction()
+
+  const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
+  assert.match(urls[0], /pages\/generate-verification\/generate-verification/)
+  assert.match(urls[0], /targetCode=LP-001/)
+  assert.match(urls[1], /pages\/generate-verification\/generate-verification/)
 })
 
 test('upload selection warns about duplicate filenames but keeps the images', () => {
@@ -177,6 +246,38 @@ test('verification page selects all available bottlenecks by default', async () 
   await page.loadPendingBottlenecks()
   assert.equal(page.data.selectedCount, 2)
   assert.ok(page.data.bottlenecks.every(item => item.selected))
+  assert.equal(page.data.paperConfig.questionCount, 6)
+  assert.equal(page.data.paperConfig.pages, 1)
+})
+
+test('verification page focuses the workbench target code when provided', async () => {
+  const pendingBottlenecks = [
+    { lpCode: 'LP-001', lpName: '计算错误', severity: 'medium' },
+    { lpCode: 'LP-008', lpName: '审题错误', severity: 'high' }
+  ]
+  const cloud = {
+    getSubjectProfile: async () => ({ pendingBottlenecks })
+  }
+  const { page } = loadPage('miniprogram/pages/generate-verification/generate-verification.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.onLoad({
+    studentId: 'student-1',
+    subject: 'math',
+    subjectName: encodeURIComponent('数学'),
+    targetCode: 'LP-008'
+  })
+  await page.loadPendingBottlenecks()
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(page.data.bottlenecks.filter(item => item.selected).map(item => item.lpCode))),
+    ['LP-008']
+  )
+  assert.equal(page.data.selectedCount, 1)
+  assert.equal(page.data.selectedSummary, '审题错误')
+  assert.equal(page.data.paperConfig.scopeText, '审题错误')
+  assert.equal(page.data.paperConfig.questionCount, 3)
 })
 
 test('verification page shows readable bottleneck summaries instead of LP codes', async () => {

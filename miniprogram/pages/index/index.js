@@ -143,6 +143,10 @@ Page({
     this.navigateToSubject(e.currentTarget.dataset.subject || 'math')
   },
 
+  onHighlightTap(e) {
+    this.navigateToSubject(e.currentTarget.dataset.subject || 'math')
+  },
+
   onSubjectTap(e) {
     this.navigateToSubject(e.currentTarget.dataset.subject || e.currentTarget.dataset.key || 'math')
   },

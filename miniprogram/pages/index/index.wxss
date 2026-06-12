@@ -226,7 +226,7 @@
   padding: 0 22rpx;
 }
 
-.observation-row,
+.highlight-row,
 .record-row {
   display: flex;
   align-items: center;
@@ -236,7 +236,7 @@
   border-top: 1rpx solid #edf2f7;
 }
 
-.observation-row:first-child,
+.highlight-row:first-child,
 .record-row:first-child {
   border-top: 0;
 }

@@ -49,12 +49,13 @@ test('learning profile home summarizes a math-only diagnosis', () => {
   assert.equal(view.headline, '数学学习线索已形成，其他学科仍待补充样本')
   assert.equal(view.sampleCoverageText, '样本覆盖：已分析数学试卷；语文、英语暂无有效诊断记录。')
   assert.deepEqual(view.metrics.map(item => [item.label, item.value]), [
-    ['学习观察', '2'],
+    ['待验证', '2'],
     ['有效报告', '1'],
     ['最近更新', '今天']
   ])
-  assert.equal(view.observations[0].title, '数学 · 2 条待验证观察')
-  assert.equal(view.observations[0].summary, '计算基础、审题理解 · 来源：最近诊断报告')
+  assert.equal(view.priorityHighlights[0].title, '数学有 2 个学习卡点待验证')
+  assert.equal(view.priorityHighlights[0].summary, '重点关注：计算基础、审题理解')
+  assert.equal(view.priorityHighlights[0].actionText, '进入数学工作台')
   assert.equal(view.recentRecords[0].title, '上传数学试卷照片')
   assert.equal(view.recentRecords[0].summary, '今天 · 2 张图片已识别')
   assert.equal(view.recentRecords[1].title, '数学诊断报告')
@@ -108,6 +109,6 @@ test('learning profile home shows improvement metric only when improvement exist
 
   assert.equal(view.headline, '近期验证显示部分学习观察已有改善')
   assert.ok(view.metrics.some(item => item.label === '已改善' && item.value === '1'))
-  assert.equal(view.observations[0].statusText, '已有改善')
+  assert.equal(view.priorityHighlights[0].statusText, '已有改善')
   assert.equal(view.nextAction.primaryText, '上传新试卷')
 })

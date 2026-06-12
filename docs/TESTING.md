@@ -1,6 +1,6 @@
 # 测试指南（TESTING）
 
-> 更新日期：2026-06-12
+> 更新日期：2026-06-13
 > 适用对象：本项目的开发者与贡献者
 > 配套文档：`docs/TEST_MATRIX.md`、`SETUP.md`、`docs/TROUBLESHOOTING.md`
 
@@ -59,21 +59,21 @@ npm run test:coverage
 | `analyze-batch-result.test.js` | `analyzeBatch/result-normalizer.js` 字段截断、严重度归一 | 3 |
 | `cloud-functions.test.js` | 6 个云函数的集成流程、权限校验、边界条件 | 17 |
 | `comparison.test.js` | 验证报告对比算法（improved/worsened/new/persisting） | 4 |
-| `contracts.test.js` | 跨模块契约、命名一致性、已修复缺陷回归保护 | 25 |
+| `contracts.test.js` | 跨模块契约、命名一致性、已修复缺陷回归保护 | 27 |
 | `coverage-gap.test.js` | 历史修复的回归场景、轮询器/数据层边界分支 | 7 |
 | `data-layer.test.js` | `miniprogram/utils/cloud.js` 统一数据访问层 | 8 |
 | `e2e-real-image.test.js` | 端到端真实图片链路脚本，单独运行 | 1（含云端条件步骤） |
-| `index-presenter.test.js` | 学习档案首页视图模型、样本覆盖、学习观察和空态 | 3 |
-| `page-flows.test.js` | 10 个页面的主流程、错误恢复、导航跳转 | 29 |
+| `index-presenter.test.js` | 学习档案首页视图模型、样本覆盖、重点提示和空态 | 3 |
+| `page-flows.test.js` | 10 个页面的主流程、错误恢复、导航跳转 | 32 |
 | `photo-dedup.test.js` | OCR 摘要去重算法（含完全重复分支） | 3 |
 | `poller.test.js` | 通用轮询器 `utils/poller.js` | 4 |
 | `project-integrity.test.js` | 页面四件套完整性、WXML 事件绑定匹配、品牌资产完整性 | 3 |
 | `profile-summary.test.js` | 当前综合诊断状态规则 | 6 |
 | `report-presenter.test.js` | 报告视图预计算与展示文本 | 7 |
-| `subject-home-presenter.test.js` | 学科主页综合诊断视图 | 4 |
+| `subject-home-presenter.test.js` | 学科工作台视图模型 | 3 |
 | `util.test.js` | 时间、卡点短名称等纯工具函数 | 11 |
 | `verification-evidence.test.js` | 验证试卷证据完整性 | 2 |
-| **合计** | | **136 常规用例 + 1 个真实图片 E2E 脚本** |
+| **合计** | | **140 常规用例 + 1 个真实图片 E2E 脚本** |
 
 > 注：常规测试以 `npm test` 输出为准；真实图片 E2E 由于依赖本机文件和云端环境，始终单独运行。
 

@@ -10,20 +10,30 @@ Page({
     studentId: '',
     subject: '',
     subjectName: '',
+    initialTargetCodes: [],
     bottlenecks: [],   // pendingBottlenecks 列表
     selectedCount: 0,
     generating: false,
     previewing: false,
     loading: true,
-    selectedSummary: ''
+    selectedSummary: '',
+    paperConfig: {
+      scopeText: '',
+      questionCount: 0,
+      estimatedMinutes: 0,
+      pages: 1,
+      paperSize: 'A4'
+    }
   },
 
   onLoad(options) {
-    const { studentId, subject, subjectName } = options
+    const { studentId, subject, subjectName, targetCode, bottlenecks } = options
+    const initialTargetCodes = this.parseTargetCodes(targetCode, bottlenecks)
     this.setData({
       studentId: studentId || '',
       subject: subject || 'math',
-      subjectName: decodeURIComponent(subjectName || '数学')
+      subjectName: decodeURIComponent(subjectName || '数学'),
+      initialTargetCodes
     })
   },
 
@@ -52,19 +62,19 @@ Page({
             const displayName = b.lpName
               ? summarizeBottleneckName(b.lpName)
               : formatBottleneckDisplayName(b)
+            const hasInitialTargets = this.data.initialTargetCodes.length > 0
             return {
               ...b,
               displayName,
-              selected: index < MAX_SELECTED_BOTTLENECKS,
+              selected: hasInitialTargets
+                ? this.data.initialTargetCodes.includes(b.lpCode)
+                : index < MAX_SELECTED_BOTTLENECKS,
               sinceDateText: this.formatDate(b.sinceDate)
             }
           })
       }
 
-      const selectedCount = bottlenecks.filter(b => b.selected).length
-      const selectedSummary = this.buildSelectedSummary(bottlenecks)
-
-      this.setData({ bottlenecks, selectedCount, selectedSummary })
+      this.setSelectionState(bottlenecks)
     } catch (err) {
       console.error('加载待验证卡点失败', err)
       wx.showToast({ title: '加载失败', icon: 'none' })
@@ -90,16 +100,12 @@ Page({
     const key = `bottlenecks[${idx}].selected`
     this.setData({ [key]: !b.selected })
 
-    const newSelected = this.data.bottlenecks.filter(x => x.selected).length
-    this.setData({
-      selectedCount: newSelected,
-      selectedSummary: this.buildSelectedSummary(this.data.bottlenecks)
-    })
+    this.setSelectionState(this.data.bottlenecks)
   },
 
   // 预览 PDF（调用云函数生成临时 PDF）
   async onPreview() {
-    const { studentId, subject, bottlenecks } = this.data
+    const { studentId, subject, bottlenecks, paperConfig } = this.data
     const selected = bottlenecks.filter(b => b.selected)
     if (selected.length === 0 || this.data.previewing) return
 
@@ -112,6 +118,7 @@ Page({
         subject,
         type: 'verification',
         targets: selected.map(b => b.lpCode),
+        questionCount: paperConfig.questionCount,
         preview: true
       })
 
@@ -134,7 +141,7 @@ Page({
 
   // 生成试卷（正式生成并保存）
   async onGenerate() {
-    const { studentId, subject, subjectName, bottlenecks } = this.data
+    const { studentId, subject, subjectName, bottlenecks, paperConfig } = this.data
     const selected = bottlenecks.filter(b => b.selected)
     if (selected.length === 0 || this.data.generating) return
 
@@ -147,6 +154,7 @@ Page({
         subject,
         type: 'verification',
         targets: selected.map(b => b.lpCode),
+        questionCount: paperConfig.questionCount,
         preview: false
       })
 
@@ -180,5 +188,34 @@ Page({
 
   buildSelectedSummary(bottlenecks) {
     return uniqueBottleneckSummaries((bottlenecks || []).filter(item => item.selected)).join('、')
+  },
+
+  parseTargetCodes(targetCode, bottlenecks) {
+    const values = []
+    if (targetCode) values.push(decodeURIComponent(targetCode))
+    if (bottlenecks) values.push(...decodeURIComponent(bottlenecks).split(','))
+    return Array.from(new Set(values.map(item => item.trim()).filter(Boolean)))
+  },
+
+  setSelectionState(bottlenecks) {
+    const selectedCount = bottlenecks.filter(b => b.selected).length
+    const selectedSummary = this.buildSelectedSummary(bottlenecks)
+    this.setData({
+      bottlenecks,
+      selectedCount,
+      selectedSummary,
+      paperConfig: this.buildPaperConfig(selectedCount, selectedSummary)
+    })
+  },
+
+  buildPaperConfig(selectedCount, selectedSummary) {
+    const questionCount = selectedCount * 3
+    return {
+      scopeText: selectedSummary || '未选择学习卡点',
+      questionCount,
+      estimatedMinutes: selectedCount * 5,
+      pages: Math.max(1, Math.ceil(questionCount / 10)),
+      paperSize: 'A4'
+    }
   }
 })
