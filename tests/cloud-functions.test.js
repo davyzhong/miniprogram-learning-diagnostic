@@ -546,7 +546,7 @@ test('generatePaper uses the grade selected for a default diagnostic paper', asy
   const handler = loadModule('cloudfunctions/generatePaper/index.js', {
     'wx-server-sdk': cloud,
     '@cloudbase/node-sdk': { init: () => aiApp },
-    pdfkit: createPdfKitMock()
+    './pdf-renderer': { generatePDF: async () => Buffer.from('pdf') }
   })
 
   const result = await handler.main({
@@ -571,6 +571,7 @@ test('generatePaper validates default grades and verification target limits befo
   })
   const handler = loadModule('cloudfunctions/generatePaper/index.js', {
     'wx-server-sdk': createCloudMock({ db }),
+    './pdf-renderer': { generatePDF: async () => Buffer.from('pdf') },
     '@cloudbase/node-sdk': {
       SYMBOL_CURRENT_ENV: 'test',
       init: () => {

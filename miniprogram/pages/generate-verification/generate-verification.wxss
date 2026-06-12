@@ -96,22 +96,19 @@
   margin-bottom: 4rpx;
 }
 
-.lp-code {
-  font-size: 22rpx;
-  font-weight: 700;
-  color: #276749;
-  background: #c6f6d5;
-  padding: 2rpx 10rpx;
-  border-radius: 6rpx;
-  margin-right: 10rpx;
-  flex-shrink: 0;
-}
-
 .lp-name {
   font-size: 28rpx;
   font-weight: 600;
   color: #1a202c;
   flex: 1;
+}
+
+.preview-summary {
+  display: block;
+  font-size: 24rpx;
+  color: #4a5568;
+  margin: -4rpx 0 18rpx;
+  line-height: 1.45;
 }
 
 .severity-badge {

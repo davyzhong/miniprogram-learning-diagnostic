@@ -60,14 +60,35 @@ test('cloud functions use deployment configuration instead of a hard-coded envir
     assert.doesNotMatch(source, /cloud1-d6gneg68m5a7a3876/)
   }
 
-  for (const relativePath of [
-    'cloudfunctions/generatePaper/index.js',
-    'cloudfunctions/generateReportPDF/index.js'
-  ]) {
-    const source = read(relativePath)
-    assert.match(source, /process\.env\.FONT_FILE_ID/)
-    assert.doesNotMatch(source, /cloud:\/\/cloud1-d6gneg68m5a7a3876/)
-  }
+  const reportPdfSource = read('cloudfunctions/generateReportPDF/index.js')
+  assert.match(reportPdfSource, /process\.env\.FONT_FILE_ID/)
+  assert.doesNotMatch(reportPdfSource, /cloud:\/\/cloud1-d6gneg68m5a7a3876/)
+})
+
+test('generatePaper cloud function allows enough time for AI and PDF generation', () => {
+  const config = JSON.parse(read('cloudfunctions/generatePaper/config.json'))
+  assert.equal(config.timeout, 60)
+})
+
+test('generatePaper does not silently fall back to a font without Chinese glyphs', () => {
+  const source = read('cloudfunctions/generatePaper/index.js')
+  assert.doesNotMatch(source, /FONT_FILE_ID/)
+  assert.doesNotMatch(source, /Helvetica/)
+  assert.match(source, /pdf-renderer/)
+})
+
+test('user-facing bottleneck labels do not render LP codes as primary text', () => {
+  const verificationPage = read('miniprogram/pages/generate-verification/generate-verification.wxml')
+  const paperPreview = read('miniprogram/pages/paper-preview/paper-preview.wxml')
+  const reportPage = read('miniprogram/pages/report/report.wxml')
+  const pdfRenderer = read('cloudfunctions/generatePaper/pdf-renderer.js')
+
+  assert.doesNotMatch(verificationPage, /\{\{item\.lpCode\}\}/)
+  assert.match(verificationPage, /\{\{item\.displayName\}\}/)
+  assert.match(paperPreview, /\{\{bottleneckText\}\}/)
+  assert.doesNotMatch(reportPage, /· \{\{item\.lpCode\}\}/)
+  assert.match(reportPage, /\{\{item\.metaText\}\}/)
+  assert.doesNotMatch(pdfRenderer, /text\(question\.lpCode/)
 })
 
 test('cloud functions do not return stack traces to clients', () => {

@@ -76,6 +76,19 @@ test('builds a directly readable report headline and source summary', () => {
   assert.equal(view.bottleneckList[0].statusClass, 'pending')
 })
 
+test('bottleneck metadata uses readable names instead of LP codes', () => {
+  const view = buildReportView({
+    bottlenecks: [
+      { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', errorCount: 2, status: 'found' },
+      { lpCode: 'LP-999', errorCount: 1, status: 'found' }
+    ]
+  })
+
+  assert.equal(view.bottleneckList[0].displayName, '计算错误')
+  assert.equal(view.bottleneckList[0].metaText, '2 道相关错题 · 计算错误')
+  assert.equal(view.bottleneckList[1].metaText, '1 道相关错题 · 待确认卡点')
+})
+
 test('report headline falls back to comparison summary then summary', () => {
   assert.equal(buildReportView({ comparisonSummary: '单位换算已有改善' }).headline, '单位换算已有改善')
   assert.equal(buildReportView({ summary: '本次诊断摘要' }).headline, '本次诊断摘要')

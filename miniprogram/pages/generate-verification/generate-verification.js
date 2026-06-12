@@ -1,5 +1,8 @@
 // pages/generate-verification/generate-verification.js
 const cloud = require('../../utils/cloud')
+const { summarizeBottleneckName, uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
+const MAX_SELECTED_BOTTLENECKS = 5
+const SEVERITY_PRIORITY = { high: 0, medium: 1, low: 2 }
 
 Page({
   data: {
@@ -10,7 +13,8 @@ Page({
     selectedCount: 0,
     generating: false,
     previewing: false,
-    loading: true
+    loading: true,
+    selectedSummary: ''
   },
 
   onLoad(options) {
@@ -38,21 +42,25 @@ Page({
 
       let bottlenecks = []
       if (profile) {
-        let selectedHighCount = 0
-        bottlenecks = (profile.pendingBottlenecks || []).map(b => {
-          const selected = b.severity === 'high' && selectedHighCount < 5
-          if (selected) selectedHighCount += 1
-          return {
-            ...b,
-            selected,
-            sinceDateText: this.formatDate(b.sinceDate)
-          }
-        })
+        bottlenecks = (profile.pendingBottlenecks || [])
+          .slice()
+          .sort((a, b) => {
+            return (SEVERITY_PRIORITY[a.severity] ?? 3) - (SEVERITY_PRIORITY[b.severity] ?? 3)
+          })
+          .map((b, index) => {
+            return {
+              ...b,
+              displayName: summarizeBottleneckName(b.lpName),
+              selected: index < MAX_SELECTED_BOTTLENECKS,
+              sinceDateText: this.formatDate(b.sinceDate)
+            }
+          })
       }
 
       const selectedCount = bottlenecks.filter(b => b.selected).length
+      const selectedSummary = this.buildSelectedSummary(bottlenecks)
 
-      this.setData({ bottlenecks, selectedCount })
+      this.setData({ bottlenecks, selectedCount, selectedSummary })
     } catch (err) {
       console.error('加载待验证卡点失败', err)
       wx.showToast({ title: '加载失败', icon: 'none' })
@@ -70,7 +78,7 @@ Page({
 
     // 最多选 5 个
     const selectedCount = bottlenecks.filter(x => x.selected).length
-    if (!b.selected && selectedCount >= 5) {
+    if (!b.selected && selectedCount >= MAX_SELECTED_BOTTLENECKS) {
       wx.showToast({ title: '最多选 5 个卡点', icon: 'none' })
       return
     }
@@ -79,7 +87,10 @@ Page({
     this.setData({ [key]: !b.selected })
 
     const newSelected = this.data.bottlenecks.filter(x => x.selected).length
-    this.setData({ selectedCount: newSelected })
+    this.setData({
+      selectedCount: newSelected,
+      selectedSummary: this.buildSelectedSummary(this.data.bottlenecks)
+    })
   },
 
   // 预览 PDF（调用云函数生成临时 PDF）
@@ -111,7 +122,7 @@ Page({
     } catch (err) {
       console.error('预览失败', err)
       wx.hideLoading()
-      wx.showToast({ title: '预览失败', icon: 'none' })
+      wx.showToast({ title: err.message || '预览失败', icon: 'none' })
     } finally {
       this.setData({ previewing: false })
     }
@@ -149,7 +160,7 @@ Page({
     } catch (err) {
       console.error('生成试卷失败', err)
       wx.hideLoading()
-      wx.showToast({ title: '生成失败', icon: 'none' })
+      wx.showToast({ title: err.message || '生成失败', icon: 'none' })
     } finally {
       this.setData({ generating: false })
     }
@@ -161,5 +172,9 @@ Page({
     const m = d.getMonth() + 1
     const day = d.getDate()
     return `${m}月${day}日`
+  },
+
+  buildSelectedSummary(bottlenecks) {
+    return uniqueBottleneckSummaries((bottlenecks || []).filter(item => item.selected)).join('、')
   }
 })

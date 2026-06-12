@@ -36,11 +36,11 @@
         <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
         <view class="bottleneck-copy">
           <view class="bottleneck-title-row">
-            <text class="bottleneck-title">{{item.lpName}}</text>
+            <text class="bottleneck-title">{{item.displayName}}</text>
             <text class="status-label status-label-{{item.statusClass}}">{{item.statusText}}</text>
           </view>
           <text class="bottleneck-desc">{{item.rootCause || item.suggestion || '建议结合相关错题进一步观察。'}}</text>
-          <text class="bottleneck-meta">{{item.errorCount || 0}} 道相关错题 · {{item.lpCode}}</text>
+          <text class="bottleneck-meta">{{item.metaText}}</text>
         </view>
       </view>
     </view>
