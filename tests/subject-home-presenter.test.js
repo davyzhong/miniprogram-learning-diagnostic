@@ -5,67 +5,53 @@ const { buildSubjectHomeView } = require('../miniprogram/pages/subject-home/subj
 
 const relative = () => '今天'
 
-test('builds current diagnosis counts and recent changes from new fields', () => {
+test('builds a subject workbench from current bottlenecks and latest reports', () => {
   const view = buildSubjectHomeView({
     totalReports: 4,
-    currentSummary: '应用题建模持续出现。',
-    nextAction: '生成验证试卷',
     currentBottlenecks: [
-      { lpCode: 'LP-001', lpName: '应用题建模', status: 'persisting' },
-      { lpCode: 'LP-002', lpName: '分数运算', status: 'needs_verification' },
-      { lpCode: 'LP-003', lpName: '单位换算', status: 'improved' }
+      { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification', errorCount: 4, severity: 'medium' },
+      { lpCode: 'LP-008', lpName: '审题错误', status: 'persisting', relatedErrorCount: 2, severity: 'high' },
+      { lpCode: 'LP-004', lpName: '单位换算错误', status: 'improved' }
     ]
   }, [{
     _id: 'report-1',
     status: 'completed',
     isEffective: true,
-    profileAppliedAt: '2026-06-12',
-    changeSummary: '发现分数运算卡点',
+    changeSummary: '发现计算基础卡点',
     createdAt: '2026-06-12'
-  }], relative)
+  }], relative, { subjectName: '数学' })
 
-  assert.equal(view.currentSummary, '应用题建模持续出现。')
-  assert.equal(view.persistingCount, 1)
+  assert.equal(view.subjectTitle, '数学工作台')
+  assert.equal(view.primaryTask.actionType, 'verification')
+  assert.equal(view.primaryTask.actionText, '生成验证试卷')
+  assert.equal(view.primaryTask.summary, '2 个学习卡点等待验证，建议先做一张纸质验证卷。')
+  assert.deepEqual(view.taskQueue.map(item => item.displayName), ['审题理解', '计算基础'])
+  assert.deepEqual(view.taskQueue.map(item => item.evidenceText), ['相关错题 2', '相关错题 4'])
+  assert.ok(view.taskQueue.every(item => item.status !== 'improved'))
+  assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history', 'latestReport'])
+  assert.equal(view.latestReportId, 'report-1')
+})
+
+test('builds a compatible workbench from legacy profile fields', () => {
+  const view = buildSubjectHomeView({
+    pendingBottlenecks: [{ lpCode: 'LP-002', lpName: '分数运算错误', relatedErrorCount: 1 }],
+    improvedBottlenecks: [{ lpCode: 'LP-004', lpName: '单位换算错误' }]
+  }, [], relative, { subjectName: '数学' })
+
+  assert.equal(view.hasDiagnosis, true)
   assert.equal(view.pendingCount, 1)
   assert.equal(view.improvedCount, 1)
-  assert.deepEqual(view.currentBottlenecks.map(item => item.displayName), ['应用题建模', '分数运算', '单位换算'])
-  assert.deepEqual(view.currentBottlenecks.map(item => item.detailText), [
-    '应用题建模在不同记录中再次出现',
-    '建议用验证题确认分数运算是否稳定出现',
-    '单位换算已通过验证 · 继续观察巩固'
-  ])
-  assert.equal(view.recentChanges[0].title, '发现分数运算卡点')
+  assert.deepEqual(view.taskQueue.map(item => item.displayName), ['分数运算'])
+  assert.equal(view.taskQueue[0].evidenceText, '相关错题 1')
 })
 
-test('builds a compatible current diagnosis from legacy profile fields', () => {
-  const view = buildSubjectHomeView({
-    pendingBottlenecks: [{ lpCode: 'LP-001', lpName: '分数运算' }],
-    improvedBottlenecks: [{ lpCode: 'LP-002', lpName: '单位换算' }]
-  }, [], relative)
-
-  assert.equal(view.currentBottlenecks[0].status, 'needs_verification')
-  assert.equal(view.currentBottlenecks[1].status, 'improved')
-  assert.equal(view.currentBottlenecks[0].displayName, '分数运算')
-  assert.equal(view.currentBottlenecks[0].detailText, '建议用验证题确认分数运算是否稳定出现')
-  assert.equal(view.hasDiagnosis, true)
-})
-
-test('legacy completed reports fall back to comparison summary and summary', () => {
-  const view = buildSubjectHomeView({}, [
-    { _id: 'r1', status: 'completed', comparisonSummary: '单位换算已有改善', createdAt: '2026-06-12' },
-    { _id: 'r2', status: 'completed', summary: '发现分数运算卡点', createdAt: '2026-06-11' }
-  ], relative)
-
-  assert.deepEqual(view.recentChanges.map(item => item.title), [
-    '单位换算已有改善',
-    '发现分数运算卡点'
-  ])
-})
-
-test('empty profile exposes first-use state', () => {
-  const view = buildSubjectHomeView({}, [], relative)
+test('empty profile exposes a first-use workbench action', () => {
+  const view = buildSubjectHomeView({}, [], relative, { subjectName: '数学' })
 
   assert.equal(view.hasDiagnosis, false)
   assert.equal(view.isFirstUse, true)
-  assert.match(view.currentSummary, /第一份/)
+  assert.equal(view.primaryTask.actionType, 'diagnosis')
+  assert.equal(view.primaryTask.actionText, '拍照诊断')
+  assert.equal(view.taskQueue.length, 0)
+  assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history'])
 })

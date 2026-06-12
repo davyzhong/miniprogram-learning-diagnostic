@@ -106,6 +106,42 @@ function buildRecentRecords(reports, subjectByKey, formatRelativeTime) {
   return records.slice(0, 3)
 }
 
+function buildPriorityHighlights(profileBySubject) {
+  return SUBJECTS.map(subject => {
+    const profile = profileBySubject.get(subject.key) || {}
+    const active = activeBottlenecks(profile)
+    const improved = profileBottlenecks(profile).filter(item => item.status === 'improved')
+
+    if (active.length > 0) {
+      return {
+        subject: subject.key,
+        subjectName: subject.name,
+        subjectShortName: subject.shortName,
+        title: `${subject.name}有 ${active.length} 个学习卡点待验证`,
+        summary: `重点关注：${formatBottleneckDisplayList(active)}`,
+        statusText: '建议验证',
+        statusClass: 'pending',
+        actionText: `进入${subject.name}工作台`
+      }
+    }
+
+    if (improved.length > 0) {
+      return {
+        subject: subject.key,
+        subjectName: subject.name,
+        subjectShortName: subject.shortName,
+        title: `${subject.name}近期有改善记录`,
+        summary: `已改善：${formatBottleneckDisplayList(improved)}`,
+        statusText: '已有改善',
+        statusClass: 'improved',
+        actionText: `进入${subject.name}工作台`
+      }
+    }
+
+    return null
+  }).filter(Boolean).slice(0, 2)
+}
+
 function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '') {
   const student = input.student || {}
   const reports = input.reports || []
@@ -147,25 +183,8 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
   ])
   const latestText = latest ? formatRelativeTime(latest) : '暂无'
 
-  const observations = SUBJECTS.map(subject => {
-    const profile = profileBySubject.get(subject.key) || {}
-    const active = activeBottlenecks(profile)
-    const improved = profileBottlenecks(profile).filter(item => item.status === 'improved')
-    const items = active.length > 0 ? active : improved
-    if (items.length === 0) return null
-    const statusText = active.length > 0 ? '待验证' : '已有改善'
-    return {
-      subject: subject.key,
-      subjectName: subject.name,
-      subjectShortName: subject.shortName,
-      title: `${subject.name} · ${items.length} 条${statusText}观察`,
-      summary: `${formatBottleneckDisplayList(items)} · 来源：最近${active.length > 0 ? '诊断报告' : '验证报告'}`,
-      statusText,
-      statusClass: active.length > 0 ? 'pending' : 'improved'
-    }
-  }).filter(Boolean)
-
-  const primarySubject = observations[0] && subjectByKey[observations[0].subject]
+  const priorityHighlights = buildPriorityHighlights(profileBySubject)
+  const primarySubject = priorityHighlights[0] && subjectByKey[priorityHighlights[0].subject]
   const pendingNames = formatBottleneckDisplayList(pendingBottlenecks)
   const hasPending = pendingBottlenecks.length > 0
   const hasImprovedOnly = !hasPending && improvedBottlenecks.length > 0
@@ -190,7 +209,7 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
   }
 
   const metrics = [
-    { label: '学习观察', value: String(allCurrentBottlenecks.length), tone: 'warning' },
+    { label: '待验证', value: String(pendingBottlenecks.length), tone: 'warning' },
     { label: '有效报告', value: String(effectiveReports.length), tone: 'primary' },
     improvedBottlenecks.length > 0
       ? { label: '已改善', value: String(improvedBottlenecks.length), tone: 'success' }
@@ -208,7 +227,8 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
     summary,
     sampleCoverageText: buildCoverageText(analyzedSubjects, missingSubjects),
     metrics,
-    observations,
+    priorityHighlights,
+    observations: priorityHighlights,
     recentRecords: buildRecentRecords(reports, subjectByKey, formatRelativeTime),
     nextAction: {
       title: hasPending

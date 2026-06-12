@@ -87,7 +87,7 @@ test('user-facing bottleneck labels do not render LP codes as primary text', () 
 
   assert.match(subjectHomeJs, /require\('\.\/subject-home-presenter'\)/)
   assert.match(subjectHomePage, /\{\{item\.displayName\}\}/)
-  assert.match(subjectHomePage, /\{\{item\.detailText\}\}/)
+  assert.match(subjectHomePage, /\{\{item\.evidenceText\}\}/)
   assert.doesNotMatch(subjectHomePage, /需要进一步验证确认/)
   assert.doesNotMatch(verificationPage, /\{\{item\.lpCode\}\}/)
   assert.match(verificationPage, /\{\{item\.displayName\}\}/)
@@ -97,10 +97,31 @@ test('user-facing bottleneck labels do not render LP codes as primary text', () 
   assert.doesNotMatch(pdfRenderer, /text\(question\.lpCode/)
 })
 
+test('subject home is an action workbench instead of another diagnosis summary', () => {
+  const subjectHomePage = read('miniprogram/pages/subject-home/subject-home.wxml')
+
+  assert.match(subjectHomePage, /待处理队列/)
+  assert.match(subjectHomePage, /工具/)
+  assert.doesNotMatch(subjectHomePage, /当前综合诊断/)
+  assert.doesNotMatch(subjectHomePage, /最近变化/)
+  assert.doesNotMatch(subjectHomePage, /diagnosis-hero/)
+  assert.doesNotMatch(subjectHomePage, /math-diagnostic-guide\.jpg/)
+})
+
+test('verification page is framed as a paper configurator', () => {
+  const verificationPage = read('miniprogram/pages/generate-verification/generate-verification.wxml')
+
+  assert.match(verificationPage, /出卷配置/)
+  assert.match(verificationPage, /出题范围/)
+  assert.match(verificationPage, /试卷配置/)
+  assert.doesNotMatch(verificationPage, /系统针对每个卡点生成 3 道验证题/)
+})
+
 test('index page is framed as a learning profile home', () => {
   const indexPage = read('miniprogram/pages/index/index.wxml')
   assert.doesNotMatch(indexPage, /选择学生开始诊断/)
-  for (const text of ['学习档案', '当前综合摘要', '样本覆盖', '学习观察', '学习记录', '下一步建议']) {
+  assert.doesNotMatch(indexPage, /home\.observations/)
+  for (const text of ['学习档案', '当前综合摘要', '样本覆盖', '重点提示', '学习记录', '下一步建议']) {
     assert.match(indexPage, new RegExp(text))
   }
 })

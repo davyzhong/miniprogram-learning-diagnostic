@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序 — 项目开发计划
 
 **创建日期**: 2026-06-09
-**最后更新**: 2026-06-12
-**项目状态**: MVP 编码完成，常规自动化测试通过（136/136），JS 语法检查 52 文件通过，待真机验收
+**最后更新**: 2026-06-13
+**项目状态**: MVP 编码完成，常规自动化测试通过（140/140），JS 语法检查 52 文件通过，待真机验收
 **负责人**: qiming
 
 ---
@@ -33,13 +33,13 @@ MVP 三条诊断路径：
 
 | 功能 | 说明 |
 |------|------|
-| 学习档案首页 | 首屏展示综合摘要、样本覆盖、学习观察、学习记录和下一步建议 |
+| 学习档案首页 | 首屏展示综合摘要、样本覆盖、重点提示、学习记录和下一步建议 |
 | 学生管理 | 添加孩子、管理当前孩子档案 |
-| 学科隔离 | 数/语/英三科独立，学科入口作为二级查看入口 |
+| 学科工作台 | 数/语/英三科独立，学科页承接主任务、待处理队列和工具入口 |
 | 拍照上传 | 支持最多 20 张，上传即返回，分析异步进行 |
 | AI 诊断分析 | 云函数分批处理（5张/批），混元 hy3-preview 视觉模型 |
 | 诊断报告 | 卡点排行、错题详情、改善/加重/新增状态对比 |
-| 验证试卷生成 | 基于历史卡点，AI 生成 3 题/卡点，A4 PDF 下载 |
+| 验证试卷生成 | 出卷配置器选择范围，AI 生成 3 题/卡点，A4 PDF 下载 |
 | 默认诊断试卷 | AI 按年级动态生成，无需预存题库 |
 | 学习记录 | 按天聚合诊断报告、验证试卷、验证上传和原始照片 |
 | 卡点短名称 | 对家长和学生展示“小数分数、单位换算”等短摘要，不直接暴露 LP 编号 |
@@ -61,7 +61,7 @@ miniprogram-learning-diagnostic/
 ├── project.config.json              # 微信开发者工具项目配置（cloudbaseRoot: cloud1-d6gneg68m5a7a3876）
 ├── package.json                     # npm scripts: test / test:coverage / check / verify
 ├── PROJECT_PLAN.md                  # 本文件
-├── PRD.md                           # 产品设计文档（v2.5）
+├── PRD.md                           # 产品设计文档（v2.6）
 ├── SETUP.md                         # 部署指南
 │
 ├── miniprogram/                     # 小程序前端代码
@@ -82,11 +82,11 @@ miniprogram-learning-diagnostic/
 │       ├── index/                   # Page 1：首页（学习档案）
 │       ├── add-student/             # 添加学生页（创建学生+三条学科档案）
 │       ├── subject-select/          # Page 2：学科入口（兼容路由）
-│       ├── subject-home/            # Page 3：学科主页（三入口 + 历史记录 + 分析状态）
+│       ├── subject-home/            # Page 3：学科工作台（主任务 + 待处理队列 + 工具）
 │       ├── upload/                  # Page 4：拍照上传（异步）
 │       ├── upload-history/          # Page 4A：学习记录时间线
 │       ├── report/                  # Page 6：诊断/验证报告（含 presenter）
-│       ├── generate-verification/   # Page 7：验证试卷生成
+│       ├── generate-verification/   # Page 7：验证试卷出卷配置器
 │       ├── default-paper/           # Page 8：默认诊断试卷选择
 │       └── paper-preview/           # Page 9：试卷预览/打印
 │
@@ -132,7 +132,7 @@ miniprogram-learning-diagnostic/
     └── superpowers/plans/           # 规划辅助材料
 ```
 
-**文件总数**: 52 个 JavaScript 文件（`npm run check` 校验），136 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
+**文件总数**: 52 个 JavaScript 文件（`npm run check` 校验），140 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
 
 ### 2.2 相关文件索引
 
@@ -313,14 +313,14 @@ miniprogram-learning-diagnostic/
 
 | 页面 | 路径 | 参数 | 功能 |
 |------|------|------|------|
-| 首页 | `pages/index/index` | — | 学习档案首页：综合摘要、样本覆盖、学习观察、学习记录、下一步建议 |
+| 首页 | `pages/index/index` | — | 学习档案首页：综合摘要、样本覆盖、重点提示、学习记录、下一步建议 |
 | 添加学生 | `pages/add-student/add-student` | — | 创建学生并同步生成三条学科档案 |
 | 学科入口 | `pages/subject-select/subject-select` | `?studentId=&name=&grade=` | 兼容路由：数/语/英三科卡片 |
-| 学科主页 | `pages/subject-home/subject-home` | `?studentId=&subject=&subjectName=&studentName=&grade=` | 三入口 + 历史记录 + 分析状态轮询 |
+| 学科主页 | `pages/subject-home/subject-home` | `?studentId=&subject=&subjectName=&studentName=&grade=` | 学科工作台：主任务 + 待处理队列 + 工具入口 + 分析状态轮询 |
 | 拍照上传 | `pages/upload/upload` | `?mode=diagnosis\|verification\|paper&studentId=&subject=&paperId=` | 上传照片，最多 20 张；创建报告后立即返回 |
 | 学习记录 | `pages/upload-history/upload-history` | `?studentId=&subject=&subjectName=&studentName=` | 按天聚合报告、试卷、验证上传、照片、OCR 摘要和重复标记 |
 | 诊断/验证报告 | `pages/report/report` | `?id=reportId` | 卡点排行 + 错题详情 + 验证入口 + PDF 下载 + 重试分析 |
-| 验证试卷生成 | `pages/generate-verification/generate-verification` | `?studentId=&subject=&subjectName=&bottlenecks=` | 选卡点 → 预览/生成 A4 PDF |
+| 验证试卷生成 | `pages/generate-verification/generate-verification` | `?studentId=&subject=&subjectName=&bottlenecks=&targetCode=` | 配置出题范围 → 预览/生成 A4 PDF |
 | 默认诊断试卷 | `pages/default-paper/default-paper` | `?studentId=&subject=&subjectName=&studentName=&grade=` | 选年级/套题 → 缓存复用或 AI 生成 |
 | 试卷预览/打印 | `pages/paper-preview/paper-preview` | `?paperId=` 或 `?fileId=&type=` | A4 预览 + 下载 PDF + 分享打印 + 跳转上传答题 |
 
@@ -418,7 +418,7 @@ System Prompt 包含：
 
 ---
 
-## 六、当前进度（2026-06-12 更新）
+## 六、当前进度（2026-06-13 更新）
 
 ### 6.1 已完成（代码 + 自动化测试）
 
@@ -434,12 +434,12 @@ System Prompt 包含：
 | **验证对比** | ✅ | `analyzePhotos/comparison.js` 输出 improved/worsened/new/persisting + 摘要文案 |
 | **上传分析解耦** | ✅ | `uploadAndAnalyze` 创建报告后 fire-and-forget 启动 `analyzePhotos`；`report.onRetryAnalysis()` 支持手动重启 |
 | **参数校验与归属校验** | ✅ | 各云函数入口检查 fileIDs/studentId/subject/mode/paperId/openID |
-| **PRD.md** | ✅ | v2.5，含学习档案首页和实现状态总览 |
+| **PRD.md** | ✅ | v2.6，含页面职责边界和实现状态总览 |
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 索引 + 字体 + 云函数部署） |
-| **自动化测试** | ✅ | 136 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
+| **自动化测试** | ✅ | 140 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
 | **端到端真实图片脚本** | ✅ | `tests/e2e-real-image.test.js` 单独运行，串通上传 → AI 分析 → 报告生成链路 |
 | **JS 语法检查** | ✅ | `npm run check` 校验 52 个文件 |
-| **学科隔离** | ✅ | 数/语/英三科独立档案，首页提供学科入口，单学科详情页承接具体操作 |
+| **学科隔离** | ✅ | 数/语/英三科独立档案，首页提供学科入口，单学科工作台承接具体操作 |
 | **20张照片支持** | ✅ | `upload` 页面限制 20 张，`analyzePhotos` 自动分批（5张/批） |
 | **学习记录** | ✅ | `upload-history` 按天展示诊断报告、验证试卷、验证批复和原始照片 |
 | **试卷下载状态** | ✅ | `paper-preview` 对已下载 PDF 显示「已下载」，防止重复下载 |

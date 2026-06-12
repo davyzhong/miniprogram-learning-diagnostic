@@ -10,9 +10,15 @@ Page({
     studentId: '',
     subject: 'math',
     subjectName: '数学',
+    subjectInitial: '数',
     studentName: '',
     grade: '',
 
+    subjectTitle: '数学工作台',
+    primaryTask: null,
+    taskQueue: [],
+    tools: [],
+    latestReportId: '',
     totalReports: 0,
     persistingCount: 0,
     pendingCount: 0,
@@ -33,10 +39,12 @@ Page({
 
   onLoad(options) {
     const { studentId, subject, subjectName, studentName, grade } = options
+    const decodedSubjectName = decodeURIComponent(subjectName || '数学')
     this.setData({
       studentId: studentId || '',
       subject: subject || 'math',
-      subjectName: decodeURIComponent(subjectName || '数学'),
+      subjectName: decodedSubjectName,
+      subjectInitial: decodedSubjectName.slice(0, 1),
       studentName: decodeURIComponent(studentName || ''),
       grade: grade || ''
     })
@@ -100,7 +108,9 @@ Page({
   },
 
   applyDashboardView() {
-    const view = buildSubjectHomeView(this._profile || {}, this._reports || [], formatRelativeTime)
+    const view = buildSubjectHomeView(this._profile || {}, this._reports || [], formatRelativeTime, {
+      subjectName: this.data.subjectName
+    })
     this.setData({ ...view, records: view.recentChanges })
   },
 
@@ -182,9 +192,14 @@ Page({
   },
 
   onVerificationTap() {
+    this.navigateToVerification()
+  },
+
+  navigateToVerification(targetCode = '') {
     const { studentId, subject, subjectName, studentName } = this.data
+    const targetParam = targetCode ? `&targetCode=${encodeURIComponent(targetCode)}` : ''
     wx.navigateTo({
-      url: `/pages/generate-verification/generate-verification?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}`
+      url: `/pages/generate-verification/generate-verification?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}${targetParam}`
     })
   },
 
@@ -212,8 +227,42 @@ Page({
   },
 
   onPrimaryAction() {
-    if (this.data.isFirstUse) this.onDiagnosisTap()
-    else this.onVerificationTap()
+    const actionType = this.data.primaryTask && this.data.primaryTask.actionType
+    this.navigateByAction(actionType || (this.data.isFirstUse ? 'diagnosis' : 'verification'))
+  },
+
+  onTaskTap(e) {
+    const { code } = e.currentTarget.dataset
+    this.navigateToVerification(code || '')
+  },
+
+  onToolTap(e) {
+    const { key } = e.currentTarget.dataset
+    const tool = (this.data.tools || []).find(item => item.key === key)
+    if (!tool) return
+    this.navigateByAction(tool.actionType, tool)
+  },
+
+  navigateByAction(actionType, payload = {}) {
+    if (actionType === 'diagnosis') {
+      this.onDiagnosisTap()
+      return
+    }
+    if (actionType === 'verification') {
+      this.navigateToVerification(payload.targetCode || '')
+      return
+    }
+    if (actionType === 'defaultPaper') {
+      this.onDefaultPaperTap()
+      return
+    }
+    if (actionType === 'history') {
+      this.onUploadHistoryTap()
+      return
+    }
+    if (actionType === 'latestReport' && payload.reportId) {
+      wx.navigateTo({ url: `/pages/report/report?id=${payload.reportId}` })
+    }
   },
 
   onAnalysisCardTap() {

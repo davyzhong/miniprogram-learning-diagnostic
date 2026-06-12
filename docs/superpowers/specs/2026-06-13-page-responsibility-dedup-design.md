@@ -224,7 +224,7 @@
   subjectTitle: '数学工作台',
   primaryTask: {
     title: '生成验证试卷',
-    summary: '2 个学习观察等待验证',
+    summary: '2 个学习卡点等待验证',
     actionText: '生成验证试卷',
     actionType: 'verification'
   },

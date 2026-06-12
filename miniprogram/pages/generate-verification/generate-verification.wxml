@@ -1,16 +1,35 @@
 <!--pages/generate-verification/generate-verification.wxml-->
 <view class="page">
-  <!-- 说明 -->
-  <view class="tip-bar">
-    <text class="tip-icon">📝</text>
-    <view class="tip-content">
-      <text class="tip-title">验证试卷</text>
-      <text class="tip-desc">选择需要验证的卡点，系统针对每个卡点生成 3 道验证题</text>
+  <view class="config-hero">
+    <text class="config-kicker">出卷配置</text>
+    <text class="config-title">{{subjectName}}纸质验证卷</text>
+    <text class="config-desc">选择本次要验证的学习卡点，生成 A4 PDF 后打印作答，完成后拍照上传批复。</text>
+  </view>
+
+  <view class="config-card" wx:if="{{selectedCount > 0}}">
+    <view class="section-title">试卷配置</view>
+    <text class="scope-text">{{paperConfig.scopeText}}</text>
+    <view class="preview-stats">
+      <view class="preview-stat">
+        <text class="preview-num">{{selectedCount}}</text>
+        <text class="preview-label">卡点数</text>
+      </view>
+      <view class="preview-stat">
+        <text class="preview-num">{{paperConfig.questionCount}}</text>
+        <text class="preview-label">题目数</text>
+      </view>
+      <view class="preview-stat">
+        <text class="preview-num">{{paperConfig.estimatedMinutes}}</text>
+        <text class="preview-label">分钟</text>
+      </view>
+      <view class="preview-stat">
+        <text class="preview-num">{{paperConfig.paperSize}}</text>
+        <text class="preview-label">{{paperConfig.pages}} 页</text>
+      </view>
     </view>
   </view>
 
-  <!-- 卡点列表 -->
-  <view class="section-title">选择卡点（{{selectedCount}}/5）</view>
+  <view class="section-title range-title">出题范围（{{selectedCount}}/5）</view>
   <view class="bottleneck-list">
     <view
       class="bottleneck-item {{item.selected ? 'selected' : ''}}"
@@ -21,7 +40,7 @@
     >
       <view class="checkbox {{item.selected ? 'checked' : ''}}">
         <text wx:if="{{item.selected}}">✓</text>
-        </view>
+      </view>
       <view class="bottleneck-info">
         <view class="bottleneck-header">
           <text class="lp-name">{{item.displayName}}</text>
@@ -31,42 +50,17 @@
             <text wx:else>低</text>
           </view>
         </view>
-        <text class="bottleneck-date">首次发现：{{item.sinceDateText}}</text>
+        <text class="bottleneck-date">首次发现：{{item.sinceDateText || '待补充'}}</text>
       </view>
     </view>
 
     <view class="empty-tip" wx:if="{{bottlenecks.length === 0 && !loading}}">
-      <text class="empty-icon">✅</text>
+      <text class="empty-icon">✓</text>
       <text class="empty-text">暂无待验证卡点</text>
       <text class="empty-hint">请先通过拍照诊断发现卡点</text>
     </view>
   </view>
 
-  <!-- 试卷预览摘要 -->
-  <view class="preview-card" wx:if="{{selectedCount > 0}}">
-    <view class="section-title">试卷预览</view>
-    <text class="preview-summary">{{selectedSummary}}</text>
-    <view class="preview-stats">
-      <view class="preview-stat">
-        <text class="preview-num">{{selectedCount}}</text>
-        <text class="preview-label">卡点数</text>
-      </view>
-      <view class="preview-stat">
-        <text class="preview-num">{{selectedCount * 3}}</text>
-        <text class="preview-label">题目数</text>
-      </view>
-      <view class="preview-stat">
-        <text class="preview-num">约{{selectedCount * 5}}</text>
-        <text class="preview-label">分钟</text>
-      </view>
-      <view class="preview-stat">
-        <text class="preview-num">A4</text>
-        <text class="preview-label">纸张</text>
-      </view>
-    </view>
-  </view>
-
-  <!-- 底部按钮 -->
   <view class="bottom-bar">
     <button class="btn-secondary" bindtap="onPreview" disabled="{{selectedCount === 0 || previewing}}">
       {{previewing ? '预览生成中...' : '预览 PDF'}}
@@ -76,7 +70,7 @@
       bindtap="onGenerate"
       disabled="{{selectedCount === 0 || generating}}"
     >
-      {{generating ? '生成中...' : '生成试卷 (A4 PDF)'}}
+      {{generating ? '生成中...' : '生成 A4 试卷'}}
     </button>
   </view>
 </view>

@@ -42,14 +42,14 @@
       </view>
     </view>
 
-    <view class="section-block" wx:if="{{home.observations.length > 0}}">
-      <view class="section-heading">学习观察</view>
+    <view class="section-block" wx:if="{{home.priorityHighlights.length > 0}}">
+      <view class="section-heading">重点提示</view>
       <view class="surface">
         <view
-          class="observation-row"
-          wx:for="{{home.observations}}"
+          class="highlight-row"
+          wx:for="{{home.priorityHighlights}}"
           wx:key="subject"
-          bindtap="onObservationTap"
+          bindtap="onHighlightTap"
           data-subject="{{item.subject}}"
         >
           <view class="subject-pill">{{item.subjectShortName}}</view>
