@@ -349,6 +349,69 @@ test('subject home polls the active report instead of whichever report is latest
   assert.deepEqual(requested, ['active-report'])
 })
 
+test('subject home stops polling and surfaces a stale analysis task', async () => {
+  let pollOptions = null
+  const { page } = loadPage('miniprogram/pages/subject-home/subject-home.js', {
+    modules: {
+      '../../utils/cloud': {},
+      '../../utils/util': { formatRelativeTime: () => '' },
+      '../../utils/poller': {
+        createPoller: options => {
+          pollOptions = options
+          return { start() {}, stop() {}, isRunning: () => false }
+        }
+      }
+    }
+  })
+  page.setData({ studentId: 'student-1', subject: 'math', currentAnalysisId: 'active-report' })
+
+  page.startReportPolling()
+  const shouldContinue = await pollOptions.onValue({
+    report: { _id: 'active-report', status: 'analyzing' },
+    progress: {
+      status: 'processing',
+      completedBatches: 0,
+      totalBatches: 1,
+      createdAt: '2020-01-01T00:00:00Z'
+    }
+  }, 2)
+
+  assert.equal(shouldContinue, false)
+  assert.equal(page.data.analysisStatusText, '分析超时，点击查看并重新分析')
+})
+
+test('report exposes retry when an analysis task is stale', async () => {
+  let pollOptions = null
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    modules: {
+      '../../utils/cloud': {},
+      '../../utils/util': { formatChineseDateTime: () => '' },
+      '../../utils/poller': {
+        createPoller: options => {
+          pollOptions = options
+          return { start() {}, stop() {} }
+        }
+      },
+      './report-presenter': { buildReportView: () => ({}) }
+    }
+  })
+
+  page.startPolling('report-1')
+  const shouldContinue = await pollOptions.onValue({
+    report: { _id: 'report-1', status: 'analyzing' },
+    progress: {
+      status: 'processing',
+      completedBatches: 0,
+      totalBatches: 1,
+      createdAt: '2020-01-01T00:00:00Z'
+    }
+  }, 2)
+
+  assert.equal(shouldContinue, false)
+  assert.equal(page.data.analysisTaskMissing, true)
+  assert.equal(page.data.analysisStatusText, '分析超时，请重新分析')
+})
+
 test('upload history supports legacy reports and previews available originals', async () => {
   const cloud = {
     getReports: async () => [{

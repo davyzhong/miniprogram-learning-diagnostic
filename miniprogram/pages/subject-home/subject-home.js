@@ -2,6 +2,7 @@
 const cloud = require('../../utils/cloud')
 const { formatRelativeTime } = require('../../utils/util')
 const { createPoller } = require('../../utils/poller')
+const STALE_ANALYSIS_MS = 10 * 60 * 1000
 
 const STATUS_META = {
   persisting: { text: '持续出现', className: 'persisting', icon: '!' },
@@ -196,6 +197,13 @@ Page({
         if (report.status === 'failed') {
           wx.showToast({ title: '分析失败，请重试', icon: 'none' })
           this.setData({ analysisStatus: '', currentAnalysisId: '', analysisStatusText: '' })
+          return false
+        }
+        const taskAge = progress && progress.createdAt
+          ? Date.now() - new Date(progress.createdAt).getTime()
+          : 0
+        if (progress && (progress.status === 'failed' || taskAge > STALE_ANALYSIS_MS)) {
+          this.setData({ analysisStatusText: '分析超时，点击查看并重新分析' })
           return false
         }
         this.setData({
