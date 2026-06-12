@@ -1,3 +1,5 @@
+const { summarizeBottleneckName } = require('../../utils/bottlenecks')
+
 function buildReportView(report) {
   const isVerification = report.type === 'verification'
   const bottlenecks = report.bottlenecks || []
@@ -15,6 +17,8 @@ function buildReportView(report) {
     return {
       ...item,
       ...status,
+      displayName: summarizeBottleneckName(item.lpName),
+      metaText: `${item.errorCount || 0} 道相关错题 · ${summarizeBottleneckName(item.lpName)}`,
       barWidth: Math.round(((item.errorCount || 0) / maxErrorCount) * 100)
     }
   })

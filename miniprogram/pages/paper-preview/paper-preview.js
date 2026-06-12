@@ -1,5 +1,6 @@
 // pages/paper-preview/paper-preview.js
 const cloud = require('../../utils/cloud')
+const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
 
 Page({
   data: {
@@ -34,6 +35,7 @@ Page({
       this.loadPaper(paperId)
     } else if (fileId) {
       const decodedFileId = decodeURIComponent(fileId)
+
       this.setData({
         mode: 'preview',
         fileId: decodedFileId,
@@ -57,6 +59,7 @@ Page({
 
       const isVerification = p.type === 'verification'
       const uploadMode = isVerification ? 'verification' : 'paper'
+      const bottleneckSummaries = this.buildBottleneckSummaries(p)
 
       this.setData({
         paperId: p._id,
@@ -72,7 +75,7 @@ Page({
         estimatedMinutes: p.estimatedMinutes || ((p.questions || []).length * 2),
         pages: p.totalPages || 1,
         bottleneckTargets: p.bottleneckTargets || [],
-        bottleneckText: (p.bottleneckTargets || []).join('、'),
+        bottleneckText: bottleneckSummaries.join('、'),
         pdfReady: !!p.pdfFileId,
         uploadBtnText: `作答完成，${isVerification ? '上传验证' : '上传答题'}`
       })
@@ -180,5 +183,24 @@ Page({
       return `${grade}年级 ${variant} 卷`
     }
     return '诊断试卷'
+  },
+
+  buildBottleneckSummaries(paper) {
+    if (Array.isArray(paper.bottleneckSummaries) && paper.bottleneckSummaries.length > 0) {
+      return uniqueBottleneckSummaries(paper.bottleneckSummaries)
+    }
+
+    const questions = Array.isArray(paper.questions) ? paper.questions : []
+    const byCode = {}
+    questions.forEach(question => {
+      if (question.lpCode && question.lpName && !byCode[question.lpCode]) {
+        byCode[question.lpCode] = question.lpName
+      }
+    })
+    const targets = Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : []
+    const targetNames = targets.map(code => byCode[code]).filter(Boolean)
+    if (targetNames.length > 0) return uniqueBottleneckSummaries(targetNames)
+
+    return uniqueBottleneckSummaries(questions)
   }
 })

@@ -114,12 +114,57 @@ test('upload submits file metadata and navigates back on success', async () => {
   assert.ok(wx.calls.some(call => call.name === 'navigateBack'))
 })
 
-test('verification page selects at most five high priority bottlenecks', async () => {
-  const pendingBottlenecks = Array.from({ length: 7 }, (_, index) => ({
-    lpCode: `LP-00${index + 1}`,
-    lpName: `卡点${index + 1}`,
-    severity: 'high'
-  }))
+test('verification page selects all available bottlenecks by default', async () => {
+  const pendingBottlenecks = [
+    { lpCode: 'LP-001', lpName: '计算错误', severity: 'medium' },
+    { lpCode: 'LP-008', lpName: '审题错误', severity: 'high' }
+  ]
+  const cloud = {
+    getSubjectProfile: async () => ({ pendingBottlenecks })
+  }
+  const { page } = loadPage('miniprogram/pages/generate-verification/generate-verification.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+  page.setData({ studentId: 'student-1', subject: 'math' })
+
+  await page.loadPendingBottlenecks()
+  assert.equal(page.data.selectedCount, 2)
+  assert.ok(page.data.bottlenecks.every(item => item.selected))
+})
+
+test('verification page shows readable bottleneck summaries instead of LP codes', async () => {
+  const pendingBottlenecks = [
+    { lpCode: 'LP-008', lpName: '审题错误', severity: 'high' },
+    { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', severity: 'medium' },
+    { lpCode: 'LP-XXX', severity: 'low' }
+  ]
+  const cloud = {
+    getSubjectProfile: async () => ({ pendingBottlenecks })
+  }
+  const { page } = loadPage('miniprogram/pages/generate-verification/generate-verification.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+  page.setData({ studentId: 'student-1', subject: 'math' })
+
+  await page.loadPendingBottlenecks()
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(page.data.bottlenecks.map(item => item.displayName))),
+    ['审题错误', '计算错误', '待确认卡点']
+  )
+  assert.equal(page.data.selectedSummary, '审题错误、计算错误、待确认卡点')
+})
+
+test('verification page selects at most five bottlenecks by severity priority', async () => {
+  const pendingBottlenecks = [
+    { lpCode: 'LP-001', severity: 'low' },
+    { lpCode: 'LP-002', severity: 'medium' },
+    { lpCode: 'LP-003', severity: 'high' },
+    { lpCode: 'LP-004', severity: 'medium' },
+    { lpCode: 'LP-005', severity: 'high' },
+    { lpCode: 'LP-006', severity: 'low' },
+    { lpCode: 'LP-007', severity: 'high' }
+  ]
   const cloud = {
     getSubjectProfile: async () => ({ pendingBottlenecks })
   }
@@ -130,7 +175,10 @@ test('verification page selects at most five high priority bottlenecks', async (
 
   await page.loadPendingBottlenecks()
   assert.equal(page.data.selectedCount, 5)
-  assert.equal(page.data.bottlenecks.filter(item => item.selected).length, 5)
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(page.data.bottlenecks.filter(item => item.selected).map(item => item.lpCode))),
+    ['LP-003', 'LP-005', 'LP-007', 'LP-002', 'LP-004']
+  )
 })
 
 test('verification paper generation sends only selected bottlenecks and opens the saved paper', async () => {
@@ -160,6 +208,31 @@ test('verification paper generation sends only selected bottlenecks and opens th
   assert.equal(request.type, 'verification')
   assert.equal(request.preview, false)
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paperId=paper-1/)
+})
+
+test('verification paper generation surfaces the backend error message', async () => {
+  const cloud = {
+    callGeneratePaper: async () => {
+      throw new Error('云函数执行超时，请稍后重试')
+    }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/generate-verification/generate-verification.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+  page.setData({
+    studentId: 'student-1',
+    subject: 'math',
+    bottlenecks: [{ lpCode: 'LP-001', selected: true }]
+  })
+
+  await page.onGenerate()
+
+  assert.equal(
+    wx.calls.filter(call => call.name === 'showToast').at(-1).payload.title,
+    '云函数执行超时，请稍后重试'
+  )
 })
 
 test('default paper reuses an existing generated paper', async () => {
@@ -230,7 +303,8 @@ test('paper preview loads a saved paper and opens its upload flow', async () => 
       type: 'verification',
       pdfFileId: 'cloud://paper.pdf',
       questions: [{ content: '1+1' }],
-      bottleneckTargets: ['LP-001']
+      bottleneckTargets: ['LP-001'],
+      bottleneckSummaries: ['计算错误']
     }),
     getStudent: async () => ({ name: '钟青羽' })
   }
@@ -243,10 +317,36 @@ test('paper preview loads a saved paper and opens its upload flow', async () => 
   await page.loadPaper('paper-1')
   assert.equal(page.data.pdfReady, true)
   assert.equal(page.data.typeText, '验证试卷')
+  assert.equal(page.data.bottleneckText, '计算错误')
   page.onUpload()
   const url = wx.calls.find(call => call.name === 'navigateTo').payload.url
   assert.match(url, /mode=verification/)
   assert.match(url, /paperId=paper-1/)
+})
+
+test('paper preview falls back to question bottleneck names for legacy papers', async () => {
+  const cloud = {
+    getPaper: async () => ({
+      _id: 'paper-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'verification',
+      pdfFileId: 'cloud://paper.pdf',
+      questions: [
+        { content: '1+1', lpCode: 'LP-001', lpName: '计算错误（加减乘除）' },
+        { content: '读题', lpCode: 'LP-008', lpName: '审题错误' }
+      ],
+      bottleneckTargets: ['LP-001', 'LP-008']
+    }),
+    getStudent: async () => ({ name: '钟青羽' })
+  }
+  const { page } = loadPage('miniprogram/pages/paper-preview/paper-preview.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.loadPaper('paper-1')
+
+  assert.equal(page.data.bottleneckText, '计算错误、审题错误')
 })
 
 test('paper preview downloads and opens the generated PDF', async () => {

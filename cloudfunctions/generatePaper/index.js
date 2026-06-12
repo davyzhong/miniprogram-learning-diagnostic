@@ -1,11 +1,9 @@
 // generatePaper/index.js
 // 生成验证试卷/默认诊断试卷（A4 PDF），上传云存储
-const pdfkit = require('pdfkit');
 const cloud = require('wx-server-sdk');
 const tcb = require('@cloudbase/node-sdk');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+const { generatePDF } = require('./pdf-renderer');
+const { summarizeBottleneckName, uniqueBottleneckSummaries } = require('./bottleneck-display');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -17,35 +15,6 @@ const app = tcb.init({
   env: tcb.SYMBOL_CURRENT_ENV,
   timeout: 60000
 });
-
-// PDF 中文字体 fileID
-const FONT_FILE_ID = process.env.FONT_FILE_ID || '';
-
-// ========== 获取中文字体（从云存储下载，缓存到临时目录） ==========
-async function getChineseFont() {
-  const fontPath = path.join(os.tmpdir(), 'chinese-font.ttf');
-
-  // 如果已缓存，直接返回
-  if (fs.existsSync(fontPath)) {
-    return fontPath;
-  }
-
-  const fontFileID = FONT_FILE_ID;
-  if (!fontFileID) {
-    console.warn('未配置 FONT_FILE_ID，中文可能无法正常显示');
-    return null;
-  }
-
-  try {
-    const res = await cloud.downloadFile({ fileID: fontFileID });
-    fs.writeFileSync(fontPath, res.fileContent);
-    console.log('中文字体下载完成：', fontPath);
-    return fontPath;
-  } catch (err) {
-    console.error('下载中文字体失败：', err.message);
-    return null;
-  }
-}
 
 // ========== 调用混元生成题目 ==========
 function cleanPromptText(value, maxLength = 30) {
@@ -81,6 +50,19 @@ function normalizeQuestionsData(data, expectedCount) {
     title: cleanPromptText(data.title, 80) || '学习卡点验证试卷',
     questions,
   };
+}
+
+function buildBottleneckSummaries(questions, targets = []) {
+  const byCode = {};
+  for (const question of questions || []) {
+    if (question.lpCode && question.lpName && !byCode[question.lpCode]) {
+      byCode[question.lpCode] = question.lpName;
+    }
+  }
+
+  const targetNames = (targets || []).map(code => byCode[code]).filter(Boolean);
+  const source = targetNames.length > 0 ? targetNames : (questions || []);
+  return uniqueBottleneckSummaries(source).map(summarizeBottleneckName);
 }
 
 async function generateQuestionsWithAI(student, subject, type, targets, paperKey, questionCount, selectedGrade) {
@@ -154,56 +136,6 @@ ${targetDesc ? `## 需要验证的卡点\n${targetDesc}` : ''}
   return normalizeQuestionsData(JSON.parse(cleaned), expectedCount);
 }
 
-// ========== 生成 PDF ==========
-async function generatePDF(questionsData, subject, type) {
-  const doc = new pdfkit({ size: 'A4', margin: 50 });
-  const buffers = [];
-  doc.on('data', buffers.push.bind(buffers));
-
-  // 注册中文字体
-  const fontPath = await getChineseFont();
-  if (fontPath) {
-    doc.registerFont('Chinese', fontPath);
-    doc.font('Chinese');
-  } else {
-    doc.font('Helvetica');  // fallback
-  }
-
-  // 标题
-  doc.fontSize(20).text(questionsData.title || '诊断试卷', { align: 'center' });
-  doc.moveDown(0.5);
-  doc.fontSize(12).text(`学科：${ { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学' }    类型：${type === 'verification' ? '验证试卷' : '默认诊断试卷' }`, { align: 'center' });
-  doc.moveDown(1);
-  doc.fontSize(10).text('姓名：__________    日期：__________    得分：__________', { align: 'left' });
-  doc.moveDown(1);
-  doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
-  doc.moveDown(1);
-
-  // 题目
-  const questions = questionsData.questions || [];
-  for (let i = 0; i < questions.length; i++) {
-    const q = questions[i];
-
-    // 题号 + 内容
-    doc.fontSize(12).text(`${q.index || i + 1}. （${q.points || 10} 分）`, { continued: true });
-    doc.text(q.content || '', { align: 'left' });
-
-    // 答题空白区域
-    doc.moveDown(2);  // 留白让考生答题
-
-    // 分页控制
-    if (doc.y > 700) {
-      doc.addPage();
-    }
-  }
-
-  // 结束 PDF 生成
-  doc.end();
-
-  await new Promise(resolve => doc.on('end', resolve));
-  return Buffer.concat(buffers);
-}
-
 // ========== 主函数 ==========
 exports.main = async (event) => {
   const {
@@ -256,6 +188,7 @@ exports.main = async (event) => {
       normalizedQuestionCount,
       type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0
     );
+    const bottleneckSummaries = buildBottleneckSummaries(questionsData.questions, targets);
 
     // 2. 生成 PDF
     console.log('开始生成 PDF');
@@ -289,6 +222,7 @@ exports.main = async (event) => {
         grade: type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0,
         paperKey: cleanPromptText(paperKey, 20),
         bottleneckTargets: targets,
+        bottleneckSummaries,
         questions: questionsData.questions || [],
         pdfFileId,
         totalPages: Math.max(1, Math.ceil(questionsData.questions.length / 6)),

@@ -24,8 +24,7 @@
       </view>
       <view class="bottleneck-info">
         <view class="bottleneck-header">
-          <text class="lp-code">{{item.lpCode}}</text>
-          <text class="lp-name">{{item.lpName}}</text>
+          <text class="lp-name">{{item.displayName}}</text>
           <view class="severity-badge severity-{{item.severity}}">
             <text wx:if="{{item.severity === 'high'}}">高</text>
             <text wx:elif="{{item.severity === 'medium'}}">中</text>
@@ -46,6 +45,7 @@
   <!-- 试卷预览摘要 -->
   <view class="preview-card" wx:if="{{selectedCount > 0}}">
     <view class="section-title">试卷预览</view>
+    <text class="preview-summary">{{selectedSummary}}</text>
     <view class="preview-stats">
       <view class="preview-stat">
         <text class="preview-num">{{selectedCount}}</text>
