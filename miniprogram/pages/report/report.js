@@ -3,6 +3,7 @@ const cloud = require('../../utils/cloud')
 const { formatChineseDateTime } = require('../../utils/util')
 const { createPoller } = require('../../utils/poller')
 const { buildReportView } = require('./report-presenter')
+const STALE_ANALYSIS_MS = 10 * 60 * 1000
 
 Page({
   data: {
@@ -160,6 +161,18 @@ Page({
         if (report.status === 'failed') {
           wx.showToast({ title: '分析失败', icon: 'none' })
           this.setData({ analysisStatusText: '分析失败' })
+          return false
+        }
+        const taskAge = progress && progress.createdAt
+          ? Date.now() - new Date(progress.createdAt).getTime()
+          : 0
+        if (progress && (progress.status === 'failed' || taskAge > STALE_ANALYSIS_MS)) {
+          this.setData({
+            analysisStatusText: '分析超时，请重新分析',
+            analysisProgress: 0,
+            hasAnalysisProgress: false,
+            analysisTaskMissing: true
+          })
           return false
         }
         const hasAnalysisProgress = !!(progress && progress.totalBatches > 0)

@@ -152,7 +152,7 @@ test('getAnalysisProgress returns the newest task and rejects other owners', asy
     reports: [{ _id: 'report-1', _openid: 'owner-1' }],
     analysisTasks: [
       { _id: 'old', reportId: 'report-1', completedBatches: 1, totalBatches: 3, createdAt: '2026-06-11T10:00:00Z' },
-      { _id: 'new', reportId: 'report-1', completedBatches: 2, totalBatches: 3, createdAt: '2026-06-11T11:00:00Z' }
+      { _id: 'new', reportId: 'report-1', status: 'processing', completedBatches: 2, totalBatches: 3, createdAt: '2026-06-11T11:00:00Z' }
     ]
   })
   const owned = loadModule('cloudfunctions/getAnalysisProgress/index.js', {
@@ -163,6 +163,8 @@ test('getAnalysisProgress returns the newest task and rejects other owners', asy
   })
 
   assert.equal((await owned.main({ reportId: 'report-1' })).completedBatches, 2)
+  assert.equal((await owned.main({ reportId: 'report-1' })).status, 'processing')
+  assert.equal((await owned.main({ reportId: 'report-1' })).createdAt, '2026-06-11T11:00:00Z')
   assert.equal((await denied.main({ reportId: 'report-1' })).error, '无权访问该报告')
 })
 

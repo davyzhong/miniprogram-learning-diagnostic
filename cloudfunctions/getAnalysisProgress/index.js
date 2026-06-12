@@ -39,6 +39,7 @@ exports.main = async (event) => {
       status: task.status,
       completedBatches: task.completedBatches || 0,
       totalBatches: task.totalBatches || 0,
+      createdAt: task.createdAt,
     };
   } catch (err) {
     console.error('getAnalysisProgress 失败：', err);
