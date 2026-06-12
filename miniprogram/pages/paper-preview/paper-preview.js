@@ -1,6 +1,7 @@
 // pages/paper-preview/paper-preview.js
 const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
+const { formatBottleneckDisplayName } = require('../../utils/util')
 
 Page({
   data: {
@@ -23,6 +24,7 @@ Page({
     bottleneckText: '',  // 预拼接的卡点文本
 
     pdfReady: false,
+    pdfDownloaded: false,
     downloading: false,
     uploadBtnText: '作答完成，拍照上传'
   },
@@ -40,7 +42,8 @@ Page({
         mode: 'preview',
         fileId: decodedFileId,
         typeText: type === 'verification' ? '验证试卷' : '诊断试卷',
-        pdfReady: true
+        pdfReady: true,
+        pdfDownloaded: this.isPdfDownloaded(decodedFileId)
       })
     }
   },
@@ -77,6 +80,7 @@ Page({
         bottleneckTargets: p.bottleneckTargets || [],
         bottleneckText: bottleneckSummaries.join('、'),
         pdfReady: !!p.pdfFileId,
+        pdfDownloaded: this.isPdfDownloaded(p.pdfFileId || p._id),
         uploadBtnText: `作答完成，${isVerification ? '上传验证' : '上传答题'}`
       })
 
@@ -99,6 +103,10 @@ Page({
       wx.showToast({ title: 'PDF 未生成', icon: 'none' })
       return
     }
+    if (this.data.pdfDownloaded) {
+      wx.showToast({ title: 'PDF 已下载', icon: 'none' })
+      return
+    }
     if (this.data.downloading) return
 
     this.setData({ downloading: true })
@@ -119,6 +127,7 @@ Page({
           wx.showToast({ title: '打开失败', icon: 'none' })
         }
       })
+      this.markPdfDownloaded(cloudFileId)
     } catch (err) {
       console.error('下载失败', err)
       wx.hideLoading()
@@ -201,6 +210,32 @@ Page({
     const targetNames = targets.map(code => byCode[code]).filter(Boolean)
     if (targetNames.length > 0) return uniqueBottleneckSummaries(targetNames)
 
+    const targetFallbacks = targets.map(code => formatBottleneckDisplayName({ lpCode: code }))
+    if (targetFallbacks.length > 0) return uniqueBottleneckSummaries(targetFallbacks)
+
     return uniqueBottleneckSummaries(questions)
+  },
+
+  getDownloadedStorageKey(cloudFileId) {
+    return `downloaded_pdf_${cloudFileId || ''}`
+  },
+
+  isPdfDownloaded(cloudFileId) {
+    if (!cloudFileId || typeof wx.getStorageSync !== 'function') return false
+    try {
+      return !!wx.getStorageSync(this.getDownloadedStorageKey(cloudFileId))
+    } catch (e) {
+      return false
+    }
+  },
+
+  markPdfDownloaded(cloudFileId) {
+    if (!cloudFileId) return
+    if (typeof wx.setStorageSync === 'function') {
+      try {
+        wx.setStorageSync(this.getDownloadedStorageKey(cloudFileId), true)
+      } catch (e) {}
+    }
+    this.setData({ pdfDownloaded: true })
   }
 })

@@ -1,6 +1,6 @@
 # 故障排查手册（TROUBLESHOOTING）
 
-> 更新日期：2026-06-11
+> 更新日期：2026-06-12
 > 配套文档：`SETUP.md`、`docs/TESTING.md`、`docs/TEST_MATRIX.md`
 > 索引方式：按症状关键词查找；每个问题包含「症状 / 可能原因 / 排查步骤 / 解决方案」四段
 
@@ -100,7 +100,7 @@
 
 **解决方案**
 - 若 profile 卡在 `analyzing` 但 report 已是终态：手动将 `analysisStatus` 置为 null、`currentAnalysisId` 置空（应急手段）
-- 若 AI 超时：增大 `analyzePhotos` 与 `uploadAndAnalyze` 的云函数超时配置至 900 秒
+- 若 AI 超时：增大 `analyzePhotos` 的云函数超时配置至 900 秒
 - 若轮询已达上限：点击报告页的"重试分析"按钮触发 `onRetryAnalysis`
 - 根因修复参考测试：`node --test --test-name-pattern="clears profile analysis state" tests/coverage-gap.test.js`
 
@@ -247,14 +247,37 @@
 3. 检查轮询期间是否有网络错误日志
 
 **解决方案**
-- 这通常是**预期行为**：设计上允许客户端超时后由服务端继续完成
+- 这通常是**预期行为**：设计上允许客户端停止轮询后由服务端继续完成
 - 用户体验优化：进入学科主页时若检测到 `currentAnalysisId` 非空，自动重启轮询
 - 若频繁超时：考虑增大 `maxAttempts` 或缩短轮询间隔
-- 根本解决：实现上传与分析完全解耦（见 PRD 已知限制）
+- 体验优化：学习记录和学科主页进入时继续恢复当前分析状态
 
 ---
 
-## 11. 数据库权限错误（读取他人数据被拒）
+## 11. 试卷 PDF 已下载后仍可重复下载
+
+**症状**
+试卷预览页已经下载过 PDF，但按钮仍显示「下载 PDF」，再次点击会重复下载同一份文件。
+
+**可能原因**
+- 本地下载标记没有写入 `wx.setStorageSync`
+- `paper-preview` 页面没有从 `pdfFileId/fileId` 生成稳定的 storage key
+- 预览模式和正式试卷模式使用了不同 fileID，导致状态无法复用
+- 用户清除了小程序本地缓存
+
+**排查步骤**
+1. 在开发者工具 Storage 面板查看是否存在 `downloaded_pdf_<fileId>` 记录
+2. 检查 `paper-preview.js` 的 `isPdfDownloaded()` 与 `markPdfDownloaded()` 是否正常执行
+3. 运行回归测试：`node --test --test-name-pattern="paper preview remembers downloaded PDF" tests/page-flows.test.js`
+
+**解决方案**
+- 确保下载成功并打开文档后调用 `markPdfDownloaded()`
+- 使用 PDF 云存储 fileID 作为下载状态 key，不使用 paperId 或页面标题
+- 若用户清空缓存，允许再次下载，这是预期行为
+
+---
+
+## 12. 数据库权限错误（读取他人数据被拒）
 
 **症状**
 调用 `getReport`、`getAnalysisProgress` 等接口返回 `permission denied`，或返回空数组但预期有数据。
@@ -279,7 +302,7 @@
 
 ---
 
-## 12. 字体缓存竞态问题
+## 13. 字体缓存竞态问题
 
 **症状**
 并发调用 `generatePaper` 或 `generateReportPDF` 时，偶发 `registerFont` 报错或 PDF 生成失败；单独调用正常。

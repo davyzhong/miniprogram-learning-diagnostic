@@ -7,6 +7,8 @@ const {
   formatDate,
   formatDateTime,
   severityBadgeClass,
+  formatBottleneckDisplayName,
+  formatBottleneckDisplayList,
   getCategoryName,
   trendIcon,
   CATEGORY_NAMES
@@ -50,6 +52,22 @@ test('getCategoryName resolves registered prefixes and returns code or 未知 ot
   assert.equal(getCategoryName(''), '未知')
   assert.equal(getCategoryName(null), '未知')
   assert.equal(getCategoryName(undefined), '未知')
+})
+
+test('formatBottleneckDisplayName hides internal LP codes behind readable names', () => {
+  assert.equal(formatBottleneckDisplayName({ lpCode: 'LP-001' }), '计算基础')
+  assert.equal(formatBottleneckDisplayName({ lpCode: 'LP-008' }), '审题理解')
+  assert.equal(formatBottleneckDisplayName({ lpCode: 'LP-002', lpName: '分数运算错误' }), '分数运算')
+  assert.equal(formatBottleneckDisplayName({ lpCode: 'LP-XXX' }), '待确认卡点')
+})
+
+test('formatBottleneckDisplayList joins readable names without exposing LP codes', () => {
+  const text = formatBottleneckDisplayList([
+    { lpCode: 'LP-001' },
+    { lpCode: 'LP-008' }
+  ])
+  assert.equal(text, '计算基础、审题理解')
+  assert.doesNotMatch(text, /LP-\d+/)
 })
 
 test('trendIcon picks the matching arrow and defaults to stable', () => {

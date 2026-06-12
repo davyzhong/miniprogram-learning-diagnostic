@@ -12,6 +12,8 @@
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
 | `analysisTasks` | 异步分析任务进度追踪 | analyzePhotos 启动时 | analyzePhotos 云函数 |
 
+> 学习记录页面不是独立集合，而是前端按天聚合 `reports`、`papers` 和 `reports.imageFiles` 后得到的时间线视图。
+
 ---
 
 ## 2. 集合详细字段定义
@@ -186,6 +188,8 @@
 | `lpName` | String | 卡点名称（≤80 字） | `"分数运算错误"` |
 
 **代码来源**：`generatePaper/index.js` 创建；preview 模式下不落库
+
+**学习记录备注**：正式落库的验证试卷和默认诊断试卷会进入学习记录时间线；`preview=true` 生成的临时 PDF 不进入学习记录。
 
 ---
 

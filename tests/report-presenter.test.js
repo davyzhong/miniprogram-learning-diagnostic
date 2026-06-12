@@ -80,13 +80,16 @@ test('bottleneck metadata uses readable names instead of LP codes', () => {
   const view = buildReportView({
     bottlenecks: [
       { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', errorCount: 2, status: 'found' },
+      { lpCode: 'LP-008', errorCount: 1, status: 'found' },
       { lpCode: 'LP-999', errorCount: 1, status: 'found' }
     ]
   })
 
   assert.equal(view.bottleneckList[0].displayName, '计算错误')
   assert.equal(view.bottleneckList[0].metaText, '2 道相关错题 · 计算错误')
-  assert.equal(view.bottleneckList[1].metaText, '1 道相关错题 · 待确认卡点')
+  assert.ok(view.bottleneckList.every(item => !/LP-\d+/.test(item.displayName)))
+  assert.equal(view.bottleneckList[1].displayName, '审题理解')
+  assert.equal(view.bottleneckList[2].metaText, '1 道相关错题 · 待确认卡点')
 })
 
 test('report headline falls back to comparison summary then summary', () => {

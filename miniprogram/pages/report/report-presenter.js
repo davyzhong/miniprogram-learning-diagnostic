@@ -1,4 +1,5 @@
 const { summarizeBottleneckName } = require('../../utils/bottlenecks')
+const { formatBottleneckDisplayName } = require('../../utils/util')
 
 function buildReportView(report) {
   const isVerification = report.type === 'verification'
@@ -17,8 +18,8 @@ function buildReportView(report) {
     return {
       ...item,
       ...status,
-      displayName: summarizeBottleneckName(item.lpName),
-      metaText: `${item.errorCount || 0} 道相关错题 · ${summarizeBottleneckName(item.lpName)}`,
+      displayName: item.lpName ? summarizeBottleneckName(item.lpName) : formatBottleneckDisplayName(item),
+      metaText: `${item.errorCount || 0} 道相关错题 · ${item.lpName ? summarizeBottleneckName(item.lpName) : formatBottleneckDisplayName(item)}`,
       barWidth: Math.round(((item.errorCount || 0) / maxErrorCount) * 100)
     }
   })

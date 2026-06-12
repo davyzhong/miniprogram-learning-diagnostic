@@ -1,6 +1,7 @@
 // pages/generate-verification/generate-verification.js
 const cloud = require('../../utils/cloud')
 const { summarizeBottleneckName, uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
+const { formatBottleneckDisplayName } = require('../../utils/util')
 const MAX_SELECTED_BOTTLENECKS = 5
 const SEVERITY_PRIORITY = { high: 0, medium: 1, low: 2 }
 
@@ -48,9 +49,12 @@ Page({
             return (SEVERITY_PRIORITY[a.severity] ?? 3) - (SEVERITY_PRIORITY[b.severity] ?? 3)
           })
           .map((b, index) => {
+            const displayName = b.lpName
+              ? summarizeBottleneckName(b.lpName)
+              : formatBottleneckDisplayName(b)
             return {
               ...b,
-              displayName: summarizeBottleneckName(b.lpName),
+              displayName,
               selected: index < MAX_SELECTED_BOTTLENECKS,
               sinceDateText: this.formatDate(b.sinceDate)
             }

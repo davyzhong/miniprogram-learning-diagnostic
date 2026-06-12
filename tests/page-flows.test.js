@@ -1,6 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createWxMock, loadPage } = require('./helpers/page-harness')
+const util = require('../miniprogram/utils/util')
 
 test('add student trims input and creates all subject profiles', async () => {
   let saved = null
@@ -179,6 +180,7 @@ test('verification page selects at most five bottlenecks by severity priority', 
     JSON.parse(JSON.stringify(page.data.bottlenecks.filter(item => item.selected).map(item => item.lpCode))),
     ['LP-003', 'LP-005', 'LP-007', 'LP-002', 'LP-004']
   )
+  assert.ok(page.data.bottlenecks.every(item => !/LP-\d+/.test(item.displayName)))
 })
 
 test('verification paper generation sends only selected bottlenecks and opens the saved paper', async () => {
@@ -308,7 +310,9 @@ test('paper preview loads a saved paper and opens its upload flow', async () => 
     }),
     getStudent: async () => ({ name: '钟青羽' })
   }
-  const wx = createWxMock()
+  const wx = createWxMock({
+    getStorageSync: key => key === 'downloaded_pdf_cloud://paper.pdf'
+  })
   const { page } = loadPage('miniprogram/pages/paper-preview/paper-preview.js', {
     wx,
     modules: { '../../utils/cloud': cloud }
@@ -318,6 +322,8 @@ test('paper preview loads a saved paper and opens its upload flow', async () => 
   assert.equal(page.data.pdfReady, true)
   assert.equal(page.data.typeText, '验证试卷')
   assert.equal(page.data.bottleneckText, '计算错误')
+  assert.equal(page.data.pdfDownloaded, true)
+  assert.doesNotMatch(page.data.bottleneckText, /LP-\d+/)
   page.onUpload()
   const url = wx.calls.find(call => call.name === 'navigateTo').payload.url
   assert.match(url, /mode=verification/)
@@ -349,10 +355,15 @@ test('paper preview falls back to question bottleneck names for legacy papers', 
   assert.equal(page.data.bottleneckText, '计算错误、审题错误')
 })
 
-test('paper preview downloads and opens the generated PDF', async () => {
+test('paper preview downloads once and marks the PDF as downloaded', async () => {
+  let downloadCount = 0
+  const storage = {}
   const wx = createWxMock({
+    getStorageSync: key => storage[key],
+    setStorageSync: (key, value) => { storage[key] = value },
     cloud: {
       downloadFile: async payload => {
+        downloadCount += 1
         assert.equal(payload.fileID, 'cloud://paper.pdf')
         return { tempFilePath: '/tmp/paper.pdf' }
       }
@@ -366,7 +377,13 @@ test('paper preview downloads and opens the generated PDF', async () => {
 
   await page.onDownload()
   assert.equal(page.data.downloading, false)
+  assert.equal(page.data.pdfDownloaded, true)
+  assert.equal(downloadCount, 1)
   assert.equal(wx.calls.find(call => call.name === 'openDocument').payload.filePath, '/tmp/paper.pdf')
+
+  await page.onDownload()
+  assert.equal(downloadCount, 1)
+  assert.ok(wx.calls.some(call => call.name === 'showToast' && /已下载/.test(call.payload.title)))
 })
 
 test('report passes its subject name into verification paper generation', () => {
@@ -512,17 +529,40 @@ test('report exposes retry when an analysis task is stale', async () => {
   assert.equal(page.data.analysisStatusText, '分析超时，请重新分析')
 })
 
-test('upload history supports legacy reports and previews available originals', async () => {
+test('learning records group uploads reports and verification papers by day', async () => {
   const cloud = {
-    getReports: async () => [{
-      _id: 'report-1',
-      type: 'diagnosis',
-      createdAt: '2026-06-11T10:00:00Z',
-      imageFileIds: ['cloud://legacy-photo']
+    getReports: async () => [
+      {
+        _id: 'report-1',
+        type: 'diagnosis',
+        createdAt: '2026-06-11T10:00:00Z',
+        summary: '发现计算基础卡点',
+        totalErrors: 2,
+        bottlenecks: [{ lpCode: 'LP-001' }],
+        imageFileIds: ['cloud://legacy-photo']
+      },
+      {
+        _id: 'report-2',
+        type: 'verification',
+        createdAt: '2026-06-11T12:00:00Z',
+        comparisonSummary: '1 个学习卡点已改善',
+        verificationEvidence: [{ lpCode: 'LP-001', complete: true, allCorrect: true }],
+        imageFiles: [{ fileID: 'cloud://verification-photo', fileName: '验证作答.jpg', ocrSummary: '验证题作答' }]
+      }
+    ],
+    getPapers: async () => [{
+      _id: 'paper-1',
+      type: 'verification',
+      createdAt: '2026-06-11T11:00:00Z',
+      questions: [{}, {}, {}],
+      bottleneckTargets: ['LP-001']
     }],
     getTempFileURLs: async () => [{
       fileID: 'cloud://legacy-photo',
       tempFileURL: 'https://temp/legacy-photo'
+    }, {
+      fileID: 'cloud://verification-photo',
+      tempFileURL: 'https://temp/verification-photo'
     }]
   }
   const wx = createWxMock()
@@ -530,16 +570,25 @@ test('upload history supports legacy reports and previews available originals', 
     wx,
     modules: {
       '../../utils/cloud': cloud,
-      '../../utils/util': { formatChineseDateTime: () => '2026年6月11日 10:00' }
+      '../../utils/util': util
     }
   })
   page.setData({ studentId: 'student-1', subject: 'math' })
 
   await page.loadHistory()
-  assert.equal(page.data.groups[0].photos[0].fileName, '历史照片1')
-  assert.match(page.data.groups[0].photos[0].summaryText, /暂无 OCR/)
-  page.onPreviewPhoto({ currentTarget: { dataset: { groupIndex: 0, photoIndex: 0 } } })
+  assert.equal(page.data.days.length, 1)
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.kind))), [
+    'verification-report',
+    'verification-paper',
+    'diagnosis-report'
+  ])
+  assert.equal(page.data.days[0].events[2].photos[0].fileName, '历史照片1')
+  assert.match(page.data.days[0].events[2].photos[0].summaryText, /暂无 OCR/)
+  page.onPreviewPhoto({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 2, photoIndex: 0 } } })
   assert.equal(wx.calls.find(call => call.name === 'previewImage').payload.current, 'https://temp/legacy-photo')
+
+  page.onEventTap({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 1 } } })
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paperId=paper-1/)
 })
 
 test('report loads diagnosis data and toggles error details', async () => {
@@ -679,6 +728,7 @@ test('upload history degrades gracefully when some temporary URLs are empty', as
         { fileID: 'cloud://expired', fileName: 'b.jpg', ocrSummary: 'OLD' }
       ]
     }],
+    getPapers: async () => [],
     getTempFileURLs: async () => [
       { fileID: 'cloud://ok', tempFileURL: 'https://temp/ok' },
       { fileID: 'cloud://expired', tempFileURL: '' }
@@ -689,24 +739,24 @@ test('upload history degrades gracefully when some temporary URLs are empty', as
     wx,
     modules: {
       '../../utils/cloud': cloud,
-      '../../utils/util': { formatChineseDateTime: () => '2026年6月11日 10:00' }
+      '../../utils/util': util
     }
   })
   page.setData({ studentId: 'student-1', subject: 'math' })
 
   await page.loadHistory()
   assert.equal(page.data.loading, false)
-  assert.equal(page.data.groups[0].photos[0].tempFileURL, 'https://temp/ok')
-  assert.equal(page.data.groups[0].photos[1].tempFileURL, '')
+  assert.equal(page.data.days[0].events[0].photos[0].tempFileURL, 'https://temp/ok')
+  assert.equal(page.data.days[0].events[0].photos[1].tempFileURL, '')
 
   // previewing the expired photo shows a toast and does not crash
-  page.onPreviewPhoto({ currentTarget: { dataset: { groupIndex: 0, photoIndex: 1 } } })
+  page.onPreviewPhoto({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 0, photoIndex: 1 } } })
   const expiredToast = wx.calls.find(call => call.name === 'showToast' && /无法预览/.test(call.payload.title))
   assert.ok(expiredToast)
   assert.equal(wx.calls.some(call => call.name === 'previewImage'), false)
 
   // previewing the valid photo filters out the empty URL from the urls list
-  page.onPreviewPhoto({ currentTarget: { dataset: { groupIndex: 0, photoIndex: 0 } } })
+  page.onPreviewPhoto({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 0, photoIndex: 0 } } })
   const previewCall = wx.calls.find(call => call.name === 'previewImage')
   assert.deepEqual(previewCall.payload.urls, ['https://temp/ok'])
   assert.equal(previewCall.payload.current, 'https://temp/ok')
@@ -715,6 +765,7 @@ test('upload history degrades gracefully when some temporary URLs are empty', as
 test('upload history surfaces load errors without leaving the loading flag stuck', async () => {
   const cloud = {
     getReports: async () => { throw new Error('network down') },
+    getPapers: async () => [],
     getTempFileURLs: async () => []
   }
   const wx = createWxMock()
@@ -722,14 +773,14 @@ test('upload history surfaces load errors without leaving the loading flag stuck
     wx,
     modules: {
       '../../utils/cloud': cloud,
-      '../../utils/util': { formatChineseDateTime: () => '' }
+      '../../utils/util': util
     }
   })
   page.setData({ studentId: 'student-1', subject: 'math' })
 
   await page.loadHistory()
   assert.equal(page.data.loading, false)
-  assert.deepEqual(page.data.groups, [])
+  assert.equal(page.data.days.length, 0)
   const errorToast = wx.calls.find(call => call.name === 'showToast' && /加载失败/.test(call.payload.title))
   assert.ok(errorToast)
 })

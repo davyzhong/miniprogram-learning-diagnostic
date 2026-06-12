@@ -1,3 +1,5 @@
+const { formatBottleneckDisplayName } = require('../../utils/util')
+
 const STATUS_META = {
   persisting: { text: '持续出现', className: 'persisting', icon: '!' },
   needs_verification: { text: '需要验证', className: 'pending', icon: '?' },
@@ -15,6 +17,7 @@ function normalizeBottlenecks(profile = {}) {
 function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = () => '') {
   const currentBottlenecks = normalizeBottlenecks(profile).map(item => ({
     ...item,
+    displayName: formatBottleneckDisplayName(item),
     statusText: (STATUS_META[item.status] || STATUS_META.needs_verification).text,
     statusClass: (STATUS_META[item.status] || STATUS_META.needs_verification).className,
     statusIcon: (STATUS_META[item.status] || STATUS_META.needs_verification).icon

@@ -28,19 +28,20 @@
 - ✅ 验证试卷生成：基于历史卡点，AI 生成针对性题目，A4 PDF 下载打印
 - ✅ 默认诊断试卷：按年级动态生成标准诊断卷（1-6 年级 A/B 卷），无需预存题库
 - ✅ 试卷预览与打印：A4 预览 + PDF 下载 + 分享打印
-- ✅ 上传历史：按报告分组展示原始照片、OCR 摘要和疑似重复标记
+- ✅ 试卷下载状态：同一份 PDF 下载后显示「已下载」，避免重复下载
+- ✅ 学习记录：按天整理诊断报告、验证试卷、验证作答上传和原始照片，形成学习证据链
 - ✅ 照片去重：跨批次 + 跨历史报告的 OCR 指纹比对，避免重复计入
 - ✅ AI 结果标准化：字段截断、严重度归一、结构化校验
 - ✅ 验证报告对比：标注改善 / 加重 / 新增 / 持续四种状态
 - ✅ 分析进度轮询：学科主页和报告页每 10s 轮询，支持手动重试
 - ✅ 报告 PDF 生成与下载
 - ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 自动化测试：100 用例全绿，JS 语法检查 40 文件通过
+- ✅ 自动化测试：128 个常规用例通过，JS 语法检查 50 文件通过
 
 ### 待完善
 
 - ⚠️ 微信订阅消息推送（`sendNotification` 当前为空实现，待申请模板）
-- ⚠️ 上传与分析完全解耦（当前同步等待，客户端 20s 超时兜底）
+- ✅ 上传与分析解耦：创建报告后服务端 fire-and-forget 启动分析，客户端提交后即可返回
 - ⚠️ 默认试卷跨学生共享模板（当前仅同学生复用）
 - ⬜ 真机端到端验收
 
@@ -77,7 +78,7 @@ miniprogram-learning-diagnostic/
 │   ├── getAnalysisProgress/     #   轻量进度查询
 │   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF
 │   └── generateReportPDF/       #   生成报告 PDF
-├── tests/                       # 自动化测试（100 用例）
+├── tests/                       # 自动化测试（128 个常规用例 + 真实图片 E2E 脚本）
 ├── scripts/                     # check-js.js（语法检查）
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
@@ -110,7 +111,7 @@ cd miniprogram-learning-diagnostic
 1. 在云开发控制台开通 `hy3-preview` 和 `deepseek-v4-flash` 两个 AI 模型
 2. 将中文字体（推荐 SimHei.ttf）上传到云存储，记录 fileID
 3. 对 `cloudfunctions/` 下每个云函数目录右键 → "上传并部署：云端安装依赖"
-4. 将 `uploadAndAnalyze` 和 `analyzePhotos` 的执行超时调整为 **900 秒**
+4. 将 `analyzePhotos` 的执行超时调整为 **900 秒**（`uploadAndAnalyze` 负责快速创建报告和启动任务）
 5. 为 `generatePaper` 和 `generateReportPDF` 配置环境变量 `FONT_FILE_ID`
 
 ### 配置数据库
@@ -130,7 +131,7 @@ cd miniprogram-learning-diagnostic
 ## 测试
 
 ```bash
-# 运行全部自动化测试（100 用例）
+# 运行常规自动化测试（128 用例，不含真实图片 E2E）
 npm test
 
 # 带覆盖率报告
@@ -140,7 +141,13 @@ npm run test:coverage
 npm run verify
 ```
 
-端到端真实图片测试脚本需单独运行，详见 `tests/e2e-real-image.test.js`。
+端到端真实图片测试脚本需单独运行：
+
+```bash
+npm run test:e2e-real-image
+```
+
+该脚本依赖本机真实试卷图片路径与 CloudBase 环境，适合作为发布前手动验收。
 
 ---
 
@@ -148,7 +155,7 @@ npm run verify
 
 | 文档 | 说明 |
 |------|------|
-| [PRD.md](./PRD.md) | 产品设计文档 v2.2：页面设计、数据模型、异步架构、实现状态总览 |
+| [PRD.md](./PRD.md) | 产品设计文档 v2.4：页面设计、数据模型、异步架构、学习记录、实现状态总览 |
 | [PROJECT_PLAN.md](./PROJECT_PLAN.md) | 技术架构、目录结构、AI 分析流程、部署步骤、版本规划 |
 | [SETUP.md](./SETUP.md) | 部署指南：环境配置、云函数部署、字体配置、数据库索引、真机验收 |
 | [docs/TEST_MATRIX.md](./docs/TEST_MATRIX.md) | 测试矩阵与验收清单 |

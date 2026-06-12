@@ -28,6 +28,7 @@ test('builds current diagnosis counts and recent changes from new fields', () =>
   assert.equal(view.persistingCount, 1)
   assert.equal(view.pendingCount, 1)
   assert.equal(view.improvedCount, 1)
+  assert.deepEqual(view.currentBottlenecks.map(item => item.displayName), ['应用题建模', '分数运算', '单位换算'])
   assert.equal(view.recentChanges[0].title, '发现分数运算卡点')
 })
 

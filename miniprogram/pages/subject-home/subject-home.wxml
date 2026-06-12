@@ -50,7 +50,7 @@
       <view class="bottleneck-row" wx:for="{{currentBottlenecks}}" wx:key="lpCode">
         <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
         <view class="row-copy">
-          <text class="row-title">{{item.lpName}}</text>
+          <text class="row-title">{{item.displayName}}</text>
           <text class="row-desc">{{item.status === 'persisting' ? '在不同记录中再次出现' : item.status === 'improved' ? '针对性验证已通过' : '需要进一步验证确认'}}</text>
         </view>
         <text class="status-label status-label-{{item.statusClass}}">{{item.statusText}}</text>
@@ -88,7 +88,7 @@
     <view class="tool-grid">
       <view class="tool-item" bindtap="onDiagnosisTap"><text class="tool-icon">⌾</text><text>拍照诊断</text></view>
       <view class="tool-item" bindtap="onDefaultPaperTap"><text class="tool-icon">□</text><text>默认试卷</text></view>
-      <view class="tool-item" bindtap="onUploadHistoryTap"><text class="tool-icon">▧</text><text>上传历史</text></view>
+      <view class="tool-item" bindtap="onUploadHistoryTap"><text class="tool-icon">▧</text><text>学习记录</text></view>
     </view>
   </view>
 </view>

@@ -18,7 +18,7 @@
 | 文件存储 | 云开发云存储 | 试卷照片、生成的 PDF 文件 |
 | PDF 生成 | pdfkit（Node.js） | 云函数内生成 A4 试卷/报告 PDF |
 | 中文字体 | 云存储 + `/tmp` 缓存 | 通过 `FONT_FILE_ID` 环境变量指定，首次下载到临时目录后复用 |
-| 本地测试 | Node.js 内置 test runner | `node --test tests/*.test.js` |
+| 本地测试 | Node.js 内置 test runner | `npm test` 运行常规测试；真实图片 E2E 单独运行 |
 
 ---
 
@@ -83,7 +83,7 @@ cloud.callUploadAndAnalyze({ fileIDs, studentId, subject, mode:'diagnosis' })
     ├── 1. 校验参数 + 权限
     ├── 2. 创建 reports 记录（status='analyzing'）
     ├── 3. 更新 subjectProfiles.analysisStatus='analyzing'
-    └── 4. 同步 await cloud.callFunction('analyzePhotos', { reportId })
+    └── 4. fire-and-forget 调用 cloud.callFunction('analyzePhotos', { reportId })
               │
               ▼
          [analyzePhotos 云函数]
@@ -105,7 +105,7 @@ cloud.callUploadAndAnalyze({ fileIDs, studentId, subject, mode:'diagnosis' })
               └── 9. 更新 analysisTasks（status='completed'）
     │
     ▼
-客户端收到 reportId → 跳转 report 页面
+客户端收到 reportId → 返回学科主页并轮询分析状态
     │
     ▼
 report 页面：createPoller 每 10s 轮询 getAnalysisProgress
@@ -132,7 +132,7 @@ generate-verification 页面
               └── 写入 papers 集合
     │
     ▼
-paper-preview 页面 → 预览/下载 PDF → 线下答题
+paper-preview 页面 → 预览/下载 PDF（已下载后显示“已下载”）→ 线下答题
     │
     ▼
 答题完成后 → upload 页面（mode='verification', paperId=xxx）
@@ -170,7 +170,7 @@ default-paper 页面
               └── 写入 papers 集合
     │
     ▼
-paper-preview 页面 → 预览/下载 PDF → 线下答题
+paper-preview 页面 → 预览/下载 PDF（已下载后显示“已下载”）→ 线下答题
     │
     ▼
 答题完成后 → upload 页面（mode='default-paper', paperId=xxx）
@@ -196,18 +196,19 @@ index（首页 - 学生列表）
                     ├── navigateTo → upload?mode=diagnosis（拍照诊断）
                     ├── navigateTo → generate-verification（生成验证试卷）
                     ├── navigateTo → default-paper（默认诊断试卷）
-                    ├── navigateTo → upload-history（历史记录）
+                    ├── navigateTo → upload-history（学习记录）
                     ├── navigateTo → report?id=xxx（查看报告）
                     └── navigateTo → report?id=currentAnalysisId（分析中报告）
 
 upload（拍照上传）
   └── 上传成功后 → redirect/reLaunch → subject-home 或 report
 
-upload-history（上传历史）
-  └── navigateTo → report?id=xxx
+upload-history（学习记录）
+  ├── navigateTo → report?id=xxx
+  └── navigateTo → paper-preview?paperId=xxx
 
 report（报告详情）
-  └── navigateTo → generate-verification（带瓶颈参数）
+  └── navigateTo → generate-verification（带卡点参数）
 
 generate-verification（验证试卷生成）
   └── navigateTo → paper-preview?fileId=xxx 或 ?paperId=xxx
@@ -216,7 +217,7 @@ default-paper（默认诊断试卷）
   └── navigateTo → paper-preview?fileId=xxx 或 ?paperId=xxx
 
 paper-preview（试卷预览）
-  └── （无进一步导航，提供下载/打开功能）
+  └── navigateTo → upload?mode=verification/default-paper（作答完成后上传批复）
 ```
 
 ### 页面清单
@@ -228,11 +229,11 @@ paper-preview（试卷预览）
 | `pages/subject-select/subject-select` | 选择学科进入 | cloud.getSubjectProfiles, ensureSubjectProfile |
 | `pages/subject-home/subject-home` | 学科主页：三入口 + 状态轮询 + 历史 | cloud.getSubjectProfile, getReports, getLatestReport, getAnalysisProgress; poller |
 | `pages/upload/upload` | 拍照/选图 + 上传 + 触发分析 | cloud.uploadPhoto, callUploadAndAnalyze, getReports |
-| `pages/upload-history/upload-history` | 历史报告列表 | cloud.getReports, getTempFileURLs |
+| `pages/upload-history/upload-history` | 学习记录时间线 | cloud.getReports, getPapers, getTempFileURLs |
 | `pages/report/report` | 报告详情 + 分析进度轮询 + PDF 生成 | cloud.getReport, getSubjectProfile, getAnalysisProgress, callAnalyzePhotos, callGenerateReportPDF; poller |
 | `pages/generate-verification/generate-verification` | 选卡点 → 生成验证试卷 | cloud.getSubjectProfile, callGeneratePaper |
 | `pages/default-paper/default-paper` | 选年级 → 生成/选择默认诊断试卷 | cloud.getPapers, callGeneratePaper |
-| `pages/paper-preview/paper-preview` | 预览/下载试卷 PDF | cloud.getPaper, getStudent |
+| `pages/paper-preview/paper-preview` | 预览/下载试卷 PDF，记录已下载状态 | cloud.getPaper, getStudent |
 
 ---
 
@@ -241,7 +242,7 @@ paper-preview（试卷预览）
 ```
 客户端
   │
-  ├─→ uploadAndAnalyze ──(同步 await)──→ analyzePhotos ──(同步 await, 串行)──→ analyzeBatch × N
+  ├─→ uploadAndAnalyze ──(fire-and-forget)──→ analyzePhotos ──(同步 await, 串行)──→ analyzeBatch × N
   │                                        │
   │                                        ├──(异步 fire-and-forget)──→ sendNotification（预留空实现）
   │                                        │
@@ -258,8 +259,8 @@ paper-preview（试卷预览）
 
 | 调用方 | 被调用方 | 方式 | 说明 |
 |--------|----------|------|------|
-| 客户端 upload 页面 | uploadAndAnalyze | wx.cloud.callFunction (20s 超时) | 主入口 |
-| uploadAndAnalyze | analyzePhotos | cloud.callFunction (同步 await) | 服务端可靠触发，不受客户端超时影响 |
+| 客户端 upload 页面 | uploadAndAnalyze | wx.cloud.callFunction | 创建报告并启动后台分析 |
+| uploadAndAnalyze | analyzePhotos | cloud.callFunction (fire-and-forget) | 服务端触发后台分析，立即返回 reportId |
 | analyzePhotos | analyzeBatch | cloud.callFunction (同步 await, 循环串行) | 每批最多 5 张，逐批处理 |
 | analyzePhotos | sendNotification | Promise.catch (fire-and-forget) | 预留，当前空实现 |
 | 客户端 report 页面 | getAnalysisProgress | wx.cloud.callFunction | 轮询调用 |
@@ -281,7 +282,7 @@ paper-preview（试卷预览）
 | subject-select | getSubjectProfiles, ensureSubjectProfile |
 | subject-home | getSubjectProfile, getReports, getLatestReport, getReport, getAnalysisProgress |
 | upload | getReports, uploadPhoto*, callUploadAndAnalyze |
-| upload-history | getReports, getTempFileURLs |
+| upload-history | getReports, getPapers, getTempFileURLs |
 | report | getReport, getSubjectProfile, getAnalysisProgress, callAnalyzePhotos, callGenerateReportPDF |
 | generate-verification | getSubjectProfile, callGeneratePaper |
 | default-paper | getPapers, callGeneratePaper |
@@ -301,9 +302,11 @@ paper-preview（试卷预览）
 | 页面 | 使用的方法 |
 |------|-----------|
 | index | formatRelativeTime |
-| subject-home | formatRelativeTime |
-| upload-history | formatChineseDateTime |
-| report | formatChineseDateTime |
+| subject-home | formatRelativeTime, formatBottleneckDisplayList |
+| upload-history | formatChineseDateTime, formatBottleneckDisplayList |
+| report | formatChineseDateTime, formatBottleneckDisplayName |
+| generate-verification | formatBottleneckDisplayName |
+| paper-preview | formatBottleneckDisplayList |
 
 ### 云函数内部模块依赖
 
@@ -379,8 +382,8 @@ poller.start()
 
 | 场景 | 超时设置 | 处理方式 |
 |------|----------|----------|
-| 客户端 → uploadAndAnalyze | 20s | 服务端已创建 reports + 启动 analyzePhotos，客户端超时不影响后台分析 |
-| 客户端 → analyzePhotos（重试） | 20s | 同上，服务端幂等检查避免重复启动 |
+| 客户端 → uploadAndAnalyze | 快速返回 | 服务端创建 reports + 启动 analyzePhotos 后立即返回 reportId |
+| 客户端 → analyzePhotos（重试） | 20s | 服务端幂等检查避免重复启动，超时按后台处理中处理 |
 | analyzePhotos → analyzeBatch | 云函数默认超时 | 失败推入 batchResults，最终检查是否有未成功批次 |
 | 轮询 getAnalysisProgress | 10s × 30 次 = 5min | onTimeout 回调提示用户稍后再看 |
 | analysisTasks.processing | 10 分钟 | 下次 analyzePhotos 启动时自动标记 failed 并允许重建 |
@@ -400,15 +403,15 @@ poller.start()
 4. **故障隔离**：某一批失败只影响该批，不会因并行 reject 导致所有批次结果丢失
 5. **总耗时可接受**：20 张照片 = 4 批，每批约 15-30 秒，总计 1-2 分钟，在异步分析场景下用户体验可接受
 
-### 为什么 uploadAndAnalyze 同步 await analyzePhotos 而非 fire-and-forget？
+### 为什么 uploadAndAnalyze 使用 fire-and-forget 启动 analyzePhotos？
 
-**决策**：`uploadAndAnalyze` 中使用 `await cloud.callFunction({ name: 'analyzePhotos' })` 同步等待。
+**决策**：`uploadAndAnalyze` 创建报告、更新学科档案后，调用 `cloud.callFunction({ name: 'analyzePhotos' })` 但不 await，立即返回 `reportId`。
 
 **原因**：
-1. **服务端可靠性**：一旦 uploadAndAnalyze 在服务端执行，即使客户端 20s 超时断开，服务端的 await 链不会被中断。这比客户端 fire-and-forget 更可靠
-2. **错误传播**：如果 analyzePhotos 启动就失败（如报告不存在、图片为空），uploadAndAnalyze 能立即返回错误给客户端，避免创建了 analyzing 状态的报告却无法分析
-3. **云函数嵌套调用时长独立计算**：被调用的 analyzePhotos 有自己的超时配置（建议 900s），不受 uploadAndAnalyze 超时限制
-4. **简化客户端逻辑**：客户端只需关心 uploadAndAnalyze 的返回，不需要额外的"确认分析是否成功启动"步骤
+1. **上传体验更轻**：客户端只等待图片上传和报告创建，不等待 AI 完整分析
+2. **长任务独立运行**：`analyzePhotos` 有自己的超时配置（建议 900s），适合处理 20 张图片的串行分析
+3. **前端状态简单**：客户端拿到 `reportId` 后回到学科主页，通过 `analysisTasks` 轮询展示进度
+4. **失败可恢复**：如果后台任务缺失或失败，报告页的重试入口会重新调用 `analyzePhotos`
 
 ### 为什么 report 页面还有 callAnalyzePhotos 重试入口？
 
