@@ -284,7 +284,7 @@
 
 | 集合 | 索引字段 | 排序 | 对应查询场景 |
 |------|----------|------|-------------|
-| `students` | `createdAt`, `_openid` | 降序, 升序 | index 页面按创建时间倒序获取学生列表 |
+| `students` | `createdAt`, `_openid` | 降序, 升序 | index 学习档案首页按创建时间倒序获取当前孩子 |
 | `subjectProfiles` | `studentId`, `_openid` | 升序, 升序 | 按学生获取学科档案（内存中筛选 subject） |
 | `reports` | `studentId`, `subject`, `createdAt`, `_openid` | 升序, 升序, 降序, 升序 | subject-home/upload-history 按学生+学科获取报告列表 |
 | `reports` | `studentId`, `subject`, `status`, `createdAt`, `_openid` | 升序, 升序, 升序, 降序, 升序 | analyzePhotos 查找最近一份 completed 报告做对比 |

@@ -21,7 +21,7 @@ Page({
       studentName: decodeURIComponent(name || ''),
       grade: grade || ''
     })
-    wx.setNavigationBarTitle({ title: decodeURIComponent(name || '选择学科') })
+    wx.setNavigationBarTitle({ title: decodeURIComponent(name || '学科入口') })
   },
 
   onShow() {

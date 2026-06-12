@@ -2,7 +2,7 @@
 
 **创建日期**: 2026-06-09
 **最后更新**: 2026-06-12
-**项目状态**: MVP 编码完成，常规自动化测试通过（128/128），JS 语法检查 50 文件通过，待真机验收
+**项目状态**: MVP 编码完成，常规自动化测试通过（136/136），JS 语法检查 52 文件通过，待真机验收
 **负责人**: qiming
 
 ---
@@ -33,8 +33,9 @@ MVP 三条诊断路径：
 
 | 功能 | 说明 |
 |------|------|
-| 学生管理 | 添加/选择学生，每人独立档案 |
-| 学科隔离 | 数/语/英三科独立，每次操作先选科目 |
+| 学习档案首页 | 首屏展示综合摘要、样本覆盖、学习观察、学习记录和下一步建议 |
+| 学生管理 | 添加孩子、管理当前孩子档案 |
+| 学科隔离 | 数/语/英三科独立，学科入口作为二级查看入口 |
 | 拍照上传 | 支持最多 20 张，上传即返回，分析异步进行 |
 | AI 诊断分析 | 云函数分批处理（5张/批），混元 hy3-preview 视觉模型 |
 | 诊断报告 | 卡点排行、错题详情、改善/加重/新增状态对比 |
@@ -60,7 +61,7 @@ miniprogram-learning-diagnostic/
 ├── project.config.json              # 微信开发者工具项目配置（cloudbaseRoot: cloud1-d6gneg68m5a7a3876）
 ├── package.json                     # npm scripts: test / test:coverage / check / verify
 ├── PROJECT_PLAN.md                  # 本文件
-├── PRD.md                           # 产品设计文档（v2.4）
+├── PRD.md                           # 产品设计文档（v2.5）
 ├── SETUP.md                         # 部署指南
 │
 ├── miniprogram/                     # 小程序前端代码
@@ -78,9 +79,9 @@ miniprogram-learning-diagnostic/
 │   ├── images/                      # 静态图片资源目录（当前为空占位）
 │   │
 │   └── pages/                       # 10 个注册页面
-│       ├── index/                   # Page 1：首页（学生列表）
+│       ├── index/                   # Page 1：首页（学习档案）
 │       ├── add-student/             # 添加学生页（创建学生+三条学科档案）
-│       ├── subject-select/          # Page 2：学科选择
+│       ├── subject-select/          # Page 2：学科入口（兼容路由）
 │       ├── subject-home/            # Page 3：学科主页（三入口 + 历史记录 + 分析状态）
 │       ├── upload/                  # Page 4：拍照上传（异步）
 │       ├── upload-history/          # Page 4A：学习记录时间线
@@ -131,7 +132,7 @@ miniprogram-learning-diagnostic/
     └── superpowers/plans/           # 规划辅助材料
 ```
 
-**文件总数**: 50 个 JavaScript 文件（`npm run check` 校验），128 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
+**文件总数**: 52 个 JavaScript 文件（`npm run check` 校验），136 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
 
 ### 2.2 相关文件索引
 
@@ -167,8 +168,8 @@ miniprogram-learning-diagnostic/
 │                     微信小程序（前端）                        │
 │                                                             │
 │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────────┐  │
-│  │ 首页      │→│ 学生详情  │→│ 拍照上传  │→│ 报告展示    │  │
-│  │ 学生列表  │  │ +历史报告 │  │ 多张批量  │  │ 卡点/错题  │  │
+│  │ 首页      │→│ 学科详情  │→│ 拍照上传  │→│ 报告展示    │  │
+│  │ 学习档案  │  │ +学习记录 │  │ 多张批量  │  │ 卡点/错题  │  │
 │  └──────────┘  └──────────┘  └──────────┘  └────────────┘  │
 │       ↑              ↑             │              ↑         │
 │       └──────────────┴─────────────┴──────────────┘         │
@@ -312,9 +313,9 @@ miniprogram-learning-diagnostic/
 
 | 页面 | 路径 | 参数 | 功能 |
 |------|------|------|------|
-| 首页 | `pages/index/index` | — | 学生列表 + 学科档案统计 |
+| 首页 | `pages/index/index` | — | 学习档案首页：综合摘要、样本覆盖、学习观察、学习记录、下一步建议 |
 | 添加学生 | `pages/add-student/add-student` | — | 创建学生并同步生成三条学科档案 |
-| 学科选择 | `pages/subject-select/subject-select` | `?studentId=&name=&grade=` | 数/语/英三科卡片 |
+| 学科入口 | `pages/subject-select/subject-select` | `?studentId=&name=&grade=` | 兼容路由：数/语/英三科卡片 |
 | 学科主页 | `pages/subject-home/subject-home` | `?studentId=&subject=&subjectName=&studentName=&grade=` | 三入口 + 历史记录 + 分析状态轮询 |
 | 拍照上传 | `pages/upload/upload` | `?mode=diagnosis\|verification\|paper&studentId=&subject=&paperId=` | 上传照片，最多 20 张；创建报告后立即返回 |
 | 学习记录 | `pages/upload-history/upload-history` | `?studentId=&subject=&subjectName=&studentName=` | 按天聚合报告、试卷、验证上传、照片、OCR 摘要和重复标记 |
@@ -433,12 +434,12 @@ System Prompt 包含：
 | **验证对比** | ✅ | `analyzePhotos/comparison.js` 输出 improved/worsened/new/persisting + 摘要文案 |
 | **上传分析解耦** | ✅ | `uploadAndAnalyze` 创建报告后 fire-and-forget 启动 `analyzePhotos`；`report.onRetryAnalysis()` 支持手动重启 |
 | **参数校验与归属校验** | ✅ | 各云函数入口检查 fileIDs/studentId/subject/mode/paperId/openID |
-| **PRD.md** | ✅ | v2.4，含实现状态总览 |
+| **PRD.md** | ✅ | v2.5，含学习档案首页和实现状态总览 |
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 索引 + 字体 + 云函数部署） |
-| **自动化测试** | ✅ | 128 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
+| **自动化测试** | ✅ | 136 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
 | **端到端真实图片脚本** | ✅ | `tests/e2e-real-image.test.js` 单独运行，串通上传 → AI 分析 → 报告生成链路 |
-| **JS 语法检查** | ✅ | `npm run check` 校验 50 个文件 |
-| **学科隔离** | ✅ | 数/语/英三科独立档案，每次操作前先选科目 |
+| **JS 语法检查** | ✅ | `npm run check` 校验 52 个文件 |
+| **学科隔离** | ✅ | 数/语/英三科独立档案，首页提供学科入口，单学科详情页承接具体操作 |
 | **20张照片支持** | ✅ | `upload` 页面限制 20 张，`analyzePhotos` 自动分批（5张/批） |
 | **学习记录** | ✅ | `upload-history` 按天展示诊断报告、验证试卷、验证批复和原始照片 |
 | **试卷下载状态** | ✅ | `paper-preview` 对已下载 PDF 显示「已下载」，防止重复下载 |

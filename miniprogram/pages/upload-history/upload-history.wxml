@@ -1,7 +1,7 @@
 <!-- 学习记录 -->
 <view class="page">
   <view class="header">
-    <text class="title">{{studentName}} · {{subjectName}}学习记录</text>
+    <text class="title">{{titleText}}</text>
     <text class="subtitle">按天整理诊断、验证试卷和作答上传，保留每次学习闭环的证据链。</text>
   </view>
 

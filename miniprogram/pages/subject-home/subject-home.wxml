@@ -9,7 +9,7 @@
   </view>
 
   <view class="diagnosis-hero">
-    <image class="hero-image" src="/assets/images/math-diagnostic-guide.png" mode="aspectFill"></image>
+    <image class="hero-image" src="/assets/images/math-diagnostic-guide.jpg" mode="aspectFill"></image>
     <view class="hero-copy">
       <text class="hero-eyebrow">{{isFirstUse ? '从第一份试卷开始' : '当前综合诊断'}}</text>
       <text class="hero-title">{{isFirstUse ? '开始整理学习线索' : '今天的学习线索已经整理好了'}}</text>
@@ -51,7 +51,7 @@
         <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
         <view class="row-copy">
           <text class="row-title">{{item.displayName}}</text>
-          <text class="row-desc">{{item.status === 'persisting' ? '在不同记录中再次出现' : item.status === 'improved' ? '针对性验证已通过' : '需要进一步验证确认'}}</text>
+          <text class="row-desc">{{item.detailText}}</text>
         </view>
         <text class="status-label status-label-{{item.statusClass}}">{{item.statusText}}</text>
       </view>

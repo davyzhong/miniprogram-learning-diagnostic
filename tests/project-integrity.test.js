@@ -32,3 +32,17 @@ test('every WXML event handler exists on its page controller', () => {
     }
   }
 })
+
+test('brand illustration and logo assets exist', () => {
+  const assets = [
+    'miniprogram/assets/images/math-diagnostic-guide.jpg',
+    'miniprogram/assets/images/app-logo-share.jpg',
+    'brand-assets/app-logo.png'
+  ]
+
+  for (const asset of assets) {
+    const absolutePath = path.join(root, asset)
+    assert.equal(fs.existsSync(absolutePath), true, `${asset} is missing`)
+    assert.ok(fs.statSync(absolutePath).size > 0, `${asset} is empty`)
+  }
+})

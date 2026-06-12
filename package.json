@@ -2,8 +2,8 @@
   "name": "miniprogram-learning-diagnostic",
   "private": true,
   "scripts": {
-    "test": "node --test tests/analyze-batch-result.test.js tests/cloud-functions.test.js tests/comparison.test.js tests/contracts.test.js tests/coverage-gap.test.js tests/data-layer.test.js tests/page-flows.test.js tests/photo-dedup.test.js tests/poller.test.js tests/profile-summary.test.js tests/project-integrity.test.js tests/report-presenter.test.js tests/subject-home-presenter.test.js tests/util.test.js tests/verification-evidence.test.js",
-    "test:coverage": "node --test --experimental-test-coverage tests/analyze-batch-result.test.js tests/cloud-functions.test.js tests/comparison.test.js tests/contracts.test.js tests/coverage-gap.test.js tests/data-layer.test.js tests/page-flows.test.js tests/photo-dedup.test.js tests/poller.test.js tests/profile-summary.test.js tests/project-integrity.test.js tests/report-presenter.test.js tests/subject-home-presenter.test.js tests/util.test.js tests/verification-evidence.test.js",
+    "test": "node --test tests/analyze-batch-result.test.js tests/cloud-functions.test.js tests/comparison.test.js tests/contracts.test.js tests/coverage-gap.test.js tests/data-layer.test.js tests/index-presenter.test.js tests/page-flows.test.js tests/photo-dedup.test.js tests/poller.test.js tests/profile-summary.test.js tests/project-integrity.test.js tests/report-presenter.test.js tests/subject-home-presenter.test.js tests/util.test.js tests/verification-evidence.test.js",
+    "test:coverage": "node --test --experimental-test-coverage tests/analyze-batch-result.test.js tests/cloud-functions.test.js tests/comparison.test.js tests/contracts.test.js tests/coverage-gap.test.js tests/data-layer.test.js tests/index-presenter.test.js tests/page-flows.test.js tests/photo-dedup.test.js tests/poller.test.js tests/profile-summary.test.js tests/project-integrity.test.js tests/report-presenter.test.js tests/subject-home-presenter.test.js tests/util.test.js tests/verification-evidence.test.js",
     "test:e2e-real-image": "node tests/e2e-real-image.test.js",
     "check": "node scripts/check-js.js",
     "verify": "npm test && npm run check"

@@ -45,6 +45,52 @@ test('student list combines profile report counts and opens subject selection', 
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /studentId=student-1/)
 })
 
+test('learning profile home loads the active student summary', async () => {
+  const cloud = {
+    getStudents: async () => [{ _id: 'student-1', name: '钟青羽', grade: 6 }],
+    getSubjectProfiles: async studentId => {
+      assert.equal(studentId, 'student-1')
+      return [{
+        subject: 'math',
+        subjectName: '数学',
+        totalReports: 1,
+        updatedAt: '2026-06-12T14:20:00+08:00',
+        currentBottlenecks: [
+          { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification' }
+        ]
+      }]
+    },
+    getReports: async (studentId, subject) => {
+      assert.equal(studentId, 'student-1')
+      assert.equal(subject, undefined)
+      return [{
+        _id: 'report-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        isEffective: true,
+        createdAt: '2026-06-12T14:20:00+08:00',
+        bottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误（加减乘除）' }]
+      }]
+    },
+    getPapers: async filter => {
+      assert.deepEqual(JSON.parse(JSON.stringify(filter)), { studentId: 'student-1' })
+      return []
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.loadStudents()
+  assert.equal(page.data.home.studentName, '钟青羽')
+  assert.match(page.data.home.observations[0].title, /数学/)
+  assert.equal(page.data.activeStudentId, 'student-1')
+})
+
 test('subject selection ensures a profile before entering the subject home', async () => {
   let ensured = null
   const cloud = {
@@ -589,6 +635,54 @@ test('learning records group uploads reports and verification papers by day', as
 
   page.onEventTap({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 1 } } })
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paperId=paper-1/)
+})
+
+test('learning records load all subjects when no subject filter is provided', async () => {
+  const seen = {}
+  const cloud = {
+    getReports: async (studentId, subject, limit) => {
+      seen.reports = { studentId, subject, limit }
+      return [{
+        _id: 'report-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        createdAt: '2026-06-11T10:00:00Z',
+        bottlenecks: [{ lpCode: 'LP-001' }]
+      }]
+    },
+    getPapers: async filter => {
+      seen.papers = filter
+      return [{
+        _id: 'paper-1',
+        subject: 'math',
+        type: 'verification',
+        createdAt: '2026-06-11T11:00:00Z',
+        questions: [{}, {}],
+        bottleneckTargets: ['LP-001']
+      }]
+    },
+    getTempFileURLs: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', subject: '', subjectName: '', studentName: '钟青羽' })
+
+  await page.loadHistory()
+  assert.deepEqual(JSON.parse(JSON.stringify(seen.reports)), {
+    studentId: 'student-1',
+    limit: 50
+  })
+  assert.deepEqual(JSON.parse(JSON.stringify(seen.papers)), { studentId: 'student-1' })
+  assert.equal(page.data.titleText, '钟青羽 · 学习记录')
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
+    '生成数学验证试卷',
+    '数学诊断报告'
+  ])
 })
 
 test('report loads diagnosis data and toggles error details', async () => {
