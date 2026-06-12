@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序 — 项目开发计划
 
 **创建日期**: 2026-06-09
-**最后更新**: 2026-06-11
-**项目状态**: MVP 编码完成，自动化测试通过（100/100），JS 语法检查 40 文件通过，待真机验收
+**最后更新**: 2026-06-12
+**项目状态**: MVP 编码完成，常规自动化测试通过（128/128），JS 语法检查 50 文件通过，待真机验收
 **负责人**: qiming
 
 ---
@@ -40,6 +40,9 @@ MVP 三条诊断路径：
 | 诊断报告 | 卡点排行、错题详情、改善/加重/新增状态对比 |
 | 验证试卷生成 | 基于历史卡点，AI 生成 3 题/卡点，A4 PDF 下载 |
 | 默认诊断试卷 | AI 按年级动态生成，无需预存题库 |
+| 学习记录 | 按天聚合诊断报告、验证试卷、验证上传和原始照片 |
+| 卡点短名称 | 对家长和学生展示“小数分数、单位换算”等短摘要，不直接暴露 LP 编号 |
+| PDF 下载状态 | 已下载试卷显示「已下载」，避免重复下载 |
 | 异步推送 | 微信订阅消息，分析完成后推送通知 |
 
 ---
@@ -57,7 +60,7 @@ miniprogram-learning-diagnostic/
 ├── project.config.json              # 微信开发者工具项目配置（cloudbaseRoot: cloud1-d6gneg68m5a7a3876）
 ├── package.json                     # npm scripts: test / test:coverage / check / verify
 ├── PROJECT_PLAN.md                  # 本文件
-├── PRD.md                           # 产品设计文档（v2.2）
+├── PRD.md                           # 产品设计文档（v2.4）
 ├── SETUP.md                         # 部署指南
 │
 ├── miniprogram/                     # 小程序前端代码
@@ -67,7 +70,7 @@ miniprogram-learning-diagnostic/
 │   ├── sitemap.json                 # 站点地图配置
 │   │
 │   ├── utils/
-│   │   ├── util.js                  # 日期/严重度/分类名等工具函数
+│   │   ├── util.js                  # 日期/严重度/卡点短名称等工具函数
 │   │   ├── cloud.js                 # 云函数调用封装 + 数据访问层
 │   │   └── poller.js                # 通用轮询器（createPoller）
 │   │
@@ -80,7 +83,7 @@ miniprogram-learning-diagnostic/
 │       ├── subject-select/          # Page 2：学科选择
 │       ├── subject-home/            # Page 3：学科主页（三入口 + 历史记录 + 分析状态）
 │       ├── upload/                  # Page 4：拍照上传（异步）
-│       ├── upload-history/          # Page 4A：上传历史分组展示
+│       ├── upload-history/          # Page 4A：学习记录时间线
 │       ├── report/                  # Page 6：诊断/验证报告（含 presenter）
 │       ├── generate-verification/   # Page 7：验证试卷生成
 │       ├── default-paper/           # Page 8：默认诊断试卷选择
@@ -128,7 +131,7 @@ miniprogram-learning-diagnostic/
     └── superpowers/plans/           # 规划辅助材料
 ```
 
-**文件总数**: 40 个 JavaScript 文件（`npm run check` 校验），100 个自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需单独运行。
+**文件总数**: 50 个 JavaScript 文件（`npm run check` 校验），128 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
 
 ### 2.2 相关文件索引
 
@@ -155,7 +158,7 @@ miniprogram-learning-diagnostic/
 | 数据库 | 云开发 MongoDB 兼容数据库 | 5 个集合：students / subjectProfiles / reports / papers / analysisTasks |
 | 图片存储 | 云开发云存储 | 试卷照片上传至云存储，生成临时 URL 供 AI 分析 |
 | PDF 生成 | pdfkit（云函数内） | 生成 A4 试卷/报告 PDF，上传云存储；中文字体从 `FONT_FILE_ID` 下载并缓存到 `/tmp` |
-| 本地测试 | Node.js 内置 test runner | `node --test tests/*.test.js`，无需 Jest/Mocha |
+| 本地测试 | Node.js 内置 test runner | `npm test` 显式运行常规测试文件，真实图片 E2E 单独运行，无需 Jest/Mocha |
 
 ### 3.2 架构图
 
@@ -313,8 +316,8 @@ miniprogram-learning-diagnostic/
 | 添加学生 | `pages/add-student/add-student` | — | 创建学生并同步生成三条学科档案 |
 | 学科选择 | `pages/subject-select/subject-select` | `?studentId=&name=&grade=` | 数/语/英三科卡片 |
 | 学科主页 | `pages/subject-home/subject-home` | `?studentId=&subject=&subjectName=&studentName=&grade=` | 三入口 + 历史记录 + 分析状态轮询 |
-| 拍照上传 | `pages/upload/upload` | `?mode=diagnosis\|verification\|paper&studentId=&subject=&paperId=` | 上传照片，最多 20 张，20s 超时兜底 |
-| 上传历史 | `pages/upload-history/upload-history` | `?studentId=&subject=&subjectName=&studentName=` | 按报告分组展示照片、OCR 摘要、重复标记 |
+| 拍照上传 | `pages/upload/upload` | `?mode=diagnosis\|verification\|paper&studentId=&subject=&paperId=` | 上传照片，最多 20 张；创建报告后立即返回 |
+| 学习记录 | `pages/upload-history/upload-history` | `?studentId=&subject=&subjectName=&studentName=` | 按天聚合报告、试卷、验证上传、照片、OCR 摘要和重复标记 |
 | 诊断/验证报告 | `pages/report/report` | `?id=reportId` | 卡点排行 + 错题详情 + 验证入口 + PDF 下载 + 重试分析 |
 | 验证试卷生成 | `pages/generate-verification/generate-verification` | `?studentId=&subject=&subjectName=&bottlenecks=` | 选卡点 → 预览/生成 A4 PDF |
 | 默认诊断试卷 | `pages/default-paper/default-paper` | `?studentId=&subject=&subjectName=&studentName=&grade=` | 选年级/套题 → 缓存复用或 AI 生成 |
@@ -326,19 +329,20 @@ miniprogram-learning-diagnostic/
 
 ## 四、AI 分析流程（当前实现）
 
-### 4.1 当前架构：服务端可靠触发 + 客户端超时兜底
+### 4.1 当前架构：服务端可靠触发 + 前端立即返回
 
 ```
 用户操作（小程序端）          云函数（后台）
 ─────────────────────      ──────────────────────────
 拍照上传 → 云存储
-  → callUploadAndAnalyze (20s timeout)
+  → callUploadAndAnalyze
                            ↓
                     uploadAndAnalyze:
                       - 校验参数与学生归属
                       - 创建 reports (status=analyzing)
                       - 更新 subjectProfiles.analysisStatus
-                      - cloud.callFunction('analyzePhotos') ← 同步等待
+                      - cloud.callFunction('analyzePhotos') ← fire-and-forget
+                      - 立即返回 reportId
                            ↓
                     analyzePhotos:
                       - 读取 reports，拆分 5 张/批
@@ -351,20 +355,20 @@ miniprogram-learning-diagnostic/
                       - sendNotification() ← 当前空实现
                            ↓
                     返回 { success, reportId }
-  ← 成功或 20s 超时均按后台处理中返回学科主页
+  ← 提交成功后返回学科主页
                            ↓
                     subject-home / report 每 10s 轮询
                            ↓
                     status=completed → 刷新视图
 ```
 
-> ⚠️ **未完全解耦**：`uploadAndAnalyze` 仍同步等待 `analyzePhotos`。客户端通过 20s 超时保证体验；云端两个函数都建议配置 900s 超时。后续可改为消息队列或 `setImmediate` 触发以实现真正的 fire-and-forget。
+> **当前实现说明**：`uploadAndAnalyze` 已经不等待 `analyzePhotos` 完成；长耗时分析由后台函数继续执行。`analyzePhotos` 建议配置 900s 超时，避免 20 张图片或模型排队导致中断。
 
 ### 4.2 云函数设计
 
 | 云函数 | 职责 |
 |----------|------|
-| `uploadAndAnalyze` | 接收 fileIDs/imageMetas/studentId/subject/mode/paperId → 校验 → 创建 reports + 更新 subjectProfiles → 同步调用 analyzePhotos |
+| `uploadAndAnalyze` | 接收 fileIDs/imageMetas/studentId/subject/mode/paperId → 校验 → 创建 reports + 更新 subjectProfiles → fire-and-forget 启动 analyzePhotos |
 | `analyzePhotos` | 读取 reports → 拆 5 张/批 → 串行调 analyzeBatch → markDuplicatePages → mergeBatchResults → compareBottlenecks（验证模式）→ 写库 |
 | `analyzeBatch` | 接收 ≤5 张 fileID → getTempFileURL → CloudBase AI hy3-preview → result-normalizer 归一 → 返回 pageResults |
 | `getAnalysisProgress` | 按 reportId 查询最新 analysisTasks，返回 status/completedBatches/totalBatches |
@@ -413,7 +417,7 @@ System Prompt 包含：
 
 ---
 
-## 六、当前进度（2026-06-11 更新）
+## 六、当前进度（2026-06-12 更新）
 
 ### 6.1 已完成（代码 + 自动化测试）
 
@@ -423,18 +427,21 @@ System Prompt 包含：
 | **云函数（6个）** | ✅ | `uploadAndAnalyze` / `analyzePhotos`（含 comparison.js、photo-dedup.js）/ `analyzeBatch`（含 result-normalizer.js）/ `getAnalysisProgress` / `generatePaper` / `generateReportPDF` |
 | **数据访问层** | ✅ | `utils/cloud.js` 封装学生/学科档案/报告/试卷/分析进度/云函数调用；无过时 photos 集合引用 |
 | **通用轮询器** | ✅ | `utils/poller.js` 支持 stop/onTimeout/异步 request，被 subject-home 与 report 使用 |
+| **卡点短名称展示** | ✅ | `utils/util.js` 提供 `formatBottleneckDisplayName/List`，页面不再向家长展示裸 LP 编号 |
 | **结果标准化** | ✅ | `analyzeBatch/result-normalizer.js` 校验 pageResults 数量、imageIndex 唯一、字段截断、severity 归一 |
 | **OCR 去重** | ✅ | `analyzePhotos/photo-dedup.js` 跨批次+跨历史报告指纹比对；全部重复时仅写 summary 不更新卡点 |
 | **验证对比** | ✅ | `analyzePhotos/comparison.js` 输出 improved/worsened/new/persisting + 摘要文案 |
-| **客户端超时兜底** | ✅ | `upload.js` 设置 20s timeout，超时按后台处理中返回；`report.onRetryAnalysis()` 支持手动重启 |
+| **上传分析解耦** | ✅ | `uploadAndAnalyze` 创建报告后 fire-and-forget 启动 `analyzePhotos`；`report.onRetryAnalysis()` 支持手动重启 |
 | **参数校验与归属校验** | ✅ | 各云函数入口检查 fileIDs/studentId/subject/mode/paperId/openID |
-| **PRD.md** | ✅ | v2.2，含实现状态总览 |
+| **PRD.md** | ✅ | v2.4，含实现状态总览 |
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 索引 + 字体 + 云函数部署） |
-| **自动化测试** | ✅ | 100 用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
+| **自动化测试** | ✅ | 128 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
 | **端到端真实图片脚本** | ✅ | `tests/e2e-real-image.test.js` 单独运行，串通上传 → AI 分析 → 报告生成链路 |
-| **JS 语法检查** | ✅ | `npm run check` 校验 40 个文件 |
+| **JS 语法检查** | ✅ | `npm run check` 校验 50 个文件 |
 | **学科隔离** | ✅ | 数/语/英三科独立档案，每次操作前先选科目 |
 | **20张照片支持** | ✅ | `upload` 页面限制 20 张，`analyzePhotos` 自动分批（5张/批） |
+| **学习记录** | ✅ | `upload-history` 按天展示诊断报告、验证试卷、验证批复和原始照片 |
+| **试卷下载状态** | ✅ | `paper-preview` 对已下载 PDF 显示「已下载」，防止重复下载 |
 | **PDF 中文字体从环境变量读取** | ✅ | `generatePaper` 与 `generateReportPDF` 通过 `process.env.FONT_FILE_ID` 加载字体，未配置时降级到 Helvetica 并警告 |
 | **AI 模型通过 CloudBase AI 调用** | ✅ | `analyzeBatch` 与 `generatePaper` 使用 `@cloudbase/node-sdk`，不再读取 SECRET_ID/SECRET_KEY/AI_API_KEY |
 
@@ -445,13 +452,13 @@ System Prompt 包含：
 | 配置云开发环境 ID | ⬜ | 已写入 `project.config.json.cloudbaseRoot` 与 `app.js`；如需更换环境请同步修改两处 |
 | 开通 CloudBase AI 模型 | ⬜ | 在当前云开发环境开通 `hy3-preview` 与 `deepseek-v4-flash` |
 | 上传中文字体并配置 FONT_FILE_ID | ⬜ | 将 `SimHei.ttf` 上传到云存储，为 `generatePaper` 与 `generateReportPDF` 配置环境变量 |
-| 部署云函数 | ⬜ | 微信开发者工具 → 右键每个云函数目录 → "上传并部署：云端安装依赖"；建议 `uploadAndAnalyze` 与 `analyzePhotos` 超时设为 900s |
+| 部署云函数 | ⬜ | 微信开发者工具 → 右键每个云函数目录 → "上传并部署：云端安装依赖"；建议 `analyzePhotos` 超时设为 900s |
 | 创建数据库集合与安全规则 | ⬜ | `students` / `subjectProfiles` / `reports` / `papers` / `analysisTasks`，规则：`doc._openid == auth.openid` |
 | 创建数据库复合索引 | ⬜ | 见 SETUP.md 第五章"数据库索引"表 |
 | 真机端到端验收 | ⬜ | 添加学生 → 上传 1/20 张试卷 → AI 分析 → 查看报告 → 生成验证卷 → 下载 PDF → 打印 |
 | 微信订阅消息 | ⬜ | PRD P0；当前 `sendNotification` 为空实现，需申请模板并完成授权、发送和跳转 |
 | 默认试卷跨学生缓存 | ⬜ | 当前只复用同一学生已生成的试卷，尚未实现共享模板 |
-| 上传与分析完全解耦 | ⚠️ | 当前仍同步等待；客户端 20s 超时兜底。后续可改为 fire-and-forget |
+| 上传与分析解耦 | ✅ | `uploadAndAnalyze` 已 fire-and-forget 启动后台分析 |
 | 验证结论证据完整性 | ⚠️ | 当前按"本次未识别出该卡点错误"判定改善，尚未区分答对、空白、模糊或 OCR 漏识别 |
 
 ---
@@ -471,7 +478,7 @@ System Prompt 包含：
 2. **右键** → "上传并部署：云端安装依赖（不上传 node_modules）"
 3. 等待控制台显示"上传成功"
 4. 对 `cloudfunctions/` 下全部六个云函数重复：`uploadAndAnalyze` / `analyzePhotos` / `analyzeBatch` / `getAnalysisProgress` / `generatePaper` / `generateReportPDF`
-5. 在云开发控制台将 `uploadAndAnalyze` 与 `analyzePhotos` 的执行超时调整为 **900 秒**
+5. 在云开发控制台将 `analyzePhotos` 的执行超时调整为 **900 秒**
 
 ### Step 3: 配置环境变量
 
@@ -522,6 +529,6 @@ System Prompt 包含：
 |------|------|---------|
 | 混元视觉模型对手写体识别率 | 分析准确率下降 | Prompt 中加入"手写体辨识有不确定性，低置信度要标注" |
 | AI 分析耗时（图片多时） | 用户等待体验差 | 限制单次 20 张，显示上传/分析进度 |
-| 云函数 60s 超时限制 | 大量图片分析超时 | 可拆分为多次调用，每次 5-8 张 |
+| 云函数超时限制 | 大量图片分析超时 | `analyzePhotos` 建议配置 900 秒；客户端提交后先返回，后台继续处理 |
 | 腾讯云 API 调用费用 | 持续运营成本 | 个人使用量级费用极低，可忽略 |
 | 图片 base64 体积大 | 请求体超限 | 上传时已压缩（sizeType: compressed） |

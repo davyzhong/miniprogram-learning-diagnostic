@@ -23,7 +23,7 @@
 
 ### 功能描述
 
-接收图片 fileID 列表，创建 `reports` 记录（初始状态为 `analyzing`），在服务端同步触发 `analyzePhotos` 完成全链路分析。客户端超时或页面卸载不会中断服务端调用链。
+接收图片 fileID 列表，创建 `reports` 记录（初始状态为 `analyzing`），更新学科档案分析状态，并在服务端 fire-and-forget 触发 `analyzePhotos` 执行后台分析。客户端不等待完整 AI 分析完成。
 
 ### 调用方式
 
@@ -93,8 +93,8 @@ wx.cloud.callFunction({
 
 ### 超时配置建议
 
-- **推荐超时：60s**。本函数会同步等待 `analyzePhotos` 返回，整体耗时取决于图片数量与 AI 调用时长。
-- 若图片较多（接近 20 张），建议在小程序端改用「先调用创建接口 → 轮询 getAnalysisProgress」的异步方案，避免客户端超时。
+- **推荐云函数超时：60s**。本函数只负责参数校验、创建报告和启动后台任务，正常会快速返回。
+- 真正的长耗时分析发生在 `analyzePhotos`，该函数建议配置 900s 超时。
 
 ### 依赖的外部服务
 
@@ -104,11 +104,11 @@ wx.cloud.callFunction({
 
 ### 内部调用关系
 
-- ➡️ `cloud.callFunction({ name: 'analyzePhotos', data: { reportId } })`（同步等待）
+- ➡️ `cloud.callFunction({ name: 'analyzePhotos', data: { reportId } })`（fire-and-forget，不等待完成）
 
 ### 注意事项
 
-1. 整个流程是**同步阻塞**的，`analyzePhotos` 完成前不会返回；客户端需设置足够长的超时。
+1. 本函数不等待 `analyzePhotos` 完成；客户端收到 `reportId` 后应通过学科主页或报告页轮询进度。
 2. 会写入 `subjectProfiles.analysisStatus = 'analyzing'`，失败时会保留该状态，需由下游清理。
 3. `imageMetas` 中的 `fileName` 会被截断到 120 字符，`fileSize` 强制转为非负数。
 4. 仅在 `mode === 'verification'` 时校验 paperId；其他模式下传入 paperId 会作为普通关联记录。
@@ -189,8 +189,8 @@ wx.cloud.callFunction({
 
 ### 超时配置建议
 
-- **推荐超时：60s**（上限）。单次批次约 5–15s，20 张图片 = 4 批，最坏情况可能接近 60s。
-- 如频繁超时，应减少单报告图片数或拆分报告。
+- **推荐云函数超时：900s**。单次批次约 5–30s，20 张图片 = 4 批，遇到模型排队或网络波动时可能超过 60s。
+- 如频繁超时，应先确认云函数超时已配置到 900s，再考虑减少单报告图片数或拆分报告。
 
 ### 依赖的外部服务
 
@@ -209,7 +209,7 @@ wx.cloud.callFunction({
 
 1. **串行执行批次**：保证进度可追踪，但总耗时线性增长。
 2. **僵尸任务保护**：若存在 `status === 'processing'` 且创建时间超过 10 分钟的任务，会自动标记为 failed 并允许重新启动。
-3. **去重逻辑**：基于 OCR 摘要指纹识别重复页面，重复页不参与瓶颈合并，但仍保留在 `imageFiles` 中（带 `isDuplicate: true`）。
+3. **去重逻辑**：基于 OCR 摘要指纹识别重复页面，重复页不参与卡点合并，但仍保留在 `imageFiles` 中（带 `isDuplicate: true`）。
 4. **验证模式对比**：会从 papers 集合读取 `bottleneckTargets`，仅对目标卡点做 improved/persisting/worsened/new 分类。
 5. **失败回滚**：异常时会将 `reports.status` 和 `analysisTasks.status` 都置为 `failed`，并清空 `subjectProfiles.analysisStatus`。
 6. 推送订阅消息目前为空实现，后续接入 `sendSubscribeMessage` 云函数即可生效。
@@ -679,7 +679,7 @@ wx.cloud.callFunction({
 **注意事项**
 
 - 去重粒度是「页面级」而非「题目级」，只要整页内容相似即判重
-- 重复页仍保留在 `imageFiles` 中（带标记），只是不参与瓶颈合并
+- 重复页仍保留在 `imageFiles` 中（带标记），只是不参与卡点合并
 - 历史照片查询范围为最近 20 份已完成报告
 
 ---

@@ -9,6 +9,14 @@
 ### Added
 
 - 端到端真实图片测试脚本 (`tests/e2e-real-image.test.js`)，串通上传 → AI 分析 → 报告生成完整链路
+- 学习记录时间线：按天聚合诊断报告、验证试卷、验证作答上传和原始照片 (`pages/upload-history/`)
+- 试卷 PDF 已下载状态：同一份试卷下载后显示「已下载」，避免重复下载 (`pages/paper-preview/`)
+- 学习卡点短名称格式化：对家长和学生展示“小数分数、单位换算”等摘要，不直接暴露 LP 编号 (`utils/util.js`)
+
+### Changed
+
+- `npm test` 改为只运行 128 个常规自动化用例；真实图片 E2E 改由 `npm run test:e2e-real-image` 单独运行
+- PRD、项目计划、架构、测试、部署、云函数和故障排查文档更新到当前实现状态
 
 ---
 

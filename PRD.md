@@ -1,6 +1,6 @@
 # Learning Diagnostic MVP 产品设计文档（PRD）
 
-> 版本：v2.3 | 日期：2026-06-12 | 状态：MVP 编码完成，自动化测试 117/117 通过，JS 语法检查 46 文件通过，待真机验收
+> 版本：v2.4 | 日期：2026-06-12 | 状态：MVP 编码完成，常规自动化测试 128/128 通过，JS 语法检查 50 文件通过，待真机验收
 
 ---
 
@@ -79,7 +79,7 @@
 | 入口 A | **拍照诊断**：上传已有试卷照片，AI 识别错题并分析卡点 |
 | 入口 B | **生成验证试卷**：基于历史卡点自动出题，验证改善情况（显示待验证卡点列表） |
 | 入口 C | **默认诊断试卷**：没有试卷？选一套标准题来做诊断 |
-| 入口 D | **上传历史**：查看原始照片、OCR 摘要和疑似重复记录 |
+| 入口 D | **学习记录**：按天查看诊断报告、验证试卷、验证作答上传和原始照片 |
 | 底部 | 最近记录列表（区分诊断报告和验证报告，显示日期、卡点数、状态） |
 
 > 新版体验：学科主页默认展示“当前综合诊断 → 学习卡点 → 最近变化 → 下一步”。最近变化点击后直接阅读对应单次报告；复杂趋势分析留待数据量提升后再引入。
@@ -127,15 +127,17 @@
 - 去掉"AI 分析中"独立页面，改为在 Page 3 显示分析状态
 - 历史中出现同名文件时只做轻提示，不阻止上传；最终由 OCR 摘要判断是否疑似重复
 
-**实现状态**：✅ 已上线。`upload.js` 逐张调用 `wx.cloud.uploadFile()`，再调用 `callUploadAndAnalyze({ timeout: 20000 })`；服务端可靠启动分析后客户端即可返回，超时亦按后台处理中对待。
+**实现状态**：✅ 已上线。`upload.js` 逐张调用 `wx.cloud.uploadFile()`，再调用 `callUploadAndAnalyze()` 创建报告并启动后台分析；服务端启动成功后客户端即可返回学科主页。
 
-### Page 4A：上传历史页
+### Page 4A：学习记录页
 
 **路由**：`pages/upload-history/upload-history`
 
-按诊断报告分组展示所有历史上传照片。每张照片可预览原图，并显示文件名、OCR 识别摘要和”疑似重复”标记。疑似重复照片仍保留在历史中，但不重复计入诊断报告的错题和学习卡点统计。若一次上传全部为疑似重复照片，本次记录不更新学习卡点或改善结论。旧报告没有 OCR 摘要时，仍展示原始照片。
+按“天”组织孩子的学习过程，聚合当天发生的诊断报告、生成的验证试卷、验证试卷作答后的上传批复记录，以及对应的原始照片、OCR 摘要和疑似重复标记。用户可以从单日时间线进入报告或试卷预览，也可以预览当天上传过的原始照片。
 
-**实现状态**：✅ 已上线。`upload-history.js` 通过 `cloud.getReports()` + `cloud.getTempFileURLs()` 渲染分组；缺临时 URL 时降级提示，加载失败会清除 loading 标志。
+疑似重复照片仍保留在学习记录中，但不重复计入诊断报告的错题和学习卡点统计。若一次上传全部为疑似重复照片，本次记录不更新学习卡点或改善结论。旧报告没有 OCR 摘要时，仍展示原始照片。
+
+**实现状态**：✅ 已上线。`upload-history.js` 通过 `cloud.getReports()`、`cloud.getPapers()` 与 `cloud.getTempFileURLs()` 构建按天分组的学习记录；缺临时 URL 时降级提示，加载失败会清除 loading 标志。
 
 ---
 
@@ -154,7 +156,7 @@
 | 顶部 | 报告类型、日期、本次结论摘要 |
 | 区块 A | **本次诊断结论**：一句话结论 + 错题/卡点/图片数量 |
 | 区块 B | **发现的学习卡点**：卡点原因、状态和相关错题数 |
-| 区块 C | **本次使用的试卷**：进入上传历史查看原始照片、OCR 摘要和重复记录 |
+| 区块 C | **本次使用的试卷**：进入学习记录查看原始照片、OCR 摘要和重复记录 |
 | 区块 D | **相关错题详情**：折叠列表，点击展开查看答案与根因分析 |
 | 下一步 | 有待验证卡点时，显示“生成验证试卷”主操作 |
 | 底部 | 分享报告 + 下载 PDF |
@@ -181,7 +183,7 @@
 |------|------|
 | 顶部 | 返回箭头 + "生成验证试卷" |
 | 说明 | 选择需要验证的卡点，系统针对每个卡点生成 3 道验证题 |
-| 卡点列表 | 待验证卡点勾选列表，每个显示：LP 编号、名称、上次发现日期、优先级标签（高/中/低） |
+| 卡点列表 | 待验证卡点勾选列表，每个显示：短名称、上次发现日期、优先级标签（高/中/低）；内部 LP 编号不直接暴露给家长和学生 |
 | 试卷预览 | 摘要统计：选中卡点数 / 题目总数 / 预估时间 / 纸幅(A4) |
 | 底部 | 「预览 PDF」 + 「生成试卷 (A4 PDF)」 |
 
@@ -225,10 +227,10 @@
 | 顶部 | 返回箭头 + "试卷预览" + 页码 |
 | 试卷标签 | 类型标签（验证试卷/诊断试卷）+ 学科 + 学生名 |
 | A4 预览区 | 缩略图展示 A4 试卷内容，按卡点分组排列题目 |
-| 操作按钮 | 「下载 PDF」+ 「分享打印」 |
+| 操作按钮 | 「下载 PDF」/「已下载」+ 「分享打印」 |
 | 主按钮 | 「作答完成，拍照上传」→ 跳转 Page 4（mode=verification 或 paper） |
 
-**实现状态**：✅ 已上线。`paper-preview.js` 同时支持 `paperId` 模式（正式试卷，可下载 + 上传答题）和 `fileId` 预览模式（临时文件，仅预览）。下载走 `wx.cloud.downloadFile` + `wx.openDocument({ showMenu: true })`；上传按钮根据试卷类型切换 mode。
+**实现状态**：✅ 已上线。`paper-preview.js` 同时支持 `paperId` 模式（正式试卷，可下载 + 上传答题）和 `fileId` 预览模式（临时文件，仅预览）。下载走 `wx.cloud.downloadFile` + `wx.openDocument({ showMenu: true })`；同一份 PDF 下载后在本地记录并显示「已下载」，避免重复下载；上传按钮根据试卷类型切换 mode。
 
 ---
 
@@ -404,23 +406,24 @@
 
 ## 5. 异步分析架构
 
-### 核心原则：服务端可靠触发 + 客户端超时兜底
+### 核心原则：服务端可靠触发 + 前端立即返回
 
 ```
-用户拍照上传 → 云存储 → uploadAndAnalyze 在服务端同步调用 analyzePhotos
-                       → 客户端设置 20s 超时，超时后按后台处理中返回学科主页
-                       → 服务端继续完成分批分析与落库
+用户拍照上传 → 云存储 → uploadAndAnalyze 创建报告并启动后台分析
+                       → 服务端创建报告并 fire-and-forget 启动 analyzePhotos
+                       → 客户端提交成功后返回学科主页
+                       → analyzePhotos 完成分批分析与落库
                        → 前端轮询报告状态直到 completed/failed
 ```
 
-> ⚠️ **当前实现说明**：`uploadAndAnalyze` 仍同步等待 `analyzePhotos` 返回，并未完全解耦为 fire-and-forget。客户端通过 20s 超时保证用户体验；云端两个函数都建议配置 900s 超时以保证长批次能跑完。后续可改为消息队列或 `setImmediate` 触发以实现真正的解耦。
+> **当前实现说明**：`uploadAndAnalyze` 不等待 `analyzePhotos` 完成，而是在服务端发起后台分析后立即返回 `reportId`。`analyzePhotos` 仍建议配置 900s 超时，以保证长批次能跑完。
 
 ### 流程详解
 
 1. **上传阶段**（Page 4）
    - 用户选择照片 → 逐张上传到云存储 → 获得 fileID 列表
    - 上传进度实时显示
-   - 全部上传完成 → 调用 `uploadAndAnalyze`（20s 超时）→ 服务端创建 `reports` + 启动 `analyzePhotos` → 客户端成功或超时均返回 Page 3
+   - 全部上传完成 → 调用 `uploadAndAnalyze` → 服务端创建 `reports` + 启动 `analyzePhotos` → 客户端成功后返回 Page 3
 
 2. **分析阶段**（云函数，后台执行）
    - `analyzePhotos` 读取报告 → 按 5 张/批拆分 → 串行调用 `analyzeBatch`
@@ -437,7 +440,7 @@
 
 ```
 cloudfunctions/
-  uploadAndAnalyze/    # 入口：校验参数、创建 reports、更新 subjectProfiles、同步调用 analyzePhotos
+  uploadAndAnalyze/    # 入口：校验参数、创建 reports、更新 subjectProfiles、fire-and-forget 启动 analyzePhotos
   analyzePhotos/       # 主控：拆分批次、串行调用 analyzeBatch、去重、合并、对比、落库
   analyzeBatch/        # 单批次分析（≤5张），调 CloudBase AI hy3-preview，返回结构化 pageResults
   getAnalysisProgress/ # 轻量查询 analysisTasks 进度
@@ -524,7 +527,7 @@ cloudfunctions/
 | 上传模式切换 | 不用 Tab，由来源页参数决定 | 减少用户选择负担，模式由上下文隐含 |
 | Lonsid 智能笔 | MVP 不做，不预留 UI | 避免未完成功能干扰用户，减少开发量 |
 | 默认试卷来源 | AI 动态生成 | 无需维护题库，灵活适配各年级 |
-| 上传与分析 | 完全解耦，异步处理 | 避免 20 张照片导致的超时问题，用户体验更好 |
+| 上传与分析 | 服务端可靠触发 + 前端立即返回 | `uploadAndAnalyze` 创建报告后 fire-and-forget 启动 `analyzePhotos`；长批次由后台函数完成 |
 | 分析进度展示 | 在学科主页显示状态，不用独立页面 | 减少页面数，用户可在等待期间浏览其他内容 |
 | 通知方式 | 微信订阅消息推送 | 合规且用户触达率高 |
 | 登录方式 | wx.login() 静默获取 openID | 零摩擦，无需注册登录页 |
@@ -532,7 +535,7 @@ cloudfunctions/
 
 ---
 
-## 10. MVP 实现状态总览（2026-06-11）
+## 10. MVP 实现状态总览（2026-06-12）
 
 | 能力 | 状态 | 备注 |
 |------|------|------|
@@ -540,7 +543,7 @@ cloudfunctions/
 | 添加学生并同步创建三条学科档案 | ✅ | `cloud.createStudentWithProfiles()` |
 | 学科隔离与学科主页统计 | ✅ | `subject-home.js` 聚合 pending/improved/total |
 | 最多 20 张照片上传 + 同名软提示 | ✅ | `upload.js` |
-| 服务端可靠触发分析 + 客户端 20s 超时兜底 | ✅ | `uploadAndAnalyze/index.js` |
+| 服务端可靠触发分析 + 前端立即返回 | ✅ | `uploadAndAnalyze/index.js` |
 | 5 张/批串行分析 + 进度写入 analysisTasks | ✅ | `analyzePhotos/index.js` |
 | AI 结果标准化（字段截断、严重度归一） | ✅ | `analyzeBatch/result-normalizer.js` |
 | OCR 摘要去重（跨批次 + 跨历史报告） | ✅ | `analyzePhotos/photo-dedup.js` |
@@ -551,13 +554,14 @@ cloudfunctions/
 | 验证试卷生成（≤5 卡点 × 3 题） | ✅ | `generatePaper/index.js` |
 | 默认诊断试卷（1-6 年级 A/B 卷 + 同学生缓存） | ✅ | `default-paper.js` + `generatePaper` paperKey 查询 |
 | 报告 PDF 生成与下载 | ✅ | `generateReportPDF/index.js` + `report.onDownloadPDF()` |
-| 试卷预览/打印/分享 | ✅ | `paper-preview.js` 支持 paperId 与 fileId 两种模式 |
-| 上传历史分组展示 + 原图预览 | ✅ | `upload-history.js` |
+| 试卷预览/打印/分享 | ✅ | `paper-preview.js` 支持 paperId 与 fileId 两种模式，并记录已下载状态 |
+| 学习记录时间线 + 原图预览 | ✅ | `upload-history.js` 按天聚合报告、试卷、验证上传和照片 |
+| 学习卡点短名称展示 | ✅ | `utils/util.js` 将 LP 编号转为家长可读的短摘要，如“小数分数”“单位换算” |
 | 数据归属校验（openID）+ 参数白名单 | ✅ | 各云函数入口 |
-| 自动化测试覆盖（100 用例全绿） | ✅ | `npm test`（含 e2e-real-image 端到端脚本） |
-| JS 语法检查 | ✅ | `npm run check`（40 个文件） |
+| 自动化测试覆盖（128 常规用例全绿） | ✅ | `npm test`；真实图片 E2E 脚本需通过 `npm run test:e2e-real-image` 单独运行 |
+| JS 语法检查 | ✅ | `npm run check`（50 个文件） |
 | 微信订阅消息推送 | ⚠️ | `sendNotification()` 仍为空实现，待申请模板 |
-| 上传与分析完全解耦 | ⚠️ | 当前仍同步等待；通过客户端超时兜底 |
+| 上传与分析解耦 | ✅ | `uploadAndAnalyze` 不等待 `analyzePhotos` 完成 |
 | 默认试卷跨学生共享模板 | ⚠️ | 仅同学生复用 |
 | 验证结论区分答对/空白/OCR 漏识别 | ⚠️ | 当前按"未识别出错题"判定改善 |
 | 真机验收（相机、CloudBase AI、打印、订阅消息） | ⬜ | 见 SETUP.md 第七章 |

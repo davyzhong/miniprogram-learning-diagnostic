@@ -21,7 +21,7 @@
     >
       <view class="checkbox {{item.selected ? 'checked' : ''}}">
         <text wx:if="{{item.selected}}">✓</text>
-      </view>
+        </view>
       <view class="bottleneck-info">
         <view class="bottleneck-header">
           <text class="lp-name">{{item.displayName}}</text>

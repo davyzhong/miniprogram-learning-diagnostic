@@ -67,8 +67,8 @@
    - `getAnalysisProgress`
 
 ### 注意：
-- `uploadAndAnalyze` 会在服务端可靠调用 `analyzePhotos`，两者执行超时建议在云端配置为 **900 秒**
-- 小程序等待 20 秒后会按后台处理中返回学科主页。当前 `uploadAndAnalyze` 仍同步等待 `analyzePhotos`，因此两个函数都建议配置为 900 秒，并需重点执行超时真机验收
+- `uploadAndAnalyze` 会在服务端创建报告并 fire-and-forget 启动 `analyzePhotos`，客户端提交成功后即可返回学科主页
+- `analyzePhotos` 执行超时建议在云端配置为 **900 秒**，并需重点执行长耗时真机验收
 - `analyzeBatch` 按图片返回 OCR 摘要；`analyzePhotos` 使用归一化摘要标记疑似重复照片，并只汇总唯一页面
 - 每个云函数的 `package.json` 都已写好，云端会自动安装依赖
 
@@ -139,7 +139,8 @@ PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sen
    - 等待分析完成
    - 查看诊断报告
    - 生成验证试卷
-   - 下载 PDF
+   - 下载 PDF，并确认按钮变为「已下载」且再次点击不会重复下载
+   - 进入「学习记录」，确认当天能看到诊断报告、生成的试卷、验证上传和原始照片
 
 ---
 
@@ -196,12 +197,12 @@ miniprogram-learning-diagnostic/
 │   ├── generatePaper/        ✅
 │   ├── generateReportPDF/    ✅
 │   └── getAnalysisProgress/  ✅
-├── tests/                    ✅（13 个测试文件 + helpers，100 用例）
-├── scripts/check-js.js       ✅（40 文件语法检查）
+├── tests/                    ✅（15 个常规测试文件 + 真实图片 E2E 脚本 + helpers，128 常规用例）
+├── scripts/check-js.js       ✅（50 文件语法检查）
 ├── project.config.json        ✅
-├── package.json              ✅（npm scripts: test / test:coverage / check / verify）
+├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / check / verify）
 ├── PROJECT_PLAN.md          ✅
-├── PRD.md                   ✅（v2.2）
+├── PRD.md                   ✅（v2.4）
 ├── SETUP.md                ✅（本文件）
 └── docs/TEST_MATRIX.md     ✅
 ```
