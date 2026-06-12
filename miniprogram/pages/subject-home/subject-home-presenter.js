@@ -6,6 +6,12 @@ const STATUS_META = {
   improved: { text: '已有改善', className: 'improved', icon: '✓' }
 }
 
+const SEVERITY_TEXT = {
+  high: '高优先级',
+  medium: '中等优先级',
+  low: '低优先级'
+}
+
 function normalizeBottlenecks(profile = {}) {
   if (Array.isArray(profile.currentBottlenecks)) return profile.currentBottlenecks
   return [
@@ -14,14 +20,33 @@ function normalizeBottlenecks(profile = {}) {
   ]
 }
 
+function buildBottleneckDetail(item, displayName) {
+  const evidence = Number(item.errorCount || item.relatedErrorCount || 0)
+  const evidenceText = evidence > 0 ? `${evidence} 道相关错题` : ''
+  const severityText = SEVERITY_TEXT[item.severity] || ''
+
+  if (item.status === 'persisting') {
+    return [`${displayName}在不同记录中再次出现`, evidenceText, severityText].filter(Boolean).join(' · ')
+  }
+  if (item.status === 'improved') {
+    return [`${displayName}已通过验证`, '继续观察巩固'].filter(Boolean).join(' · ')
+  }
+  return [`建议用验证题确认${displayName}是否稳定出现`, evidenceText, severityText].filter(Boolean).join(' · ')
+}
+
 function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = () => '') {
-  const currentBottlenecks = normalizeBottlenecks(profile).map(item => ({
-    ...item,
-    displayName: formatBottleneckDisplayName(item),
-    statusText: (STATUS_META[item.status] || STATUS_META.needs_verification).text,
-    statusClass: (STATUS_META[item.status] || STATUS_META.needs_verification).className,
-    statusIcon: (STATUS_META[item.status] || STATUS_META.needs_verification).icon
-  }))
+  const currentBottlenecks = normalizeBottlenecks(profile).map(item => {
+    const meta = STATUS_META[item.status] || STATUS_META.needs_verification
+    const displayName = formatBottleneckDisplayName(item)
+    return {
+      ...item,
+      displayName,
+      detailText: buildBottleneckDetail(item, displayName),
+      statusText: meta.text,
+      statusClass: meta.className,
+      statusIcon: meta.icon
+    }
+  })
   const recentChanges = reports
     .filter(report => report.status === 'completed' && (
       report.isEffective === undefined || report.isEffective === true
@@ -51,4 +76,4 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
   }
 }
 
-module.exports = { buildSubjectHomeView, normalizeBottlenecks }
+module.exports = { buildSubjectHomeView, normalizeBottlenecks, buildBottleneckDetail }

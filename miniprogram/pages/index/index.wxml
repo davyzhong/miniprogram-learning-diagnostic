@@ -1,57 +1,126 @@
 <!--pages/index/index.wxml-->
 <view class="page">
-  <!-- 顶部标题 -->
-  <view class="header">
-    <text class="header-title">学习诊断</text>
-    <text class="header-sub">选择学生开始诊断</text>
+  <view class="loading-state" wx:if="{{loading}}">
+    <image class="loading-logo" src="/assets/images/app-logo-share.jpg" mode="aspectFit" />
+    <text>正在整理学习档案...</text>
   </view>
 
-  <!-- 学生列表 -->
-  <view class="student-list" wx:if="{{students.length > 0}}">
-    <view
-      class="student-card"
-      wx:for="{{students}}"
-      wx:key="_id"
-      bindtap="onStudentTap"
-      data-id="{{item._id}}"
-      data-name="{{item.name}}"
-      data-grade="{{item.grade}}"
-    >
-      <!-- 头像 -->
-      <view class="avatar" style="background:{{item.avatarColor}};">
-        <text class="avatar-text">{{item.avatarText}}</text>
-      </view>
+  <view class="profile-home" wx:elif="{{hasStudents && home}}">
+    <view class="top-row">
+      <text class="page-title">学习档案</text>
+      <view class="manage-link" bindtap="onManageStudents">管理孩子</view>
+    </view>
 
-      <!-- 信息 -->
-      <view class="info">
-        <view class="name-row">
-          <text class="name">{{item.name}}</text>
-          <text class="grade-tag">{{item.gradeText}}</text>
+    <view class="hero-card">
+      <image class="hero-image" src="/assets/images/math-diagnostic-guide.jpg" mode="aspectFill"></image>
+      <view class="hero-copy">
+        <view class="student-line">
+          <view class="mini-avatar">{{home.avatarText}}</view>
+          <view class="student-copy">
+            <text class="student-name">{{home.studentName}}</text>
+            <text class="student-meta">{{home.gradeText}}<text wx:if="{{home.gradeText}}"> · </text>最近更新：{{home.recentUpdateText}}</text>
+          </view>
         </view>
-        <view class="meta">
-          <text wx:if="{{item.totalReports > 0}}">已诊断 {{item.totalReports}} 次</text>
-          <text wx:else>暂无诊断记录</text>
-          <text class="dot" wx:if="{{item.lastReportAt}}">·</text>
-          <text wx:if="{{item.lastReportAt}}">{{item.lastReportAt}}</text>
+        <text class="section-kicker">当前综合摘要</text>
+        <text class="hero-title">{{home.headline}}</text>
+        <text class="hero-summary">{{home.summary}}</text>
+      </view>
+    </view>
+
+    <view class="coverage-card">
+      <view class="coverage-icon">i</view>
+      <view class="coverage-copy">
+        <text class="coverage-label">样本覆盖</text>
+        <text class="coverage-text">{{home.sampleCoverageText}}</text>
+      </view>
+    </view>
+
+    <view class="metric-strip">
+      <view class="metric-cell metric-{{item.tone}}" wx:for="{{home.metrics}}" wx:key="label">
+        <text class="metric-value">{{item.value}}</text>
+        <text class="metric-label">{{item.label}}</text>
+      </view>
+    </view>
+
+    <view class="section-block" wx:if="{{home.observations.length > 0}}">
+      <view class="section-heading">学习观察</view>
+      <view class="surface">
+        <view
+          class="observation-row"
+          wx:for="{{home.observations}}"
+          wx:key="subject"
+          bindtap="onObservationTap"
+          data-subject="{{item.subject}}"
+        >
+          <view class="subject-pill">{{item.subjectShortName}}</view>
+          <view class="row-copy">
+            <text class="row-title">{{item.title}}</text>
+            <text class="row-desc">{{item.summary}}</text>
+          </view>
+          <text class="state-tag state-{{item.statusClass}}">{{item.statusText}}</text>
         </view>
       </view>
+    </view>
 
-      <!-- 箭头 -->
-      <text class="arrow">›</text>
+    <view class="section-block">
+      <view class="section-heading between">
+        <text>学习记录</text>
+        <text class="link-text" bindtap="onViewAllRecords">查看全部</text>
+      </view>
+      <view class="surface" wx:if="{{home.recentRecords.length > 0}}">
+        <view
+          class="record-row"
+          wx:for="{{home.recentRecords}}"
+          wx:key="title"
+          bindtap="onRecordTap"
+          data-index="{{index}}"
+        >
+          <view class="record-icon record-{{item.kind}}">{{item.icon}}</view>
+          <view class="row-copy">
+            <text class="row-title">{{item.title}}</text>
+            <text class="row-desc">{{item.summary}}</text>
+          </view>
+          <text class="arrow">›</text>
+        </view>
+      </view>
+      <view class="surface empty-records" wx:else>
+        <text>暂无学习记录，上传试卷后会自动整理。</text>
+      </view>
+    </view>
+
+    <view class="section-block">
+      <view class="section-heading">下一步建议</view>
+      <view class="next-card">
+        <text class="next-title">{{home.nextAction.title}}</text>
+        <text class="next-desc">{{home.nextAction.summary}}</text>
+        <view class="action-grid">
+          <view class="primary-action" bindtap="onPrimaryAction">{{home.nextAction.primaryText}}</view>
+          <view class="secondary-action" bindtap="onSecondaryAction">{{home.nextAction.secondaryText}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-block">
+      <view class="section-heading">学科入口</view>
+      <view class="subject-grid">
+        <view
+          class="subject-entry subject-{{item.key}}"
+          wx:for="{{home.subjects}}"
+          wx:key="key"
+          bindtap="onSubjectTap"
+          data-subject="{{item.key}}"
+        >
+          <text class="subject-name">{{item.name}}</text>
+          <text class="subject-status">{{item.statusText}}</text>
+        </view>
+      </view>
     </view>
   </view>
 
-  <!-- 空状态 -->
   <view class="empty-state" wx:else>
-    <text class="icon">📋</text>
-    <text class="text">还没有添加学生</text>
-    <text class="sub-text">点击下方按钮添加第一个学生</text>
-  </view>
-
-  <!-- 底部添加按钮 -->
-  <view class="bottom-bar">
-    <button class="btn-primary btn-add" bindtap="onAddStudent">
-      + 添加学生
-    </button>
+    <image class="empty-logo" src="/assets/images/app-logo-share.jpg" mode="aspectFit" />
+    <text class="text">还没有学习档案</text>
+    <text class="sub-text">添加第一个孩子后，上传试卷建立学习记录。</text>
+    <view class="empty-action" bindtap="onAddStudent">添加第一个孩子</view>
   </view>
 </view>

@@ -29,6 +29,11 @@ test('builds current diagnosis counts and recent changes from new fields', () =>
   assert.equal(view.pendingCount, 1)
   assert.equal(view.improvedCount, 1)
   assert.deepEqual(view.currentBottlenecks.map(item => item.displayName), ['应用题建模', '分数运算', '单位换算'])
+  assert.deepEqual(view.currentBottlenecks.map(item => item.detailText), [
+    '应用题建模在不同记录中再次出现',
+    '建议用验证题确认分数运算是否稳定出现',
+    '单位换算已通过验证 · 继续观察巩固'
+  ])
   assert.equal(view.recentChanges[0].title, '发现分数运算卡点')
 })
 
@@ -40,6 +45,8 @@ test('builds a compatible current diagnosis from legacy profile fields', () => {
 
   assert.equal(view.currentBottlenecks[0].status, 'needs_verification')
   assert.equal(view.currentBottlenecks[1].status, 'improved')
+  assert.equal(view.currentBottlenecks[0].displayName, '分数运算')
+  assert.equal(view.currentBottlenecks[0].detailText, '建议用验证题确认分数运算是否稳定出现')
   assert.equal(view.hasDiagnosis, true)
 })
 

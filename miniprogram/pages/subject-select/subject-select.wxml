@@ -2,7 +2,8 @@
 <view class="page">
   <!-- 顶部提示 -->
   <view class="tip-bar">
-    <text class="tip-text">为 {{studentName}} 选择诊断学科</text>
+    <text class="tip-text">{{studentName}} 的学科入口</text>
+    <text class="tip-sub">查看单学科详情，或继续上传对应学科的新试卷。</text>
   </view>
 
   <!-- 学科卡片列表 -->

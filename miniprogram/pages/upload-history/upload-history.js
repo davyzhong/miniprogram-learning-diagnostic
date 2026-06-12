@@ -1,6 +1,16 @@
 const cloud = require('../../utils/cloud')
 const { formatBottleneckDisplayList } = require('../../utils/util')
 
+const SUBJECT_NAMES = {
+  math: '数学',
+  chinese: '语文',
+  english: '英语'
+}
+
+function subjectNameOf(subject, fallback = '') {
+  return SUBJECT_NAMES[subject] || fallback || ''
+}
+
 function getReportPhotos(report) {
   if (Array.isArray(report.imageFiles) && report.imageFiles.length > 0) {
     return report.imageFiles
@@ -38,11 +48,15 @@ function dayLabel(value) {
   return `${date.getMonth() + 1}月${date.getDate()}日`
 }
 
-function reportTitle(report) {
-  if (report.type === 'verification') return '验证报告'
-  if (report.status === 'analyzing') return '诊断分析中'
-  if (report.status === 'failed') return '诊断失败'
-  return '诊断报告'
+function recordSubjectName(item = {}, fallback = '') {
+  return subjectNameOf(item.subject, item.subjectName || fallback)
+}
+
+function reportTitle(report, subjectName = '') {
+  if (report.type === 'verification') return `${subjectName}验证反馈`
+  if (report.status === 'analyzing') return `${subjectName}诊断分析中`
+  if (report.status === 'failed') return `${subjectName}诊断失败`
+  return `${subjectName}诊断报告`
 }
 
 function reportSummary(report) {
@@ -56,7 +70,7 @@ function reportSummary(report) {
   return '查看这次学习诊断的详细结果。'
 }
 
-function buildReportEvent(report, photos) {
+function buildReportEvent(report, photos, subjectName = '') {
   const isVerification = report.type === 'verification'
   const photoCount = photos.length
   const duplicateCount = photos.filter(photo => photo.isDuplicate).length
@@ -68,7 +82,7 @@ function buildReportEvent(report, photos) {
     id: report._id,
     kind: isVerification ? 'verification-report' : 'diagnosis-report',
     icon: isVerification ? '✓' : '◎',
-    title: reportTitle(report),
+    title: reportTitle(report, subjectName),
     timeText: timeText(report.createdAt),
     createdAt: report.createdAt,
     summary: reportSummary(report),
@@ -86,7 +100,7 @@ function buildReportEvent(report, photos) {
   }
 }
 
-function buildPaperEvent(paper) {
+function buildPaperEvent(paper, subjectName = '') {
   const questionCount = (paper.questions || []).length || paper.questionCount || 0
   const bottleneckText = formatBottleneckDisplayList(
     (paper.bottleneckTargets || []).map(code => ({ lpCode: code }))
@@ -96,7 +110,7 @@ function buildPaperEvent(paper) {
     id: paper._id,
     kind: 'verification-paper',
     icon: '□',
-    title: paper.type === 'verification' ? '生成验证试卷' : '生成诊断试卷',
+    title: paper.type === 'verification' ? `生成${subjectName}验证试卷` : `生成${subjectName}诊断试卷`,
     timeText: timeText(paper.createdAt),
     createdAt: paper.createdAt,
     summary: bottleneckText ? `覆盖 ${bottleneckText}` : '已生成可打印的 A4 试卷。',
@@ -130,22 +144,34 @@ function groupEventsByDay(events) {
   return Array.from(byDay.values())
 }
 
+function buildTitleText(studentName, subjectName) {
+  if (studentName && subjectName) return `${studentName} · ${subjectName}学习记录`
+  if (studentName) return `${studentName} · 学习记录`
+  if (subjectName) return `${subjectName}学习记录`
+  return '学习记录'
+}
+
 Page({
   data: {
     studentId: '',
-    subject: 'math',
-    subjectName: '数学',
+    subject: '',
+    subjectName: '',
     studentName: '',
+    titleText: '学习记录',
     loading: true,
     days: []
   },
 
   onLoad(options) {
+    const subject = options.subject || ''
+    const subjectName = decodeURIComponent(options.subjectName || '')
+    const studentName = decodeURIComponent(options.studentName || '')
     this.setData({
       studentId: options.studentId || '',
-      subject: options.subject || 'math',
-      subjectName: decodeURIComponent(options.subjectName || '数学'),
-      studentName: decodeURIComponent(options.studentName || '')
+      subject,
+      subjectName,
+      studentName,
+      titleText: buildTitleText(studentName, subjectName)
     })
     wx.setNavigationBarTitle({ title: '学习记录' })
     this.loadHistory()
@@ -154,9 +180,14 @@ Page({
   async loadHistory() {
     this.setData({ loading: true })
     try {
-      const reports = await cloud.getReports(this.data.studentId, this.data.subject, 50)
+      const subject = this.data.subject || ''
+      const subjectName = this.data.subjectName || subjectNameOf(subject)
+      const titleText = buildTitleText(this.data.studentName, subjectName)
+      const reports = await cloud.getReports(this.data.studentId, subject || undefined, 50)
       const papers = typeof cloud.getPapers === 'function'
-        ? await cloud.getPapers({ studentId: this.data.studentId, subject: this.data.subject })
+        ? await cloud.getPapers(subject
+          ? { studentId: this.data.studentId, subject }
+          : { studentId: this.data.studentId })
         : []
 
       const reportPhotos = reports.map(report => ({
@@ -173,14 +204,14 @@ Page({
           tempFileURL: urlByFileID.get(photo.fileID) || '',
           summaryText: photo.ocrSummary || '此照片来自旧报告，暂无 OCR 识别摘要'
         }))
-        return buildReportEvent(report, viewPhotos)
+        return buildReportEvent(report, viewPhotos, recordSubjectName(report, subjectName))
       })
       const paperEvents = (papers || [])
         .filter(paper => paper.type === 'verification')
-        .map(buildPaperEvent)
+        .map(paper => buildPaperEvent(paper, recordSubjectName(paper, subjectName)))
       const days = groupEventsByDay([...reportEvents, ...paperEvents])
 
-      this.setData({ days, loading: false })
+      this.setData({ titleText, days, loading: false })
     } catch (err) {
       console.error('加载学习记录失败', err)
       this.setData({ days: [], loading: false })

@@ -197,12 +197,12 @@ miniprogram-learning-diagnostic/
 │   ├── generatePaper/        ✅
 │   ├── generateReportPDF/    ✅
 │   └── getAnalysisProgress/  ✅
-├── tests/                    ✅（15 个常规测试文件 + 真实图片 E2E 脚本 + helpers，128 常规用例）
-├── scripts/check-js.js       ✅（50 文件语法检查）
+├── tests/                    ✅（16 个常规测试文件 + 真实图片 E2E 脚本 + helpers，136 常规用例）
+├── scripts/check-js.js       ✅（52 文件语法检查）
 ├── project.config.json        ✅
 ├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / check / verify）
 ├── PROJECT_PLAN.md          ✅
-├── PRD.md                   ✅（v2.4）
+├── PRD.md                   ✅（v2.5）
 ├── SETUP.md                ✅（本文件）
 └── docs/TEST_MATRIX.md     ✅
 ```

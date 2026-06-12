@@ -124,7 +124,7 @@ Page({
     return {
       title: (report.studentName || '孩子') + '的学习诊断报告',
       path: '/pages/report/report?id=' + this.data.reportId,
-      imageUrl: ''
+      imageUrl: '/assets/images/app-logo-share.jpg'
     }
   },
 

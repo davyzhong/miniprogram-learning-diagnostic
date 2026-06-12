@@ -78,17 +78,37 @@ test('generatePaper does not silently fall back to a font without Chinese glyphs
 })
 
 test('user-facing bottleneck labels do not render LP codes as primary text', () => {
+  const subjectHomePage = read('miniprogram/pages/subject-home/subject-home.wxml')
+  const subjectHomeJs = read('miniprogram/pages/subject-home/subject-home.js')
   const verificationPage = read('miniprogram/pages/generate-verification/generate-verification.wxml')
   const paperPreview = read('miniprogram/pages/paper-preview/paper-preview.wxml')
   const reportPage = read('miniprogram/pages/report/report.wxml')
   const pdfRenderer = read('cloudfunctions/generatePaper/pdf-renderer.js')
 
+  assert.match(subjectHomeJs, /require\('\.\/subject-home-presenter'\)/)
+  assert.match(subjectHomePage, /\{\{item\.displayName\}\}/)
+  assert.match(subjectHomePage, /\{\{item\.detailText\}\}/)
+  assert.doesNotMatch(subjectHomePage, /需要进一步验证确认/)
   assert.doesNotMatch(verificationPage, /\{\{item\.lpCode\}\}/)
   assert.match(verificationPage, /\{\{item\.displayName\}\}/)
   assert.match(paperPreview, /\{\{bottleneckText\}\}/)
   assert.doesNotMatch(reportPage, /· \{\{item\.lpCode\}\}/)
   assert.match(reportPage, /\{\{item\.metaText\}\}/)
   assert.doesNotMatch(pdfRenderer, /text\(question\.lpCode/)
+})
+
+test('index page is framed as a learning profile home', () => {
+  const indexPage = read('miniprogram/pages/index/index.wxml')
+  assert.doesNotMatch(indexPage, /选择学生开始诊断/)
+  for (const text of ['学习档案', '当前综合摘要', '样本覆盖', '学习观察', '学习记录', '下一步建议']) {
+    assert.match(indexPage, new RegExp(text))
+  }
+})
+
+test('subject select is framed as a secondary subject entry', () => {
+  const subjectSelect = read('miniprogram/pages/subject-select/subject-select.wxml')
+  assert.doesNotMatch(subjectSelect, /选择诊断学科/)
+  assert.match(subjectSelect, /学科入口/)
 })
 
 test('cloud functions do not return stack traces to clients', () => {

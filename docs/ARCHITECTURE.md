@@ -30,8 +30,8 @@
 │                                                                     │
 │  ┌──────────┐  ┌────────────┐  ┌──────────────┐  ┌──────────────┐  │
 │  │ index    │→│ subject-   │→│ upload /      │→│ report       │  │
-│  │ 学生列表  │  │ select     │  │ generate-*   │  │ 报告展示      │  │
-│  │          │  │ 学科选择    │  │ default-paper│  │ 卡点/错题/PDF │  │
+│  │ 学习档案  │  │ home       │  │ generate-*   │  │ 报告展示      │  │
+│  │ 首页      │  │ 学科详情    │  │ default-paper│  │ 卡点/错题/PDF │  │
 │  └──────────┘  └────────────┘  └──────────────┘  └──────────────┘  │
 │       ↑              ↑               ↑                  ↑          │
 │       └──────────────┴───────────────┴──────────────────┘          │
@@ -187,18 +187,24 @@ report 页面展示诊断结果（不执行验证对比逻辑）
 ## 4. 前端页面路由图
 
 ```
-index（首页 - 学生列表）
-  ├── navigateTo → add-student（添加学生）
-  └── navigateTo → subject-select（学科选择）
-                        │
-                        ▼
-                  subject-home（学科主页）
-                    ├── navigateTo → upload?mode=diagnosis（拍照诊断）
-                    ├── navigateTo → generate-verification（生成验证试卷）
-                    ├── navigateTo → default-paper（默认诊断试卷）
-                    ├── navigateTo → upload-history（学习记录）
-                    ├── navigateTo → report?id=xxx（查看报告）
-                    └── navigateTo → report?id=currentAnalysisId（分析中报告）
+index（首页 - 学习档案）
+  ├── navigateTo → add-student（管理孩子/添加学生）
+  ├── navigateTo → subject-home（学习观察/学科入口）
+  ├── navigateTo → upload-history（学习记录）
+  ├── navigateTo → report?id=xxx（最近报告）
+  ├── navigateTo → paper-preview?paperId=xxx（最近试卷）
+  └── navigateTo → generate-verification 或 upload（下一步建议）
+
+subject-select（学科入口兼容页）
+  └── navigateTo → subject-home（学科主页）
+
+subject-home（学科主页）
+  ├── navigateTo → upload?mode=diagnosis（拍照诊断）
+  ├── navigateTo → generate-verification（生成验证试卷）
+  ├── navigateTo → default-paper（默认诊断试卷）
+  ├── navigateTo → upload-history（学习记录）
+  ├── navigateTo → report?id=xxx（查看报告）
+  └── navigateTo → report?id=currentAnalysisId（分析中报告）
 
 upload（拍照上传）
   └── 上传成功后 → redirect/reLaunch → subject-home 或 report
@@ -224,9 +230,9 @@ paper-preview（试卷预览）
 
 | 页面路径 | 功能 | 核心依赖 |
 |----------|------|----------|
-| `pages/index/index` | 学生列表、最近分析状态 | cloud.getStudents, getSubjectProfiles |
+| `pages/index/index` | 学习档案首页：综合摘要、样本覆盖、学习观察、学习记录、下一步建议 | cloud.getStudents, getSubjectProfiles, getReports, getPapers, index-presenter |
 | `pages/add-student/add-student` | 新增学生 + 自动创建三科档案 | cloud.createStudentWithProfiles |
-| `pages/subject-select/subject-select` | 选择学科进入 | cloud.getSubjectProfiles, ensureSubjectProfile |
+| `pages/subject-select/subject-select` | 学科入口兼容页 | cloud.getSubjectProfiles, ensureSubjectProfile |
 | `pages/subject-home/subject-home` | 学科主页：三入口 + 状态轮询 + 历史 | cloud.getSubjectProfile, getReports, getLatestReport, getAnalysisProgress; poller |
 | `pages/upload/upload` | 拍照/选图 + 上传 + 触发分析 | cloud.uploadPhoto, callUploadAndAnalyze, getReports |
 | `pages/upload-history/upload-history` | 学习记录时间线 | cloud.getReports, getPapers, getTempFileURLs |
