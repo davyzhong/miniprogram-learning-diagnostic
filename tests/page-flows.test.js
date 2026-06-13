@@ -89,6 +89,166 @@ test('learning profile home loads the active student summary', async () => {
   assert.equal(page.data.home.studentName, '钟青羽')
   assert.match(page.data.home.priorityHighlights[0].title, /数学/)
   assert.equal(page.data.activeStudentId, 'student-1')
+  assert.equal(page.data.permissions.canManageParents, true)
+})
+
+test('learning profile home falls back to legacy student reads when shared access is unavailable', async () => {
+  const cloud = {
+    getAccessibleStudents: async () => { throw new Error('cloud function not found') },
+    getStudents: async () => [{ _id: 'student-1', name: '钟青羽', grade: 6 }],
+    getSubjectProfiles: async () => [{
+      subject: 'math',
+      subjectName: '数学',
+      totalReports: 2,
+      updatedAt: '2026-06-12T14:20:00+08:00',
+      currentBottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification' }]
+    }],
+    getStudentDashboard: async () => { throw new Error('studentData not deployed') },
+    getReports: async () => [{
+      _id: 'report-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      createdAt: '2026-06-12T14:20:00+08:00',
+      summary: '发现计算基础卡点'
+    }],
+    getPapers: async () => [{
+      _id: 'paper-1',
+      subject: 'math',
+      type: 'verification',
+      createdAt: '2026-06-13T10:00:00+08:00',
+      questions: [{}, {}, {}],
+      bottleneckSummaries: ['计算基础']
+    }]
+  }
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.loadStudents()
+
+  assert.equal(page.data.hasStudents, true)
+  assert.equal(page.data.activeStudent.name, '钟青羽')
+  assert.equal(page.data.home.recentRecords.length, 2)
+})
+
+test('learning profile home falls back to legacy student reads when shared access returns no students', async () => {
+  const cloud = {
+    getAccessibleStudents: async () => [],
+    getStudents: async () => [{ _id: 'student-legacy', name: '钟青羽', grade: 6 }],
+    getSubjectProfiles: async () => [],
+    getStudentDashboard: async () => ({
+      permissions: { canView: true, canUpload: true },
+      subjectProfiles: [],
+      recentReports: [],
+      recentPapers: []
+    }),
+    getReports: async () => [],
+    getPapers: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.loadStudents()
+
+  assert.equal(page.data.hasStudents, true)
+  assert.equal(page.data.activeStudentId, 'student-legacy')
+  assert.equal(page.data.activeStudent.name, '钟青羽')
+})
+
+test('learning profile home opens parent management for the active student', async () => {
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/index/index.js', { wx })
+  page.setData({
+    activeStudentId: 'student-1',
+    activeStudent: { _id: 'student-1', name: '钟青羽' },
+    permissions: { canManageParents: true }
+  })
+
+  page.onParentManagement()
+
+  const navigation = wx.calls.find(call => call.name === 'navigateTo')
+  assert.match(navigation.payload.url, /pages\/parent-management\/parent-management/)
+  assert.match(navigation.payload.url, /studentId=student-1/)
+  assert.equal(typeof navigation.payload.fail, 'function')
+})
+
+test('learning profile home redirects to parent management when navigateTo fails', async () => {
+  const wx = createWxMock({
+    navigateTo: payload => {
+      wx.calls.push({ name: 'navigateTo', payload })
+      payload.fail({ errMsg: 'navigateTo:fail webview count limit exceed' })
+      return Promise.resolve(payload)
+    }
+  })
+  const { page } = loadPage('miniprogram/pages/index/index.js', { wx })
+  page.setData({
+    activeStudentId: 'student-1',
+    activeStudent: { _id: 'student-1', name: '钟青羽' },
+    permissions: { canManageParents: true }
+  })
+
+  page.onParentManagement()
+
+  const redirect = wx.calls.find(call => call.name === 'redirectTo')
+  assert.match(redirect.payload.url, /pages\/parent-management\/parent-management/)
+  assert.match(redirect.payload.url, /studentId=student-1/)
+})
+
+test('learning profile home shows a message when parent management has no active student', async () => {
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/index/index.js', { wx })
+
+  page.onParentManagement()
+
+  assert.equal(wx.calls.find(call => call.name === 'navigateTo'), undefined)
+  assert.equal(wx.calls.find(call => call.name === 'showToast').payload.title, '缺少孩子档案信息')
+})
+
+test('learning profile home uses shared access and routes viewers to records', async () => {
+  const wx = createWxMock()
+  const cloud = {
+    getAccessibleStudents: async () => [{
+      _id: 'student-1',
+      name: '钟青羽',
+      grade: 6,
+      role: 'viewer',
+      permissions: { canView: true, canManageParents: false, canUpload: false, canGeneratePaper: false }
+    }],
+    getSubjectProfiles: async () => [],
+    getStudentDashboard: async studentId => ({
+      student: { _id: studentId, name: '钟青羽', grade: 6 },
+      permissions: { canView: true, canManageParents: false, canUpload: false, canGeneratePaper: false },
+      subjectProfiles: [{
+        subject: 'math',
+        totalReports: 1,
+        currentBottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification' }]
+      }],
+      recentReports: [{ _id: 'report-1', subject: 'math', status: 'completed', createdAt: '2026-06-12T10:00:00Z' }],
+      recentPapers: []
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.loadStudents()
+  assert.equal(page.data.permissions.canUpload, false)
+  assert.equal(page.data.home.nextAction.primaryText, '查看学习记录')
+
+  page.onPrimaryAction()
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /upload-history/)
 })
 
 test('subject selection ensures a profile before entering the subject home', async () => {
@@ -148,6 +308,45 @@ test('subject home loads a compact action workbench', async () => {
   assert.equal(page.data.primaryTask.actionType, 'verification')
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.taskQueue.map(item => item.displayName))), ['计算基础'])
   assert.ok(page.data.tools.some(item => item.key === 'latestReport'))
+})
+
+test('subject home hides write tools for viewer access', async () => {
+  const cloud = {
+    getSubjectDashboard: async () => ({
+      permissions: { canView: true, canUpload: false, canGeneratePaper: false, canRetryAnalysis: false },
+      profile: {
+        totalReports: 1,
+        currentBottlenecks: [
+          { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification' }
+        ]
+      },
+      reports: [{ _id: 'report-1', status: 'completed', createdAt: '2026-06-12T10:00:00Z' }]
+    })
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/subject-home/subject-home.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatRelativeTime: () => '今天' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {}, isRunning: () => false }) }
+    }
+  })
+  page.onLoad({
+    studentId: 'student-1',
+    subject: 'math',
+    subjectName: encodeURIComponent('数学'),
+    studentName: encodeURIComponent('钟青羽'),
+    grade: '6'
+  })
+
+  await page.loadProfile()
+  assert.equal(page.data.canWriteActions, false)
+  assert.deepEqual(page.data.tools.map(item => item.key), ['history', 'latestReport'])
+  assert.equal(page.data.primaryTask.actionType, 'history')
+
+  page.onTaskTap({ currentTarget: { dataset: { code: 'LP-001' } } })
+  assert.equal(wx.calls.find(call => call.name === 'navigateTo'), undefined)
 })
 
 test('subject home task and primary actions open the focused workflow', () => {
@@ -230,6 +429,78 @@ test('upload submits file metadata and navigates back on success', async () => {
   assert.ok(wx.calls.some(call => call.name === 'navigateBack'))
 })
 
+test('verification upload page shows the paper code context', async () => {
+  const cloud = {
+    getPaperDetail: async paperId => ({
+      paper: {
+        _id: paperId,
+        subject: 'math',
+        type: 'verification',
+        paperDisplayCode: '数学-20260613-01',
+        questions: [{}, {}, {}, {}, {}, {}]
+      }
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/upload/upload.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.loadPaperContext('paper-1')
+
+  assert.equal(page.data.paperCodeText, '数学-20260613-01')
+  assert.equal(page.data.paperName, '验证试卷')
+  assert.equal(page.data.paperQuestionCount, 6)
+})
+
+test('upload retry reuses already uploaded images and only uploads missing files', async () => {
+  let submitted = null
+  const uploadedTempPaths = []
+  const cloud = {
+    callUploadAndAnalyze: async payload => {
+      submitted = payload
+      return { success: true, reportId: 'report-1' }
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/upload/upload.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+  page.uploadOne = async image => {
+    uploadedTempPaths.push(image.tempPath)
+    return `cloud://uploaded-${uploadedTempPaths.length}`
+  }
+  page.setData({
+    studentId: 'student-1',
+    subject: 'math',
+    mode: 'diagnosis',
+    images: [
+      {
+        tempPath: '/tmp/already.jpg',
+        fileName: 'already.jpg',
+        fileSize: 100,
+        fileId: 'cloud://already-uploaded',
+        uploaded: true
+      },
+      {
+        tempPath: '/tmp/new.jpg',
+        fileName: 'new.jpg',
+        fileSize: 200,
+        fileId: '',
+        uploaded: false
+      }
+    ]
+  })
+
+  await page.onSubmit()
+
+  assert.deepEqual(uploadedTempPaths, ['/tmp/new.jpg'])
+  assert.deepEqual(JSON.parse(JSON.stringify(submitted.fileIDs)), [
+    'cloud://already-uploaded',
+    'cloud://uploaded-1'
+  ])
+  assert.equal(page.data.images[1].fileId, 'cloud://uploaded-1')
+  assert.equal(page.data.images[1].uploaded, true)
+})
+
 test('verification page selects all available bottlenecks by default', async () => {
   const pendingBottlenecks = [
     { lpCode: 'LP-001', lpName: '计算错误', severity: 'medium' },
@@ -275,8 +546,8 @@ test('verification page focuses the workbench target code when provided', async 
     ['LP-008']
   )
   assert.equal(page.data.selectedCount, 1)
-  assert.equal(page.data.selectedSummary, '审题错误')
-  assert.equal(page.data.paperConfig.scopeText, '审题错误')
+  assert.equal(page.data.selectedSummary, '审题理解')
+  assert.equal(page.data.paperConfig.scopeText, '审题理解')
   assert.equal(page.data.paperConfig.questionCount, 3)
 })
 
@@ -298,9 +569,9 @@ test('verification page shows readable bottleneck summaries instead of LP codes'
 
   assert.deepEqual(
     JSON.parse(JSON.stringify(page.data.bottlenecks.map(item => item.displayName))),
-    ['审题错误', '计算错误', '待确认卡点']
+    ['审题理解', '计算基础', '待确认卡点']
   )
-  assert.equal(page.data.selectedSummary, '审题错误、计算错误、待确认卡点')
+  assert.equal(page.data.selectedSummary, '审题理解、计算基础、待确认卡点')
 })
 
 test('verification page selects at most five bottlenecks by severity priority', async () => {
@@ -445,17 +716,37 @@ test('paper preview formats default paper names without repeating the grade key'
 
 test('paper preview loads a saved paper and opens its upload flow', async () => {
   const cloud = {
-    getPaper: async () => ({
-      _id: 'paper-1',
-      studentId: 'student-1',
-      subject: 'math',
-      type: 'verification',
-      pdfFileId: 'cloud://paper.pdf',
-      questions: [{ content: '1+1' }],
-      bottleneckTargets: ['LP-001'],
-      bottleneckSummaries: ['计算错误']
-    }),
-    getStudent: async () => ({ name: '钟青羽' })
+    getPaperDetail: async () => ({
+      student: { name: '钟青羽' },
+      paper: {
+        _id: 'paper-1',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'verification',
+        paperCode: 'MATH-20260613-01',
+        paperDisplayCode: '数学-20260613-01',
+        pdfFileId: 'cloud://paper.pdf',
+        questions: Array.from({ length: 5 }, (_, index) => ({
+          index: index + 1,
+          content: `${index + 1}+1`,
+          lpCode: 'LP-001',
+          lpName: '计算错误'
+        })),
+        bottleneckTargets: ['LP-001'],
+        bottleneckSummaries: ['计算错误'],
+        paperDate: '2026-06-13',
+        studentPages: 1,
+        answerPages: 1,
+        totalPages: 2
+      },
+      latestVerificationReport: {
+        _id: 'report-verify',
+        status: 'completed',
+        summary: '验证卷完成',
+        comparisonSummary: '计算基础有改善',
+        verificationEvidence: [{ complete: true, allCorrect: true }]
+      }
+    })
   }
   const wx = createWxMock({
     getStorageSync: key => key === 'downloaded_pdf_cloud://paper.pdf'
@@ -468,13 +759,26 @@ test('paper preview loads a saved paper and opens its upload flow', async () => 
   await page.loadPaper('paper-1')
   assert.equal(page.data.pdfReady, true)
   assert.equal(page.data.typeText, '验证试卷')
+  assert.equal(page.data.paperCodeText, '数学-20260613-01')
   assert.equal(page.data.bottleneckText, '计算错误')
+  assert.equal(page.data.paperDate, '2026-06-13')
+  assert.equal(page.data.pageSummary, '学生卷 1 页 · 答案 1 页 · 共 2 页')
   assert.equal(page.data.pdfDownloaded, true)
+  assert.equal(page.data.questionPreview.length, 4)
+  assert.equal(page.data.hasMoreQuestions, true)
+  assert.equal(page.data.workbenchStatus, 'completed')
+  assert.equal(page.data.feedback.summary, '计算基础有改善')
+  assert.ok(page.data.feedback.chips.includes('1 个卡点有改善'))
   assert.doesNotMatch(page.data.bottleneckText, /LP-\d+/)
+  page.onToggleQuestions()
+  assert.equal(page.data.questionPreview.length, 5)
+  page.onViewFeedbackReport()
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /report-verify/)
   page.onUpload()
-  const url = wx.calls.find(call => call.name === 'navigateTo').payload.url
+  const url = wx.calls.filter(call => call.name === 'navigateTo').pop().payload.url
   assert.match(url, /mode=verification/)
   assert.match(url, /paperId=paper-1/)
+  assert.match(url, /paperCode=/)
 })
 
 test('paper preview falls back to question bottleneck names for legacy papers', async () => {
@@ -641,7 +945,7 @@ test('subject home stops polling and surfaces a stale analysis task', async () =
   }, 2)
 
   assert.equal(shouldContinue, false)
-  assert.equal(page.data.analysisStatusText, '分析超时，点击查看并重新分析')
+  assert.equal(page.data.analysisStatusText, '分析可能超时，可刷新或重试')
 })
 
 test('report exposes retry when an analysis task is stale', async () => {
@@ -684,6 +988,7 @@ test('learning records group uploads reports and verification papers by day', as
         subject: 'math',
         type: 'diagnosis',
         createdAt: '2026-06-11T10:00:00Z',
+        evidenceTime: '2026-06-11T10:05:00Z',
         summary: '发现计算基础卡点',
         totalErrors: 2,
         bottlenecks: [{ lpCode: 'LP-001' }],
@@ -694,16 +999,20 @@ test('learning records group uploads reports and verification papers by day', as
         subject: 'math',
         type: 'verification',
         createdAt: '2026-06-11T12:00:00Z',
+        evidenceTime: '2026-06-11T12:05:00Z',
         comparisonSummary: '1 个学习卡点已改善',
         verificationEvidence: [{ lpCode: 'LP-001', complete: true, allCorrect: true }],
-        imageFiles: [{ fileID: 'cloud://verification-photo', fileName: '验证作答.jpg', ocrSummary: '验证题作答' }]
+        imageFiles: [{ fileID: 'cloud://verification-photo', fileName: '验证作答.jpg', ocrSummary: '验证题作答', uploadedAt: '2026-06-11T12:05:00Z' }]
       }
     ],
     getPapers: async () => [{
       _id: 'paper-1',
       subject: 'math',
       type: 'verification',
+      paperDisplayCode: '数学-20260611-01',
       createdAt: '2026-06-11T11:00:00Z',
+      generatedAt: '2026-06-11T11:02:00Z',
+      paperDate: '2026-06-11',
       questions: [{}, {}, {}],
       bottleneckTargets: ['LP-001']
     }],
@@ -733,12 +1042,113 @@ test('learning records group uploads reports and verification papers by day', as
     'diagnosis-report'
   ])
   assert.equal(page.data.days[0].events[2].photos[0].fileName, '历史照片1')
+  assert.ok(page.data.days[0].events[0].chips.some(chip => /证据时间 6月11日/.test(chip)))
+  assert.ok(page.data.days[0].events[1].chips.includes('编号 数学-20260611-01'))
+  assert.ok(page.data.days[0].events[1].chips.includes('试卷日期 6月11日'))
   assert.match(page.data.days[0].events[2].photos[0].summaryText, /暂无 OCR/)
   page.onPreviewPhoto({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 2, photoIndex: 0 } } })
   assert.equal(wx.calls.find(call => call.name === 'previewImage').payload.current, 'https://temp/legacy-photo')
 
   page.onEventTap({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 1 } } })
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paperId=paper-1/)
+})
+
+test('learning records fold evidence, compact transient states, and hide low frequency tool papers', async () => {
+  const cloud = {
+    getReports: async () => [
+      {
+        _id: 'report-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        createdAt: '2026-06-12T09:00:00Z',
+        evidenceTime: '2026-06-12T09:05:00Z',
+        summary: '发现计算基础卡点',
+        bottlenecks: [{ lpCode: 'LP-001' }],
+        imageFiles: [
+          { fileID: 'cloud://photo-1', fileName: '数学卷1.jpg', ocrSummary: '计算题错 2 道' },
+          { fileID: 'cloud://photo-2', fileName: '数学卷2.jpg', ocrSummary: '疑似重复', isDuplicate: true }
+        ]
+      },
+      {
+        _id: 'report-2',
+        subject: 'math',
+        type: 'verification',
+        status: 'completed',
+        paperId: 'paper-1',
+        createdAt: '2026-06-12T11:00:00Z',
+        comparisonSummary: '计算基础有改善',
+        verificationEvidence: [{ lpCode: 'LP-001', complete: true, allCorrect: true }],
+        bottlenecks: [{ lpCode: 'LP-001', status: 'improved' }],
+        imageFiles: [{ fileID: 'cloud://answer-1', fileName: '验证卷作答.jpg', ocrSummary: '验证卷答题照片' }]
+      },
+      {
+        _id: 'report-analyzing',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'analyzing',
+        createdAt: '2026-06-12T12:00:00Z'
+      },
+      {
+        _id: 'report-failed',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'failed',
+        createdAt: '2026-06-12T12:30:00Z'
+      }
+    ],
+    getPapers: async () => [
+      {
+        _id: 'paper-1',
+        subject: 'math',
+        type: 'verification',
+        paperDisplayCode: '数学-20260612-01',
+        createdAt: '2026-06-12T10:00:00Z',
+        paperDate: '2026-06-12',
+        questions: [{}, {}, {}, {}, {}, {}],
+        bottleneckSummaries: ['计算基础']
+      },
+      {
+        _id: 'default-paper',
+        subject: 'math',
+        type: 'default-diagnosis',
+        createdAt: '2026-06-12T08:00:00Z'
+      }
+    ],
+    getTempFileURLs: async () => [
+      { fileID: 'cloud://photo-1', tempFileURL: 'https://temp/photo-1' },
+      { fileID: 'cloud://photo-2', tempFileURL: 'https://temp/photo-2' },
+      { fileID: 'cloud://answer-1', tempFileURL: 'https://temp/answer-1' }
+    ]
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', activeSubject: 'math' })
+
+  await page.loadHistory()
+
+  const day = page.data.days[0]
+  assert.deepEqual(JSON.parse(JSON.stringify(day.events.map(event => event.kind))), [
+    'verification-report',
+    'verification-paper',
+    'diagnosis-report'
+  ])
+  assert.equal(day.statusItems.length, 2)
+  assert.deepEqual(JSON.parse(JSON.stringify(day.statusItems.map(item => item.status))), ['failed', 'analyzing'])
+  assert.equal(day.events.some(event => event.paperId === 'default-paper'), false)
+  assert.equal(day.events.find(event => event.kind === 'diagnosis-report').foldedEvidence.length, 2)
+  assert.equal(day.events.find(event => event.kind === 'verification-paper').paperCode, '数学-20260612-01')
+  assert.ok(day.events.find(event => event.kind === 'verification-report').chips.includes('关联 数学-20260612-01'))
+  assert.ok(day.events.find(event => event.kind === 'diagnosis-report').chips.includes('计算基础'))
+
+  page.onPreviewFoldedEvidence({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 2, evidenceIndex: 0 } } })
+  assert.equal(wx.calls.find(call => call.name === 'previewImage').payload.current, 'https://temp/photo-1')
 })
 
 test('learning records load all subjects when no subject filter is provided', async () => {
@@ -790,6 +1200,59 @@ test('learning records load all subjects when no subject filter is provided', as
   ])
   assert.equal(page.data.filters.find(item => item.key === '').active, true)
   assert.equal(page.data.allDays.length, 1)
+})
+
+test('learning records prefer shared timeline access before legacy collection queries', async () => {
+  const seen = { legacyReports: 0, legacyPapers: 0, timeline: null }
+  const cloud = {
+    getLearningTimeline: async params => {
+      seen.timeline = params
+      return {
+        reports: [{
+          _id: 'shared-report',
+          subject: 'math',
+          type: 'diagnosis',
+          status: 'completed',
+          createdAt: '2026-06-11T10:00:00Z',
+          summary: '共享档案诊断'
+        }],
+        papers: [{
+          _id: 'shared-paper',
+          subject: 'math',
+          type: 'verification',
+          createdAt: '2026-06-11T11:00:00Z',
+          questions: [{}, {}],
+          bottleneckSummaries: ['审题理解']
+        }]
+      }
+    },
+    getReports: async () => {
+      seen.legacyReports += 1
+      return []
+    },
+    getPapers: async () => {
+      seen.legacyPapers += 1
+      return []
+    },
+    getTempFileURLs: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', subject: '', subjectName: '', studentName: '钟青羽' })
+
+  await page.loadHistory()
+
+  assert.deepEqual(JSON.parse(JSON.stringify(seen.timeline)), { studentId: 'student-1' })
+  assert.equal(seen.legacyReports, 0)
+  assert.equal(seen.legacyPapers, 0)
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
+    '生成数学验证试卷',
+    '数学诊断报告'
+  ])
 })
 
 test('learning records treat route subject as an initial filter on the complete timeline', async () => {
@@ -930,6 +1393,45 @@ test('report loads diagnosis data and toggles error details', async () => {
   assert.equal(page.data.pendingCount, 1)
   page.onToggleError({ currentTarget: { dataset: { index: 0 } } })
   assert.equal(page.data.errorDetailList[0].expanded, true)
+})
+
+test('report viewer can read details but cannot generate paper or retry analysis', async () => {
+  let retryCalled = false
+  const cloud = {
+    getReportDetail: async () => ({
+      permissions: { canView: true, canGeneratePaper: false, canRetryAnalysis: false },
+      report: {
+        _id: 'report-1',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        createdAt: '2026-06-11T10:00:00Z',
+        bottlenecks: [{ lpCode: 'LP-001', errorCount: 1 }]
+      }
+    }),
+    getSubjectDashboard: async () => ({ profile: { pendingBottlenecks: [{ lpCode: 'LP-001' }] } }),
+    callAnalyzePhotos: async () => { retryCalled = true }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '2026年6月11日 10:00' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {} }) },
+      './report-presenter': require('../miniprogram/pages/report/report-presenter')
+    }
+  })
+
+  await page.loadReport('report-1')
+  assert.equal(page.data.canGeneratePaper, false)
+  assert.equal(page.data.canRetryAnalysis, false)
+
+  page.onGenerateVerification()
+  page.onRetryAnalysis()
+  assert.equal(retryCalled, false)
+  assert.equal(wx.calls.find(call => call.name === 'navigateTo'), undefined)
 })
 
 test('report generates, downloads and opens its printable PDF', async () => {

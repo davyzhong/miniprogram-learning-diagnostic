@@ -66,10 +66,17 @@ test('verification PDF uses bundled Chinese font and renders grouped student and
       { index: 1, content: '计算：38 × 24 =', answer: '912', lpCode: 'LP-001', lpName: '计算错误' },
       { index: 2, content: '小明读题后应该先求什么？', answer: '先求总数', lpCode: 'LP-008', lpName: '审题错误' }
     ]
-  }, 'math', 'verification', { pdfkit: PdfMock, fontPath })
+  }, 'math', 'verification', {
+    pdfkit: PdfMock,
+    fontPath,
+    paperDate: '2026-06-13',
+    paperDisplayCode: '数学-20260613-01'
+  })
 
   const texts = operations.filter(item => item[0] === 'text').map(item => item[1])
   assert.ok(texts.includes('学习卡点验证卷'))
+  assert.equal(texts.filter(text => text === '试卷日期：2026年06月13日').length, 2)
+  assert.equal(texts.filter(text => text === '试卷编号：数学-20260613-01').length, 2)
   assert.ok(texts.includes('A. 计算错误'))
   assert.ok(texts.includes('B. 审题错误'))
   assert.equal(texts.some(text => /^LP-\d+/.test(text)), false)
@@ -118,4 +125,26 @@ test('verification PDF has a dedicated answer page after student pages', async (
   const firstPageBreakIndex = operations.findIndex(item => item[0] === 'addPage')
   assert.ok(firstPageBreakIndex >= 0)
   assert.ok(answerTitleIndex > firstPageBreakIndex)
+})
+
+test('verification PDF returns student and answer page metadata with the buffer', async () => {
+  const { PdfMock } = createRecordingPdfKit()
+  const { generatePDF } = require('../cloudfunctions/generatePaper/pdf-renderer')
+  const result = await generatePDF({
+    questions: Array.from({ length: 7 }, (_, index) => ({
+      index: index + 1,
+      content: `第 ${index + 1} 题：请写出完整计算过程。`,
+      answer: `答案 ${index + 1}`,
+      lpCode: index < 4 ? 'LP-001' : 'LP-008',
+      lpName: index < 4 ? '计算错误' : '审题错误'
+    }))
+  }, 'math', 'verification', {
+    pdfkit: PdfMock,
+    fontPath: path.resolve(__dirname, '../cloudfunctions/generatePaper/NotoSansCJKsc-Regular.otf')
+  })
+
+  assert.ok(Buffer.isBuffer(result.buffer))
+  assert.ok(result.studentPages >= 1)
+  assert.ok(result.answerPages >= 1)
+  assert.equal(result.totalPages, result.studentPages + result.answerPages)
 })

@@ -1,8 +1,38 @@
-const { summarizeBottleneckName } = require('../../utils/bottlenecks')
-const { formatBottleneckDisplayName } = require('../../utils/util')
+const {
+  bottleneckLabelOf,
+  paperCodeOf
+} = require('../../utils/learning-records')
+
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function formatDateTime(value) {
+  if (!value) return ''
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${pad2(date.getHours())}:${pad2(date.getMinutes())}`
+}
+
+function buildTrendSummary(bottlenecks = []) {
+  const counts = bottlenecks.reduce((acc, item) => {
+    const trend = item.trend || ''
+    if (trend) acc[trend] = (acc[trend] || 0) + 1
+    return acc
+  }, {})
+  const parts = [
+    counts.recurring ? `${counts.recurring} 个再次出现` : '',
+    counts.persisting ? `${counts.persisting} 个持续出现` : '',
+    counts.declining ? `${counts.declining} 个下降中` : '',
+    counts.improved ? `${counts.improved} 个已改善` : '',
+    counts.new ? `${counts.new} 个新发现` : ''
+  ].filter(Boolean)
+  return parts.length > 0 ? parts.join('，') : ''
+}
 
 function buildReportView(report) {
   const isVerification = report.type === 'verification'
+  const paperCodeText = paperCodeOf(report.linkedPaper || report.paper)
   const bottlenecks = report.bottlenecks || []
   const errorDetails = report.errorDetails || []
   const maxErrorCount = bottlenecks.length > 0
@@ -15,11 +45,12 @@ function buildReportView(report) {
       : (item.status === 'persisting' || item.status === 'worsened')
         ? { statusText: '持续出现', statusClass: 'persisting', statusIcon: '!' }
         : { statusText: '需要验证', statusClass: 'pending', statusIcon: '?' }
+    const displayName = bottleneckLabelOf(item)
     return {
       ...item,
       ...status,
-      displayName: item.lpName ? summarizeBottleneckName(item.lpName) : formatBottleneckDisplayName(item),
-      metaText: `${item.errorCount || 0} 道相关错题 · ${item.lpName ? summarizeBottleneckName(item.lpName) : formatBottleneckDisplayName(item)}`,
+      displayName,
+      metaText: `${item.errorCount || 0} 道相关错题 · ${displayName}`,
       barWidth: Math.round(((item.errorCount || 0) / maxErrorCount) * 100)
     }
   })
@@ -31,6 +62,9 @@ function buildReportView(report) {
 
   return {
     headline: report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断结果',
+    paperCodeText,
+    evidenceTimeText: formatDateTime(report.evidenceTime || report.createdAt),
+    trendSummaryText: buildTrendSummary(bottlenecks),
     sourceImageCount: (report.imageFiles || report.imageFileIds || []).length,
     isVerification,
     bottleneckCount: bottlenecks.length,

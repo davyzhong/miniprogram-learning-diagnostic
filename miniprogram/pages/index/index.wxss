@@ -26,6 +26,12 @@
   font-weight: 800;
 }
 
+.manage-actions {
+  display: flex;
+  gap: 12rpx;
+  align-items: center;
+}
+
 .manage-link {
   padding: 10rpx 16rpx;
   border-radius: 18rpx;
@@ -286,6 +292,17 @@
   font-size: 22rpx;
   line-height: 1.45;
   margin-top: 5rpx;
+}
+
+.row-meta {
+  display: block;
+  color: #8a97a8;
+  font-size: 20rpx;
+  line-height: 1.35;
+  margin-top: 3rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .state-tag {

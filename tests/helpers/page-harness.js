@@ -30,6 +30,7 @@ function createWxMock(overrides = {}) {
     hideLoading: record('hideLoading'),
     showToast: record('showToast'),
     navigateTo: record('navigateTo'),
+    redirectTo: record('redirectTo'),
     navigateBack: record('navigateBack'),
     setNavigationBarTitle: record('setNavigationBarTitle'),
     setNavigationBarColor: record('setNavigationBarColor'),

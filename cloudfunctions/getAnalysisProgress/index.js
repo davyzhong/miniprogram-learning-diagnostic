@@ -5,6 +5,17 @@ const cloud = require('wx-server-sdk');
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 
+async function canReadReport(report, openId) {
+  if (report && report._openid === openId) return true;
+  if (!report || !report.studentId) return false;
+  const res = await db.collection('studentMembers').where({
+    studentId: report.studentId,
+    memberOpenId: openId,
+    status: 'active',
+  }).get();
+  return (res.data || []).length > 0;
+}
+
 exports.main = async (event) => {
   const { reportId } = event;
 
@@ -19,7 +30,7 @@ exports.main = async (event) => {
     if (!report) {
       return { success: false, error: '报告不存在' };
     }
-    if (report._openid && report._openid !== currentOpenId) {
+    if (!(await canReadReport(report, currentOpenId))) {
       return { success: false, error: '无权访问该报告' };
     }
 

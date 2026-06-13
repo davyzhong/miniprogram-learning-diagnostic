@@ -7,6 +7,8 @@
 ## 目录
 
 - [uploadAndAnalyze](#uploadandanalyze)
+- [studentAccess](#studentaccess)
+- [studentData](#studentdata)
 - [analyzePhotos](#analyzephotos)
 - [analyzeBatch](#analyzebatch)
 - [generatePaper](#generatepaper)
@@ -16,6 +18,163 @@
   - [result-normalizer.js](#result-normalizerjs)
   - [photo-dedup.js](#photo-dedupjs)
   - [comparison.js](#comparisonjs)
+
+---
+
+## studentAccess
+
+### 功能描述
+
+轻量家长管理云函数。一个孩子档案可以有多个家长成员，拥有者可以创建邀请、查看成员、移除协同家长；扫码加入的家长获得查看权限，但不能上传、生成试卷、重试分析或继续邀请他人。
+
+### 调用方式
+
+```javascript
+wx.cloud.callFunction({
+  name: 'studentAccess',
+  data: {
+    action: 'getAccessibleStudents'
+  }
+})
+```
+
+### action 列表
+
+| action | 必填参数 | 权限 | 描述 |
+| --- | --- | --- | --- |
+| `getAccessibleStudents` | — | 当前登录用户 | 获取当前微信可访问的孩子档案，包含自己创建和受邀加入 |
+| `listMembers` | `studentId` | owner/viewer 可查看 | 获取某个孩子档案的家长成员列表 |
+| `createInvite` | `studentId` | owner | 创建扫码加入邀请，返回一次性明文 token 和小程序路径 |
+| `getInvite` | `inviteId`, `token` | 持有邀请者 | 加入前预览邀请信息 |
+| `acceptInvite` | `inviteId`, `token` | 持有邀请者 | 接受邀请，成为 viewer 成员 |
+| `revokeMember` | `studentId`, `memberOpenId` | owner | 移除协同家长，不能移除自己或 owner |
+
+### 输出示例
+
+**getAccessibleStudents**
+
+```json
+{
+  "success": true,
+  "students": [
+    {
+      "_id": "stu_xxx",
+      "name": "钟青羽",
+      "grade": 6,
+      "role": "owner",
+      "permissions": {
+        "canView": true,
+        "canManageParents": true,
+        "canUpload": true,
+        "canGeneratePaper": true,
+        "canRetryAnalysis": true
+      }
+    }
+  ]
+}
+```
+
+**createInvite**
+
+```json
+{
+  "success": true,
+  "inviteId": "invite_xxx",
+  "token": "明文token仅返回一次",
+  "path": "/pages/join-student/join-student?inviteId=invite_xxx&token=...",
+  "expiresAt": "2026-06-20T00:00:00.000Z"
+}
+```
+
+### 错误码 / 错误消息
+
+| 错误消息 | 触发条件 |
+| --- | --- |
+| 操作类型无效 | action 不在白名单 |
+| 缺少 studentId | 需要 studentId 的 action 未传入 |
+| 无权访问该学生 | 当前微信不是 owner，也不是 active viewer |
+| 无权执行该操作 | viewer 尝试创建邀请或移除成员 |
+| 邀请不存在或已失效 | inviteId/token 不匹配，或邀请状态不可用 |
+| 邀请已过期 | 当前时间超过 expiresAt |
+| 不能移除自己 | owner 尝试 revoke 自己 |
+| 家长成员不存在或不可移除 | 目标成员不存在、已移除，或目标是 owner |
+| 家长管理操作失败，请稍后重试 | 任意未预期异常兜底 |
+
+### 安全说明
+
+1. 邀请只在数据库保存 `tokenHash`，不保存明文 token。
+2. `createInvite` 返回的明文 token 只用于生成一次性扫码路径。
+3. 邀请默认 7 天过期，接受后状态改为 `accepted`。
+4. 同一微信重复接受同一孩子档案邀请时保持幂等，不重复创建成员。
+5. 前端不直接查询 `studentMembers / studentInvites`，统一由本云函数做 OPENID 和角色校验。
+
+---
+
+## studentData
+
+### 功能描述
+
+访问感知的学习数据读取云函数。用于共享家长查看同一个孩子的首页摘要、学科主页、学习记录、报告详情和试卷详情。所有 action 都会先校验当前 OPENID 是否为档案 owner 或 active viewer。
+
+### 调用方式
+
+```javascript
+wx.cloud.callFunction({
+  name: 'studentData',
+  data: {
+    action: 'getSubjectDashboard',
+    studentId: 'stu_xxx',
+    subject: 'math'
+  }
+})
+```
+
+### action 列表
+
+| action | 必填参数 | 返回重点 |
+| --- | --- | --- |
+| `getStudentDashboard` | `studentId` | student、subjectProfiles、latestReport、latestPaper、recentReports、recentPapers |
+| `getSubjectDashboard` | `studentId`, `subject` | student、profile、reports、papers |
+| `getLearningTimeline` | `studentId`；`subject` 可选 | reports、papers、items 派生时间线 |
+| `getReportDetail` | `reportId` | student、report |
+| `getPaperDetail` | `paperId` | student、paper |
+
+### 统一返回字段
+
+成功返回会携带角色和权限：
+
+```json
+{
+  "success": true,
+  "role": "viewer",
+  "permissions": {
+    "canView": true,
+    "canManageParents": false,
+    "canUpload": false,
+    "canGeneratePaper": false,
+    "canRetryAnalysis": false
+  }
+}
+```
+
+### 错误码 / 错误消息
+
+| 错误消息 | 触发条件 |
+| --- | --- |
+| 操作类型无效 | action 不在白名单 |
+| 缺少 studentId | 读取首页、学科主页或时间线时未传 studentId |
+| 缺少 reportId | 读取报告详情时未传 reportId |
+| 缺少 paperId | 读取试卷详情时未传 paperId |
+| 报告不存在 | reports 查无该记录 |
+| 试卷不存在 | papers 查无该记录 |
+| 无权访问该学生 | 当前微信不是 owner，也不是 active viewer |
+| 学习数据读取失败，请稍后重试 | 任意未预期异常兜底 |
+
+### 注意事项
+
+1. 本函数只做共享读取，不创建、不修改学习数据。
+2. 时间线仍是派生视图，由 `reports`、`papers` 和 `reports.imageFiles` 汇总，不新增独立事件集合。
+3. viewer 可以读取报告和试卷，但不能通过本函数获得上传、重试或生成试卷能力。
 
 ---
 
@@ -87,7 +246,7 @@ wx.cloud.callFunction({
 | 验证分析必须关联验证试卷 | mode 为 verification 但 paperId 为空，或关联试卷 type 不是 verification |
 | 验证试卷必须使用验证分析模式 | 关联试卷为 verification 但 mode 不是 verification |
 | 学生不存在 | students 集合查无此 doc |
-| 无权访问该学生 | 学生的 `_openid` 与当前 OPENID 不一致 |
+| 无权执行该操作 | 当前微信不是该孩子档案 owner；viewer 不能上传并触发新分析 |
 | 关联试卷不存在或无权访问 | papers 查不到 / studentId 不匹配 / openid 不匹配 |
 | 创建分析任务失败，请稍后重试 | 任意未预期异常（已 try-catch 兜底） |
 
@@ -98,7 +257,7 @@ wx.cloud.callFunction({
 
 ### 依赖的外部服务
 
-- 微信云数据库（students、papers、subjectProfiles、reports 集合）
+- 微信云数据库（students、studentMembers、papers、subjectProfiles、reports 集合）
 - 微信云存储（fileID 引用）
 - 内部云函数：`analyzePhotos`
 
@@ -422,7 +581,7 @@ wx.cloud.callFunction({
 | 验证试卷至少需要一个学习卡点 | type=verification 但 targets 为空 |
 | 默认诊断试卷需要选择有效年级 | type=default-diagnosis 但 grade 不在 1~6 |
 | 学生不存在 | students 查无此 doc |
-| 无权访问该学生 | `_openid` 不匹配 |
+| 无权执行该操作 | 当前微信不是该孩子档案 owner；viewer 不能生成试卷 |
 | AI 返回的试卷结构无效 | 解析后缺少 questions 数组 |
 | AI 返回题目数量不正确 | 题目数 ≠ 期望值（验证=targets×3，诊断=questionCount） |
 | 试卷生成失败，请稍后重试 | 任意未预期异常兜底 |
@@ -435,19 +594,19 @@ wx.cloud.callFunction({
 ### 依赖的外部服务
 
 - 微信云数据库（students、subjectProfiles、papers 集合）
-- 微信云存储（下载字体 `FONT_FILE_ID`、上传生成的 PDF）
+- 微信云存储（上传生成的 PDF）
 - CloudBase AI（模型：`deepseek-v4-flash`，纯文本）
 - npm 包：`pdfkit`
-- 环境变量：`FONT_FILE_ID`（中文字体文件在云存储中的 fileID）
+- 内置字体：`NotoSansCJKsc-Regular.otf`
 
 ### 内部调用关系
 
 - 无内部云函数调用
-- 📦 本地工具函数：`getChineseFont`、`cleanPromptText`、`normalizeQuestionsData`、`generatePDF`
+- 📦 本地工具函数：`cleanPromptText`、`normalizeQuestionsData`、`generatePDF`
 
 ### 注意事项
 
-1. **字体缓存**：中文字体下载到 `os.tmpdir()`，同一容器实例内复用；冷启动首次会额外耗时。
+1. **中文字体**：字体文件随云函数部署，缺失时会直接返回试卷生成失败，避免静默生成乱码 PDF。
 2. **Prompt 防注入**：学生姓名、paperKey 等均经 `cleanPromptText` 清洗（去换行、去尖括号、截断）。
 3. **题目数量强校验**：AI 返回题目数必须严格等于期望值，否则抛错重试。
 4. **预览模式**：`preview=true` 时 PDF 仍会上传云存储，但不写 papers 记录，适合即时预览。
@@ -507,7 +666,7 @@ wx.cloud.callFunction({
 | --- | --- |
 | 缺少 reportId | 未传 reportId |
 | 报告不存在 | reports.doc(reportId).get() 返回空数据 |
-| 无权访问该报告 | `_openid` 不匹配 |
+| 无权执行该操作 | 当前微信不是报告所属孩子档案 owner；viewer 不能生成报告 PDF |
 | 报告 PDF 生成失败，请稍后重试 | 任意未预期异常兜底 |
 
 ### 超时配置建议
@@ -518,14 +677,14 @@ wx.cloud.callFunction({
 ### 依赖的外部服务
 
 - 微信云数据库（reports 集合）
-- 微信云存储（下载字体、上传 PDF）
+- 微信云存储（上传 PDF）
 - npm 包：`pdfkit`
-- 环境变量：`FONT_FILE_ID`
+- 内置字体：`NotoSansCJKsc-Regular.otf`
 
 ### 内部调用关系
 
 - 无内部云函数调用
-- 📦 本地工具函数：`getChineseFont`、`generatePDF`
+- 📦 本地工具函数：`useChineseFont`、`generatePDF`
 
 ### 注意事项
 
@@ -589,14 +748,14 @@ wx.cloud.callFunction({
 | --- | --- |
 | 缺少 reportId | 未传 reportId |
 | 报告不存在 | reports.doc(reportId).get() 返回空 |
-| 无权访问该报告 | `_openid` 不匹配 |
+| 无权访问该报告 | 当前微信不是报告 owner，也不是该孩子档案的 active 成员 |
 | 未找到分析任务 | analysisTasks 中无对应 reportId 的记录 |
 | 获取分析进度失败，请稍后重试 | 任意未预期异常兜底 |
 
 ### 超时配置建议
 
 - **推荐超时：10s**。纯数据库查询，响应极快。
-- 前端轮询间隔建议 2~3s。
+- 前端轮询间隔建议 10s；报告页和学科主页通过 `utils/poller.js` 控制最大轮询次数和超时提示。
 
 ### 依赖的外部服务
 

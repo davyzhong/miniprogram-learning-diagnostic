@@ -7,6 +7,17 @@ const db = cloud.database();
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const MODES = new Set(['diagnosis', 'verification', 'paper', 'default-paper']);
 
+async function hasOwnerAccess(student, openId) {
+  if (student && student._openid === openId) return true;
+  const res = await db.collection('studentMembers').where({
+    studentId: student._id,
+    memberOpenId: openId,
+    role: 'owner',
+    status: 'active',
+  }).get();
+  return (res.data || []).length > 0;
+}
+
 // ========== 主函数 ==========
 exports.main = async (event, context) => {
   const { fileIDs, imageMetas = [], studentId, subject = 'math', mode = 'diagnosis', paperId = '' } = event;
@@ -38,8 +49,8 @@ exports.main = async (event, context) => {
     if (!student) {
       return { success: false, error: '学生不存在' };
     }
-    if (student._openid && student._openid !== currentOpenId) {
-      return { success: false, error: '无权访问该学生' };
+    if (!(await hasOwnerAccess(student, currentOpenId))) {
+      return { success: false, error: '无权执行该操作' };
     }
     let sourceType = 'photo';
     if (paperId) {
@@ -57,12 +68,14 @@ exports.main = async (event, context) => {
       sourceType = paper.type === 'default-diagnosis' ? 'default-paper' : 'paper';
     }
     const studentName = String(student.name || '未知学生').slice(0, 30);
+    const uploadedAt = new Date();
     const imageFiles = fileIDs.map((fileID, index) => {
       const meta = imageMetas[index] || {};
       return {
         fileID,
         fileName: String(meta.fileName || `照片${index + 1}`).slice(0, 120),
         fileSize: Math.max(0, Number(meta.fileSize) || 0),
+        uploadedAt,
         ocrSummary: '',
         contentFingerprint: '',
         isDuplicate: false,
@@ -83,13 +96,15 @@ exports.main = async (event, context) => {
       imageFileIds: fileIDs,
       imageFiles,
       paperId: paperId || '',
+      evidenceTime: uploadedAt,
+      ...(mode === 'verification' ? { verificationUploadedAt: uploadedAt } : {}),
       summary: '',
       totalErrors: 0,
       bottlenecks: [],
       errorDetails: [],
       comparisonSummary: '',
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      createdAt: uploadedAt,
+      updatedAt: uploadedAt,
     };
     const reportRes = await db.collection('reports').add({ data: reportData });
     const reportId = reportRes._id;

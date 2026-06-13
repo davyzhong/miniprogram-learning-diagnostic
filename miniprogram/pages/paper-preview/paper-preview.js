@@ -1,7 +1,14 @@
 // pages/paper-preview/paper-preview.js
 const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
-const { formatBottleneckDisplayName } = require('../../utils/util')
+const {
+  formatBottleneckDisplayName
+} = require('../../utils/util')
+const {
+  bottleneckLabelOf,
+  bottleneckListText,
+  paperCodeOf
+} = require('../../utils/learning-records')
 
 Page({
   data: {
@@ -14,14 +21,33 @@ Page({
     pdfFileId: '',     // paper's pdfFileId (for paperId mode)
 
     typeText: '',
+    paperType: 'verification',
     subjectName: '',
     studentName: '',
     paperName: '',
+    paperCodeText: '',
+    paperDate: '',
     questionCount: 0,
     estimatedMinutes: 0,
     pages: 1,
+    studentPages: 1,
+    answerPages: 1,
+    pageSummary: '共 1 页 · A4 纸张',
     bottleneckTargets: [],
     bottleneckText: '',  // 预拼接的卡点文本
+    questionPreview: [],
+    hasMoreQuestions: false,
+    allQuestionsExpanded: false,
+    workbenchStatus: 'waiting',
+    workbenchStatusText: '等待打印作答',
+    workbenchStatusDesc: '下载或分享打印后，让孩子在纸面完成作答，再回到这里上传验证。',
+    feedback: {
+      hasFeedback: false,
+      reportId: '',
+      title: '暂无验证反馈',
+      summary: '上传作答照片后，这里会显示批改结果和学习卡点变化。',
+      chips: []
+    },
 
     pdfReady: false,
     pdfDownloaded: false,
@@ -42,6 +68,7 @@ Page({
         mode: 'preview',
         fileId: decodedFileId,
         typeText: type === 'verification' ? '验证试卷' : '诊断试卷',
+        paperType: type === 'verification' ? 'verification' : 'diagnosis',
         pdfReady: true,
         pdfDownloaded: this.isPdfDownloaded(decodedFileId)
       })
@@ -52,7 +79,10 @@ Page({
     wx.showLoading({ title: '加载中...' })
 
     try {
-      const p = await cloud.getPaper(paperId)
+      const detail = typeof cloud.getPaperDetail === 'function'
+        ? await cloud.getPaperDetail(paperId)
+        : { paper: await cloud.getPaper(paperId) }
+      const p = detail.paper
 
       if (!p) {
         wx.hideLoading()
@@ -63,6 +93,15 @@ Page({
       const isVerification = p.type === 'verification'
       const uploadMode = isVerification ? 'verification' : 'paper'
       const bottleneckSummaries = this.buildBottleneckSummaries(p)
+      const questions = Array.isArray(p.questions) ? p.questions : []
+      this._paperQuestions = questions
+      const latestReport = detail.latestVerificationReport || detail.latestReport || null
+      const paperCodeText = this.getPaperCodeText(p)
+      const studentName = detail.student && detail.student.name
+        ? detail.student.name
+        : await this.getStudentName(p.studentId)
+      const workbenchStatus = this.buildWorkbenchStatus(latestReport)
+      const feedback = this.buildFeedback(latestReport)
 
       this.setData({
         paperId: p._id,
@@ -71,14 +110,27 @@ Page({
         grade: p.grade || '',
         pdfFileId: p.pdfFileId || '',
         typeText: isVerification ? '验证试卷' : '诊断试卷',
+        paperType: isVerification ? 'verification' : 'diagnosis',
         subjectName: this.getSubjectName(p.subject),
-        studentName: await this.getStudentName(p.studentId),
+        studentName,
         paperName: this.getPaperName(p),
-        questionCount: (p.questions || []).length,
-        estimatedMinutes: p.estimatedMinutes || ((p.questions || []).length * 2),
+        paperCodeText,
+        paperDate: p.paperDate || '',
+        questionCount: questions.length,
+        estimatedMinutes: p.estimatedMinutes || (questions.length * 2),
         pages: p.totalPages || 1,
+        studentPages: p.studentPages || Math.max(1, (p.totalPages || 1) - 1),
+        answerPages: p.answerPages || 1,
+        pageSummary: this.buildPageSummary(p),
         bottleneckTargets: p.bottleneckTargets || [],
         bottleneckText: bottleneckSummaries.join('、'),
+        questionPreview: this.buildQuestionPreview(questions, false),
+        hasMoreQuestions: questions.length > 4,
+        allQuestionsExpanded: false,
+        workbenchStatus: workbenchStatus.status,
+        workbenchStatusText: workbenchStatus.text,
+        workbenchStatusDesc: workbenchStatus.desc,
+        feedback,
         pdfReady: !!p.pdfFileId,
         pdfDownloaded: this.isPdfDownloaded(p.pdfFileId || p._id),
         uploadBtnText: `作答完成，${isVerification ? '上传验证' : '上传答题'}`
@@ -143,30 +195,51 @@ Page({
   },
 
   onShareAppMessage() {
-    const { paperId, fileId, mode, typeText } = this.data
+    const { paperId, fileId, mode, typeText, paperCodeText } = this.data
+    const shareTitle = [typeText, paperCodeText || this.data.paperName].filter(Boolean).join(' · ')
     if (mode === 'preview' && fileId) {
       // preview 模式下 fileId 是临时文件，分享后无法访问；禁用分享并提示
       return {
-        title: `${typeText} - ${this.data.paperName}`,
+        title: shareTitle,
         path: `/pages/paper-preview/paper-preview?fileId=${encodeURIComponent(fileId)}`,
       }
     }
     return {
-      title: `${typeText} - ${this.data.paperName}`,
+      title: shareTitle,
       path: `/pages/paper-preview/paper-preview?paperId=${paperId}`,
     }
   },
 
   // 拍照上传
   onUpload() {
-    const { paperId, studentId, subject, studentName, subjectName, grade } = this.data
+    const { paperId, studentId, subject, studentName, subjectName, grade, paperCodeText } = this.data
     const isVerification = this.data.typeText === '验证试卷'
     const uploadMode = isVerification ? 'verification' : 'paper'
 
     let url = `/pages/upload/upload?mode=${uploadMode}&studentId=${studentId}&subject=${subject}&studentName=${encodeURIComponent(studentName || '')}&subjectName=${encodeURIComponent(subjectName || '')}&grade=${grade || ''}`
     if (paperId) url += `&paperId=${paperId}`
+    if (paperCodeText) url += `&paperCode=${encodeURIComponent(paperCodeText)}`
 
     wx.navigateTo({ url })
+  },
+
+  onToggleQuestions() {
+    if (!this.data.paperId) return
+    const expand = !this.data.allQuestionsExpanded
+    const questions = (this._paperQuestions || [])
+    this.setData({
+      questionPreview: this.buildQuestionPreview(questions, expand),
+      allQuestionsExpanded: expand
+    })
+  },
+
+  onViewFeedbackReport() {
+    const reportId = this.data.feedback && this.data.feedback.reportId
+    if (!reportId) {
+      wx.showToast({ title: '暂无反馈报告', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url: `/pages/report/report?id=${reportId}` })
   },
 
   // 工具函数
@@ -194,6 +267,17 @@ Page({
     return '诊断试卷'
   },
 
+  getPaperCodeText(paper) {
+    if (!paper) return ''
+    const savedCode = paperCodeOf(paper)
+    if (savedCode) return savedCode
+    const subjectName = this.getSubjectName(paper.subject)
+    const dateText = String(paper.paperDate || '').replace(/-/g, '')
+    if (subjectName && dateText) return `${subjectName}-${dateText}`
+    if (paper._id) return `试卷-${String(paper._id).slice(-6)}`
+    return ''
+  },
+
   buildBottleneckSummaries(paper) {
     if (Array.isArray(paper.bottleneckSummaries) && paper.bottleneckSummaries.length > 0) {
       return uniqueBottleneckSummaries(paper.bottleneckSummaries)
@@ -214,6 +298,82 @@ Page({
     if (targetFallbacks.length > 0) return uniqueBottleneckSummaries(targetFallbacks)
 
     return uniqueBottleneckSummaries(questions)
+  },
+
+  buildPageSummary(paper) {
+    const totalPages = Number(paper.totalPages) || 1
+    const answerPages = Number(paper.answerPages) || (totalPages > 1 ? 1 : 0)
+    const studentPages = Number(paper.studentPages) || Math.max(1, totalPages - answerPages)
+    if (answerPages > 0) {
+      return `学生卷 ${studentPages} 页 · 答案 ${answerPages} 页 · 共 ${studentPages + answerPages} 页`
+    }
+    return `共 ${totalPages} 页 · A4 纸张`
+  },
+
+  buildQuestionPreview(questions = [], expanded = false) {
+    const source = Array.isArray(questions) ? questions : []
+    const visible = expanded ? source : source.slice(0, 4)
+    return visible.map((question, index) => ({
+      number: question.index || index + 1,
+      content: question.content || '题目内容待加载',
+      bottleneckName: bottleneckLabelOf(question)
+    }))
+  },
+
+  buildWorkbenchStatus(report) {
+    if (!report) {
+      return {
+        status: 'waiting',
+        text: '等待打印作答',
+        desc: '下载或分享打印后，让孩子在纸面完成作答，再回到这里上传验证。'
+      }
+    }
+    if (report.status === 'analyzing') {
+      return {
+        status: 'analyzing',
+        text: '反馈分析中',
+        desc: '作答照片已经上传，AI 正在整理批改结果和学习卡点变化。'
+      }
+    }
+    if (report.status === 'failed') {
+      return {
+        status: 'failed',
+        text: '反馈分析失败',
+        desc: '这次验证反馈没有完成，可以重新上传作答照片。'
+      }
+    }
+    return {
+      status: 'completed',
+      text: '已生成验证反馈',
+      desc: '可以查看批改结果、评语和学习卡点改善情况。'
+    }
+  },
+
+  buildFeedback(report) {
+    if (!report) {
+      return {
+        hasFeedback: false,
+        reportId: '',
+        title: '暂无验证反馈',
+        summary: '上传作答照片后，这里会显示批改结果和学习卡点变化。',
+        chips: []
+      }
+    }
+
+    const evidence = Array.isArray(report.verificationEvidence) ? report.verificationEvidence : []
+    const improvedCount = evidence.filter(item => item.complete && item.allCorrect).length
+    const bottleneckText = bottleneckListText(report.bottlenecks || [])
+    return {
+      hasFeedback: report.status === 'completed',
+      reportId: report._id || '',
+      title: report.status === 'completed' ? '验证反馈已完成' : (report.status === 'failed' ? '验证反馈失败' : '正在分析反馈'),
+      summary: report.comparisonSummary || report.changeSummary || report.summary || '反馈报告生成后会在这里展示。',
+      chips: [
+        improvedCount > 0 ? `${improvedCount} 个卡点有改善` : '',
+        bottleneckText ? `仍需关注：${bottleneckText}` : '',
+        report.status === 'failed' ? '可重新上传' : ''
+      ].filter(Boolean)
+    }
   },
 
   getDownloadedStorageKey(cloudFileId) {

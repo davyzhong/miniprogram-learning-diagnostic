@@ -1,6 +1,7 @@
 // pages/subject-home/subject-home.js
 const cloud = require('../../utils/cloud')
 const { formatRelativeTime } = require('../../utils/util')
+const { buildStatusText } = require('../../utils/learning-records')
 const { createPoller } = require('../../utils/poller')
 const { buildSubjectHomeView } = require('./subject-home-presenter')
 const STALE_ANALYSIS_MS = 10 * 60 * 1000
@@ -29,6 +30,8 @@ Page({
     recentChanges: [],
     hasDiagnosis: false,
     isFirstUse: true,
+    permissions: {},
+    canWriteActions: true,
 
     analysisStatus: '',   // '' | 'analyzing'
     analysisStatusText: '',
@@ -58,7 +61,6 @@ Page({
       this.loadProfile().then(() => {
         this.checkAnalysisStatus()
       })
-      this.loadRecords()
     }
   },
 
@@ -81,6 +83,22 @@ Page({
   async loadProfile() {
     const { studentId, subject } = this.data
     try {
+      if (typeof cloud.getSubjectDashboard === 'function') {
+        const dashboard = await cloud.getSubjectDashboard(studentId, subject)
+        const p = dashboard.profile
+        this._profile = p || {}
+        this._reports = dashboard.reports || []
+        const permissions = dashboard.permissions || {}
+        this.setData({
+          permissions,
+          canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
+          analysisStatus: p && p.analysisStatus || '',
+          currentAnalysisId: p && p.currentAnalysisId || '',
+        })
+        this.applyDashboardView()
+        return
+      }
+
       const p = await cloud.getSubjectProfile(studentId, subject)
       if (p) {
         this._profile = p
@@ -98,6 +116,7 @@ Page({
   // ========== 加载历史记录 ==========
   async loadRecords() {
     const { studentId, subject } = this.data
+    if (typeof cloud.getSubjectDashboard === 'function') return
     try {
       const reports = await cloud.getReports(studentId, subject, 20)
       this._reports = reports
@@ -109,7 +128,8 @@ Page({
 
   applyDashboardView() {
     const view = buildSubjectHomeView(this._profile || {}, this._reports || [], formatRelativeTime, {
-      subjectName: this.data.subjectName
+      subjectName: this.data.subjectName,
+      permissions: this.data.permissions || {}
     })
     this.setData({ ...view, records: view.recentChanges })
   },
@@ -163,13 +183,13 @@ Page({
           ? Date.now() - new Date(progress.createdAt).getTime()
           : 0
         if (progress && (progress.status === 'failed' || taskAge > STALE_ANALYSIS_MS)) {
-          this.setData({ analysisStatusText: '分析超时，点击查看并重新分析' })
+          this.setData({ analysisStatusText: buildStatusText({ status: 'timeout' }) })
           return false
         }
         this.setData({
           analysisStatusText: progress && progress.totalBatches > 0
             ? `AI 正在分析第 ${Math.min(progress.completedBatches + 1, progress.totalBatches)}/${progress.totalBatches} 批`
-            : 'AI 后台分析中，点击查看详情'
+            : buildStatusText({ status: 'analyzing' })
         })
         return true
       },
@@ -185,6 +205,7 @@ Page({
   // ========== 入口点击 ==========
 
   onDiagnosisTap() {
+    if (!this.data.canWriteActions) return
     const { studentId, subject, subjectName, studentName, grade } = this.data
     wx.navigateTo({
       url: `/pages/upload/upload?mode=diagnosis&studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}&grade=${grade}`
@@ -196,6 +217,7 @@ Page({
   },
 
   navigateToVerification(targetCode = '') {
+    if (!this.data.canWriteActions) return
     const { studentId, subject, subjectName, studentName } = this.data
     const targetParam = targetCode ? `&targetCode=${encodeURIComponent(targetCode)}` : ''
     wx.navigateTo({
@@ -204,6 +226,7 @@ Page({
   },
 
   onDefaultPaperTap() {
+    if (!this.data.canWriteActions) return
     const { studentId, subject, subjectName, studentName, grade } = this.data
     wx.navigateTo({
       url: `/pages/default-paper/default-paper?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}&grade=${grade}`
@@ -232,6 +255,7 @@ Page({
   },
 
   onTaskTap(e) {
+    if (!this.data.canWriteActions) return
     const { code } = e.currentTarget.dataset
     this.navigateToVerification(code || '')
   },

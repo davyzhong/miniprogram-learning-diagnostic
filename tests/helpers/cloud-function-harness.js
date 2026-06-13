@@ -10,11 +10,23 @@ function matches(document, filter) {
   return Object.entries(filter || {}).every(([key, value]) => document[key] === value)
 }
 
-function createDatabase(initial = {}) {
+function createDatabase(initial = {}, options = {}) {
   const collections = Object.fromEntries(
     Object.entries(initial).map(([name, items]) => [name, clone(items)])
   )
+  const missingCollections = new Set(options.missingCollections || [])
   let nextId = 1
+
+  function missingCollectionError(name) {
+    const error = new Error(`errCode: -502005 database collection not exists | errMsg: [ResourceNotFound] Db or Table not exist: ${name}`)
+    error.errCode = -502005
+    error.errMsg = `[ResourceNotFound] Db or Table not exist: ${name}`
+    return error
+  }
+
+  function assertCollectionExists(name) {
+    if (missingCollections.has(name)) throw missingCollectionError(name)
+  }
 
   function getItems(name) {
     if (!collections[name]) collections[name] = []
@@ -32,16 +44,23 @@ function createDatabase(initial = {}) {
   }
 
   function collection(name) {
-    const items = getItems(name)
     return {
       add: async ({ data }) => {
+        assertCollectionExists(name)
+        const items = getItems(name)
         const _id = data._id || `${name}-${nextId++}`
         items.push({ _id, ...clone(data) })
         return { _id }
       },
       doc: id => ({
-        get: async () => ({ data: clone(items.find(item => item._id === id)) }),
+        get: async () => {
+          assertCollectionExists(name)
+          const items = getItems(name)
+          return { data: clone(items.find(item => item._id === id)) }
+        },
         update: async ({ data }) => {
+          assertCollectionExists(name)
+          const items = getItems(name)
           const document = items.find(item => item._id === id)
           if (!document) throw new Error(`${name}/${id} not found`)
           applyUpdate(document, data)
@@ -49,6 +68,8 @@ function createDatabase(initial = {}) {
         }
       }),
       where: filter => {
+        assertCollectionExists(name)
+        const items = getItems(name)
         let selected = items.filter(item => matches(item, filter))
         const query = {
           orderBy(field, direction) {
@@ -72,6 +93,11 @@ function createDatabase(initial = {}) {
 
   return {
     collection,
+    createCollection: async name => {
+      missingCollections.delete(name)
+      getItems(name)
+      return { errMsg: 'collection.create:ok' }
+    },
     command: {
       inc: value => ({ __operation: 'inc', value })
     },

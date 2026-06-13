@@ -9,6 +9,8 @@ cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const TYPES = new Set(['verification', 'default-diagnosis']);
+const SUBJECT_CODE = { math: 'MATH', chinese: 'CHN', english: 'ENG' };
+const SUBJECT_NAME = { math: '数学', chinese: '语文', english: '英语' };
 
 // 初始化 CloudBase AI SDK
 const app = tcb.init({
@@ -23,6 +25,51 @@ function cleanPromptText(value, maxLength = 30) {
     .replace(/[<>`]/g, '')
     .trim()
     .slice(0, maxLength);
+}
+
+function formatLocalDate(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateCode(paperDate) {
+  const text = /^\d{4}-\d{2}-\d{2}$/.test(String(paperDate || ''))
+    ? String(paperDate)
+    : formatLocalDate(new Date());
+  return text.replace(/-/g, '');
+}
+
+function normalizePaperDate(value) {
+  const text = cleanPromptText(value, 20);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  return formatLocalDate(new Date());
+}
+
+async function createPaperCodes(studentId, subject, paperDate) {
+  const dateCode = formatDateCode(paperDate);
+  const normalizedSubject = SUBJECT_CODE[subject] || 'PAPER';
+  const subjectName = SUBJECT_NAME[subject] || subject || '试卷';
+  const existing = await db.collection('papers')
+    .where({ studentId, subject, paperDate })
+    .get();
+  const sequence = String((existing.data || []).length + 1).padStart(2, '0');
+  return {
+    paperCode: `${normalizedSubject}-${dateCode}-${sequence}`,
+    paperDisplayCode: `${subjectName}-${dateCode}-${sequence}`,
+  };
+}
+
+async function hasOwnerAccess(student, openId) {
+  if (student && student._openid === openId) return true;
+  const res = await db.collection('studentMembers').where({
+    studentId: student._id,
+    memberOpenId: openId,
+    role: 'owner',
+    status: 'active',
+  }).get();
+  return (res.data || []).length > 0;
 }
 
 function normalizeQuestionsData(data, expectedCount) {
@@ -147,6 +194,7 @@ exports.main = async (event) => {
     paperKey = '',
     questionCount = 12,
     grade = 0,
+    paperDate = '',
   } = event;
 
   if (!studentId) {
@@ -165,6 +213,7 @@ exports.main = async (event) => {
     return { success: false, error: '默认诊断试卷需要选择有效年级' };
   }
   const normalizedQuestionCount = Math.min(20, Math.max(6, Number(questionCount) || 12));
+  const normalizedPaperDate = normalizePaperDate(paperDate);
 
   try {
     const studentRes = await db.collection('students').doc(studentId).get();
@@ -173,8 +222,8 @@ exports.main = async (event) => {
     if (!student) {
       return { success: false, error: '学生不存在' };
     }
-    if (student._openid && student._openid !== currentOpenId) {
-      return { success: false, error: '无权访问该学生' };
+    if (!(await hasOwnerAccess(student, currentOpenId))) {
+      return { success: false, error: '无权执行该操作' };
     }
 
     // 1. 调用混元生成题目
@@ -189,10 +238,26 @@ exports.main = async (event) => {
       type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0
     );
     const bottleneckSummaries = buildBottleneckSummaries(questionsData.questions, targets);
+    const paperCodes = await createPaperCodes(studentId, subject, normalizedPaperDate);
 
     // 2. 生成 PDF
     console.log('开始生成 PDF');
-    const pdfBuffer = await generatePDF(questionsData, subject, type);
+    const pdfResult = await generatePDF(questionsData, subject, type, {
+      paperDate: normalizedPaperDate,
+      ...paperCodes,
+    });
+    const pdfBuffer = Buffer.isBuffer(pdfResult) ? pdfResult : pdfResult.buffer;
+    if (!Buffer.isBuffer(pdfBuffer)) {
+      throw new Error('PDF 生成结果无效');
+    }
+    const pageInfo = {
+      studentPages: Number(pdfResult.studentPages) || Math.max(1, Math.ceil(questionsData.questions.length / 6)),
+      answerPages: Number(pdfResult.answerPages) || 1,
+      totalPages: Number(pdfResult.totalPages) || 0,
+    };
+    if (!pageInfo.totalPages) {
+      pageInfo.totalPages = pageInfo.studentPages + pageInfo.answerPages;
+    }
 
     // 3. 上传到云存储
     const timestamp = Date.now();
@@ -209,6 +274,9 @@ exports.main = async (event) => {
         pdfFileId,
         title: questionsData.title,
         questionCount: questionsData.questions.length,
+        paperDate: normalizedPaperDate,
+        ...paperCodes,
+        ...pageInfo,
       };
     }
 
@@ -221,11 +289,14 @@ exports.main = async (event) => {
         type,
         grade: type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0,
         paperKey: cleanPromptText(paperKey, 20),
+        ...paperCodes,
         bottleneckTargets: targets,
         bottleneckSummaries,
         questions: questionsData.questions || [],
         pdfFileId,
-        totalPages: Math.max(1, Math.ceil(questionsData.questions.length / 6)),
+        paperDate: normalizedPaperDate,
+        generatedAt: new Date(),
+        ...pageInfo,
         createdAt: new Date(),
       },
     });
@@ -237,6 +308,9 @@ exports.main = async (event) => {
       pdfFileId,
       title: questionsData.title,
       questionCount: (questionsData.questions || []).length,
+      paperDate: normalizedPaperDate,
+      ...paperCodes,
+      ...pageInfo,
     };
   } catch (err) {
     console.error('generatePaper 失败：', err);

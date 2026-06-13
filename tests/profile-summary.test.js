@@ -107,7 +107,9 @@ test('ineffective reports preserve the current diagnosis', () => {
 
   assert.equal(result.isEffective, false)
   assert.equal(result.currentSummary, '已有结论')
-  assert.deepEqual(result.currentBottlenecks, profile.currentBottlenecks)
+  assert.equal(result.currentBottlenecks[0].lpCode, 'LP-001')
+  assert.equal(result.currentBottlenecks[0].status, 'persisting')
+  assert.equal(result.currentBottlenecks[0].trend, 'persisting')
   assert.equal(result.changeSummary, '本次未产生新的诊断结论')
 })
 

@@ -31,6 +31,19 @@ function createPdfKitMock() {
   }
 }
 
+function createTcbMock(text) {
+  return {
+    SYMBOL_CURRENT_ENV: 'test',
+    init: () => ({
+      ai: () => ({
+        createModel: () => ({
+          generateText: async () => ({ text })
+        })
+      })
+    })
+  }
+}
+
 test('uploadAndAnalyze creates a report and starts analysis for an owned student', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
@@ -51,7 +64,12 @@ test('uploadAndAnalyze creates a report and starts analysis for an owned student
   })
 
   assert.equal(result.success, true)
-  assert.equal(db.dump('reports')[0].imageFiles[0].fileName, 'paper.jpg')
+  const report = db.dump('reports')[0]
+  assert.equal(report.imageFiles[0].fileName, 'paper.jpg')
+  assert.ok(report.evidenceTime)
+  assert.ok(report.imageFiles[0].uploadedAt)
+  assert.equal(new Date(report.imageFiles[0].uploadedAt).getTime(), new Date(report.evidenceTime).getTime())
+  assert.equal(new Date(report.createdAt).getTime(), new Date(report.evidenceTime).getTime())
   assert.equal(db.dump('subjectProfiles')[0].analysisStatus, 'analyzing')
   assert.equal(cloud.calls.find(call => call.name === 'callFunction').payload.name, 'analyzePhotos')
 })
@@ -112,8 +130,67 @@ test('uploadAndAnalyze rejects invalid uploads and students owned by another use
     fileIDs: ['cloud://photo-1'],
     studentId: 'student-1',
     subject: 'math'
-  })).error, '无权访问该学生')
+  })).error, '无权执行该操作')
   assert.equal(db.dump('reports').length, 0)
+})
+
+test('viewer cannot perform owner-only write operations', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentMembers: [{ _id: 'member-1', studentId: 'student-1', ownerOpenId: 'owner-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }],
+    subjectProfiles: [{ _id: 'profile-1', studentId: 'student-1', subject: 'math' }],
+    papers: [],
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      status: 'completed',
+      createdAt: '2026-06-11T10:00:00Z'
+    }]
+  })
+  const viewerCloud = createCloudMock({ db, openId: 'viewer-1' })
+  const upload = loadModule('cloudfunctions/uploadAndAnalyze/index.js', {
+    'wx-server-sdk': viewerCloud
+  })
+  const generatePaper = loadModule('cloudfunctions/generatePaper/index.js', {
+    'wx-server-sdk': viewerCloud,
+    '@cloudbase/node-sdk': createTcbMock(JSON.stringify({ title: '测试', questions: [] })),
+    './pdf-renderer': { generatePDF: async () => ({ buffer: Buffer.from('pdf'), studentPages: 1, answerPages: 1, totalPages: 2 }) }
+  })
+  const generateReportPDF = loadModule('cloudfunctions/generateReportPDF/index.js', {
+    'wx-server-sdk': viewerCloud,
+    'pdfkit': createPdfKitMock()
+  })
+
+  assert.equal((await upload.main({
+    fileIDs: ['cloud://photo-1'],
+    studentId: 'student-1',
+    subject: 'math'
+  })).error, '无权执行该操作')
+  assert.equal((await generatePaper.main({
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'verification',
+    targets: ['LP-001']
+  })).error, '无权执行该操作')
+  assert.equal((await generateReportPDF.main({ reportId: 'report-1' })).error, '无权执行该操作')
+})
+
+test('viewer can read analysis progress for a joined child', async () => {
+  const db = createDatabase({
+    reports: [{ _id: 'report-1', _openid: 'owner-1', studentId: 'student-1' }],
+    studentMembers: [{ _id: 'member-1', studentId: 'student-1', ownerOpenId: 'owner-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }],
+    analysisTasks: [{ _id: 'task-1', reportId: 'report-1', status: 'processing', completedBatches: 1, totalBatches: 2, createdAt: '2026-06-11T10:00:00Z' }]
+  })
+  const progress = loadModule('cloudfunctions/getAnalysisProgress/index.js', {
+    'wx-server-sdk': createCloudMock({ db, openId: 'viewer-1' })
+  })
+
+  const result = await progress.main({ reportId: 'report-1' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.completedBatches, 1)
 })
 
 test('uploadAndAnalyze requires a matching verification paper for verification reports', async () => {
@@ -147,6 +224,36 @@ test('uploadAndAnalyze requires a matching verification paper for verification r
   assert.equal(db.dump('reports').length, 0)
 })
 
+test('uploadAndAnalyze stores verification upload evidence time', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    subjectProfiles: [{ _id: 'profile-1', studentId: 'student-1', subject: 'math' }],
+    papers: [{
+      _id: 'paper-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      type: 'verification'
+    }],
+    reports: []
+  })
+  const handler = loadModule('cloudfunctions/uploadAndAnalyze/index.js', {
+    'wx-server-sdk': createCloudMock({ db })
+  })
+
+  const result = await handler.main({
+    fileIDs: ['cloud://photo-1'],
+    studentId: 'student-1',
+    subject: 'math',
+    mode: 'verification',
+    paperId: 'paper-1'
+  })
+  const report = db.dump('reports')[0]
+
+  assert.equal(result.success, true)
+  assert.ok(report.verificationUploadedAt)
+  assert.equal(new Date(report.verificationUploadedAt).getTime(), new Date(report.evidenceTime).getTime())
+})
+
 test('getAnalysisProgress returns the newest task and rejects other owners', async () => {
   const db = createDatabase({
     reports: [{ _id: 'report-1', _openid: 'owner-1' }],
@@ -166,6 +273,74 @@ test('getAnalysisProgress returns the newest task and rejects other owners', asy
   assert.equal((await owned.main({ reportId: 'report-1' })).status, 'processing')
   assert.equal((await owned.main({ reportId: 'report-1' })).createdAt, '2026-06-11T11:00:00Z')
   assert.equal((await denied.main({ reportId: 'report-1' })).error, '无权访问该报告')
+})
+
+test('generatePaper stores and returns printable PDF page metadata', async () => {
+  const questions = Array.from({ length: 6 }, (_, index) => ({
+    index: index + 1,
+    content: `计算题 ${index + 1}`,
+    answer: String(index + 1),
+    points: 10,
+    lpCode: index < 3 ? 'LP-001' : 'LP-008',
+    lpName: index < 3 ? '计算错误' : '审题错误'
+  }))
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      pendingBottlenecks: [
+        { lpCode: 'LP-001', lpName: '计算错误' },
+        { lpCode: 'LP-008', lpName: '审题错误' }
+      ]
+    }],
+    papers: []
+  })
+  let pdfOptions = null
+  const handler = loadModule('cloudfunctions/generatePaper/index.js', {
+    'wx-server-sdk': createCloudMock({ db }),
+    '@cloudbase/node-sdk': createTcbMock(JSON.stringify({ title: '数学验证试卷', questions })),
+    './pdf-renderer': {
+      generatePDF: async (...args) => {
+        pdfOptions = args[3]
+        return {
+        buffer: Buffer.from('pdf'),
+        studentPages: 1,
+        answerPages: 1,
+        totalPages: 2
+        }
+      }
+    }
+  })
+
+  const result = await handler.main({
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'verification',
+    targets: ['LP-001', 'LP-008'],
+    paperDate: '2026-06-13'
+  })
+  const paper = db.dump('papers')[0]
+
+  assert.equal(result.success, true)
+  assert.equal(result.questionCount, 6)
+  assert.equal(result.studentPages, 1)
+  assert.equal(result.answerPages, 1)
+  assert.equal(result.totalPages, 2)
+  assert.equal(result.paperDate, '2026-06-13')
+  assert.equal(result.paperCode, 'MATH-20260613-01')
+  assert.equal(result.paperDisplayCode, '数学-20260613-01')
+  assert.equal(pdfOptions.paperDate, '2026-06-13')
+  assert.equal(pdfOptions.paperCode, result.paperCode)
+  assert.equal(pdfOptions.paperDisplayCode, result.paperDisplayCode)
+  assert.equal(paper.paperDate, '2026-06-13')
+  assert.equal(paper.paperCode, result.paperCode)
+  assert.equal(paper.paperDisplayCode, result.paperDisplayCode)
+  assert.equal(paper.studentPages, 1)
+  assert.equal(paper.answerPages, 1)
+  assert.equal(paper.totalPages, 2)
+  assert.deepEqual(paper.bottleneckSummaries, ['计算错误', '审题错误'])
 })
 
 test('analyzePhotos splits batches, excludes duplicate pages and updates the profile', async () => {
@@ -190,8 +365,9 @@ test('analyzePhotos splits batches, excludes duplicate pages and updates the pro
         type: 'diagnosis',
         status: 'analyzing',
         createdAt: '2026-06-11T10:00:00Z',
+        evidenceTime: '2026-06-11T09:50:00Z',
         imageFileIds: fileIDs,
-        imageFiles: fileIDs.map(fileID => ({ fileID }))
+        imageFiles: fileIDs.map(fileID => ({ fileID, uploadedAt: '2026-06-11T09:50:00Z' }))
       }
     ],
     subjectProfiles: [{
@@ -242,6 +418,7 @@ test('analyzePhotos splits batches, excludes duplicate pages and updates the pro
   assert.equal(result.success, true)
   assert.deepEqual(batchCalls.map(batch => batch.length), [5, 1])
   assert.equal(report.imageFiles[0].isDuplicate, true)
+  assert.equal(new Date(report.imageFiles[0].uploadedAt).getTime(), new Date('2026-06-11T09:50:00Z').getTime())
   assert.equal(report.totalErrors, 5)
   assert.equal(report.bottlenecks[0].errorCount, 5)
   assert.equal(report.isEffective, true)
@@ -609,7 +786,7 @@ test('generateReportPDF checks ownership before producing a document', async () 
 
   const result = await handler.main({ reportId: 'report-1' })
   assert.equal(result.success, false)
-  assert.equal(result.error, '无权访问该报告')
+  assert.equal(result.error, '无权执行该操作')
 })
 
 test('generateReportPDF uploads and stores the generated file for its owner', async () => {

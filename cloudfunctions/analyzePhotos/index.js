@@ -322,6 +322,7 @@ exports.main = async (event) => {
         fileID,
         fileName: initial.fileName || `照片${index + 1}`,
         fileSize: Number(initial.fileSize) || 0,
+        uploadedAt: initial.uploadedAt || report.evidenceTime || report.createdAt,
         ocrSummary: page.ocrSummary || '',
         contentFingerprint: page.contentFingerprint || '',
         isDuplicate: Boolean(page.isDuplicate),
@@ -360,7 +361,7 @@ exports.main = async (event) => {
       verificationTargets,
       verificationEvidence: merged.verificationEvidence || [],
       allPhotosDuplicate: uniquePages.length === 0,
-    }, new Date());
+    }, report.evidenceTime || report.createdAt || new Date());
 
     // 5. 更新 reports 集合
     await db.collection('reports').doc(reportId).update({

@@ -227,6 +227,63 @@ async function getAnalysisProgress(reportId) {
   return callFunction('getAnalysisProgress', { reportId })
 }
 
+async function getAccessibleStudents() {
+  const result = await callFunction('studentAccess', { action: 'getAccessibleStudents' })
+  return result.students || []
+}
+
+async function listStudentMembers(studentId) {
+  return callFunction('studentAccess', { action: 'listMembers', studentId })
+}
+
+async function createStudentInvite(studentId, presetRelation = '') {
+  return callFunction('studentAccess', { action: 'createInvite', studentId, presetRelation })
+}
+
+async function getStudentInvite(inviteId, token) {
+  return callFunction('studentAccess', { action: 'getInvite', inviteId, token })
+}
+
+async function acceptStudentInvite(inviteId, token, profile = {}) {
+  return callFunction('studentAccess', { action: 'acceptInvite', inviteId, token, ...profile })
+}
+
+async function getStudentInviteByCode(inviteCode) {
+  return callFunction('studentAccess', { action: 'getInviteByCode', inviteCode })
+}
+
+async function acceptStudentInviteByCode(params) {
+  return callFunction('studentAccess', { action: 'acceptInviteByCode', ...params })
+}
+
+async function updateStudentMemberProfile(params) {
+  return callFunction('studentAccess', { action: 'updateMemberProfile', ...params })
+}
+
+async function revokeStudentMember(studentId, memberOpenId) {
+  return callFunction('studentAccess', { action: 'revokeMember', studentId, memberOpenId })
+}
+
+async function getStudentDashboard(studentId) {
+  return callFunction('studentData', { action: 'getStudentDashboard', studentId })
+}
+
+async function getSubjectDashboard(studentId, subject) {
+  return callFunction('studentData', { action: 'getSubjectDashboard', studentId, subject })
+}
+
+async function getLearningTimeline({ studentId, subject } = {}) {
+  return callFunction('studentData', { action: 'getLearningTimeline', studentId, subject })
+}
+
+async function getReportDetail(reportId) {
+  return callFunction('studentData', { action: 'getReportDetail', reportId })
+}
+
+async function getPaperDetail(paperId) {
+  return callFunction('studentData', { action: 'getPaperDetail', paperId })
+}
+
 module.exports = {
   normalizeError,
   isTimeoutError,
@@ -250,4 +307,18 @@ module.exports = {
   callGeneratePaper,
   callGenerateReportPDF,
   getAnalysisProgress,
+  getAccessibleStudents,
+  listStudentMembers,
+  createStudentInvite,
+  getStudentInvite,
+  acceptStudentInvite,
+  getStudentInviteByCode,
+  acceptStudentInviteByCode,
+  updateStudentMemberProfile,
+  revokeStudentMember,
+  getStudentDashboard,
+  getSubjectDashboard,
+  getLearningTimeline,
+  getReportDetail,
+  getPaperDetail,
 }

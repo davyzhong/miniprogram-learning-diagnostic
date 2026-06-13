@@ -9,12 +9,21 @@ const SUBJECT_NAMES = {
   english: '英语'
 }
 
+const OWNER_PERMISSIONS = {
+  canView: true,
+  canManageParents: true,
+  canUpload: true,
+  canGeneratePaper: true,
+  canRetryAnalysis: true
+}
+
 Page({
   data: {
     loading: true,
     students: [],
     activeStudentId: '',
     activeStudent: null,
+    permissions: {},
     hasStudents: false,
     home: null
   },
@@ -28,13 +37,29 @@ Page({
     wx.showLoading({ title: '加载中...' })
 
     try {
-      // 1. 加载所有学生
-      const students = await cloud.getStudents()
+      // 1. 加载所有可访问学生。新版共享家长走云函数，旧实现保留为兜底。
+      let students = []
+      let usedSharedAccess = false
+      try {
+        if (typeof cloud.getAccessibleStudents === 'function') {
+          usedSharedAccess = true
+          students = await cloud.getAccessibleStudents()
+        } else {
+          students = await cloud.getStudents()
+        }
+      } catch (error) {
+        console.warn('共享档案入口不可用，回退到旧档案读取', error && error.message ? error.message : error)
+        students = typeof cloud.getStudents === 'function' ? await cloud.getStudents() : []
+      }
+      if (usedSharedAccess && !students.length && typeof cloud.getStudents === 'function') {
+        students = await cloud.getStudents()
+      }
       if (!students.length) {
         this.setData({
           students: [],
           activeStudentId: '',
           activeStudent: null,
+          permissions: {},
           hasStudents: false,
           home: null,
           loading: false
@@ -88,24 +113,44 @@ Page({
       }))
 
       const activeStudent = viewModels[0]
-      const activeProfiles = profileLists[activeStudent._id] || []
-      const reports = typeof cloud.getReports === 'function'
-        ? await cloud.getReports(activeStudent._id)
-        : []
-      const papers = typeof cloud.getPapers === 'function'
-        ? await cloud.getPapers({ studentId: activeStudent._id })
-        : []
+      let activeProfiles = profileLists[activeStudent._id] || []
+      let reports = []
+      let papers = []
+      let permissions = activeStudent.permissions || OWNER_PERMISSIONS
+
+      if (typeof cloud.getStudentDashboard === 'function') {
+        try {
+          const dashboard = await cloud.getStudentDashboard(activeStudent._id)
+          activeProfiles = dashboard.subjectProfiles || activeProfiles
+          reports = dashboard.recentReports || []
+          papers = dashboard.recentPapers || []
+          permissions = dashboard.permissions || permissions
+        } catch (error) {
+          console.warn('共享档案详情不可用，回退到旧学习记录读取', error && error.message ? error.message : error)
+        }
+      }
+
+      if (!reports.length && !papers.length) {
+        reports = typeof cloud.getReports === 'function'
+          ? await cloud.getReports(activeStudent._id)
+          : []
+        papers = typeof cloud.getPapers === 'function'
+          ? await cloud.getPapers({ studentId: activeStudent._id })
+          : []
+      }
       const home = buildLearningProfileHomeView({
         student: activeStudent,
         profiles: activeProfiles,
         reports,
-        papers
+        papers,
+        permissions
       }, formatRelativeTime)
 
       this.setData({
         students: viewModels,
         activeStudentId: activeStudent._id,
-        activeStudent,
+        activeStudent: { ...activeStudent, permissions },
+        permissions,
         hasStudents: true,
         home,
         loading: false
@@ -129,6 +174,32 @@ Page({
 
   onManageStudents() {
     this.onAddStudent()
+  },
+
+  onParentManagement() {
+    const student = this.data.activeStudent || {}
+    const studentId = student._id || this.data.activeStudentId
+    if (!studentId) {
+      wx.showToast({ title: '缺少孩子档案信息', icon: 'none' })
+      return
+    }
+    const url = `/pages/parent-management/parent-management?studentId=${studentId}`
+    wx.navigateTo({
+      url,
+      fail: error => {
+        console.error('打开家长管理失败', error)
+        wx.redirectTo({
+          url,
+          fail: redirectError => {
+            console.error('重定向家长管理失败', redirectError)
+            const message = redirectError && redirectError.errMsg
+              ? redirectError.errMsg.replace(/^redirectTo:fail\s*/i, '').slice(0, 18)
+              : '请重新编译后再试'
+            wx.showToast({ title: message || '家长管理暂时打不开', icon: 'none' })
+          }
+        })
+      }
+    })
   },
 
   navigateToSubject(subject) {
@@ -176,6 +247,10 @@ Page({
     const student = this.data.activeStudent || {}
     const subject = home.nextAction && home.nextAction.subject ? home.nextAction.subject : 'math'
     const subjectName = SUBJECT_NAMES[subject] || '数学'
+    if (home.nextAction && home.nextAction.primaryText === '查看学习记录') {
+      this.onViewAllRecords()
+      return
+    }
     if (home.nextAction && home.nextAction.primaryText === '生成验证试卷') {
       wx.navigateTo({
         url: `/pages/generate-verification/generate-verification?studentId=${student._id || this.data.activeStudentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}`
@@ -192,6 +267,7 @@ Page({
     const student = this.data.activeStudent || {}
     const subject = home.nextAction && home.nextAction.subject ? home.nextAction.subject : 'math'
     const subjectName = SUBJECT_NAMES[subject] || '数学'
+    if (!home.nextAction || !home.nextAction.secondaryText) return
     if (home.nextAction && home.nextAction.secondaryText === '查看学习记录') {
       this.onViewAllRecords()
       return

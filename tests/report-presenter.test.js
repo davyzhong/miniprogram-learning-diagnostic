@@ -66,12 +66,18 @@ test('builds a directly readable report headline and source summary', () => {
     type: 'diagnosis',
     changeSummary: '发现分数运算卡点',
     summary: '旧摘要',
+    evidenceTime: '2026-06-13T12:30:00Z',
     imageFiles: [{ fileID: 'one' }, { fileID: 'two' }],
-    bottlenecks: [{ lpCode: 'LP-001', lpName: '分数运算', status: 'found', errorCount: 2 }]
+    bottlenecks: [
+      { lpCode: 'LP-001', lpName: '分数运算', status: 'found', trend: 'new', errorCount: 2 },
+      { lpCode: 'LP-008', lpName: '审题错误', status: 'persisting', trend: 'persisting', errorCount: 1 }
+    ]
   })
 
   assert.equal(view.headline, '发现分数运算卡点')
   assert.equal(view.sourceImageCount, 2)
+  assert.match(view.evidenceTimeText, /2026年6月13日/)
+  assert.equal(view.trendSummaryText, '1 个持续出现，1 个新发现')
   assert.equal(view.bottleneckList[0].statusText, '需要验证')
   assert.equal(view.bottleneckList[0].statusClass, 'pending')
 })
@@ -85,11 +91,24 @@ test('bottleneck metadata uses readable names instead of LP codes', () => {
     ]
   })
 
-  assert.equal(view.bottleneckList[0].displayName, '计算错误')
-  assert.equal(view.bottleneckList[0].metaText, '2 道相关错题 · 计算错误')
+  assert.equal(view.bottleneckList[0].displayName, '计算基础')
+  assert.equal(view.bottleneckList[0].metaText, '2 道相关错题 · 计算基础')
   assert.ok(view.bottleneckList.every(item => !/LP-\d+/.test(item.displayName)))
   assert.equal(view.bottleneckList[1].displayName, '审题理解')
   assert.equal(view.bottleneckList[2].metaText, '1 道相关错题 · 待确认卡点')
+})
+
+test('verification report exposes linked paper display code', () => {
+  const view = buildReportView({
+    type: 'verification',
+    linkedPaper: {
+      paperDisplayCode: '数学-20260613-01'
+    },
+    bottlenecks: [{ lpCode: 'LP-008', status: 'improved' }]
+  })
+
+  assert.equal(view.paperCodeText, '数学-20260613-01')
+  assert.equal(view.bottleneckList[0].displayName, '审题理解')
 })
 
 test('report headline falls back to comparison summary then summary', () => {

@@ -56,9 +56,10 @@ test('learning profile home summarizes a math-only diagnosis', () => {
   assert.equal(view.priorityHighlights[0].title, '数学有 2 个学习卡点待验证')
   assert.equal(view.priorityHighlights[0].summary, '重点关注：计算基础、审题理解')
   assert.equal(view.priorityHighlights[0].actionText, '进入数学工作台')
-  assert.equal(view.recentRecords[0].title, '上传数学试卷照片')
-  assert.equal(view.recentRecords[0].summary, '今天 · 2 张图片已识别')
-  assert.equal(view.recentRecords[1].title, '数学诊断报告')
+  assert.equal(view.recentRecords[0].kind, 'diagnosis-report')
+  assert.equal(view.recentRecords[0].title, '数学诊断报告')
+  assert.equal(view.recentRecords[0].summary, '今天 · 发现 2 条学习观察')
+  assert.equal(view.recentRecords[0].metaText, '关注 计算基础、审题理解 · 诊断结果')
   assert.equal(view.nextAction.primaryText, '生成验证试卷')
   assert.deepEqual(view.subjects.map(item => [item.name, item.statusText]), [
     ['数学', '已有观察'],
@@ -111,4 +112,69 @@ test('learning profile home shows improvement metric only when improvement exist
   assert.ok(view.metrics.some(item => item.label === '已改善' && item.value === '1'))
   assert.equal(view.priorityHighlights[0].statusText, '已有改善')
   assert.equal(view.nextAction.primaryText, '上传新试卷')
+})
+
+test('learning profile recent records include generated verification papers in time order', () => {
+  const view = buildLearningProfileHomeView({
+    student: { _id: 'student-1', name: '钟青羽', grade: 6 },
+    profiles: [{
+      subject: 'math',
+      totalReports: 1,
+      currentBottlenecks: [{ lpCode: 'LP-001', status: 'needs_verification' }]
+    }],
+    reports: [{
+      _id: 'report-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      isEffective: true,
+      createdAt: '2026-06-11T10:00:00+08:00',
+      bottlenecks: [{ lpCode: 'LP-001' }]
+    }],
+    papers: [{
+      _id: 'paper-1',
+      subject: 'math',
+      type: 'verification',
+      paperDisplayCode: '数学-20260611-01',
+      createdAt: '2026-06-11T11:00:00+08:00',
+      questions: [{}, {}, {}],
+      bottleneckSummaries: ['计算基础'],
+      totalPages: 2
+    }]
+  }, relative)
+
+  assert.equal(view.recentRecords[0].kind, 'verification-paper')
+  assert.equal(view.recentRecords[0].title, '数学验证试卷')
+  assert.equal(view.recentRecords[0].summary, '今天 · 编号 数学-20260611-01 · 3 题 · 覆盖 计算基础')
+  assert.equal(view.recentRecords[1].kind, 'diagnosis-report')
+})
+
+test('learning profile recent records suppress default diagnostic papers', () => {
+  const view = buildLearningProfileHomeView({
+    student: { _id: 'student-1', name: '钟青羽', grade: 6 },
+    profiles: [{
+      subject: 'math',
+      totalReports: 1,
+      currentBottlenecks: [{ lpCode: 'LP-001', status: 'needs_verification' }]
+    }],
+    reports: [],
+    papers: [{
+      _id: 'default-paper',
+      subject: 'math',
+      type: 'default-diagnosis',
+      createdAt: '2026-06-11T09:00:00+08:00'
+    }, {
+      _id: 'paper-1',
+      subject: 'math',
+      type: 'verification',
+      paperDisplayCode: '数学-20260611-01',
+      createdAt: '2026-06-11T11:00:00+08:00',
+      questions: [{}, {}],
+      bottleneckSummaries: ['计算基础']
+    }]
+  }, relative)
+
+  assert.equal(view.recentRecords.some(record => record.paperId === 'default-paper'), false)
+  assert.equal(view.recentRecords.some(record => record.paperId === 'paper-1'), true)
+  assert.equal(view.recentRecords[0].paperCode, '数学-20260611-01')
 })

@@ -4,35 +4,30 @@ const pdfkit = require('pdfkit');
 const cloud = require('wx-server-sdk');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 
-const FONT_FILE_ID = process.env.FONT_FILE_ID || '';
+const DEFAULT_FONT_PATH = path.join(__dirname, 'NotoSansCJKsc-Regular.otf');
 
-// ========== 获取中文字体（从云存储下载，缓存到临时目录） ==========
-async function getChineseFont() {
-  const fontPath = path.join(os.tmpdir(), 'chinese-font.ttf');
-  if (fs.existsSync(fontPath)) {
-    return fontPath;
-  }
+async function hasOwnerAccess(reportData, openId) {
+  if (reportData && reportData._openid === openId) return true;
+  if (!reportData || !reportData.studentId) return false;
+  const res = await db.collection('studentMembers').where({
+    studentId: reportData.studentId,
+    memberOpenId: openId,
+    role: 'owner',
+    status: 'active',
+  }).get();
+  return (res.data || []).length > 0;
+}
 
-  const fontFileID = FONT_FILE_ID;
-  if (!fontFileID) {
-    console.warn('未配置 FONT_FILE_ID，中文可能无法正常显示');
-    return null;
+function useChineseFont(doc) {
+  if (!fs.existsSync(DEFAULT_FONT_PATH)) {
+    throw new Error('内置中文字体缺失，无法生成报告 PDF');
   }
-
-  try {
-    const res = await cloud.downloadFile({ fileID: fontFileID });
-    fs.writeFileSync(fontPath, res.fileContent);
-    console.log('中文字体下载完成：', fontPath);
-    return fontPath;
-  } catch (err) {
-    console.error('下载中文字体失败：', err.message);
-    return null;
-  }
+  doc.registerFont('Chinese', DEFAULT_FONT_PATH);
+  doc.font('Chinese');
 }
 
 // ========== 生成 PDF ==========
@@ -41,14 +36,7 @@ async function generatePDF(reportData) {
   const buffers = [];
   doc.on('data', buffers.push.bind(buffers));
 
-  // 注册中文字体
-  const fontPath = await getChineseFont();
-  if (fontPath) {
-    doc.registerFont('Chinese', fontPath);
-    doc.font('Chinese');
-  } else {
-    doc.font('Helvetica');
-  }
+  useChineseFont(doc);
 
   const { studentName = '同学', subject = 'math', summary = '', totalErrors = 0, bottlenecks = [], errorDetails = [], comparisonSummary = '' } = reportData;
   const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
@@ -63,13 +51,13 @@ async function generatePDF(reportData) {
   doc.moveDown(1);
 
   // 摘要
-  doc.fontSize(14).text('📊 诊断摘要', { underline: true });
+  doc.fontSize(14).text('诊断摘要', { underline: true });
   doc.moveDown(0.3);
   doc.fontSize(11).text(summary || `共发现 ${totalErrors} 道错题`);
   doc.moveDown(1);
 
   // 卡点分布
-  doc.fontSize(14).text('🎯 卡点分布（按错误次数排序）', { underline: true });
+  doc.fontSize(14).text('学习卡点分布（按错误次数排序）', { underline: true });
   doc.moveDown(0.5);
 
   if (bottlenecks.length === 0) {
@@ -77,8 +65,8 @@ async function generatePDF(reportData) {
   } else {
     for (let i = 0; i < Math.min(bottlenecks.length, 10); i++) {
       const bn = bottlenecks[i];
-      const severityIcon = { high: '🔴', medium: '🟡', low: '🟢' }[bn.severity] || '⚪';
-      doc.fontSize(11).text(`${i + 1}. ${severityIcon} ${bn.lpName}——出现 ${bn.errorCount} 次`);
+      const severityText = { high: '高', medium: '中', low: '低' }[bn.severity] || '待确认';
+      doc.fontSize(11).text(`${i + 1}. ${bn.lpName}（${severityText}）——出现 ${bn.errorCount} 次`);
       if (bn.rootCause) {
         doc.fontSize(10).text(`   根因：${bn.rootCause}`, { indent: 20 });
       }
@@ -91,7 +79,7 @@ async function generatePDF(reportData) {
   doc.moveDown(1);
 
   // 错题详情（仅显示前 10 道）
-  doc.fontSize(14).text('📝 错题详情（前 10 道）', { underline: true });
+  doc.fontSize(14).text('错题详情（前 10 道）', { underline: true });
   doc.moveDown(0.5);
 
   if (!errorDetails || errorDetails.length === 0) {
@@ -119,7 +107,7 @@ async function generatePDF(reportData) {
   if (comparisonSummary) {
     doc.moveTo(50, doc.y).lineTo(545, doc.y).stroke();
     doc.moveDown(1);
-    doc.fontSize(14).text('📈 对比上次诊断', { underline: true });
+    doc.fontSize(14).text('对比上次诊断', { underline: true });
     doc.moveDown(0.5);
     doc.fontSize(11).text(comparisonSummary);
   }
@@ -157,8 +145,8 @@ exports.main = async (event) => {
     }
     const reportData = reportRes.data;
     const currentOpenId = cloud.getWXContext().OPENID;
-    if (reportData._openid && reportData._openid !== currentOpenId) {
-      return { success: false, error: '无权访问该报告' };
+    if (!(await hasOwnerAccess(reportData, currentOpenId))) {
+      return { success: false, error: '无权执行该操作' };
     }
 
     // 2. 生成 PDF

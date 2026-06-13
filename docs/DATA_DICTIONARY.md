@@ -7,6 +7,8 @@
 | 集合名称 | 用途 | 创建时机 | 主要写入方 |
 |----------|------|----------|-----------|
 | `students` | 学生基本信息 | 用户手动添加 | 前端 add-student 页面（通过 cloud.createStudentWithProfiles） |
+| `studentMembers` | 孩子档案的家长成员关系 | 创建孩子、接受邀请、首次进入家长管理时补建 | studentAccess 云函数 |
+| `studentInvites` | 家长扫码加入邀请 | 档案拥有者点击邀请家长 | studentAccess 云函数 |
 | `subjectProfiles` | 学科档案：卡点追踪、分析状态 | 添加学生时自动创建三科；首次进入学科时幂等补建 | cloud.createStudentWithProfiles / ensureSubjectProfile；analyzePhotos 更新 |
 | `reports` | 诊断/验证报告 | 上传照片触发分析时 | uploadAndAnalyze 创建初始记录；analyzePhotos 填充分析结果；generateReportPDF 回写 pdfFileId |
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
@@ -35,6 +37,46 @@
 
 ---
 
+### 2.1.1 studentMembers 集合
+
+| 字段名 | 类型 | 必填 | 默认值 | 描述 | 示例值 |
+|--------|------|------|--------|------|--------|
+| `_id` | String | 是 | 自动生成 | 文档唯一标识 | `"member_xxx"` |
+| `studentId` | String | 是 | — | 关联 students._id | `"665a1b2c3d4e5f6a7b8c9d0e"` |
+| `ownerOpenId` | String | 是 | — | 档案拥有者 openID | `"oOWNER"` |
+| `memberOpenId` | String | 是 | — | 可访问该档案的家长 openID | `"oPARENT"` |
+| `role` | String | 是 | `'viewer'` | 成员角色：`'owner'` \| `'viewer'` | `"viewer"` |
+| `status` | String | 是 | `'active'` | 成员状态：`'active'` \| `'revoked'` | `"active"` |
+| `displayName` | String | 否 | `''` | 家长备注名或微信昵称摘要 | `"妈妈"` |
+| `joinedByInviteId` | String | 否 | `''` | 通过哪个邀请加入 | `"invite_xxx"` |
+| `createdAt` | Date | 是 | serverDate() | 加入时间 | `ISODate("2026-06-13T08:00:00Z")` |
+| `updatedAt` | Date | 是 | serverDate() | 最后更新时间 | `ISODate("2026-06-13T08:00:00Z")` |
+| `revokedAt` | Date | 否 | — | 被移除时间 | `ISODate("2026-06-20T08:00:00Z")` |
+
+**访问规则**：前端不直接查询该集合，统一通过 `studentAccess` 获取可访问学生、成员列表和权限信息。
+
+---
+
+### 2.1.2 studentInvites 集合
+
+| 字段名 | 类型 | 必填 | 默认值 | 描述 | 示例值 |
+|--------|------|------|--------|------|--------|
+| `_id` | String | 是 | 自动生成 | 文档唯一标识 | `"invite_xxx"` |
+| `studentId` | String | 是 | — | 关联 students._id | `"665a1b2c3d4e5f6a7b8c9d0e"` |
+| `ownerOpenId` | String | 是 | — | 发起邀请的档案拥有者 openID | `"oOWNER"` |
+| `tokenHash` | String | 是 | — | 邀请 token 的 SHA-256 哈希，不保存明文 token | `"9f86d081..."` |
+| `role` | String | 是 | `'viewer'` | 接受邀请后获得的角色 | `"viewer"` |
+| `status` | String | 是 | `'active'` | 邀请状态：`'active'` \| `'accepted'` \| `'expired'` | `"active"` |
+| `expiresAt` | Date | 是 | 创建后 7 天 | 过期时间 | `ISODate("2026-06-20T08:00:00Z")` |
+| `acceptedByOpenId` | String | 否 | `''` | 接受邀请的家长 openID | `"oPARENT"` |
+| `acceptedAt` | Date | 否 | — | 接受时间 | `ISODate("2026-06-14T08:00:00Z")` |
+| `createdAt` | Date | 是 | serverDate() | 创建时间 | `ISODate("2026-06-13T08:00:00Z")` |
+| `updatedAt` | Date | 是 | serverDate() | 最后更新时间 | `ISODate("2026-06-13T08:00:00Z")` |
+
+**访问规则**：邀请明文 token 只在创建时返回一次；后续校验时由 `studentAccess` 重新计算哈希并匹配。
+
+---
+
 ### 2.2 subjectProfiles 集合
 
 | 字段名 | 类型 | 必填 | 默认值 | 描述 | 示例值 |
@@ -55,6 +97,25 @@
 | `analysisStatus` | String | 是 | `''` | 分析状态：`'analyzing'` \| `''`（空串=空闲）\| `null`（完成后清空） | `"analyzing"` |
 | `createdAt` | Date | 是 | serverDate() | 创建时间 | `ISODate("2025-06-01T08:00:00Z")` |
 | `updatedAt` | Date | 是 | serverDate() | 最后更新时间 | `ISODate("2025-06-01T10:30:00Z")` |
+
+#### currentBottlenecks 子结构
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `lpCode` | String | 卡点编码 | `"LP-001"` |
+| `lpName` | String | 卡点名称 | `"计算错误（加减乘除）"` |
+| `status` | String | 当前处理状态：`needs_verification` \| `persisting` \| `improved` | `"persisting"` |
+| `trend` | String | 时间化趋势：`new` \| `persisting` \| `declining` \| `improved` \| `recurring` | `"declining"` |
+| `firstSeenAt` | Date | 首次发现时间，使用报告 evidenceTime | `ISODate("2026-06-01T...")` |
+| `lastSeenAt` | Date | 最近一次在诊断中出现的时间 | `ISODate("2026-06-12T...")` |
+| `lastVerifiedAt` | Date | 最近一次验证时间 | `ISODate("2026-06-13T...")` |
+| `lastPassedAt` | Date | 最近一次完整通过验证时间 | `ISODate("2026-06-13T...")` |
+| `lastFailedVerificationAt` | Date | 最近一次验证未通过时间 | `ISODate("2026-06-13T...")` |
+| `evidenceCount` | Number | 该卡点累计被诊断发现的次数 | `2` |
+| `recentErrorCount` | Number | 最近一次诊断中相关错题数 | `3` |
+| `verificationPassCount` | Number | 完整通过验证次数 | `1` |
+| `verificationFailCount` | Number | 验证未通过次数 | `0` |
+| `weight` | Number | 0-100 的当前关注权重，越高越需要优先处理 | `50` |
 
 #### pendingBottlenecks 子结构
 
@@ -92,6 +153,8 @@
 | `imageFileIds` | Array\<String\> | 是 | — | 云存储文件 ID 列表 | `["cloud://xxx/a.jpg", ...]` |
 | `imageFiles` | Array\<Object\> | 是 | — | 每张照片的元数据和 OCR 去重信息 | 见下方子结构 |
 | `paperId` | String | 是 | `''` | 关联 papers._id（验证/默认试卷模式时有值） | `"665a1b2c..."` |
+| `evidenceTime` | Date | 是 | 上传时刻 | 本次诊断证据进入系统的时间；历史试卷也以上传时间为准 | `ISODate("2026-06-13T10:00:00Z")` |
+| `verificationUploadedAt` | Date | 否 | — | 验证试卷作答照片上传时间，仅 verification 报告写入 | `ISODate("2026-06-13T10:00:00Z")` |
 | `summary` | String | 是 | `''` | 一句话诊断总结 | `"共发现 8 道错题，主要卡点：分数运算、单位换算"` |
 | `totalErrors` | Number | 是 | `0` | 错题总数（已去重） | `8` |
 | `bottlenecks` | Array\<Object\> | 是 | `[]` | 学习卡点列表（按 errorCount 降序） | 见下方子结构 |
@@ -116,6 +179,7 @@
 | `fileID` | String | 云存储文件 ID | `"cloud://xxx/photo.jpg"` |
 | `fileName` | String | 文件名（≤120 字） | `"照片1"` |
 | `fileSize` | Number | 文件大小（字节） | `1048576` |
+| `uploadedAt` | Date | 该照片上传到系统的时间；分析完成后继续保留 | `ISODate("2026-06-13T10:00:00Z")` |
 | `ocrSummary` | String | AI 返回的 OCR 摘要（≤1000 字），用于去重指纹 | `"第3题：1/2+1/3=..."` |
 | `contentFingerprint` | String | 归一化后的内容指纹 | `"第3题1213"` |
 | `isDuplicate` | Boolean | 是否与历史或本次其他照片重复 | `false` |
@@ -171,9 +235,14 @@
 | `grade` | Number | 是 | — | 适用年级 | `3` |
 | `paperKey` | String | 是 | `''` | 套题标识（默认试卷用，如 `'grade3_a'`；验证试卷为空串，≤20 字） | `"grade3_a"` |
 | `bottleneckTargets` | Array\<String\> | 是 | `[]` | 覆盖的 LP 编号列表（验证试卷用，最多 5 个） | `["LP-002", "LP-003"]` |
+| `bottleneckSummaries` | Array\<String\> | 否 | `[]` | 面向家长和学生展示的卡点短名称 | `["分数运算", "审题理解"]` |
 | `questions` | Array\<Object\> | 是 | — | 题目列表 | 见下方子结构 |
 | `pdfFileId` | String | 是 | — | 生成的 PDF 云存储 fileID | `"cloud://xxx/paper.pdf"` |
-| `totalPages` | Number | 是 | 计算值 | 预估页数（每页 6 题） | `2` |
+| `paperDate` | String | 是 | 生成当天 | 试卷日期，打印卷和答案页会醒目显示 | `"2026-06-13"` |
+| `generatedAt` | Date | 否 | 生成时刻 | PDF 生成完成并落库的时间 | `ISODate("2026-06-13T10:00:00Z")` |
+| `studentPages` | Number | 否 | 计算值 | 学生作答页数 | `1` |
+| `answerPages` | Number | 否 | 计算值 | 参考答案页数 | `1` |
+| `totalPages` | Number | 是 | 计算值 | PDF 总页数，包含学生卷和答案页 | `2` |
 | `createdAt` | Date | 是 | new Date() | 创建时间 | `ISODate("2025-06-01T09:00:00Z")` |
 
 #### questions 子结构
@@ -275,6 +344,8 @@
 | reports → papers | N:1 | reports.paperId = papers._id | 验证/默认试卷模式下关联试卷 |
 | reports → reports | 自引用 | reports.previousReportId = reports._id | 验证报告引用上一份报告做对比 |
 | subjectProfiles ← reports | 逻辑关联 | subjectProfiles.currentAnalysisId = reports._id | 指向当前正在分析的报告 |
+| students → studentMembers | 1:N | studentMembers.studentId = students._id | 一个孩子档案可以有多个家长成员 |
+| students → studentInvites | 1:N | studentInvites.studentId = students._id | 拥有者可为孩子档案创建多个邀请 |
 
 ---
 
@@ -285,6 +356,11 @@
 | 集合 | 索引字段 | 排序 | 对应查询场景 |
 |------|----------|------|-------------|
 | `students` | `createdAt`, `_openid` | 降序, 升序 | index 学习档案首页按创建时间倒序获取当前孩子 |
+| `studentMembers` | `memberOpenId`, `status` | 升序, 升序 | studentAccess 获取当前微信可访问的孩子档案 |
+| `studentMembers` | `studentId`, `status` | 升序, 升序 | studentAccess 获取某个孩子档案的家长成员列表 |
+| `studentMembers` | `studentId`, `memberOpenId`, `status` | 升序, 升序, 升序 | studentAccess 判断当前用户是否已加入或是否可重复接受邀请 |
+| `studentInvites` | `studentId`, `status` | 升序, 升序 | studentAccess 获取/校验某个孩子档案的有效邀请 |
+| `studentInvites` | `expiresAt`, `status` | 升序, 升序 | 后续清理过期邀请或调试查询 |
 | `subjectProfiles` | `studentId`, `_openid` | 升序, 升序 | 按学生获取学科档案（内存中筛选 subject） |
 | `reports` | `studentId`, `subject`, `createdAt`, `_openid` | 升序, 升序, 降序, 升序 | subject-home/upload-history 按学生+学科获取报告列表 |
 | `reports` | `studentId`, `subject`, `status`, `createdAt`, `_openid` | 升序, 升序, 升序, 降序, 升序 | analyzePhotos 查找最近一份 completed 报告做对比 |
@@ -303,7 +379,7 @@
 
 ### 统一安全规则
 
-所有 5 个集合使用相同的安全规则：
+核心学习数据集合继续使用创建者隔离规则：
 
 ```json
 {
@@ -312,7 +388,9 @@
 }
 ```
 
-含义：只有文档的创建者（`_openid` 字段匹配当前登录用户的 `auth.openid`）才能读写该文档。
+含义：只有文档的创建者（`_openid` 字段匹配当前登录用户的 `auth.openid`）才能直接读写该文档。
+
+`studentMembers` 和 `studentInvites` 是授权辅助集合，前端不直接读写，统一通过 `studentAccess` 云函数操作。后续共享家长读取报告、试卷、上传记录时，也应通过访问感知的数据云函数读取，避免把主数据集合的客户端规则放宽。
 
 ### 云函数端的归属校验
 
@@ -320,6 +398,8 @@
 
 | 云函数 | 校验逻辑 |
 |--------|----------|
+| `studentAccess` | 基于当前 OPENID 校验 owner/viewer 关系；owner 才能邀请和移除家长 |
+| `studentData` | 基于当前 OPENID 校验 owner/viewer 关系；只允许共享读取，不执行写操作 |
 | `uploadAndAnalyze` | 检查 student._openid === currentOpenId；检查 paper._openid === currentOpenId |
 | `analyzePhotos` | 检查 report._openid === currentOpenId |
 | `getAnalysisProgress` | 检查 report._openid === currentOpenId |
