@@ -5,6 +5,7 @@ const cloud = require('wx-server-sdk');
 const fs = require('fs');
 const path = require('path');
 const { getLearningResourceAccess, canOperateLearning } = require('../_shared/access');
+const { getSubjectName } = require('../_shared/constants');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -28,7 +29,7 @@ async function generatePDF(reportData) {
   useChineseFont(doc);
 
   const { studentName = '同学', subject = 'math', summary = '', totalErrors = 0, bottlenecks = [], errorDetails = [], comparisonSummary = '' } = reportData;
-  const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
+  const subjectName = getSubjectName(subject, '数学');
   const reportType = reportData.type === 'verification' ? '验证报告' : '诊断报告';
 
   // 标题

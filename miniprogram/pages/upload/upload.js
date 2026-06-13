@@ -1,6 +1,7 @@
 // pages/upload/upload.js
 const cloud = require('../../utils/cloud')
 const { paperCodeOf } = require('../../utils/learning-records')
+const { getSubjectName } = require('../../utils/constants')
 
 function getFileName(filePath, index) {
   const cleanPath = String(filePath || '').split('?')[0]
@@ -247,8 +248,7 @@ Page({
   },
 
   getSubjectName(subject) {
-    const map = { math: '数学', chinese: '语文', english: '英语' }
-    return map[subject] || subject || '试卷'
+    return getSubjectName(subject, subject || '试卷')
   },
 
   getPaperName(paper) {

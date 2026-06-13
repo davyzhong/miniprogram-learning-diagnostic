@@ -2,12 +2,7 @@
 const cloud = require('../../utils/cloud')
 const { formatRelativeTime } = require('../../utils/util')
 const { buildLearningProfileHomeView } = require('./index-presenter')
-
-const SUBJECT_NAMES = {
-  math: '数学',
-  chinese: '语文',
-  english: '英语'
-}
+const { getSubjectName } = require('../../utils/constants')
 
 const OWNER_PERMISSIONS = {
   canView: true,
@@ -204,7 +199,7 @@ Page({
 
   navigateToSubject(subject) {
     const student = this.data.activeStudent || {}
-    const subjectName = SUBJECT_NAMES[subject] || '数学'
+    const subjectName = getSubjectName(subject, '数学')
     wx.navigateTo({
       url: `/pages/subject-home/subject-home?studentId=${student._id || this.data.activeStudentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}&grade=${student.grade || ''}`
     })
@@ -246,7 +241,7 @@ Page({
     const home = this.data.home || {}
     const student = this.data.activeStudent || {}
     const subject = home.nextAction && home.nextAction.subject ? home.nextAction.subject : 'math'
-    const subjectName = SUBJECT_NAMES[subject] || '数学'
+    const subjectName = getSubjectName(subject, '数学')
     if (home.nextAction && home.nextAction.primaryText === '查看学习记录') {
       this.onViewAllRecords()
       return
@@ -266,7 +261,7 @@ Page({
     const home = this.data.home || {}
     const student = this.data.activeStudent || {}
     const subject = home.nextAction && home.nextAction.subject ? home.nextAction.subject : 'math'
-    const subjectName = SUBJECT_NAMES[subject] || '数学'
+    const subjectName = getSubjectName(subject, '数学')
     if (!home.nextAction || !home.nextAction.secondaryText) return
     if (home.nextAction && home.nextAction.secondaryText === '查看学习记录') {
       this.onViewAllRecords()

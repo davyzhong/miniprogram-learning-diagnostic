@@ -9,12 +9,11 @@ const {
   isMainTimelinePaper,
   paperCodeOf
 } = require('../../utils/learning-records')
-
-const SUBJECT_NAMES = {
-  math: '数学',
-  chinese: '语文',
-  english: '英语'
-}
+const {
+  SUBJECT_NAMES,
+  getSubjectName,
+  normalizeSubject: normalizeKnownSubject
+} = require('../../utils/constants')
 
 const SUBJECT_FILTERS = [
   { key: '', name: '全部' },
@@ -34,11 +33,11 @@ const FILTER_EMPTY_STATE = {
 }
 
 function subjectNameOf(subject, fallback = '') {
-  return SUBJECT_NAMES[subject] || fallback || ''
+  return getSubjectName(subject, fallback)
 }
 
 function normalizeSubject(subject) {
-  return SUBJECT_NAMES[subject] ? subject : ''
+  return normalizeKnownSubject(subject, '')
 }
 
 function getReportPhotos(report) {

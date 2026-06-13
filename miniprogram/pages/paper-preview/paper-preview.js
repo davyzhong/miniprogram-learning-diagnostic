@@ -9,6 +9,7 @@ const {
   bottleneckListText,
   paperCodeOf
 } = require('../../utils/learning-records')
+const { getSubjectName } = require('../../utils/constants')
 
 Page({
   data: {
@@ -244,8 +245,7 @@ Page({
 
   // 工具函数
   getSubjectName(subject) {
-    const map = { math: '数学', chinese: '语文', english: '英语' }
-    return map[subject] || subject || ''
+    return getSubjectName(subject, subject || '')
   },
 
   async getStudentName(studentId) {

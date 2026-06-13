@@ -7,12 +7,17 @@ const {
   isMainTimelinePaper,
   paperCodeOf
 } = require('../../utils/learning-records')
+const {
+  SUBJECTS: SUBJECT_KEYS,
+  SUBJECT_NAMES,
+  SUBJECT_SHORT_NAMES
+} = require('../../utils/constants')
 
-const SUBJECTS = [
-  { key: 'math', name: '数学', shortName: '数' },
-  { key: 'chinese', name: '语文', shortName: '语' },
-  { key: 'english', name: '英语', shortName: '英' }
-]
+const SUBJECTS = SUBJECT_KEYS.map(key => ({
+  key,
+  name: SUBJECT_NAMES[key],
+  shortName: SUBJECT_SHORT_NAMES[key]
+}))
 
 function toDate(value) {
   if (!value) return null
