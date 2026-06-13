@@ -324,7 +324,7 @@ git commit -m "refactor: centralize subject constants"
 - Test: `tests/generate-paper-pdf.test.js`
 - Test: `tests/contracts.test.js`
 
-- [ ] **Step 1: Define the single display algorithm**
+- [x] **Step 1: Define the single display algorithm**
 
 Priority:
 
@@ -333,11 +333,11 @@ Priority:
 3. cleaned raw text.
 4. LP code only as last-resort internal fallback.
 
-- [ ] **Step 2: Remove or isolate dead category mappings**
+- [x] **Step 2: Remove or isolate dead category mappings**
 
 Either delete unused `CATEGORY_NAMES`, or keep only if a real caller uses it. Do not let user-facing display depend on incompatible `LP-OP` prefixes.
 
-- [ ] **Step 3: Verify all user-facing output**
+- [x] **Step 3: Verify all user-facing output**
 
 Check:
 
@@ -345,7 +345,7 @@ Check:
 - PDF does not show `LP-001` as primary text.
 - learning record cards use readable summaries.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add miniprogram cloudfunctions tests

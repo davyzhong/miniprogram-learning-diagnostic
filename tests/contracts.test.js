@@ -104,6 +104,14 @@ test('user-facing bottleneck labels do not render LP codes as primary text', () 
   assert.doesNotMatch(pdfRenderer, /text\(question\.lpCode/)
 })
 
+test('bottleneck summary helpers use shared display-name modules', () => {
+  const frontend = read('miniprogram/utils/bottlenecks.js')
+  const pdf = read('cloudfunctions/generatePaper/bottleneck-display.js')
+
+  assert.match(frontend, /require\('\.\/bottleneck-name'\)/)
+  assert.match(pdf, /require\('\.\.\/_shared\/bottleneck-name'\)/)
+})
+
 test('verification paper workbench exposes paper code, content preview and feedback entry', () => {
   const paperPreviewView = read('miniprogram/pages/paper-preview/paper-preview.wxml')
   const paperPreviewPage = read('miniprogram/pages/paper-preview/paper-preview.js')
