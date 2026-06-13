@@ -1,5 +1,6 @@
 const cloud = require('wx-server-sdk');
 const crypto = require('node:crypto');
+const { permissionsForRole, canManageFamily } = require('../_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -145,17 +146,6 @@ async function createUniqueInviteCode() {
   throw new Error('邀请码生成失败');
 }
 
-function permissionsForRole(role) {
-  const owner = role === 'owner';
-  return {
-    canView: true,
-    canManageParents: owner,
-    canUpload: owner,
-    canGeneratePaper: owner,
-    canRetryAnalysis: owner,
-  };
-}
-
 async function getStudent(studentId) {
   if (!studentId) return null;
   const res = await db.collection('students').doc(studentId).get();
@@ -282,7 +272,7 @@ async function listMembers(openId, studentId) {
 
 async function createInvite(openId, studentId, presetRelation = '') {
   const access = await getAccess(studentId, openId);
-  if (!access.owner) return failure('无权执行该操作');
+  if (!canManageFamily(access)) return failure('无权执行该操作');
   const token = createToken();
   const inviteCode = await createUniqueInviteCode();
   const normalizedRelation = normalizeRelation(presetRelation, 'viewer');
@@ -463,7 +453,7 @@ async function acceptInviteByCode(openId, inviteCode, options = {}) {
 
 async function updateMemberProfile(openId, studentId, memberOpenId, displayName, relation) {
   const access = await getAccess(studentId, openId);
-  if (!access.owner) return failure('无权执行该操作');
+  if (!canManageFamily(access)) return failure('无权执行该操作');
   const members = await getMembersByStudent(studentId);
   const target = members.find(member => member.memberOpenId === memberOpenId && member.status === 'active');
   if (!target) return failure('家长成员不存在');
@@ -488,7 +478,7 @@ async function updateMemberProfile(openId, studentId, memberOpenId, displayName,
 
 async function revokeMember(openId, studentId, memberOpenId) {
   const access = await getAccess(studentId, openId);
-  if (!access.owner) return failure('无权执行该操作');
+  if (!canManageFamily(access)) return failure('无权执行该操作');
   if (!memberOpenId || memberOpenId === openId) return failure('不能移除自己');
 
   const members = await getMembersByStudent(studentId);

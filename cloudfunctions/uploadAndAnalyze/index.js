@@ -1,22 +1,12 @@
 // uploadAndAnalyze/index.js
 // 入口函数：接收fileIDs，创建reports记录，触发后台分析
 const cloud = require('wx-server-sdk');
+const { getStudentAccess, canOperateLearning } = require('../_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const MODES = new Set(['diagnosis', 'verification', 'paper', 'default-paper']);
-
-async function hasOwnerAccess(student, openId) {
-  if (student && student._openid === openId) return true;
-  const res = await db.collection('studentMembers').where({
-    studentId: student._id,
-    memberOpenId: openId,
-    role: 'owner',
-    status: 'active',
-  }).get();
-  return (res.data || []).length > 0;
-}
 
 // ========== 主函数 ==========
 exports.main = async (event, context) => {
@@ -44,19 +34,19 @@ exports.main = async (event, context) => {
   try {
     // 1. 获取学生信息（用于报告显示）
     const currentOpenId = cloud.getWXContext().OPENID;
-    const studentRes = await db.collection('students').doc(studentId).get();
-    const student = studentRes.data;
+    const access = await getStudentAccess(db, studentId, currentOpenId);
+    const student = access.student;
     if (!student) {
       return { success: false, error: '学生不存在' };
     }
-    if (!(await hasOwnerAccess(student, currentOpenId))) {
+    if (!canOperateLearning(access)) {
       return { success: false, error: '无权执行该操作' };
     }
     let sourceType = 'photo';
     if (paperId) {
       const paperRes = await db.collection('papers').doc(paperId).get();
       const paper = paperRes.data;
-      if (!paper || paper.studentId !== studentId || (paper._openid && paper._openid !== currentOpenId)) {
+      if (!paper || paper.studentId !== studentId) {
         return { success: false, error: '关联试卷不存在或无权访问' };
       }
       if (mode === 'verification' && paper.type !== 'verification') {
