@@ -273,6 +273,19 @@ test('upload history page is registered and linked from subject home', () => {
   assert.equal(fs.existsSync(path.join(root, 'miniprogram/pages/upload-history/upload-history.js')), true)
 })
 
+test('upload history uses a unified learning timeline with subject filters', () => {
+  const page = read('miniprogram/pages/upload-history/upload-history.js')
+  const view = read('miniprogram/pages/upload-history/upload-history.wxml')
+
+  assert.match(page, /activeSubject/)
+  assert.match(page, /allDays/)
+  assert.match(page, /onFilterTap/)
+  assert.match(view, /filter-bar/)
+  assert.match(view, /wx:for="\{\{filters\}\}"/)
+  assert.doesNotMatch(page, /subjectName\}学习记录/)
+  assert.doesNotMatch(page, /数学学习记录/)
+})
+
 test('upload filename duplicates only produce a soft warning', () => {
   const upload = read('miniprogram/pages/upload/upload.js')
   assert.match(upload, /nameDuplicate/)

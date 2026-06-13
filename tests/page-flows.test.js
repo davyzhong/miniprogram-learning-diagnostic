@@ -681,6 +681,7 @@ test('learning records group uploads reports and verification papers by day', as
     getReports: async () => [
       {
         _id: 'report-1',
+        subject: 'math',
         type: 'diagnosis',
         createdAt: '2026-06-11T10:00:00Z',
         summary: '发现计算基础卡点',
@@ -690,6 +691,7 @@ test('learning records group uploads reports and verification papers by day', as
       },
       {
         _id: 'report-2',
+        subject: 'math',
         type: 'verification',
         createdAt: '2026-06-11T12:00:00Z',
         comparisonSummary: '1 个学习卡点已改善',
@@ -699,6 +701,7 @@ test('learning records group uploads reports and verification papers by day', as
     ],
     getPapers: async () => [{
       _id: 'paper-1',
+      subject: 'math',
       type: 'verification',
       createdAt: '2026-06-11T11:00:00Z',
       questions: [{}, {}, {}],
@@ -720,7 +723,7 @@ test('learning records group uploads reports and verification papers by day', as
       '../../utils/util': util
     }
   })
-  page.setData({ studentId: 'student-1', subject: 'math' })
+  page.setData({ studentId: 'student-1', activeSubject: 'math' })
 
   await page.loadHistory()
   assert.equal(page.data.days.length, 1)
@@ -779,11 +782,124 @@ test('learning records load all subjects when no subject filter is provided', as
     limit: 50
   })
   assert.deepEqual(JSON.parse(JSON.stringify(seen.papers)), { studentId: 'student-1' })
+  assert.equal(page.data.activeSubject, '')
   assert.equal(page.data.titleText, '钟青羽 · 学习记录')
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
     '生成数学验证试卷',
     '数学诊断报告'
   ])
+  assert.equal(page.data.filters.find(item => item.key === '').active, true)
+  assert.equal(page.data.allDays.length, 1)
+})
+
+test('learning records treat route subject as an initial filter on the complete timeline', async () => {
+  const seen = {}
+  const cloud = {
+    getReports: async (studentId, subject, limit) => {
+      seen.reports = { studentId, subject, limit }
+      return [
+        {
+          _id: 'math-report',
+          subject: 'math',
+          type: 'diagnosis',
+          status: 'completed',
+          createdAt: '2026-06-11T10:00:00Z',
+          summary: '数学计算卡点'
+        },
+        {
+          _id: 'chinese-report',
+          subject: 'chinese',
+          type: 'diagnosis',
+          status: 'completed',
+          createdAt: '2026-06-11T09:00:00Z',
+          summary: '阅读理解卡点'
+        }
+      ]
+    },
+    getPapers: async filter => {
+      seen.papers = filter
+      return [{
+        _id: 'english-paper',
+        subject: 'english',
+        type: 'verification',
+        createdAt: '2026-06-11T11:00:00Z',
+        questions: [{}, {}]
+      }]
+    },
+    getTempFileURLs: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({
+    studentId: 'student-1',
+    subject: 'math',
+    activeSubject: 'math',
+    subjectName: '数学',
+    studentName: '钟青羽'
+  })
+
+  await page.loadHistory()
+
+  assert.deepEqual(JSON.parse(JSON.stringify(seen.reports)), {
+    studentId: 'student-1',
+    limit: 50
+  })
+  assert.deepEqual(JSON.parse(JSON.stringify(seen.papers)), { studentId: 'student-1' })
+  assert.equal(page.data.titleText, '钟青羽 · 学习记录')
+  assert.equal(page.data.activeSubject, 'math')
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
+    '数学诊断报告'
+  ])
+  assert.equal(page.data.allDays[0].events.length, 3)
+  assert.equal(page.data.filters.find(item => item.key === 'math').active, true)
+
+  page.onFilterTap({ currentTarget: { dataset: { subject: '' } } })
+
+  assert.equal(page.data.activeSubject, '')
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
+    '生成英语验证试卷',
+    '数学诊断报告',
+    '语文诊断报告'
+  ])
+  assert.equal(page.data.filters.find(item => item.key === '').active, true)
+})
+
+test('learning records show a subject-filter empty state when the complete timeline has records', async () => {
+  const cloud = {
+    getReports: async () => [{
+      _id: 'math-report',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      createdAt: '2026-06-11T10:00:00Z'
+    }],
+    getPapers: async () => [],
+    getTempFileURLs: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({
+    studentId: 'student-1',
+    subject: 'chinese',
+    activeSubject: 'chinese',
+    subjectName: '语文',
+    studentName: '钟青羽'
+  })
+
+  await page.loadHistory()
+
+  assert.equal(page.data.allDays.length, 1)
+  assert.equal(page.data.days.length, 0)
+  assert.equal(page.data.emptyTitle, '当前学科暂无记录')
+  assert.equal(page.data.emptyDesc, '可切换“全部”查看其他学习记录。')
 })
 
 test('report loads diagnosis data and toggles error details', async () => {

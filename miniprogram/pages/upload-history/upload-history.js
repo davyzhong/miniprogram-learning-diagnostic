@@ -7,8 +7,29 @@ const SUBJECT_NAMES = {
   english: '英语'
 }
 
+const SUBJECT_FILTERS = [
+  { key: '', name: '全部' },
+  { key: 'math', name: '数学' },
+  { key: 'chinese', name: '语文' },
+  { key: 'english', name: '英语' }
+]
+
+const GLOBAL_EMPTY_STATE = {
+  emptyTitle: '暂无学习记录',
+  emptyDesc: '完成一次诊断或生成验证试卷后，记录会按天显示在这里。'
+}
+
+const FILTER_EMPTY_STATE = {
+  emptyTitle: '当前学科暂无记录',
+  emptyDesc: '可切换“全部”查看其他学习记录。'
+}
+
 function subjectNameOf(subject, fallback = '') {
   return SUBJECT_NAMES[subject] || fallback || ''
+}
+
+function normalizeSubject(subject) {
+  return SUBJECT_NAMES[subject] ? subject : ''
 }
 
 function getReportPhotos(report) {
@@ -70,7 +91,7 @@ function reportSummary(report) {
   return '查看这次学习诊断的详细结果。'
 }
 
-function buildReportEvent(report, photos, subjectName = '') {
+function buildReportEvent(report, photos, subjectName = '', fallbackSubject = '') {
   const isVerification = report.type === 'verification'
   const photoCount = photos.length
   const duplicateCount = photos.filter(photo => photo.isDuplicate).length
@@ -80,6 +101,7 @@ function buildReportEvent(report, photos, subjectName = '') {
 
   return {
     id: report._id,
+    subject: report.subject || fallbackSubject,
     kind: isVerification ? 'verification-report' : 'diagnosis-report',
     icon: isVerification ? '✓' : '◎',
     title: reportTitle(report, subjectName),
@@ -100,7 +122,7 @@ function buildReportEvent(report, photos, subjectName = '') {
   }
 }
 
-function buildPaperEvent(paper, subjectName = '') {
+function buildPaperEvent(paper, subjectName = '', fallbackSubject = '') {
   const questionCount = (paper.questions || []).length || paper.questionCount || 0
   const bottleneckText = formatBottleneckDisplayList(
     (paper.bottleneckTargets || []).map(code => ({ lpCode: code }))
@@ -108,6 +130,7 @@ function buildPaperEvent(paper, subjectName = '') {
 
   return {
     id: paper._id,
+    subject: paper.subject || fallbackSubject,
     kind: 'verification-paper',
     icon: '□',
     title: paper.type === 'verification' ? `生成${subjectName}验证试卷` : `生成${subjectName}诊断试卷`,
@@ -128,7 +151,7 @@ function buildPaperEvent(paper, subjectName = '') {
 
 function groupEventsByDay(events) {
   const byDay = new Map()
-  events
+  Array.from(events)
     .sort((a, b) => toDate(b.createdAt) - toDate(a.createdAt))
     .forEach(event => {
       const key = dateKey(event.createdAt)
@@ -144,11 +167,44 @@ function groupEventsByDay(events) {
   return Array.from(byDay.values())
 }
 
-function buildTitleText(studentName, subjectName) {
-  if (studentName && subjectName) return `${studentName} · ${subjectName}学习记录`
+function buildTitleText(studentName) {
   if (studentName) return `${studentName} · 学习记录`
-  if (subjectName) return `${subjectName}学习记录`
   return '学习记录'
+}
+
+function filterEventsBySubject(events, activeSubject) {
+  if (!activeSubject) return events
+  return events.filter(event => event.subject === activeSubject)
+}
+
+function buildFilters(activeSubject, events) {
+  return SUBJECT_FILTERS.map(filter => ({
+    ...filter,
+    count: filter.key ? events.filter(event => event.subject === filter.key).length : events.length,
+    active: filter.key === activeSubject
+  }))
+}
+
+function buildEmptyState(allCount, filteredCount, activeSubject) {
+  if (allCount === 0) return GLOBAL_EMPTY_STATE
+  if (activeSubject && filteredCount === 0) return FILTER_EMPTY_STATE
+  return GLOBAL_EMPTY_STATE
+}
+
+function buildHistoryState(events, activeSubject) {
+  const safeSubject = normalizeSubject(activeSubject)
+  const filteredEvents = filterEventsBySubject(events, safeSubject)
+  const emptyState = buildEmptyState(events.length, filteredEvents.length, safeSubject)
+
+  return {
+    activeSubject: safeSubject,
+    subject: safeSubject,
+    allEvents: events,
+    allDays: groupEventsByDay(events),
+    days: groupEventsByDay(filteredEvents),
+    filters: buildFilters(safeSubject, events),
+    ...emptyState
+  }
 }
 
 Page({
@@ -158,6 +214,11 @@ Page({
     subjectName: '',
     studentName: '',
     titleText: '学习记录',
+    activeSubject: '',
+    allEvents: [],
+    allDays: [],
+    filters: buildFilters('', []),
+    ...GLOBAL_EMPTY_STATE,
     loading: true,
     days: []
   },
@@ -169,9 +230,10 @@ Page({
     this.setData({
       studentId: options.studentId || '',
       subject,
+      activeSubject: normalizeSubject(subject),
       subjectName,
       studentName,
-      titleText: buildTitleText(studentName, subjectName)
+      titleText: buildTitleText(studentName)
     })
     wx.setNavigationBarTitle({ title: '学习记录' })
     this.loadHistory()
@@ -180,14 +242,12 @@ Page({
   async loadHistory() {
     this.setData({ loading: true })
     try {
-      const subject = this.data.subject || ''
-      const subjectName = this.data.subjectName || subjectNameOf(subject)
-      const titleText = buildTitleText(this.data.studentName, subjectName)
-      const reports = await cloud.getReports(this.data.studentId, subject || undefined, 50)
+      const activeSubject = normalizeSubject(this.data.activeSubject || this.data.subject || '')
+      const fallbackSubjectName = this.data.subjectName || subjectNameOf(activeSubject)
+      const titleText = buildTitleText(this.data.studentName)
+      const reports = await cloud.getReports(this.data.studentId, undefined, 50)
       const papers = typeof cloud.getPapers === 'function'
-        ? await cloud.getPapers(subject
-          ? { studentId: this.data.studentId, subject }
-          : { studentId: this.data.studentId })
+        ? await cloud.getPapers({ studentId: this.data.studentId })
         : []
 
       const reportPhotos = reports.map(report => ({
@@ -204,19 +264,40 @@ Page({
           tempFileURL: urlByFileID.get(photo.fileID) || '',
           summaryText: photo.ocrSummary || '此照片来自旧报告，暂无 OCR 识别摘要'
         }))
-        return buildReportEvent(report, viewPhotos, recordSubjectName(report, subjectName))
+        return buildReportEvent(
+          report,
+          viewPhotos,
+          recordSubjectName(report, fallbackSubjectName),
+          activeSubject
+        )
       })
       const paperEvents = (papers || [])
         .filter(paper => paper.type === 'verification')
-        .map(paper => buildPaperEvent(paper, recordSubjectName(paper, subjectName)))
-      const days = groupEventsByDay([...reportEvents, ...paperEvents])
+        .map(paper => buildPaperEvent(
+          paper,
+          recordSubjectName(paper, fallbackSubjectName),
+          activeSubject
+        ))
+      const events = [...reportEvents, ...paperEvents]
 
-      this.setData({ titleText, days, loading: false })
+      this.setData({
+        titleText,
+        ...buildHistoryState(events, activeSubject),
+        loading: false
+      })
     } catch (err) {
       console.error('加载学习记录失败', err)
-      this.setData({ days: [], loading: false })
+      this.setData({
+        ...buildHistoryState([], normalizeSubject(this.data.activeSubject || this.data.subject || '')),
+        loading: false
+      })
       wx.showToast({ title: '学习记录加载失败', icon: 'none' })
     }
+  },
+
+  onFilterTap(e) {
+    const activeSubject = normalizeSubject(e.currentTarget.dataset.subject || '')
+    this.setData(buildHistoryState(this.data.allEvents || [], activeSubject))
   },
 
   onPreviewPhoto(e) {

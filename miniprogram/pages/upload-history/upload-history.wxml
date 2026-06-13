@@ -3,13 +3,25 @@
   <view class="header">
     <text class="title">{{titleText}}</text>
     <text class="subtitle">按天整理诊断、验证试卷和作答上传，保留每次学习闭环的证据链。</text>
+    <view class="filter-bar">
+      <view
+        class="filter-pill {{item.active ? 'is-active' : ''}}"
+        wx:for="{{filters}}"
+        wx:key="key"
+        bindtap="onFilterTap"
+        data-subject="{{item.key}}"
+      >
+        <text class="filter-name">{{item.name}}</text>
+        <text class="filter-count">{{item.count}}</text>
+      </view>
+    </view>
   </view>
 
   <view class="loading" wx:if="{{loading}}">正在加载学习记录...</view>
 
   <view class="empty" wx:if="{{!loading && days.length === 0}}">
-    <text class="empty-title">暂无学习记录</text>
-    <text class="empty-desc">完成一次诊断或生成验证试卷后，记录会按天显示在这里。</text>
+    <text class="empty-title">{{emptyTitle}}</text>
+    <text class="empty-desc">{{emptyDesc}}</text>
   </view>
 
   <view class="day-group" wx:for="{{days}}" wx:key="dateKey" wx:for-index="dayIndex">

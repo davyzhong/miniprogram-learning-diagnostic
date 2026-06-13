@@ -24,6 +24,53 @@
   line-height: 1.5;
 }
 
+.filter-bar {
+  display: flex;
+  gap: 12rpx;
+  margin-top: 22rpx;
+  overflow-x: auto;
+  padding-bottom: 2rpx;
+  white-space: nowrap;
+}
+
+.filter-pill {
+  align-items: center;
+  background: #fff;
+  border: 1rpx solid #dce5f0;
+  border-radius: 999rpx;
+  color: #52667d;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 23rpx;
+  font-weight: 650;
+  gap: 8rpx;
+  min-height: 56rpx;
+  padding: 0 20rpx;
+}
+
+.filter-pill.is-active {
+  background: #e7f0ff;
+  border-color: #2d6cdf;
+  color: #2459a5;
+}
+
+.filter-count {
+  align-items: center;
+  background: rgba(45, 108, 223, 0.1);
+  border-radius: 999rpx;
+  display: flex;
+  font-size: 19rpx;
+  height: 30rpx;
+  justify-content: center;
+  min-width: 30rpx;
+  padding: 0 8rpx;
+}
+
+.filter-pill.is-active .filter-count {
+  background: #2d6cdf;
+  color: #fff;
+}
+
 .loading,
 .empty {
   color: #718096;
