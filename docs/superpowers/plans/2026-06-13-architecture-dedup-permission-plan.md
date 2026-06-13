@@ -503,7 +503,7 @@ git commit -m "refactor: split heavy page presenters"
 - Test: `tests/analyze-batch-result.test.js`
 - Test: `tests/verification-evidence.test.js`
 
-- [ ] **Step 1: Add characterization tests for existing behavior**
+- [x] **Step 1: Add characterization tests for existing behavior**
 
 Before splitting, ensure tests cover:
 
@@ -514,7 +514,7 @@ Before splitting, ensure tests cover:
 - stale interrupted tasks.
 - profile status writeback.
 
-- [ ] **Step 2: Extract helpers without changing behavior**
+- [x] **Step 2: Extract helpers without changing behavior**
 
 Candidate helpers:
 
@@ -526,11 +526,11 @@ Candidate helpers:
 - `applyVerificationEvidence`
 - `writeReportAndProfile`
 
-- [ ] **Step 3: Keep main function as orchestration**
+- [x] **Step 3: Keep main function as orchestration**
 
 The exported `main` should read like a workflow, not a 200-line implementation block.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -539,7 +539,7 @@ node --test tests/cloud-functions.test.js tests/analyze-batch-result.test.js tes
 npm run verify
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add cloudfunctions/analyzePhotos tests
