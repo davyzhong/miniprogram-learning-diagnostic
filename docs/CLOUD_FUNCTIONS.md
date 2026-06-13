@@ -25,7 +25,7 @@
 
 ### 功能描述
 
-轻量家长管理云函数。一个孩子档案可以有多个家长成员，拥有者可以创建邀请、查看成员、移除协同家长；扫码加入的家长获得查看权限，但不能上传、生成试卷、重试分析或继续邀请他人。
+轻量家长管理云函数。一个孩子档案可以有多个家长成员，拥有者可以创建邀请、查看成员、移除协同家长；扫码加入的共同家长可以参与学习诊断相关流程，但不能继续邀请或移除家庭成员。
 
 ### 调用方式
 
@@ -149,10 +149,12 @@ wx.cloud.callFunction({
   "role": "viewer",
   "permissions": {
     "canView": true,
+    "canReadLearning": true,
+    "canOperateLearning": true,
     "canManageParents": false,
-    "canUpload": false,
-    "canGeneratePaper": false,
-    "canRetryAnalysis": false
+    "canUpload": true,
+    "canGeneratePaper": true,
+    "canRetryAnalysis": true
   }
 }
 ```
@@ -174,7 +176,7 @@ wx.cloud.callFunction({
 
 1. 本函数只做共享读取，不创建、不修改学习数据。
 2. 时间线仍是派生视图，由 `reports`、`papers` 和 `reports.imageFiles` 汇总，不新增独立事件集合。
-3. viewer 可以读取报告和试卷，但不能通过本函数获得上传、重试或生成试卷能力。
+3. `studentData` 本身只做读取聚合；共同家长是否能上传、重试或生成试卷由对应写入云函数的成员权限校验决定。
 
 ---
 
@@ -246,14 +248,14 @@ wx.cloud.callFunction({
 | 验证分析必须关联验证试卷 | mode 为 verification 但 paperId 为空，或关联试卷 type 不是 verification |
 | 验证试卷必须使用验证分析模式 | 关联试卷为 verification 但 mode 不是 verification |
 | 学生不存在 | students 集合查无此 doc |
-| 无权执行该操作 | 当前微信不是该孩子档案 owner；viewer 不能上传并触发新分析 |
+| 无权执行该操作 | 当前微信不是该孩子档案成员，不能上传并触发新分析 |
 | 关联试卷不存在或无权访问 | papers 查不到 / studentId 不匹配 / openid 不匹配 |
 | 创建分析任务失败，请稍后重试 | 任意未预期异常（已 try-catch 兜底） |
 
 ### 超时配置建议
 
 - **推荐云函数超时：60s**。本函数只负责参数校验、创建报告和启动后台任务，正常会快速返回。
-- 真正的长耗时分析发生在 `analyzePhotos`，该函数建议配置 900s 超时。
+- 微信云函数超时时间上限为 60s。长耗时分析由 `analyzePhotos` 后台执行，前端通过进度轮询、超时提示和重试入口恢复异常状态。
 
 ### 依赖的外部服务
 
@@ -348,8 +350,8 @@ wx.cloud.callFunction({
 
 ### 超时配置建议
 
-- **推荐云函数超时：900s**。单次批次约 5–30s，20 张图片 = 4 批，遇到模型排队或网络波动时可能超过 60s。
-- 如频繁超时，应先确认云函数超时已配置到 900s，再考虑减少单报告图片数或拆分报告。
+- **推荐云函数超时：60s**。这是当前平台允许的上限。
+- 单报告图片数过多时仍可能触发超时；前端会展示分析中/超时提示，报告页可重新触发分析。后续批量独立执行方案应继续降低单次函数运行时长。
 
 ### 依赖的外部服务
 
@@ -581,7 +583,7 @@ wx.cloud.callFunction({
 | 验证试卷至少需要一个学习卡点 | type=verification 但 targets 为空 |
 | 默认诊断试卷需要选择有效年级 | type=default-diagnosis 但 grade 不在 1~6 |
 | 学生不存在 | students 查无此 doc |
-| 无权执行该操作 | 当前微信不是该孩子档案 owner；viewer 不能生成试卷 |
+| 无权执行该操作 | 当前微信不是该孩子档案成员，不能生成试卷 |
 | AI 返回的试卷结构无效 | 解析后缺少 questions 数组 |
 | AI 返回题目数量不正确 | 题目数 ≠ 期望值（验证=targets×3，诊断=questionCount） |
 | 试卷生成失败，请稍后重试 | 任意未预期异常兜底 |
@@ -666,7 +668,7 @@ wx.cloud.callFunction({
 | --- | --- |
 | 缺少 reportId | 未传 reportId |
 | 报告不存在 | reports.doc(reportId).get() 返回空数据 |
-| 无权执行该操作 | 当前微信不是报告所属孩子档案 owner；viewer 不能生成报告 PDF |
+| 无权执行该操作 | 当前微信不是报告所属孩子档案成员，不能生成报告 PDF |
 | 报告 PDF 生成失败，请稍后重试 | 任意未预期异常兜底 |
 
 ### 超时配置建议

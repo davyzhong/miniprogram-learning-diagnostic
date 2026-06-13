@@ -1,5 +1,8 @@
 # Code Review Debt Execution Plan
 
+> Superseded on 2026-06-13 by `docs/superpowers/plans/2026-06-13-architecture-dedup-permission-plan.md`.
+> This document is kept as historical review context. Its earlier `viewer = read-only` assumptions are no longer the current product policy: an invited co-parent can operate learning workflows, while family member management remains owner-only.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Resolve the verified code review findings without disrupting the single-child learning diagnostic MVP flow.
@@ -562,4 +565,3 @@ Manual smoke test in WeChat DevTools:
 4. Join as a second parent account if available and verify report PDF download works.
 5. Confirm viewer still cannot upload photos or generate verification papers.
 6. Generate a verification paper and confirm its display code appears in learning records and paper preview.
-

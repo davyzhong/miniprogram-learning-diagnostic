@@ -262,7 +262,7 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
       }
     : {
         title: '查看最新学习资料',
-        summary: '你当前拥有查看权限，可以阅读诊断报告、验证试卷和学习记录。',
+        summary: '你当前是共同家长，可以参与学习诊断；如需邀请或移除家庭成员，请联系档案创建者。',
         primaryText: '查看学习记录',
         secondaryText: '',
         subject: nextSubject

@@ -2,7 +2,7 @@
 
 **创建日期**: 2026-06-09
 **最后更新**: 2026-06-13
-**项目状态**: MVP 编码完成，常规自动化测试通过（140/140），JS 语法检查 52 文件通过，待真机验收
+**项目状态**: MVP 编码完成，常规自动化测试通过（216/216），JS 语法检查 74 文件通过，待真机验收
 **负责人**: qiming
 
 ---
@@ -66,7 +66,7 @@ miniprogram-learning-diagnostic/
 │
 ├── miniprogram/                     # 小程序前端代码
 │   ├── app.js                       # 全局入口，初始化云开发（env: cloud1-d6gneg68m5a7a3876）
-│   ├── app.json                     # 全局配置（10 个页面路由）
+│   ├── app.json                     # 全局配置（12 个页面路由）
 │   ├── app.wxss                     # 全局样式
 │   ├── sitemap.json                 # 站点地图配置
 │   │
@@ -78,20 +78,22 @@ miniprogram-learning-diagnostic/
 │   ├── components/                  # 自定义组件目录（当前为空占位）
 │   ├── images/                      # 静态图片资源目录（当前为空占位）
 │   │
-│   └── pages/                       # 10 个注册页面
+│   └── pages/                       # 12 个注册页面
 │       ├── index/                   # Page 1：首页（学习档案）
 │       ├── add-student/             # 添加学生页（创建学生+三条学科档案）
 │       ├── subject-select/          # Page 2：学科入口（兼容路由）
 │       ├── subject-home/            # Page 3：学科工作台（主任务 + 待处理队列 + 工具）
 │       ├── upload/                  # Page 4：拍照上传（异步）
 │       ├── upload-history/          # Page 4A：学习记录时间线
+│       ├── parent-management/       # Page 5A：家庭成员管理
+│       ├── join-student/            # Page 5B：扫码加入孩子档案
 │       ├── report/                  # Page 6：诊断/验证报告（含 presenter）
 │       ├── generate-verification/   # Page 7：验证试卷出卷配置器
 │       ├── default-paper/           # Page 8：默认诊断试卷选择
 │       └── paper-preview/           # Page 9：试卷预览/打印
 │
-├── cloudfunctions/                  # 云函数（后端，6 个）
-│   ├── uploadAndAnalyze/            # 入口：校验参数、创建 reports、同步调 analyzePhotos
+├── cloudfunctions/                  # 云函数（后端，8 个）
+│   ├── uploadAndAnalyze/            # 入口：校验参数、创建 reports、后台触发 analyzePhotos
 │   ├── analyzePhotos/               # 主控：拆分批次、串行分析、去重、合并、对比、落库
 │   │   ├── index.js                 #   主流程
 │   │   ├── comparison.js            #   验证报告对比逻辑
@@ -100,6 +102,8 @@ miniprogram-learning-diagnostic/
 │   │   ├── index.js                 #   调 CloudBase AI hy3-preview
 │   │   └── result-normalizer.js     #   AI 返回结构化归一
 │   ├── getAnalysisProgress/         # 轻量查询 analysisTasks 进度
+│   ├── studentAccess/               # 家长成员、邀请和加入管理
+│   ├── studentData/                 # 访问感知的学习资料聚合读取
 │   ├── generatePaper/               # 生成验证/默认试卷 + A4 PDF（支持 preview）
 │   └── generateReportPDF/           # 生成报告 PDF，回写 reports.pdfFileId
 │
@@ -132,7 +136,7 @@ miniprogram-learning-diagnostic/
     └── superpowers/plans/           # 规划辅助材料
 ```
 
-**文件总数**: 52 个 JavaScript 文件（`npm run check` 校验），140 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
+**文件总数**: 74 个 JavaScript 文件（`npm run check` 校验），216 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
 
 ### 2.2 相关文件索引
 
@@ -156,9 +160,9 @@ miniprogram-learning-diagnostic/
 | 后端服务 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI 模型（图像） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI 模型（文本） | CloudBase AI `deepseek-v4-flash` | 用于 generatePaper 生成题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 5 个集合：students / subjectProfiles / reports / papers / analysisTasks |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 7 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites |
 | 图片存储 | 云开发云存储 | 试卷照片上传至云存储，生成临时 URL 供 AI 分析 |
-| PDF 生成 | pdfkit（云函数内） | 生成 A4 试卷/报告 PDF，上传云存储；中文字体从 `FONT_FILE_ID` 下载并缓存到 `/tmp` |
+| PDF 生成 | pdfkit（云函数内） | 生成 A4 试卷/报告 PDF，上传云存储；云函数内置 Noto CJK 中文字体 |
 | 本地测试 | Node.js 内置 test runner | `npm test` 显式运行常规测试文件，真实图片 E2E 单独运行，无需 Jest/Mocha |
 
 ### 3.2 架构图
@@ -363,7 +367,7 @@ miniprogram-learning-diagnostic/
                     status=completed → 刷新视图
 ```
 
-> **当前实现说明**：`uploadAndAnalyze` 已经不等待 `analyzePhotos` 完成；长耗时分析由后台函数继续执行。`analyzePhotos` 建议配置 900s 超时，避免 20 张图片或模型排队导致中断。
+> **当前实现说明**：`uploadAndAnalyze` 已经不等待 `analyzePhotos` 完成；云函数超时保持在微信平台允许的 60 秒以内，长耗时分析通过任务进度、轮询和手动重试恢复。
 
 ### 4.2 云函数设计
 
@@ -408,13 +412,7 @@ System Prompt 包含：
 
 `analyzeBatch` 和 `generatePaper` 通过 `@cloudbase/node-sdk` 使用当前云开发环境的 CloudBase AI 能力，调用 `hy3-preview`（图像）与 `deepseek-v4-flash`（文本）。部署前需在该环境开通这两个模型。代码不再读取 `SECRET_ID`、`SECRET_KEY`、`AI_API_KEY`、`AI_API_URL`。
 
-`generatePaper` 和 `generateReportPDF` 需要配置：
-
-| 变量名 | 必填 | 说明 | 示例值 |
-|--------|------|------|--------|
-| `FONT_FILE_ID` | 是 | 云存储中的中文字体 fileID；云函数启动时下载到 `/tmp/chinese-font.ttf` 并缓存 | `cloud://xxxxx/SimHei.ttf` |
-
-未配置 `FONT_FILE_ID` 时 PDF 会回退到 Helvetica，中文将显示为空白或乱码。
+`generatePaper` 和 `generateReportPDF` 云函数目录内已内置 `NotoSansCJKsc-Regular.otf`。部署时请确认字体文件随云函数一起上传；不需要再配置字体环境变量，也不会回退到 Helvetica。
 
 ---
 
@@ -436,14 +434,14 @@ System Prompt 包含：
 | **参数校验与归属校验** | ✅ | 各云函数入口检查 fileIDs/studentId/subject/mode/paperId/openID |
 | **PRD.md** | ✅ | v2.6，含页面职责边界和实现状态总览 |
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 索引 + 字体 + 云函数部署） |
-| **自动化测试** | ✅ | 140 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
+| **自动化测试** | ✅ | 216 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
 | **端到端真实图片脚本** | ✅ | `tests/e2e-real-image.test.js` 单独运行，串通上传 → AI 分析 → 报告生成链路 |
-| **JS 语法检查** | ✅ | `npm run check` 校验 52 个文件 |
+| **JS 语法检查** | ✅ | `npm run check` 校验 74 个文件 |
 | **学科隔离** | ✅ | 数/语/英三科独立档案，首页提供学科入口，单学科工作台承接具体操作 |
 | **20张照片支持** | ✅ | `upload` 页面限制 20 张，`analyzePhotos` 自动分批（5张/批） |
 | **学习记录** | ✅ | `upload-history` 按天展示诊断报告、验证试卷、验证批复和原始照片 |
 | **试卷下载状态** | ✅ | `paper-preview` 对已下载 PDF 显示「已下载」，防止重复下载 |
-| **PDF 中文字体从环境变量读取** | ✅ | `generatePaper` 与 `generateReportPDF` 通过 `process.env.FONT_FILE_ID` 加载字体，未配置时降级到 Helvetica 并警告 |
+| **PDF 中文字体内置** | ✅ | `generatePaper` 与 `generateReportPDF` 使用函数目录内的 Noto CJK 字体，缺失时直接返回明确错误 |
 | **AI 模型通过 CloudBase AI 调用** | ✅ | `analyzeBatch` 与 `generatePaper` 使用 `@cloudbase/node-sdk`，不再读取 SECRET_ID/SECRET_KEY/AI_API_KEY |
 
 ### 6.2 待完成（部署 + 配置 + 真机验收）
@@ -452,9 +450,9 @@ System Prompt 包含：
 |------|------|------|
 | 配置云开发环境 ID | ⬜ | 已写入 `project.config.json.cloudbaseRoot` 与 `app.js`；如需更换环境请同步修改两处 |
 | 开通 CloudBase AI 模型 | ⬜ | 在当前云开发环境开通 `hy3-preview` 与 `deepseek-v4-flash` |
-| 上传中文字体并配置 FONT_FILE_ID | ⬜ | 将 `SimHei.ttf` 上传到云存储，为 `generatePaper` 与 `generateReportPDF` 配置环境变量 |
-| 部署云函数 | ⬜ | 微信开发者工具 → 右键每个云函数目录 → "上传并部署：云端安装依赖"；建议 `analyzePhotos` 超时设为 900s |
-| 创建数据库集合与安全规则 | ⬜ | `students` / `subjectProfiles` / `reports` / `papers` / `analysisTasks`，规则：`doc._openid == auth.openid` |
+| 确认内置中文字体 | ⬜ | 确认 `generatePaper` 与 `generateReportPDF` 目录内的 `NotoSansCJKsc-Regular.otf` 随云函数上传 |
+| 部署云函数 | ⬜ | 微信开发者工具 → 右键每个云函数目录 → "上传并部署：云端安装依赖"；所有云函数超时保持在 60 秒以内 |
+| 创建数据库集合与安全规则 | ⬜ | 主学习数据集合使用创建者规则；`studentMembers` / `studentInvites` 通过云函数访问 |
 | 创建数据库复合索引 | ⬜ | 见 SETUP.md 第五章"数据库索引"表 |
 | 真机端到端验收 | ⬜ | 添加学生 → 上传 1/20 张试卷 → AI 分析 → 查看报告 → 生成验证卷 → 下载 PDF → 打印 |
 | 微信订阅消息 | ⬜ | PRD P0；当前 `sendNotification` 为空实现，需申请模板并完成授权、发送和跳转 |
@@ -466,10 +464,10 @@ System Prompt 包含：
 
 ## 七、部署操作步骤（详细）
 
-### Step 1: 开通 CloudBase AI 并上传字体
+### Step 1: 开通 CloudBase AI 并确认字体
 
 1. 在当前云开发环境中确认 CloudBase AI 可用，并开通 `hy3-preview` 与 `deepseek-v4-flash` 两个模型
-2. 将中文字体（推荐 SimHei.ttf）上传到云存储，记录 `FONT_FILE_ID`
+2. 确认 `generatePaper` 与 `generateReportPDF` 云函数目录内包含 `NotoSansCJKsc-Regular.otf`
 
 ### Step 2: 上传云函数
 
@@ -478,16 +476,14 @@ System Prompt 包含：
 1. 左侧文件树找到 `cloudfunctions/<函数名>`
 2. **右键** → "上传并部署：云端安装依赖（不上传 node_modules）"
 3. 等待控制台显示"上传成功"
-4. 对 `cloudfunctions/` 下全部六个云函数重复：`uploadAndAnalyze` / `analyzePhotos` / `analyzeBatch` / `getAnalysisProgress` / `generatePaper` / `generateReportPDF`
-5. 在云开发控制台将 `analyzePhotos` 的执行超时调整为 **900 秒**
+4. 对 `cloudfunctions/` 下全部八个云函数重复：`uploadAndAnalyze` / `analyzePhotos` / `analyzeBatch` / `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `generateReportPDF`
+5. 在云开发控制台确认各云函数执行超时均不超过 **60 秒**
 
-### Step 3: 配置环境变量
+### Step 3: 确认云函数配置
 
 1. 点顶部"云开发"按钮 → 进入控制台
-2. "云函数" → `generatePaper` → "配置"标签
-3. "环境变量" → 添加：
-   - `FONT_FILE_ID` = Step 1 上传字体得到的 fileID
-4. 保存，并为 `generateReportPDF` 配置相同变量
+2. "云函数" → 逐个检查函数配置
+3. 确认 AI 模型已开通、函数超时不超过 60 秒、PDF 字体文件随函数包上传
 
 ### Step 4: 编译测试
 
@@ -530,6 +526,6 @@ System Prompt 包含：
 |------|------|---------|
 | 混元视觉模型对手写体识别率 | 分析准确率下降 | Prompt 中加入"手写体辨识有不确定性，低置信度要标注" |
 | AI 分析耗时（图片多时） | 用户等待体验差 | 限制单次 20 张，显示上传/分析进度 |
-| 云函数超时限制 | 大量图片分析超时 | `analyzePhotos` 建议配置 900 秒；客户端提交后先返回，后台继续处理 |
+| 云函数超时限制 | 大量图片分析超时 | 所有云函数保持 60 秒以内；客户端提交后先返回，依靠任务进度、轮询和手动重试恢复 |
 | 腾讯云 API 调用费用 | 持续运营成本 | 个人使用量级费用极低，可忽略 |
 | 图片 base64 体积大 | 请求体超限 | 上传时已压缩（sizeType: compressed） |

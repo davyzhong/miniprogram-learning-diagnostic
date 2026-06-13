@@ -1,5 +1,7 @@
 # Parent Management and Time-Aware Bottlenecks Implementation Plan
 
+> Superseded note: 本计划保留为早期执行记录。其中 `viewer/read-only` 权限设定已被 `2026-06-13-architecture-dedup-permission-plan.md` 取代。当前策略是共同家长可以操作学习闭环，只有家庭成员管理保持 owner-only。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a lightweight parent-management model where multiple WeChat accounts can view one child profile, while adding time-aware evidence and bottleneck trend tracking for uploaded photos and verification papers.
@@ -1261,4 +1263,3 @@ Mitigation:
 - Existing single-owner flow still works.
 - `npm run verify` passes.
 - WeChat DevTools preview passes.
-
