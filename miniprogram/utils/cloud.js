@@ -1,4 +1,5 @@
 // utils/cloud.js - 云函数调用封装
+const { SUBJECT_NAMES } = require('./constants')
 
 let _db = null
 function getDb() {
@@ -66,15 +67,14 @@ async function addStudent(data) {
 
 async function createStudentWithProfiles(data) {
   const studentId = await addStudent(data)
-  const subjectNames = { math: '数学', chinese: '语文', english: '英语' }
   const now = getDb().serverDate()
 
-  for (const subject of Object.keys(subjectNames)) {
+  for (const subject of Object.keys(SUBJECT_NAMES)) {
     await getDb().collection('subjectProfiles').add({
       data: {
         studentId,
         subject,
-        subjectName: subjectNames[subject],
+        subjectName: SUBJECT_NAMES[subject],
         totalReports: 0,
         currentSummary: '',
         currentBottlenecks: [],

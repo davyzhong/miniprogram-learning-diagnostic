@@ -2,6 +2,10 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 
 const { createPoller } = require('../miniprogram/utils/poller')
+const {
+  classifyAnalysisState,
+  createAnalysisPoller
+} = require('../miniprogram/utils/analysis-poller')
 
 test('poller stops when onValue returns false', async () => {
   const values = ['analyzing', 'completed']
@@ -119,4 +123,62 @@ test('poller.stop cancels pending schedule during an async request', async () =>
   await started
   assert.equal(scheduled, null)
   assert.equal(cancelled, false)
+})
+
+test('analysis poller classifies completed, failed, stale and active progress states', () => {
+  const now = new Date('2026-06-13T10:00:00+08:00').getTime()
+
+  assert.equal(classifyAnalysisState({ report: { status: 'completed' }, now }).status, 'completed')
+  assert.equal(classifyAnalysisState({ report: { status: 'failed' }, now }).status, 'failed')
+  assert.deepEqual(classifyAnalysisState({
+    report: { status: 'analyzing', createdAt: '2026-06-13T09:59:00+08:00' },
+    progress: { status: 'running', totalBatches: 4, completedBatches: 1, createdAt: '2026-06-13T09:59:00+08:00' },
+    attempt: 1,
+    now
+  }), {
+    status: 'analyzing',
+    shouldContinue: true,
+    hasProgress: true,
+    taskMissing: false,
+    progressPercent: 25,
+    completedBatches: 1,
+    totalBatches: 4,
+    currentBatch: 2
+  })
+  assert.equal(classifyAnalysisState({
+    report: { status: 'analyzing' },
+    progress: { status: 'running', createdAt: '2026-06-13T09:00:00+08:00' },
+    now
+  }).status, 'timeout')
+  assert.equal(classifyAnalysisState({
+    report: { status: 'analyzing', createdAt: '2026-06-13T09:58:00+08:00' },
+    attempt: 2,
+    now
+  }).taskMissing, true)
+})
+
+test('analysis poller wraps createPoller and only loads progress for analyzing reports', async () => {
+  const calls = []
+  let onCompletedReport = null
+  const poller = createAnalysisPoller({
+    loadReport: async () => ({ _id: 'report-1', status: 'completed' }),
+    loadProgress: async () => {
+      calls.push('progress')
+      return null
+    },
+    onCompleted: report => { onCompletedReport = report },
+    createPoller: options => {
+      calls.push('create')
+      return {
+        start: () => options.onValue({ report: { _id: 'report-1', status: 'completed' }, progress: null }, 1),
+        stop: () => {},
+        isRunning: () => false
+      }
+    }
+  })
+
+  await poller.start()
+
+  assert.deepEqual(calls, ['create'])
+  assert.equal(onCompletedReport._id, 'report-1')
 })

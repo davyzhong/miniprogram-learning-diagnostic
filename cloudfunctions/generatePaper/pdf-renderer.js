@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { summarizeBottleneckName } = require('./bottleneck-display');
+const { getSubjectName } = require('../_shared/constants');
 
 const COLORS = {
   navy: '#17365D',
@@ -76,7 +77,7 @@ function drawLine(doc, x1, y1, x2, y2, color = COLORS.line, width = 1) {
 }
 
 function getPaperTitle(subject, type) {
-  const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
+  const subjectName = getSubjectName(subject, '数学');
   return type === 'verification' ? '学习卡点验证卷' : `${subjectName}学习诊断卷`;
 }
 
@@ -112,7 +113,7 @@ function drawPaperCode(doc, paperDisplayCode, y) {
 }
 
 function drawStudentHeader(doc, subject, type, continuation = false, paperDate = '', paperDisplayCode = '') {
-  const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
+  const subjectName = getSubjectName(subject, '数学');
   const title = getPaperTitle(subject, type);
   if (continuation) {
     doc.fillColor(COLORS.navy).fontSize(13)
@@ -235,7 +236,7 @@ function drawPageNumber(doc, pageNumber, answerPage = false) {
 }
 
 function drawAnswerHeader(doc, subject, type, paperDate = '', paperDisplayCode = '') {
-  const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
+  const subjectName = getSubjectName(subject, '数学');
   doc.fillColor(COLORS.navy).fontSize(19)
     .text(`${getPaperTitle(subject, type)} · 参考答案`, PAGE.left, PAGE.top + 2, {
       width: PAGE.contentWidth,

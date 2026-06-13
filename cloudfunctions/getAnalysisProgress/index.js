@@ -1,20 +1,10 @@
 // getAnalysisProgress/index.js
 // 轻量查询函数：返回 analysisTasks 中的进度信息
 const cloud = require('wx-server-sdk');
+const { getLearningResourceAccess, canReadLearning } = require('../_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
-
-async function canReadReport(report, openId) {
-  if (report && report._openid === openId) return true;
-  if (!report || !report.studentId) return false;
-  const res = await db.collection('studentMembers').where({
-    studentId: report.studentId,
-    memberOpenId: openId,
-    status: 'active',
-  }).get();
-  return (res.data || []).length > 0;
-}
 
 exports.main = async (event) => {
   const { reportId } = event;
@@ -30,7 +20,8 @@ exports.main = async (event) => {
     if (!report) {
       return { success: false, error: '报告不存在' };
     }
-    if (!(await canReadReport(report, currentOpenId))) {
+    const access = await getLearningResourceAccess(db, report, currentOpenId);
+    if (!canReadLearning(access)) {
       return { success: false, error: '无权访问该报告' };
     }
 

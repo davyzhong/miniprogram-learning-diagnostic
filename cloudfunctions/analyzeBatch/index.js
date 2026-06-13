@@ -3,6 +3,7 @@
 const tcb = require('@cloudbase/node-sdk');
 const cloud = require('wx-server-sdk');
 const { normalizePageResults } = require('./result-normalizer');
+const { getSubjectName } = require('../_shared/constants');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
@@ -15,7 +16,7 @@ const app = tcb.init({
 
 // ========== 构建 Prompt ==========
 function buildPrompt(subject, verificationPlan = []) {
-  const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
+  const subjectName = getSubjectName(subject, '数学');
 
   const bugTaxonomy = {
     math: [
