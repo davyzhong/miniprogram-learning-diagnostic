@@ -318,7 +318,7 @@ test('新增的云函数也应遵守 init-before-db 规则', () => {
 - **目标**：核心模块行覆盖 ≥ 80%，云函数主入口 ≥ 90%
 - **当前采集方式**：`npm run test:coverage`（V8 原生）
 - **已知缺口**：
-  - `sendNotification()` 空实现无覆盖
+  - `sendNotification()` 是订阅消息预留钩子；模板与授权链路接入前不作为覆盖率目标
   - `e2e-real-image.test.js` 不计入覆盖率
   - 部分错误分支仅在真机触发（相机、存储鉴权）
 
@@ -334,35 +334,43 @@ test('新增的云函数也应遵守 init-before-db 规则', () => {
 - 微信运行时特有行为（应在真机验收清单中覆盖）
 - 第三方 SDK 内部实现
 
-## 8. CI 集成建议
+## 8. CI 集成
 
-当前项目未接入 CI，但架构已为 CI 准备好：
+项目已接入最小 GitHub Actions 校验：`.github/workflows/verify.yml`。
 
 ### 推荐的最小 CI 流水线
 
 ```yaml
-# .github/workflows/ci.yml 示例
-name: CI
-on: [push, pull_request]
+# .github/workflows/verify.yml
+name: Verify
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
 jobs:
-  test:
+  verify:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [20, 22]
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
-      - run: npm run verify
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Run verification
+        run: npm run verify
 ```
 
 ### 接入要点
 
 1. **不需要安装微信开发者工具**：所有自动化测试都在 Node 中运行
 2. **不需要云开发凭证**：harness 完全隔离了云端依赖
-3. **缓存 `node_modules`**：虽然本项目零外部依赖，但保留这一步便于未来扩展
+3. **依赖安装**：当前使用 `npm install`，与本地验证方式保持一致
 4. **覆盖率上报**：可将 `npm run test:coverage` 的输出接入 Codecov/Coveralls；如需 LCOV 格式，再叠加 `c8`
 5. **真机验收不进 CI**：`e2e-real-image.test.js` 需要真实环境与密钥，应作为发布前的手动检查项
 

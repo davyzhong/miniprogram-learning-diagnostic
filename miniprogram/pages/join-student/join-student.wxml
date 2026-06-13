@@ -3,7 +3,7 @@
     <view class="state-icon">码</view>
     <view class="title">输入家庭邀请码</view>
     <view class="hint">由档案创建者在家长管理中生成。</view>
-    <input class="code-input" value="{{inviteCode}}" maxlength="8" placeholder="例如 QY8392" bindinput="onInviteCodeInput" />
+    <input class="code-input" value="{{inviteCode}}" maxlength="8" placeholder="例如 QY8392AB" bindinput="onInviteCodeInput" />
     <view class="error-text" wx:if="{{error}}">{{error}}</view>
     <button class="primary" loading="{{lookingUp}}" bindtap="onLookupCode">查看孩子档案</button>
   </view>

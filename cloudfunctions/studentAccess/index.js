@@ -50,12 +50,10 @@ function createToken() {
 }
 
 function createInviteCode() {
-  return crypto.randomBytes(4)
-    .toString('base64url')
-    .replace(/[^A-Z0-9]/ig, '')
-    .toUpperCase()
-    .slice(0, 6)
-    .padEnd(6, 'X');
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  return Array.from(crypto.randomBytes(8))
+    .map(byte => alphabet[byte % alphabet.length])
+    .join('');
 }
 
 function addDays(date, days) {

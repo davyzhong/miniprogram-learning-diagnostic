@@ -2,6 +2,7 @@
 const cloud = require('../../utils/cloud')
 const { formatRelativeTime } = require('../../utils/util')
 const { buildLearningProfileHomeView } = require('./index-presenter')
+const { buildChildWorkbenchCards } = require('../../utils/child-workbench')
 const { getSubjectName } = require('../../utils/constants')
 
 const OWNER_PERMISSIONS = {
@@ -20,7 +21,8 @@ Page({
     activeStudent: null,
     permissions: {},
     hasStudents: false,
-    home: null
+    home: null,
+    childCards: []
   },
 
   onShow() {
@@ -57,6 +59,7 @@ Page({
           permissions: {},
           hasStudents: false,
           home: null,
+          childCards: [],
           loading: false
         })
         return
@@ -107,32 +110,48 @@ Page({
         return viewModel
       }))
 
-      const activeStudent = viewModels[0]
-      let activeProfiles = profileLists[activeStudent._id] || []
-      let reports = []
-      let papers = []
-      let permissions = activeStudent.permissions || OWNER_PERMISSIONS
+      const reportsByStudentId = {}
+      const papersByStudentId = {}
+      const permissionsByStudentId = {}
 
       if (typeof cloud.getStudentDashboard === 'function') {
-        try {
-          const dashboard = await cloud.getStudentDashboard(activeStudent._id)
-          activeProfiles = dashboard.subjectProfiles || activeProfiles
-          reports = dashboard.recentReports || []
-          papers = dashboard.recentPapers || []
-          permissions = dashboard.permissions || permissions
-        } catch (error) {
-          console.warn('共享档案详情不可用，回退到旧学习记录读取', error && error.message ? error.message : error)
-        }
+        await Promise.all(viewModels.map(async student => {
+          try {
+            const dashboard = await cloud.getStudentDashboard(student._id)
+            profileLists[student._id] = dashboard.subjectProfiles || profileLists[student._id] || []
+            reportsByStudentId[student._id] = dashboard.recentReports || []
+            papersByStudentId[student._id] = dashboard.recentPapers || []
+            permissionsByStudentId[student._id] = dashboard.permissions || student.permissions || OWNER_PERMISSIONS
+          } catch (error) {
+            console.warn('共享档案详情不可用，回退到旧学习记录读取', error && error.message ? error.message : error)
+          }
+        }))
       }
 
-      if (!reports.length && !papers.length) {
-        reports = typeof cloud.getReports === 'function'
-          ? await cloud.getReports(activeStudent._id)
-          : []
-        papers = typeof cloud.getPapers === 'function'
-          ? await cloud.getPapers({ studentId: activeStudent._id })
-          : []
-      }
+      await Promise.all(viewModels.map(async student => {
+        if (!reportsByStudentId[student._id] && typeof cloud.getReports === 'function') {
+          reportsByStudentId[student._id] = await cloud.getReports(student._id)
+        }
+        if (!papersByStudentId[student._id] && typeof cloud.getPapers === 'function') {
+          papersByStudentId[student._id] = await cloud.getPapers({ studentId: student._id })
+        }
+        if (!permissionsByStudentId[student._id]) {
+          permissionsByStudentId[student._id] = student.permissions || OWNER_PERMISSIONS
+        }
+      }))
+
+      const childCards = buildChildWorkbenchCards({
+        students: viewModels,
+        profilesByStudentId: profileLists,
+        reportsByStudentId,
+        papersByStudentId
+      }, formatRelativeTime)
+
+      const activeStudent = viewModels[0]
+      const activeProfiles = profileLists[activeStudent._id] || []
+      const reports = reportsByStudentId[activeStudent._id] || []
+      const papers = papersByStudentId[activeStudent._id] || []
+      const permissions = permissionsByStudentId[activeStudent._id] || activeStudent.permissions || OWNER_PERMISSIONS
       const home = buildLearningProfileHomeView({
         student: activeStudent,
         profiles: activeProfiles,
@@ -148,6 +167,7 @@ Page({
         permissions,
         hasStudents: true,
         home,
+        childCards,
         loading: false
       })
     } catch (err) {
@@ -195,6 +215,15 @@ Page({
         })
       }
     })
+  },
+
+  onTraceableUrlTap(e) {
+    const url = e.currentTarget.dataset.url || ''
+    if (!url) {
+      wx.showToast({ title: '暂时没有可查看内容', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url })
   },
 
   navigateToSubject(subject) {

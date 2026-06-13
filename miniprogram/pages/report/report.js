@@ -157,6 +157,15 @@ Page({
     })
   },
 
+  onTraceableUrlTap(e) {
+    const url = e.currentTarget.dataset.url || ''
+    if (!url) {
+      wx.showToast({ title: '暂时没有可查看内容', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url })
+  },
+
   // ========== 轮询逻辑 ==========
 
   startPolling(reportId) {

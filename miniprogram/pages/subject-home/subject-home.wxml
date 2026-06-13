@@ -33,15 +33,15 @@
   </view>
 
   <view class="quick-strip">
-    <view class="quick-cell">
+    <view class="quick-cell" bindtap="onQuickStatTap" data-target="pending">
       <text class="quick-num pending-color">{{taskQueue.length}}</text>
       <text class="quick-label">待处理</text>
     </view>
-    <view class="quick-cell">
+    <view class="quick-cell" bindtap="onQuickStatTap" data-target="records">
       <text class="quick-num">{{totalReports}}</text>
       <text class="quick-label">诊断记录</text>
     </view>
-    <view class="quick-cell">
+    <view class="quick-cell" bindtap="onQuickStatTap" data-target="improved">
       <text class="quick-num improved-color">{{improvedCount}}</text>
       <text class="quick-label">已改善</text>
     </view>

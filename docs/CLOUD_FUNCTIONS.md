@@ -81,6 +81,7 @@ wx.cloud.callFunction({
   "success": true,
   "inviteId": "invite_xxx",
   "token": "明文token仅返回一次",
+  "inviteCode": "QY8392AB",
   "path": "/pages/join-student/join-student?inviteId=invite_xxx&token=...",
   "expiresAt": "2026-06-20T00:00:00.000Z"
 }
@@ -104,9 +105,10 @@ wx.cloud.callFunction({
 
 1. 邀请只在数据库保存 `tokenHash`，不保存明文 token。
 2. `createInvite` 返回的明文 token 只用于生成一次性扫码路径。
-3. 邀请默认 7 天过期，接受后状态改为 `accepted`。
-4. 同一微信重复接受同一孩子档案邀请时保持幂等，不重复创建成员。
-5. 前端不直接查询 `studentMembers / studentInvites`，统一由本云函数做 OPENID 和角色校验。
+3. `inviteCode` 为 8 位大写字母/数字，供另一位家长手动输入加入。
+4. 邀请默认 7 天过期，接受后状态改为 `accepted`。
+5. 同一微信重复接受同一孩子档案邀请时保持幂等，不重复创建成员。
+6. 前端不直接查询 `studentMembers / studentInvites`，统一由本云函数做 OPENID 和角色校验。
 
 ---
 
@@ -280,7 +282,7 @@ wx.cloud.callFunction({
 
 ### 功能描述
 
-分析主控函数：根据 `reportId` 读取报告，将图片拆分为每批最多 5 张，串行调用 `analyzeBatch`，合并结果、去重、对比历史卡点，更新 `reports / subjectProfiles / analysisTasks`，并异步触发订阅消息推送。
+分析主控函数：根据 `reportId` 读取报告，将图片拆分为每批最多 5 张，串行调用 `analyzeBatch`，合并结果、去重、对比历史卡点，更新 `reports / subjectProfiles / analysisTasks`。当前保留 `sendNotification` 钩子，但在订阅消息模板和用户授权链路完成前，不向用户承诺推送。
 
 ### 调用方式
 
@@ -373,7 +375,7 @@ wx.cloud.callFunction({
 3. **去重逻辑**：基于 OCR 摘要指纹识别重复页面，重复页不参与卡点合并，但仍保留在 `imageFiles` 中（带 `isDuplicate: true`）。
 4. **验证模式对比**：会从 papers 集合读取 `bottleneckTargets`，仅对目标卡点做 improved/persisting/worsened/new 分类。
 5. **失败回滚**：异常时会将 `reports.status` 和 `analysisTasks.status` 都置为 `failed`，并清空 `subjectProfiles.analysisStatus`。
-6. 推送订阅消息目前为空实现，后续接入 `sendSubscribeMessage` 云函数即可生效。
+6. `sendNotification` 目前是预留钩子；后续接入 `sendSubscribeMessage` 云函数、模板 ID 和前端订阅授权后，再恢复“完成后推送通知”的产品文案。
 
 ---
 

@@ -64,6 +64,12 @@
   padding: 0 14rpx;
 }
 
+.stat-card:active,
+.bottleneck-card:active,
+.card-action:active {
+  opacity: 0.74;
+}
+
 .stat-value {
   color: #173f6b;
   font-size: 34rpx;

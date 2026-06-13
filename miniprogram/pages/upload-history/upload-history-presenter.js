@@ -16,6 +16,7 @@ const {
   getSubjectName,
   normalizeSubject: normalizeKnownSubject
 } = require('../../utils/constants')
+const { buildTraceableUrl } = require('../../utils/traceable-actions')
 
 const SUBJECT_FILTERS = [
   { key: '', name: '全部' },
@@ -118,11 +119,13 @@ function buildPhotoEvidenceRows(photos = [], kind = 'photo') {
 
 function buildStatusItem(report, subjectName = '', fallbackSubject = '') {
   const eventTime = report.evidenceTime || report.createdAt
+  const subject = report.subject || fallbackSubject
   return {
     id: `status-${report._id}`,
     type: 'status',
-    subject: report.subject || fallbackSubject,
+    subject,
     reportId: report._id,
+    url: buildTraceableUrl({ type: 'report-detail', id: report._id }),
     title: buildStatusTitle(report, subjectName),
     status: report.status || 'analyzing',
     statusIcon: report.status === 'failed' || report.status === 'timeout' ? '!' : '…',
@@ -135,6 +138,7 @@ function buildStatusItem(report, subjectName = '', fallbackSubject = '') {
 function buildReportEvent(report, photos, subjectName = '', fallbackSubject = '', options = {}) {
   const isVerification = report.type === 'verification'
   const eventTime = report.evidenceTime || report.createdAt
+  const subject = report.subject || fallbackSubject
   const photoCount = photos.length
   const duplicateCount = photos.filter(photo => photo.isDuplicate).length
   const bottleneckText = bottleneckListText(report.bottlenecks || [])
@@ -144,32 +148,58 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
   const paperCode = (report.paperId && options.paperCodeById ? options.paperCodeById.get(report.paperId) : '')
     || paperCodeOf(linkedPaper)
   const foldedEvidence = buildPhotoEvidenceRows(photos, isVerification ? 'answer-upload' : 'photo')
+  const reportUrl = buildTraceableUrl({ type: 'report-detail', id: report._id })
+  const paperUrl = report.paperId
+    ? buildTraceableUrl({ type: 'paper-workbench', id: report.paperId })
+    : ''
+  const bottleneckUrl = buildTraceableUrl({
+    type: 'bottleneck-center',
+    studentId: report.studentId,
+    subject,
+    filter: isVerification ? 'all' : 'active'
+  })
+  const sourceUrl = buildTraceableUrl({
+    type: 'learning-records',
+    studentId: report.studentId,
+    subject,
+    filter: isVerification ? 'answer-uploads' : 'sources'
+  })
+  const chips = [
+    isVerification && paperCode ? `关联 ${paperCode}` : '',
+    dateTimeChip('证据时间', eventTime),
+    photoCount > 0 ? `${photoCount} 张照片` : '',
+    isVerification && improvedCount > 0 ? `${improvedCount} 个已改善` : '',
+    !isVerification && report.totalErrors ? `${report.totalErrors} 道相关错题` : '',
+    bottleneckText
+  ].filter(Boolean)
 
   return {
     id: report._id,
-    subject: report.subject || fallbackSubject,
+    subject,
     kind: isVerification ? 'verification-report' : 'diagnosis-report',
     displayLevel: 'main',
     icon: isVerification ? '✓' : '◎',
+    url: reportUrl,
     title: reportTitle(report, subjectName),
     timeText: timeText(eventTime),
     createdAt: eventTime,
     summary: reportSummary(report),
     actionText: '查看报告',
     reportId: report._id,
+    paperUrl,
     photos,
     foldedEvidence,
     photoCount,
     duplicateCount,
     paperCode,
-    chips: [
-      isVerification && paperCode ? `关联 ${paperCode}` : '',
-      dateTimeChip('证据时间', eventTime),
-      photoCount > 0 ? `${photoCount} 张照片` : '',
-      isVerification && improvedCount > 0 ? `${improvedCount} 个已改善` : '',
-      !isVerification && report.totalErrors ? `${report.totalErrors} 道相关错题` : '',
-      bottleneckText
-    ].filter(Boolean)
+    paperCodeUrl: paperUrl,
+    chips,
+    chipItems: chips.map(text => ({
+      text,
+      url: text.startsWith('关联 ') ? paperUrl
+        : (text.includes('照片') ? sourceUrl
+          : (text.includes('卡点') || text === bottleneckText ? bottleneckUrl : reportUrl))
+    }))
   }
 }
 
@@ -178,14 +208,37 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
   const display = buildPaperDisplay(paper, subjectName, options)
   const paperCode = display.paperCode
   const bottleneckText = display.bottleneckText
-  const hasFeedback = linkedReports.some(report => report.status === 'completed')
+  const completedFeedback = linkedReports.find(report => report.status === 'completed')
+  const hasFeedback = Boolean(completedFeedback)
+  const subject = paper.subject || fallbackSubject
+  const paperUrl = buildTraceableUrl({ type: 'paper-workbench', id: paper._id })
+  const uploadUrl = buildTraceableUrl({
+    type: 'upload',
+    mode: 'verification',
+    studentId: paper.studentId,
+    subject,
+    subjectName,
+    grade: paper.grade,
+    paperId: paper._id
+  })
+  const feedbackUrl = hasFeedback
+    ? buildTraceableUrl({ type: 'report-detail', id: completedFeedback._id })
+    : ''
+  const bottleneckUrl = buildTraceableUrl({
+    type: 'bottleneck-center',
+    studentId: paper.studentId,
+    subject,
+    filter: 'active'
+  })
+  const chips = display.chips
 
   return {
     id: paper._id,
-    subject: paper.subject || fallbackSubject,
+    subject,
     kind: 'verification-paper',
     displayLevel: 'main',
     icon: '卷',
+    url: paperUrl,
     title: `生成${subjectName}验证试卷`,
     timeText: timeText(eventTime),
     createdAt: eventTime,
@@ -195,6 +248,7 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     actionText: '查看试卷',
     paperId: paper._id,
     paperCode,
+    paperCodeUrl: paperUrl,
     showPaperCode: Boolean(paperCode),
     photos: [],
     foldedEvidence: linkedReports.flatMap(report => buildPhotoEvidenceRows(getReportPhotos(report), 'answer-upload')),
@@ -203,7 +257,16 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     statusText: hasFeedback
       ? '已生成验证反馈'
       : (linkedReports.length > 0 ? '反馈分析中' : '等待打印作答并上传验证'),
-    chips: display.chips
+    statusUrl: hasFeedback ? feedbackUrl : uploadUrl,
+    uploadUrl,
+    feedbackUrl,
+    chips,
+    chipItems: chips.map(text => ({
+      text,
+      url: text.includes('题') || text.includes('卷') || text.includes('答案') || text.includes('试卷日期')
+        ? paperUrl
+        : bottleneckUrl
+    }))
   }
 }
 

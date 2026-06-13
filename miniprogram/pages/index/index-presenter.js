@@ -9,7 +9,8 @@ const {
 const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-display')
 const {
   buildBottleneckViews,
-  buildBottleneckStats
+  buildBottleneckStats,
+  profileBottlenecks
 } = require('../../utils/bottleneck-view')
 const {
   SUBJECTS: SUBJECT_KEYS,
@@ -34,14 +35,6 @@ function newestDate(values) {
     .map(toDate)
     .filter(Boolean)
     .sort((a, b) => b - a)[0] || null
-}
-
-function profileBottlenecks(profile = {}) {
-  if (Array.isArray(profile.currentBottlenecks)) return profile.currentBottlenecks
-  return [
-    ...(profile.pendingBottlenecks || []).map(item => ({ ...item, status: 'needs_verification' })),
-    ...(profile.improvedBottlenecks || []).map(item => ({ ...item, status: 'improved' }))
-  ]
 }
 
 function activeBottlenecks(profile = {}) {

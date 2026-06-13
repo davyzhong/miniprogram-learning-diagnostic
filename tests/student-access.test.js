@@ -142,7 +142,7 @@ test('owner creates invite code with preset relation and parent can join by code
     presetRelation: 'mother'
   })
   assert.equal(invite.success, true)
-  assert.match(invite.inviteCode, /^[A-Z0-9]{6}$/)
+  assert.match(invite.inviteCode, /^[A-Z0-9]{8}$/)
   assert.equal(db.dump('studentInvites')[0].presetRelation, 'mother')
   assert.equal(db.dump('studentInvites')[0].presetRelationText, '妈妈')
 

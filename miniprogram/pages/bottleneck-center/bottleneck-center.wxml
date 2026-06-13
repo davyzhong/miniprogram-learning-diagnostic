@@ -11,19 +11,19 @@
     </view>
 
     <view class="stats-grid">
-      <view class="stat-card">
+      <view class="stat-card" bindtap="onStatTap" data-status="all">
         <text class="stat-value">{{stats.totalCount}}</text>
         <text class="stat-label">全部卡点</text>
       </view>
-      <view class="stat-card">
+      <view class="stat-card" bindtap="onStatTap" data-status="active">
         <text class="stat-value">{{stats.activeCount}}</text>
         <text class="stat-label">待跟进</text>
       </view>
-      <view class="stat-card">
+      <view class="stat-card" bindtap="onStatTap" data-status="persisting">
         <text class="stat-value">{{stats.persistingCount}}</text>
         <text class="stat-label">持续出现</text>
       </view>
-      <view class="stat-card">
+      <view class="stat-card" bindtap="onStatTap" data-status="improved">
         <text class="stat-value">{{stats.improvedCount}}</text>
         <text class="stat-label">已改善</text>
       </view>

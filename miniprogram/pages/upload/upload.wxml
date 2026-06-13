@@ -63,7 +63,7 @@
   <!-- 异步提示 -->
   <view class="async-tip">
     <text class="async-icon">⏳</text>
-    <text class="async-text">上传完成后即可返回，AI 将在后台分析，完成后推送通知</text>
+    <text class="async-text">上传完成后即可返回，AI 将在后台分析，完成后可在学习记录查看</text>
   </view>
 
   <!-- 底部按钮 -->

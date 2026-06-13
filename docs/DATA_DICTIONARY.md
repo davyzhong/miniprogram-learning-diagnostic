@@ -65,6 +65,7 @@
 | `studentId` | String | 是 | — | 关联 students._id | `"665a1b2c3d4e5f6a7b8c9d0e"` |
 | `ownerOpenId` | String | 是 | — | 发起邀请的档案拥有者 openID | `"oOWNER"` |
 | `tokenHash` | String | 是 | — | 邀请 token 的 SHA-256 哈希，不保存明文 token | `"9f86d081..."` |
+| `inviteCode` | String | 是 | — | 8 位大写字母/数字邀请码，用于另一位家长手动输入加入 | `"QY8392AB"` |
 | `role` | String | 是 | `'viewer'` | 接受邀请后获得的角色 | `"viewer"` |
 | `status` | String | 是 | `'active'` | 邀请状态：`'active'` \| `'accepted'` \| `'expired'` | `"active"` |
 | `expiresAt` | Date | 是 | 创建后 7 天 | 过期时间 | `ISODate("2026-06-20T08:00:00Z")` |
@@ -73,7 +74,7 @@
 | `createdAt` | Date | 是 | serverDate() | 创建时间 | `ISODate("2026-06-13T08:00:00Z")` |
 | `updatedAt` | Date | 是 | serverDate() | 最后更新时间 | `ISODate("2026-06-13T08:00:00Z")` |
 
-**访问规则**：邀请明文 token 只在创建时返回一次；后续校验时由 `studentAccess` 重新计算哈希并匹配。
+**访问规则**：邀请明文 token 只在创建时返回一次；后续校验时由 `studentAccess` 重新计算哈希并匹配。邀请码也只通过 `studentAccess` 查询和接受，前端不直接读写 `studentInvites`。
 
 ---
 
@@ -360,6 +361,7 @@
 | `studentMembers` | `studentId`, `status` | 升序, 升序 | studentAccess 获取某个孩子档案的家长成员列表 |
 | `studentMembers` | `studentId`, `memberOpenId`, `status` | 升序, 升序, 升序 | studentAccess 判断当前用户是否已加入或是否可重复接受邀请 |
 | `studentInvites` | `studentId`, `status` | 升序, 升序 | studentAccess 获取/校验某个孩子档案的有效邀请 |
+| `studentInvites` | `inviteCode`, `status` | 升序, 升序 | 通过 8 位邀请码查找仍有效的家庭邀请 |
 | `studentInvites` | `expiresAt`, `status` | 升序, 升序 | 后续清理过期邀请或调试查询 |
 | `subjectProfiles` | `studentId`, `_openid` | 升序, 升序 | 按学生获取学科档案（内存中筛选 subject） |
 | `reports` | `studentId`, `subject`, `createdAt`, `_openid` | 升序, 升序, 降序, 升序 | subject-home/upload-history 按学生+学科获取报告列表 |

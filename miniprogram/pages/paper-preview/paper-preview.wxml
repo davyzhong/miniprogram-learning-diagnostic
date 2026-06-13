@@ -8,23 +8,23 @@
 
   <view class="workbench-card">
     <view class="workbench-top">
-      <view class="code-block">
+      <view class="code-block traceable-block" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
         <text class="code-label">验证试卷编号</text>
         <text class="paper-code">{{paperCodeText || '待生成编号'}}</text>
       </view>
-      <view class="status-pill status-{{workbenchStatus}}">{{workbenchStatusText}}</view>
+      <view class="status-pill status-{{workbenchStatus}}" bindtap="onTraceableUrlTap" data-url="{{statusUrl}}">{{workbenchStatusText}}</view>
     </view>
     <text class="status-desc">{{workbenchStatusDesc}}</text>
     <view class="meta-grid">
-      <view class="meta-cell" wx:if="{{paperDate}}">
+      <view class="meta-cell traceable-block" wx:if="{{paperDate}}" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
         <text class="meta-label">试卷日期</text>
         <text class="meta-value date-strong">{{paperDate}}</text>
       </view>
-      <view class="meta-cell">
+      <view class="meta-cell traceable-block" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
         <text class="meta-label">题目数量</text>
         <text class="meta-value">{{questionCount}} 题</text>
       </view>
-      <view class="meta-cell">
+      <view class="meta-cell traceable-block" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
         <text class="meta-label">页数</text>
         <text class="meta-value">{{pageSummary}}</text>
       </view>
@@ -35,7 +35,7 @@
     </view>
   </view>
 
-  <view class="paper-info card" wx:if="{{bottleneckText}}">
+  <view class="paper-info card traceable-block" wx:if="{{bottleneckText}}" bindtap="onTraceableUrlTap" data-url="{{bottleneckCenterUrl}}">
     <view class="info-row">
       <text class="info-label">覆盖卡点</text>
       <text class="info-value">{{bottleneckText}}</text>
@@ -51,7 +51,7 @@
       <view class="question-item" wx:for="{{questionPreview}}" wx:key="number">
         <view class="question-head">
           <text class="question-no">{{item.number}}</text>
-          <text class="question-tag">{{item.bottleneckName}}</text>
+          <text class="question-tag" bindtap="onTraceableUrlTap" data-url="{{item.bottleneckUrl}}">{{item.bottleneckName}}</text>
         </view>
         <text class="question-content">{{item.content}}</text>
         <view class="answer-space">
@@ -67,12 +67,12 @@
   <view class="feedback-card card">
     <view class="section-title-row">
       <text class="section-title">验证反馈</text>
-      <text class="section-action" wx:if="{{feedback.reportId}}" bindtap="onViewFeedbackReport">查看报告</text>
+      <text class="section-action" wx:if="{{feedback.reportId}}" bindtap="onTraceableUrlTap" data-url="{{feedback.reportUrl}}">查看报告</text>
     </view>
     <text class="feedback-title">{{feedback.title}}</text>
     <text class="feedback-summary">{{feedback.summary}}</text>
-    <view class="feedback-chips" wx:if="{{feedback.chips.length > 0}}">
-      <text class="feedback-chip" wx:for="{{feedback.chips}}" wx:key="*this">{{item}}</text>
+    <view class="feedback-chips" wx:if="{{feedback.chipItems.length > 0}}">
+      <text class="feedback-chip" wx:for="{{feedback.chipItems}}" wx:key="text" bindtap="onTraceableUrlTap" data-url="{{item.url}}">{{item.text}}</text>
     </view>
   </view>
 

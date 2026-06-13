@@ -1,19 +1,12 @@
 const cloud = require('../../utils/cloud')
 const {
   buildBottleneckViews,
-  findBottleneckView
+  findBottleneckView,
+  profileBottlenecks
 } = require('../../utils/bottleneck-view')
 const { bottleneckListText } = require('../../utils/learning-records')
 const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-display')
 const { SUBJECT_NAMES } = require('../../utils/constants')
-
-function profileBottlenecks(profile = {}) {
-  if (Array.isArray(profile.currentBottlenecks)) return profile.currentBottlenecks
-  return [
-    ...(profile.pendingBottlenecks || []).map(item => ({ ...item, status: 'needs_verification' })),
-    ...(profile.improvedBottlenecks || []).map(item => ({ ...item, status: 'improved' }))
-  ]
-}
 
 function toDate(value) {
   if (!value) return null
@@ -219,8 +212,27 @@ Page({
     this.onViewReport(e)
   },
 
+  onMetricTap(e) {
+    const target = e.currentTarget.dataset.target || 'evidence'
+    if (target === 'papers') {
+      const firstPaper = this.data.relatedPapers && this.data.relatedPapers[0]
+      if (firstPaper && firstPaper._id) {
+        wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${firstPaper._id}` })
+        return
+      }
+    }
+    if (target === 'reports') {
+      const firstReport = this.data.relatedReports && this.data.relatedReports[0]
+      if (firstReport && firstReport._id) {
+        wx.navigateTo({ url: `/pages/report/report?id=${firstReport._id}` })
+        return
+      }
+    }
+    wx.showToast({ title: '暂无对应证据', icon: 'none' })
+  },
+
   onBackToCenter() {
-    wx.navigateTo({
+    wx.redirectTo({
       url: `/pages/bottleneck-center/bottleneck-center?studentId=${this.data.studentId}&studentName=${encodeURIComponent(this.data.studentName || '')}`
     })
   }

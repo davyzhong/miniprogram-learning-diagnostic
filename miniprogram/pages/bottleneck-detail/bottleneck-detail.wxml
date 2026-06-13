@@ -21,19 +21,19 @@
     </view>
 
     <view class="metrics">
-      <view class="metric">
+      <view class="metric" bindtap="onMetricTap" data-target="reports">
         <text class="metric-value">{{bottleneck.evidenceCount}}</text>
         <text class="metric-label">证据</text>
       </view>
-      <view class="metric">
+      <view class="metric" bindtap="onMetricTap" data-target="reports">
         <text class="metric-value">{{bottleneck.recentErrorCount}}</text>
         <text class="metric-label">相关错题</text>
       </view>
-      <view class="metric">
+      <view class="metric" bindtap="onMetricTap" data-target="papers">
         <text class="metric-value">{{bottleneck.verificationPassCount}}</text>
         <text class="metric-label">通过</text>
       </view>
-      <view class="metric">
+      <view class="metric" bindtap="onMetricTap" data-target="papers">
         <text class="metric-value">{{bottleneck.verificationFailCount}}</text>
         <text class="metric-label">未通过</text>
       </view>

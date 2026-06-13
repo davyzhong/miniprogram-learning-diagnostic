@@ -29,6 +29,10 @@ Page({
     paperName: '',
     paperCodeText: '',
     paperDate: '',
+    paperCodeUrl: '',
+    statusUrl: '',
+    uploadUrl: '',
+    bottleneckCenterUrl: '',
     questionCount: 0,
     estimatedMinutes: 0,
     pages: 1,
@@ -46,9 +50,11 @@ Page({
     feedback: {
       hasFeedback: false,
       reportId: '',
+      reportUrl: '',
       title: '暂无验证反馈',
       summary: '上传作答照片后，这里会显示批改结果和学习卡点变化。',
-      chips: []
+      chips: [],
+      chipItems: []
     },
 
     pdfReady: false,
@@ -198,8 +204,16 @@ Page({
     if (!this.data.paperId) return
     const expand = !this.data.allQuestionsExpanded
     const questions = (this._paperQuestions || [])
+    const context = {
+      studentId: this.data.studentId,
+      studentName: this.data.studentName,
+      subject: this.data.subject,
+      subjectName: this.data.subjectName,
+      grade: this.data.grade,
+      paperId: this.data.paperId
+    }
     this.setData({
-      questionPreview: buildQuestionPreview(questions, expand),
+      questionPreview: buildQuestionPreview(questions, expand, context),
       allQuestionsExpanded: expand
     })
   },
@@ -211,6 +225,17 @@ Page({
       return
     }
     wx.navigateTo({ url: `/pages/report/report?id=${reportId}` })
+  },
+
+  onTraceableUrlTap(e) {
+    const url = e && e.currentTarget && e.currentTarget.dataset
+      ? e.currentTarget.dataset.url
+      : ''
+    if (!url) {
+      wx.showToast({ title: '暂无可查看内容', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url })
   },
 
   // 工具函数
