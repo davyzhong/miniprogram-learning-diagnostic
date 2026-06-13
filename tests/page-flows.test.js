@@ -212,7 +212,7 @@ test('learning profile home shows a message when parent management has no active
   assert.equal(wx.calls.find(call => call.name === 'showToast').payload.title, '缺少孩子档案信息')
 })
 
-test('learning profile home uses shared access and routes viewers to records', async () => {
+test('learning profile home uses shared access and lets co-parents operate learning workflows', async () => {
   const wx = createWxMock()
   const cloud = {
     getAccessibleStudents: async () => [{
@@ -220,12 +220,12 @@ test('learning profile home uses shared access and routes viewers to records', a
       name: '钟青羽',
       grade: 6,
       role: 'viewer',
-      permissions: { canView: true, canManageParents: false, canUpload: false, canGeneratePaper: false }
+      permissions: { canView: true, canManageParents: false, canUpload: true, canGeneratePaper: true }
     }],
     getSubjectProfiles: async () => [],
     getStudentDashboard: async studentId => ({
       student: { _id: studentId, name: '钟青羽', grade: 6 },
-      permissions: { canView: true, canManageParents: false, canUpload: false, canGeneratePaper: false },
+      permissions: { canView: true, canManageParents: false, canUpload: true, canGeneratePaper: true },
       subjectProfiles: [{
         subject: 'math',
         totalReports: 1,
@@ -244,11 +244,12 @@ test('learning profile home uses shared access and routes viewers to records', a
   })
 
   await page.loadStudents()
-  assert.equal(page.data.permissions.canUpload, false)
-  assert.equal(page.data.home.nextAction.primaryText, '查看学习记录')
+  assert.equal(page.data.permissions.canUpload, true)
+  assert.equal(page.data.permissions.canManageParents, false)
+  assert.equal(page.data.home.nextAction.primaryText, '生成验证试卷')
 
   page.onPrimaryAction()
-  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /upload-history/)
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
 })
 
 test('subject selection ensures a profile before entering the subject home', async () => {
@@ -310,10 +311,10 @@ test('subject home loads a compact action workbench', async () => {
   assert.ok(page.data.tools.some(item => item.key === 'latestReport'))
 })
 
-test('subject home hides write tools for viewer access', async () => {
+test('subject home shows learning workflow tools for co-parent access', async () => {
   const cloud = {
     getSubjectDashboard: async () => ({
-      permissions: { canView: true, canUpload: false, canGeneratePaper: false, canRetryAnalysis: false },
+      permissions: { canView: true, canManageParents: false, canUpload: true, canGeneratePaper: true, canRetryAnalysis: true },
       profile: {
         totalReports: 1,
         currentBottlenecks: [
@@ -341,12 +342,12 @@ test('subject home hides write tools for viewer access', async () => {
   })
 
   await page.loadProfile()
-  assert.equal(page.data.canWriteActions, false)
-  assert.deepEqual(page.data.tools.map(item => item.key), ['history', 'latestReport'])
-  assert.equal(page.data.primaryTask.actionType, 'history')
+  assert.equal(page.data.canWriteActions, true)
+  assert.deepEqual(page.data.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history', 'latestReport'])
+  assert.equal(page.data.primaryTask.actionType, 'verification')
 
   page.onTaskTap({ currentTarget: { dataset: { code: 'LP-001' } } })
-  assert.equal(wx.calls.find(call => call.name === 'navigateTo'), undefined)
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
 })
 
 test('subject home task and primary actions open the focused workflow', () => {
@@ -902,8 +903,8 @@ test('subject home polls the active report instead of whichever report is latest
     modules: {
       '../../utils/cloud': cloud,
       '../../utils/util': { formatRelativeTime: () => '' },
-      '../../utils/poller': {
-        createPoller: options => {
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: options => {
           pollOptions = options
           return { start() {}, stop() {}, isRunning: () => false }
         }
@@ -913,7 +914,7 @@ test('subject home polls the active report instead of whichever report is latest
   page.setData({ studentId: 'student-1', subject: 'math', currentAnalysisId: 'active-report' })
 
   page.startReportPolling()
-  await pollOptions.request()
+  await pollOptions.loadReport()
   assert.deepEqual(requested, ['active-report'])
 })
 
@@ -923,8 +924,8 @@ test('subject home stops polling and surfaces a stale analysis task', async () =
     modules: {
       '../../utils/cloud': {},
       '../../utils/util': { formatRelativeTime: () => '' },
-      '../../utils/poller': {
-        createPoller: options => {
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: options => {
           pollOptions = options
           return { start() {}, stop() {}, isRunning: () => false }
         }
@@ -934,17 +935,8 @@ test('subject home stops polling and surfaces a stale analysis task', async () =
   page.setData({ studentId: 'student-1', subject: 'math', currentAnalysisId: 'active-report' })
 
   page.startReportPolling()
-  const shouldContinue = await pollOptions.onValue({
-    report: { _id: 'active-report', status: 'analyzing' },
-    progress: {
-      status: 'processing',
-      completedBatches: 0,
-      totalBatches: 1,
-      createdAt: '2020-01-01T00:00:00Z'
-    }
-  }, 2)
+  await pollOptions.onTimeoutStatus()
 
-  assert.equal(shouldContinue, false)
   assert.equal(page.data.analysisStatusText, '分析可能超时，可刷新或重试')
 })
 
@@ -954,8 +946,8 @@ test('report exposes retry when an analysis task is stale', async () => {
     modules: {
       '../../utils/cloud': {},
       '../../utils/util': { formatChineseDateTime: () => '' },
-      '../../utils/poller': {
-        createPoller: options => {
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: options => {
           pollOptions = options
           return { start() {}, stop() {} }
         }
@@ -965,17 +957,8 @@ test('report exposes retry when an analysis task is stale', async () => {
   })
 
   page.startPolling('report-1')
-  const shouldContinue = await pollOptions.onValue({
-    report: { _id: 'report-1', status: 'analyzing' },
-    progress: {
-      status: 'processing',
-      completedBatches: 0,
-      totalBatches: 1,
-      createdAt: '2020-01-01T00:00:00Z'
-    }
-  }, 2)
+  await pollOptions.onTimeoutStatus()
 
-  assert.equal(shouldContinue, false)
   assert.equal(page.data.analysisTaskMissing, true)
   assert.equal(page.data.analysisStatusText, '分析超时，请重新分析')
 })
@@ -1487,11 +1470,11 @@ test('report loads diagnosis data and toggles error details', async () => {
   assert.equal(page.data.errorDetailList[0].expanded, true)
 })
 
-test('report viewer can read details but cannot generate paper or retry analysis', async () => {
+test('report co-parent can generate paper and retry analysis', async () => {
   let retryCalled = false
   const cloud = {
     getReportDetail: async () => ({
-      permissions: { canView: true, canGeneratePaper: false, canRetryAnalysis: false },
+      permissions: { canView: true, canManageParents: false, canGeneratePaper: true, canRetryAnalysis: true },
       report: {
         _id: 'report-1',
         studentId: 'student-1',
@@ -1517,13 +1500,13 @@ test('report viewer can read details but cannot generate paper or retry analysis
   })
 
   await page.loadReport('report-1')
-  assert.equal(page.data.canGeneratePaper, false)
-  assert.equal(page.data.canRetryAnalysis, false)
+  assert.equal(page.data.canGeneratePaper, true)
+  assert.equal(page.data.canRetryAnalysis, true)
 
   page.onGenerateVerification()
   page.onRetryAnalysis()
-  assert.equal(retryCalled, false)
-  assert.equal(wx.calls.find(call => call.name === 'navigateTo'), undefined)
+  assert.equal(retryCalled, true)
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
 })
 
 test('report generates, downloads and opens its printable PDF', async () => {
@@ -1571,8 +1554,8 @@ test('subject home resets analysis state and reloads data when polling completes
     modules: {
       '../../utils/cloud': cloud,
       '../../utils/util': { formatRelativeTime: () => '' },
-      '../../utils/poller': {
-        createPoller: options => {
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: options => {
           pollOptions = options
           return { start() {}, stop() {}, isRunning: () => false }
         }
@@ -1586,11 +1569,7 @@ test('subject home resets analysis state and reloads data when polling completes
 
   page.startReportPolling()
   // simulate completion
-  const continueAfterComplete = await pollOptions.onValue(
-    { report: { _id: 'active-report', status: 'completed' }, progress: null },
-    1
-  )
-  assert.equal(continueAfterComplete, false)
+  await pollOptions.onCompleted({ _id: 'active-report', status: 'completed' })
   assert.equal(page.data.analysisStatus, '')
   assert.equal(page.data.currentAnalysisId, '')
   assert.equal(page.data.analysisStatusText, '分析完成')
@@ -1602,11 +1581,7 @@ test('subject home resets analysis state and reloads data when polling completes
   profileLoads = 0
   recordLoads = 0
   wx.calls.length = 0
-  const continueAfterFailure = await pollOptions.onValue(
-    { report: { _id: 'active-report', status: 'failed' }, progress: null },
-    2
-  )
-  assert.equal(continueAfterFailure, false)
+  await pollOptions.onFailed({ _id: 'active-report', status: 'failed' })
   assert.equal(page.data.analysisStatus, '')
   assert.equal(page.data.currentAnalysisId, '')
   assert.equal(page.data.analysisStatusText, '')

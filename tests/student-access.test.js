@@ -37,7 +37,12 @@ test('getAccessibleStudents returns owned and joined active child profiles', asy
   assert.deepEqual(JSON.parse(JSON.stringify(result.students.map(item => item._id))), ['owned-student', 'joined-student'])
   assert.equal(result.students.find(item => item._id === 'owned-student').role, 'owner')
   assert.equal(result.students.find(item => item._id === 'joined-student').role, 'viewer')
-  assert.equal(result.students.find(item => item._id === 'joined-student').permissions.canUpload, false)
+  const joinedPermissions = result.students.find(item => item._id === 'joined-student').permissions
+  assert.equal(joinedPermissions.canView, true)
+  assert.equal(joinedPermissions.canUpload, true)
+  assert.equal(joinedPermissions.canGeneratePaper, true)
+  assert.equal(joinedPermissions.canRetryAnalysis, true)
+  assert.equal(joinedPermissions.canManageParents, false)
 })
 
 test('owner can list members and create an invite, viewer cannot', async () => {

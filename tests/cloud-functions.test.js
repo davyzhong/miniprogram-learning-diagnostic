@@ -134,12 +134,32 @@ test('uploadAndAnalyze rejects invalid uploads and students owned by another use
   assert.equal(db.dump('reports').length, 0)
 })
 
-test('viewer cannot perform owner-only write operations', async () => {
+test('joined parent can perform learning workflow operations', async () => {
+  const questions = Array.from({ length: 3 }, (_, index) => ({
+    index: index + 1,
+    content: `计算题 ${index + 1}`,
+    answer: String(index + 1),
+    points: 10,
+    lpCode: 'LP-001',
+    lpName: '计算错误'
+  }))
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
     studentMembers: [{ _id: 'member-1', studentId: 'student-1', ownerOpenId: 'owner-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }],
-    subjectProfiles: [{ _id: 'profile-1', studentId: 'student-1', subject: 'math' }],
-    papers: [],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      pendingBottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误' }]
+    }],
+    papers: [{
+      _id: 'paper-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'verification',
+      bottleneckTargets: ['LP-001']
+    }],
     reports: [{
       _id: 'report-1',
       _openid: 'owner-1',
@@ -155,20 +175,33 @@ test('viewer cannot perform owner-only write operations', async () => {
   })
   const generatePaper = loadModule('cloudfunctions/generatePaper/index.js', {
     'wx-server-sdk': viewerCloud,
-    '@cloudbase/node-sdk': createTcbMock(JSON.stringify({ title: '测试', questions: [] })),
+    '@cloudbase/node-sdk': createTcbMock(JSON.stringify({ title: '测试', questions })),
     './pdf-renderer': { generatePDF: async () => ({ buffer: Buffer.from('pdf'), studentPages: 1, answerPages: 1, totalPages: 2 }) }
   })
-  assert.equal((await upload.main({
+
+  const diagnosis = await upload.main({
     fileIDs: ['cloud://photo-1'],
     studentId: 'student-1',
     subject: 'math'
-  })).error, '无权执行该操作')
-  assert.equal((await generatePaper.main({
+  })
+  assert.equal(diagnosis.success, true)
+
+  const paper = await generatePaper.main({
     studentId: 'student-1',
     subject: 'math',
     type: 'verification',
     targets: ['LP-001']
-  })).error, '无权执行该操作')
+  })
+  assert.equal(paper.success, true)
+
+  const verification = await upload.main({
+    fileIDs: ['cloud://answer-1'],
+    studentId: 'student-1',
+    subject: 'math',
+    mode: 'verification',
+    paperId: 'paper-1'
+  })
+  assert.equal(verification.success, true)
 })
 
 test('viewer can read analysis progress for a joined child', async () => {

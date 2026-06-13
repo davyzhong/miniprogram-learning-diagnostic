@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const { permissionsForRole, canManageFamily } = require('../_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -45,17 +46,6 @@ function isStaleStatusReport(report = {}, now = Date.now()) {
 function visibleReports(reports = []) {
   const now = Date.now();
   return reports.filter(report => !isArchivedReport(report) && !isStaleStatusReport(report, now));
-}
-
-function permissionsForRole(role) {
-  const owner = role === 'owner';
-  return {
-    canView: true,
-    canManageParents: owner,
-    canUpload: owner,
-    canGeneratePaper: owner,
-    canRetryAnalysis: owner,
-  };
 }
 
 function normalizeSubject(subject) {
@@ -292,7 +282,7 @@ async function cleanupStaleLearningRecords(openId, studentId, subjectValue) {
   if (!studentId) return failure('缺少 studentId');
   const access = await getAccess(studentId, openId);
   if (!access.allowed) return failure('无权访问该学生');
-  if (access.role !== 'owner') return failure('只有档案管理者可以清理历史任务');
+  if (!canManageFamily(access)) return failure('只有档案管理者可以清理历史任务');
 
   const subject = subjectValue ? normalizeSubject(subjectValue) : '';
   const now = Date.now();

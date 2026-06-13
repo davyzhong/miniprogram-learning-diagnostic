@@ -399,12 +399,12 @@
 | 云函数 | 校验逻辑 |
 |--------|----------|
 | `studentAccess` | 基于当前 OPENID 校验 owner/viewer 关系；owner 才能邀请和移除家长 |
-| `studentData` | 基于当前 OPENID 校验 owner/viewer 关系；只允许共享读取，不执行写操作 |
-| `uploadAndAnalyze` | 检查 student._openid === currentOpenId；检查 paper._openid === currentOpenId |
-| `analyzePhotos` | 检查 report._openid === currentOpenId |
-| `getAnalysisProgress` | 检查 report._openid === currentOpenId |
-| `generatePaper` | 检查 student._openid === currentOpenId |
-| `generateReportPDF` | 检查 reportData._openid === currentOpenId |
+| `studentData` | 基于当前 OPENID 校验 owner/viewer 关系；聚合返回学习资料和角色权限 |
+| `uploadAndAnalyze` | 通过共享 access helper 校验当前 OPENID 是否可操作对应学生/试卷 |
+| `analyzePhotos` | 通过共享 access helper 校验触发者或当前用户是否可操作对应报告 |
+| `getAnalysisProgress` | 通过共享 access helper 校验当前 OPENID 是否可读取对应报告进度 |
+| `generatePaper` | 通过共享 access helper 校验当前 OPENID 是否可为对应学生生成试卷 |
+| `generateReportPDF` | 通过共享 access helper 校验当前 OPENID 是否可读取并生成对应报告 PDF |
 
 ### 参数校验
 

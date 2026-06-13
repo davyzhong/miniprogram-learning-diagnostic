@@ -1,7 +1,5 @@
-const {
-  bottleneckLabelOf,
-  paperCodeOf
-} = require('../../utils/learning-records')
+const { bottleneckLabelOf } = require('../../utils/learning-records')
+const { paperCodeOf } = require('../../utils/paper-display')
 
 function pad2(value) {
   return String(value).padStart(2, '0')

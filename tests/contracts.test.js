@@ -67,9 +67,36 @@ test('cloud functions use deployment configuration instead of a hard-coded envir
   assert.doesNotMatch(reportPdfSource, /cloud:\/\/cloud1-d6gneg68m5a7a3876/)
 })
 
-test('generatePaper cloud function allows enough time for AI and PDF generation', () => {
-  const config = JSON.parse(read('cloudfunctions/generatePaper/config.json'))
-  assert.equal(config.timeout, 60)
+test('cloud function timeout configs and active docs use the current 60 second limit', () => {
+  const functionsRoot = path.join(root, 'cloudfunctions')
+  for (const entry of fs.readdirSync(functionsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const configPath = path.join(functionsRoot, entry.name, 'config.json')
+    if (!fs.existsSync(configPath)) continue
+
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+    assert.ok(config.timeout <= 60, `${entry.name} timeout should not exceed 60 seconds`)
+  }
+
+  for (const relativePath of [
+    'README.md',
+    'SETUP.md',
+    'PROJECT_PLAN.md',
+    'PRD.md',
+    'docs/CLOUD_FUNCTIONS.md',
+    'docs/DATA_DICTIONARY.md',
+    'docs/TEST_MATRIX.md',
+    'docs/TESTING.md',
+    'docs/TROUBLESHOOTING.md'
+  ]) {
+    assert.doesNotMatch(read(relativePath), /900 秒|900s|共同家长只读|viewer 可读不可写|只允许共享读取/)
+  }
+
+  const parentManagementView = read('miniprogram/pages/parent-management/parent-management.wxml')
+  const indexPresenter = read('miniprogram/pages/index/index-presenter.js')
+  assert.doesNotMatch(parentManagementView, /共同查看|只读/)
+  assert.match(parentManagementView, /可以参与孩子的学习诊断/)
+  assert.match(indexPresenter, /共同家长，可以参与学习诊断/)
 })
 
 test('generatePaper does not silently fall back to a font without Chinese glyphs', () => {
@@ -104,9 +131,50 @@ test('user-facing bottleneck labels do not render LP codes as primary text', () 
   assert.doesNotMatch(pdfRenderer, /text\(question\.lpCode/)
 })
 
+test('bottleneck summary helpers use shared display-name modules', () => {
+  const frontend = read('miniprogram/utils/bottlenecks.js')
+  const pdf = read('cloudfunctions/generatePaper/bottleneck-display.js')
+
+  assert.match(frontend, /require\('\.\/bottleneck-name'\)/)
+  assert.match(pdf, /require\('\.\.\/_shared\/bottleneck-name'\)/)
+})
+
+test('paper display surfaces use the shared paper display helper', () => {
+  for (const relativePath of [
+    'miniprogram/pages/paper-preview/paper-preview-presenter.js',
+    'miniprogram/pages/upload/upload.js',
+    'miniprogram/pages/upload-history/upload-history-presenter.js',
+    'miniprogram/pages/index/index-presenter.js'
+  ]) {
+    assert.match(read(relativePath), /paper-display/)
+  }
+})
+
+test('analysis status pages use the shared analysis poller wrapper', () => {
+  for (const relativePath of [
+    'miniprogram/pages/subject-home/subject-home.js',
+    'miniprogram/pages/report/report.js'
+  ]) {
+    const source = read(relativePath)
+    assert.match(source, /analysis-poller/)
+    assert.doesNotMatch(source, /utils\/poller/)
+  }
+})
+
+test('heavy pages keep presentation logic in presenter modules', () => {
+  const uploadHistory = read('miniprogram/pages/upload-history/upload-history.js')
+  const paperPreview = read('miniprogram/pages/paper-preview/paper-preview.js')
+
+  assert.match(uploadHistory, /require\('\.\/upload-history-presenter'\)/)
+  assert.match(paperPreview, /require\('\.\/paper-preview-presenter'\)/)
+  assert.doesNotMatch(uploadHistory, /function buildTimelineEvents/)
+  assert.doesNotMatch(paperPreview, /function buildPaperPreviewState/)
+})
+
 test('verification paper workbench exposes paper code, content preview and feedback entry', () => {
   const paperPreviewView = read('miniprogram/pages/paper-preview/paper-preview.wxml')
   const paperPreviewPage = read('miniprogram/pages/paper-preview/paper-preview.js')
+  const paperPreviewPresenter = read('miniprogram/pages/paper-preview/paper-preview-presenter.js')
   const uploadView = read('miniprogram/pages/upload/upload.wxml')
   const uploadPage = read('miniprogram/pages/upload/upload.js')
   const dataFunction = read('cloudfunctions/studentData/index.js')
@@ -115,7 +183,7 @@ test('verification paper workbench exposes paper code, content preview and feedb
   assert.match(paperPreviewView, /\{\{paperCodeText/)
   assert.match(paperPreviewView, /试卷内容预览/)
   assert.match(paperPreviewView, /验证反馈/)
-  assert.match(paperPreviewPage, /latestVerificationReport/)
+  assert.match(paperPreviewPresenter, /latestVerificationReport/)
   assert.match(paperPreviewPage, /onViewFeedbackReport/)
   assert.match(uploadView, /正在上传到/)
   assert.match(uploadPage, /loadPaperContext/)
@@ -207,10 +275,14 @@ test('subject profile reads avoid a compound student and subject index', () => {
   }
 })
 
-test('analysis progress endpoint checks report ownership', () => {
+test('analysis progress endpoint uses shared resource access checks', () => {
   const source = read('cloudfunctions/getAnalysisProgress/index.js')
+  const accessSource = read('cloudfunctions/_shared/access.js')
   assert.match(source, /cloud\.getWXContext\(\)\.OPENID/)
-  assert.match(source, /report\._openid/)
+  assert.match(source, /getLearningResourceAccess/)
+  assert.match(source, /canReadLearning/)
+  assert.match(accessSource, /resource\._openid/)
+  assert.match(accessSource, /getActiveMember/)
 })
 
 test('analysis is started reliably by the server entrypoint', () => {
@@ -314,16 +386,17 @@ test('upload history uses a unified learning timeline with subject filters', () 
 
 test('learning record surfaces use the four-level display taxonomy', () => {
   const page = read('miniprogram/pages/upload-history/upload-history.js')
+  const presenter = read('miniprogram/pages/upload-history/upload-history-presenter.js')
   const view = read('miniprogram/pages/upload-history/upload-history.wxml')
   const style = read('miniprogram/pages/upload-history/upload-history.wxss')
   const indexPresenter = read('miniprogram/pages/index/index-presenter.js')
 
   assert.match(page, /buildTimelineEvents/)
   assert.match(page, /statusItems/)
-  assert.match(page, /foldedEvidence/)
-  assert.match(page, /isMainTimelinePaper/)
-  assert.match(page, /buildPaperCodeById/)
-  assert.match(page, /showPaperCode/)
+  assert.match(presenter, /foldedEvidence/)
+  assert.match(presenter, /isMainTimelinePaper/)
+  assert.match(presenter, /buildPaperCodeById/)
+  assert.match(presenter, /showPaperCode/)
   assert.match(view, /status-strip/)
   assert.match(view, /paper-code-row/)
   assert.match(view, /验证卷编号/)

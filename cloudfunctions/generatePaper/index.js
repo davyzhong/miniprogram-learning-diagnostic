@@ -4,13 +4,13 @@ const cloud = require('wx-server-sdk');
 const tcb = require('@cloudbase/node-sdk');
 const { generatePDF } = require('./pdf-renderer');
 const { summarizeBottleneckName, uniqueBottleneckSummaries } = require('./bottleneck-display');
+const { getStudentAccess, canOperateLearning } = require('../_shared/access');
+const { getSubjectName, getSubjectCode } = require('../_shared/constants');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const TYPES = new Set(['verification', 'default-diagnosis']);
-const SUBJECT_CODE = { math: 'MATH', chinese: 'CHN', english: 'ENG' };
-const SUBJECT_NAME = { math: '数学', chinese: '语文', english: '英语' };
 
 // 初始化 CloudBase AI SDK
 const app = tcb.init({
@@ -49,8 +49,8 @@ function normalizePaperDate(value) {
 
 async function createPaperCodes(studentId, subject, paperDate) {
   const dateCode = formatDateCode(paperDate);
-  const normalizedSubject = SUBJECT_CODE[subject] || 'PAPER';
-  const subjectName = SUBJECT_NAME[subject] || subject || '试卷';
+  const normalizedSubject = getSubjectCode(subject, 'PAPER');
+  const subjectName = getSubjectName(subject, subject || '试卷');
   const existing = await db.collection('papers')
     .where({ studentId, subject, paperDate })
     .get();
@@ -59,17 +59,6 @@ async function createPaperCodes(studentId, subject, paperDate) {
     paperCode: `${normalizedSubject}-${dateCode}-${sequence}`,
     paperDisplayCode: `${subjectName}-${dateCode}-${sequence}`,
   };
-}
-
-async function hasOwnerAccess(student, openId) {
-  if (student && student._openid === openId) return true;
-  const res = await db.collection('studentMembers').where({
-    studentId: student._id,
-    memberOpenId: openId,
-    role: 'owner',
-    status: 'active',
-  }).get();
-  return (res.data || []).length > 0;
 }
 
 function normalizeQuestionsData(data, expectedCount) {
@@ -118,7 +107,7 @@ async function generateQuestionsWithAI(student, subject, type, targets, paperKey
   const grade = Number(selectedGrade) || Number(student.grade) || 0;
   const expectedCount = type === 'verification' ? targets.length * 3 : questionCount;
 
-  const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
+  const subjectName = getSubjectName(subject, '数学');
   const typeName = type === 'verification' ? '验证试卷（针对已知卡点）' : '默认诊断试卷（全面诊断）';
 
   // 构建 targets 描述
@@ -216,13 +205,13 @@ exports.main = async (event) => {
   const normalizedPaperDate = normalizePaperDate(paperDate);
 
   try {
-    const studentRes = await db.collection('students').doc(studentId).get();
-    const student = studentRes.data;
     const currentOpenId = cloud.getWXContext().OPENID;
+    const access = await getStudentAccess(db, studentId, currentOpenId);
+    const student = access.student;
     if (!student) {
       return { success: false, error: '学生不存在' };
     }
-    if (!(await hasOwnerAccess(student, currentOpenId))) {
+    if (!canOperateLearning(access)) {
       return { success: false, error: '无权执行该操作' };
     }
 

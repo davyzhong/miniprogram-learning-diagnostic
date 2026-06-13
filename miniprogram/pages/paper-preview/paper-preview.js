@@ -1,14 +1,16 @@
 // pages/paper-preview/paper-preview.js
 const cloud = require('../../utils/cloud')
-const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
 const {
-  formatBottleneckDisplayName
-} = require('../../utils/util')
-const {
-  bottleneckLabelOf,
-  bottleneckListText,
-  paperCodeOf
-} = require('../../utils/learning-records')
+  subjectNameOf,
+  getPaperName,
+  getPaperCodeText,
+  buildBottleneckSummaries,
+  buildPageSummary,
+  buildQuestionPreview,
+  buildWorkbenchStatus,
+  buildFeedback,
+  buildPaperPreviewState
+} = require('./paper-preview-presenter')
 
 Page({
   data: {
@@ -90,51 +92,20 @@ Page({
         return
       }
 
-      const isVerification = p.type === 'verification'
-      const uploadMode = isVerification ? 'verification' : 'paper'
-      const bottleneckSummaries = this.buildBottleneckSummaries(p)
       const questions = Array.isArray(p.questions) ? p.questions : []
       this._paperQuestions = questions
-      const latestReport = detail.latestVerificationReport || detail.latestReport || null
-      const paperCodeText = this.getPaperCodeText(p)
+      const subjectName = this.getSubjectName(p.subject)
       const studentName = detail.student && detail.student.name
         ? detail.student.name
         : await this.getStudentName(p.studentId)
-      const workbenchStatus = this.buildWorkbenchStatus(latestReport)
-      const feedback = this.buildFeedback(latestReport)
 
-      this.setData({
-        paperId: p._id,
-        studentId: p.studentId || '',
-        subject: p.subject || 'math',
-        grade: p.grade || '',
-        pdfFileId: p.pdfFileId || '',
-        typeText: isVerification ? '验证试卷' : '诊断试卷',
-        paperType: isVerification ? 'verification' : 'diagnosis',
-        subjectName: this.getSubjectName(p.subject),
+      this.setData(buildPaperPreviewState({
+        paper: p,
+        detail,
+        subjectName,
         studentName,
-        paperName: this.getPaperName(p),
-        paperCodeText,
-        paperDate: p.paperDate || '',
-        questionCount: questions.length,
-        estimatedMinutes: p.estimatedMinutes || (questions.length * 2),
-        pages: p.totalPages || 1,
-        studentPages: p.studentPages || Math.max(1, (p.totalPages || 1) - 1),
-        answerPages: p.answerPages || 1,
-        pageSummary: this.buildPageSummary(p),
-        bottleneckTargets: p.bottleneckTargets || [],
-        bottleneckText: bottleneckSummaries.join('、'),
-        questionPreview: this.buildQuestionPreview(questions, false),
-        hasMoreQuestions: questions.length > 4,
-        allQuestionsExpanded: false,
-        workbenchStatus: workbenchStatus.status,
-        workbenchStatusText: workbenchStatus.text,
-        workbenchStatusDesc: workbenchStatus.desc,
-        feedback,
-        pdfReady: !!p.pdfFileId,
-        pdfDownloaded: this.isPdfDownloaded(p.pdfFileId || p._id),
-        uploadBtnText: `作答完成，${isVerification ? '上传验证' : '上传答题'}`
-      })
+        pdfDownloaded: this.isPdfDownloaded(p.pdfFileId || p._id)
+      }))
 
       wx.setNavigationBarTitle({ title: this.data.paperName })
 
@@ -228,7 +199,7 @@ Page({
     const expand = !this.data.allQuestionsExpanded
     const questions = (this._paperQuestions || [])
     this.setData({
-      questionPreview: this.buildQuestionPreview(questions, expand),
+      questionPreview: buildQuestionPreview(questions, expand),
       allQuestionsExpanded: expand
     })
   },
@@ -244,8 +215,7 @@ Page({
 
   // 工具函数
   getSubjectName(subject) {
-    const map = { math: '数学', chinese: '语文', english: '英语' }
-    return map[subject] || subject || ''
+    return subjectNameOf(subject)
   },
 
   async getStudentName(studentId) {
@@ -257,123 +227,31 @@ Page({
   },
 
   getPaperName(paper) {
-    if (paper.type === 'verification') return '验证试卷'
-    if (paper.type === 'default-diagnosis') {
-      const grade = paper.grade || ''
-      const key = paper.paperKey || ''
-      const variant = key.split('_').pop().toUpperCase()
-      return `${grade}年级 ${variant} 卷`
-    }
-    return '诊断试卷'
+    return getPaperName(paper)
   },
 
   getPaperCodeText(paper) {
-    if (!paper) return ''
-    const savedCode = paperCodeOf(paper)
-    if (savedCode) return savedCode
-    const subjectName = this.getSubjectName(paper.subject)
-    const dateText = String(paper.paperDate || '').replace(/-/g, '')
-    if (subjectName && dateText) return `${subjectName}-${dateText}`
-    if (paper._id) return `试卷-${String(paper._id).slice(-6)}`
-    return ''
+    return getPaperCodeText(paper)
   },
 
   buildBottleneckSummaries(paper) {
-    if (Array.isArray(paper.bottleneckSummaries) && paper.bottleneckSummaries.length > 0) {
-      return uniqueBottleneckSummaries(paper.bottleneckSummaries)
-    }
-
-    const questions = Array.isArray(paper.questions) ? paper.questions : []
-    const byCode = {}
-    questions.forEach(question => {
-      if (question.lpCode && question.lpName && !byCode[question.lpCode]) {
-        byCode[question.lpCode] = question.lpName
-      }
-    })
-    const targets = Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : []
-    const targetNames = targets.map(code => byCode[code]).filter(Boolean)
-    if (targetNames.length > 0) return uniqueBottleneckSummaries(targetNames)
-
-    const targetFallbacks = targets.map(code => formatBottleneckDisplayName({ lpCode: code }))
-    if (targetFallbacks.length > 0) return uniqueBottleneckSummaries(targetFallbacks)
-
-    return uniqueBottleneckSummaries(questions)
+    return buildBottleneckSummaries(paper)
   },
 
   buildPageSummary(paper) {
-    const totalPages = Number(paper.totalPages) || 1
-    const answerPages = Number(paper.answerPages) || (totalPages > 1 ? 1 : 0)
-    const studentPages = Number(paper.studentPages) || Math.max(1, totalPages - answerPages)
-    if (answerPages > 0) {
-      return `学生卷 ${studentPages} 页 · 答案 ${answerPages} 页 · 共 ${studentPages + answerPages} 页`
-    }
-    return `共 ${totalPages} 页 · A4 纸张`
+    return buildPageSummary(paper)
   },
 
   buildQuestionPreview(questions = [], expanded = false) {
-    const source = Array.isArray(questions) ? questions : []
-    const visible = expanded ? source : source.slice(0, 4)
-    return visible.map((question, index) => ({
-      number: question.index || index + 1,
-      content: question.content || '题目内容待加载',
-      bottleneckName: bottleneckLabelOf(question)
-    }))
+    return buildQuestionPreview(questions, expanded)
   },
 
   buildWorkbenchStatus(report) {
-    if (!report) {
-      return {
-        status: 'waiting',
-        text: '等待打印作答',
-        desc: '下载或分享打印后，让孩子在纸面完成作答，再回到这里上传验证。'
-      }
-    }
-    if (report.status === 'analyzing') {
-      return {
-        status: 'analyzing',
-        text: '反馈分析中',
-        desc: '作答照片已经上传，AI 正在整理批改结果和学习卡点变化。'
-      }
-    }
-    if (report.status === 'failed') {
-      return {
-        status: 'failed',
-        text: '反馈分析失败',
-        desc: '这次验证反馈没有完成，可以重新上传作答照片。'
-      }
-    }
-    return {
-      status: 'completed',
-      text: '已生成验证反馈',
-      desc: '可以查看批改结果、评语和学习卡点改善情况。'
-    }
+    return buildWorkbenchStatus(report)
   },
 
   buildFeedback(report) {
-    if (!report) {
-      return {
-        hasFeedback: false,
-        reportId: '',
-        title: '暂无验证反馈',
-        summary: '上传作答照片后，这里会显示批改结果和学习卡点变化。',
-        chips: []
-      }
-    }
-
-    const evidence = Array.isArray(report.verificationEvidence) ? report.verificationEvidence : []
-    const improvedCount = evidence.filter(item => item.complete && item.allCorrect).length
-    const bottleneckText = bottleneckListText(report.bottlenecks || [])
-    return {
-      hasFeedback: report.status === 'completed',
-      reportId: report._id || '',
-      title: report.status === 'completed' ? '验证反馈已完成' : (report.status === 'failed' ? '验证反馈失败' : '正在分析反馈'),
-      summary: report.comparisonSummary || report.changeSummary || report.summary || '反馈报告生成后会在这里展示。',
-      chips: [
-        improvedCount > 0 ? `${improvedCount} 个卡点有改善` : '',
-        bottleneckText ? `仍需关注：${bottleneckText}` : '',
-        report.status === 'failed' ? '可重新上传' : ''
-      ].filter(Boolean)
-    }
+    return buildFeedback(report)
   },
 
   getDownloadedStorageKey(cloudFileId) {

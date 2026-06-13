@@ -1,9 +1,9 @@
 // pages/report/report.js
 const cloud = require('../../utils/cloud')
 const { formatChineseDateTime } = require('../../utils/util')
-const { createPoller } = require('../../utils/poller')
+const { createAnalysisPoller } = require('../../utils/analysis-poller')
 const { buildReportView } = require('./report-presenter')
-const STALE_ANALYSIS_MS = 10 * 60 * 1000
+const { getSubjectName } = require('../../utils/constants')
 
 Page({
   data: {
@@ -123,7 +123,7 @@ Page({
     var report = this.data.report
     var studentId = report.studentId
     var subject = report.subject
-    var subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || ''
+    var subjectName = getSubjectName(subject)
 
     // 获取卡点列表，传给验证试卷生成页
     var bottlenecks = (report.bottlenecks || [])
@@ -151,7 +151,7 @@ Page({
 
   onViewSources() {
     const report = this.data.report
-    const subjectName = { math: '数学', chinese: '语文', english: '英语' }[report.subject] || ''
+    const subjectName = getSubjectName(report.subject)
     wx.navigateTo({
       url: `/pages/upload-history/upload-history?studentId=${report.studentId}&subject=${report.subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(report.studentName || '')}`
     })
@@ -161,58 +161,37 @@ Page({
 
   startPolling(reportId) {
     if (this._poller) this._poller.stop()
-    this._poller = createPoller({
-      request: async () => {
+    this._poller = createAnalysisPoller({
+      loadReport: async () => {
         const detail = typeof cloud.getReportDetail === 'function'
           ? await cloud.getReportDetail(reportId)
           : { report: await cloud.getReport(reportId) }
-        const report = detail.report
-        let progress = null
-        if (report && report.status === 'analyzing') {
-          try {
-            progress = await cloud.getAnalysisProgress(reportId)
-          } catch (e) { /* task may not exist yet */ }
-        }
-        return { report, progress }
+        return detail.report
       },
-      onValue: ({ report, progress }, attempt) => {
-        if (!report) return true
-        if (report.status === 'completed') {
-          wx.showToast({ title: '诊断完成', icon: 'success' })
-          this.loadReport(reportId)
-          return false
-        }
-        if (report.status === 'failed') {
-          wx.showToast({ title: '分析失败', icon: 'none' })
-          this.setData({ analysisStatusText: '分析失败' })
-          return false
-        }
-        const taskAge = progress && progress.createdAt
-          ? Date.now() - new Date(progress.createdAt).getTime()
-          : 0
-        if (progress && (progress.status === 'failed' || taskAge > STALE_ANALYSIS_MS)) {
-          this.setData({
-            analysisStatusText: '分析超时，请重新分析',
-            analysisProgress: 0,
-            hasAnalysisProgress: false,
-            analysisTaskMissing: true
-          })
-          return false
-        }
-        const hasAnalysisProgress = !!(progress && progress.totalBatches > 0)
-        const analysisTaskMissing = !hasAnalysisProgress && (
-          attempt >= 2 || Date.now() - new Date(report.createdAt).getTime() > 60000
-        )
-        const actualProgress = hasAnalysisProgress
-          ? Math.round(progress.completedBatches / progress.totalBatches * 100)
-          : 0
+      loadProgress: () => cloud.getAnalysisProgress(reportId),
+      onCompleted: () => {
+        wx.showToast({ title: '诊断完成', icon: 'success' })
+        this.loadReport(reportId)
+      },
+      onFailed: () => {
+        wx.showToast({ title: '分析失败', icon: 'none' })
+        this.setData({ analysisStatusText: '分析失败' })
+      },
+      onTimeoutStatus: () => {
         this.setData({
-          analysisStatusText: analysisTaskMissing ? '分析任务未启动' : 'AI 分析中...',
-          analysisProgress: Math.min(actualProgress, 90),
-          hasAnalysisProgress,
-          analysisTaskMissing
+          analysisStatusText: '分析超时，请重新分析',
+          analysisProgress: 0,
+          hasAnalysisProgress: false,
+          analysisTaskMissing: true
         })
-        return true
+      },
+      onAnalyzing: state => {
+        this.setData({
+          analysisStatusText: state.taskMissing ? '分析任务未启动' : 'AI 分析中...',
+          analysisProgress: Math.min(state.progressPercent, 90),
+          hasAnalysisProgress: state.hasProgress,
+          analysisTaskMissing: state.taskMissing
+        })
       },
       onError: err => console.error('轮询报告状态失败', err),
       onTimeout: () => {
