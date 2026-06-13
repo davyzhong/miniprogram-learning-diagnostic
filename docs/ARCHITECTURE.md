@@ -66,7 +66,7 @@
 │                           └──────────────┘  └────────────────────┘   │
 │  ┌──────────────────┐    ┌──────────────────┐                       │
 │  │studentAccess     │    │studentData       │                       │
-│  │家长成员/邀请管理   │    │共享家长只读数据层  │                       │
+│  │家长成员/邀请管理   │    │共享学习数据层      │                       │
 │  └──────────────────┘    └──────────────────┘                       │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -216,7 +216,7 @@ parent-management 页面
          [studentAccess 云函数]
               ├── 校验 tokenHash、状态和过期时间
               ├── 幂等创建 studentMembers viewer 关系
-              └── 返回 studentId，进入首页/学科页只读查看
+              └── 返回 studentId，进入首页/学科页参与学习流程
 ```
 
 ### 流程 E：时间化学习卡点追踪
@@ -335,7 +335,7 @@ paper-preview（试卷预览）
 | 调用方 | 被调用方 | 方式 | 说明 |
 |--------|----------|------|------|
 | 客户端 upload 页面 | uploadAndAnalyze | wx.cloud.callFunction | 创建报告并启动后台分析 |
-| 客户端 index/subject-home/report/upload-history/paper-preview | studentData | wx.cloud.callFunction | 访问感知的只读数据聚合，支持 owner/viewer |
+| 客户端 index/subject-home/report/upload-history/paper-preview | studentData | wx.cloud.callFunction | 访问感知的学习数据聚合，支持 owner/viewer |
 | 客户端 parent-management/join-student | studentAccess | wx.cloud.callFunction | 家长成员管理、邀请创建、扫码加入 |
 | uploadAndAnalyze | analyzePhotos | cloud.callFunction (fire-and-forget) | 服务端触发后台分析，立即返回 reportId |
 | analyzePhotos | analyzeBatch | cloud.callFunction (同步 await, 循环串行) | 每批最多 5 张，逐批处理 |
@@ -489,7 +489,7 @@ poller.start()
 
 **原因**：
 1. **上传体验更轻**：客户端只等待图片上传和报告创建，不等待 AI 完整分析
-2. **长任务独立运行**：`analyzePhotos` 有自己的超时配置（建议 900s），适合处理 20 张图片的串行分析
+2. **长任务独立运行**：`analyzePhotos` 在 60s 云函数上限内尽量完成后台分析；前端通过进度轮询、超时提示和重试入口恢复异常状态
 3. **前端状态简单**：客户端拿到 `reportId` 后回到学科主页，通过 `analysisTasks` 轮询展示进度
 4. **失败可恢复**：如果后台任务缺失或失败，报告页的重试入口会重新调用 `analyzePhotos`
 
@@ -522,15 +522,15 @@ poller.start()
 3. **写入频率低**：只在分析完成时更新一次，读写比合理
 4. **数据一致性**：通过分析流程的事务性更新保证，失败时 clearSubjectProfileAnalysis 清空状态
 
-### 为什么共享家长只能读，不能写？
+### 为什么共同家长可以参与学习流程，但不能管理家庭成员？
 
-**决策**：孩子档案支持多个家长查看，但本轮只开放 owner 写权限。viewer 可以查看首页、学科主页、学习记录、报告和试卷；上传照片、生成试卷、重试分析、邀请家长和移除成员都要求 owner。
+**决策**：孩子档案支持多个家长共同使用。active viewer 在产品语义上是"共同家长"：可以查看首页、学科主页、学习记录、报告和试卷，也可以上传试卷、生成验证卷、重试分析和下载报告 PDF；邀请、编辑和移除家庭成员仍要求 owner。
 
 **原因**：
-1. **单人 MVP 保持简单**：先解决"另一位家长能看到同一份资料"，不引入协作编辑冲突。
-2. **避免重复分析和重复出卷**：上传、重试、生成试卷都会产生新报告或新文件，多个家长同时写入会让时间线和卡点权重更难解释。
-3. **权限边界清晰**：`studentData` 只读，`studentAccess` 管家长关系，写类云函数各自校验 owner，前后端口径一致。
-4. **后续可扩展**：如果需要开放 member 写权限，只需扩展 permissions 和 owner-only guard，不需要重做数据模型。
+1. **符合家庭真实协作**：另一位家长不只是旁观者，通常也需要上传卷子、打印验证卷和补充作答反馈。
+2. **学习闭环完整**：诊断、出卷、作答上传和反馈都属于同一学习流程，拆成只读会让共同家长无法完成闭环。
+3. **家庭管理边界清晰**：`studentAccess` 仍将邀请、移除、成员身份管理限制为 owner，避免权限纠纷。
+4. **数据模型保持简单**：第一版不引入复杂角色层级，内部 role 仍可保留 `viewer`，但权限语义由共享 access helper 统一解释为共同家长。
 
 ### 为什么照片使用上传时间，而试卷使用试卷日期？
 

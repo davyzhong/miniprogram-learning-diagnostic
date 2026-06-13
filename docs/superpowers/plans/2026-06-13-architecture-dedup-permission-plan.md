@@ -558,7 +558,7 @@ git commit -m "refactor: split photo analysis pipeline"
 - Test: `tests/project-integrity.test.js`
 - Test: `tests/contracts.test.js`
 
-- [ ] **Step 1: Remove or fix dead helpers**
+- [x] **Step 1: Remove or fix dead helpers**
 
 Review:
 
@@ -567,7 +567,9 @@ Review:
 - unused subject maps.
 - stale permission text.
 
-- [ ] **Step 2: Update docs**
+Compatibility helpers that still have callers/tests remain in place; stale permission text and deployment settings are corrected.
+
+- [x] **Step 2: Update docs**
 
 Make docs say:
 
@@ -575,7 +577,7 @@ Make docs say:
 - family management remains owner-only.
 - LP codes are internal identifiers.
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 
@@ -583,7 +585,7 @@ Run:
 npm run verify
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add miniprogram docs CLAUDE.md tests

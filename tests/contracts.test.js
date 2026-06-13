@@ -67,9 +67,36 @@ test('cloud functions use deployment configuration instead of a hard-coded envir
   assert.doesNotMatch(reportPdfSource, /cloud:\/\/cloud1-d6gneg68m5a7a3876/)
 })
 
-test('generatePaper cloud function allows enough time for AI and PDF generation', () => {
-  const config = JSON.parse(read('cloudfunctions/generatePaper/config.json'))
-  assert.equal(config.timeout, 60)
+test('cloud function timeout configs and active docs use the current 60 second limit', () => {
+  const functionsRoot = path.join(root, 'cloudfunctions')
+  for (const entry of fs.readdirSync(functionsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const configPath = path.join(functionsRoot, entry.name, 'config.json')
+    if (!fs.existsSync(configPath)) continue
+
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+    assert.ok(config.timeout <= 60, `${entry.name} timeout should not exceed 60 seconds`)
+  }
+
+  for (const relativePath of [
+    'README.md',
+    'SETUP.md',
+    'PROJECT_PLAN.md',
+    'PRD.md',
+    'docs/CLOUD_FUNCTIONS.md',
+    'docs/DATA_DICTIONARY.md',
+    'docs/TEST_MATRIX.md',
+    'docs/TESTING.md',
+    'docs/TROUBLESHOOTING.md'
+  ]) {
+    assert.doesNotMatch(read(relativePath), /900 秒|900s|共同家长只读|viewer 可读不可写|只允许共享读取/)
+  }
+
+  const parentManagementView = read('miniprogram/pages/parent-management/parent-management.wxml')
+  const indexPresenter = read('miniprogram/pages/index/index-presenter.js')
+  assert.doesNotMatch(parentManagementView, /共同查看|只读/)
+  assert.match(parentManagementView, /可以参与孩子的学习诊断/)
+  assert.match(indexPresenter, /共同家长，可以参与学习诊断/)
 })
 
 test('generatePaper does not silently fall back to a font without Chinese glyphs', () => {

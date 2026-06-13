@@ -1,6 +1,6 @@
 # Learning Diagnostic MVP 产品设计文档（PRD）
 
-> 版本：v2.6 | 日期：2026-06-13 | 状态：MVP 编码完成，常规自动化测试 140/140 通过，JS 语法检查 52 文件通过，待真机验收
+> 版本：v2.6 | 日期：2026-06-13 | 状态：MVP 编码完成，常规自动化测试 216/216 通过，JS 语法检查 74 文件通过，待真机验收
 
 ---
 
@@ -416,7 +416,7 @@
                        → 前端轮询报告状态直到 completed/failed
 ```
 
-> **当前实现说明**：`uploadAndAnalyze` 不等待 `analyzePhotos` 完成，而是在服务端发起后台分析后立即返回 `reportId`。`analyzePhotos` 仍建议配置 900s 超时，以保证长批次能跑完。
+> **当前实现说明**：`uploadAndAnalyze` 不等待 `analyzePhotos` 完成，而是在服务端发起后台分析后立即返回 `reportId`。云函数超时保持在微信平台允许的 60 秒以内，长批次通过任务进度、轮询和手动重试恢复。
 
 ### 流程详解
 
@@ -540,7 +540,7 @@ cloudfunctions/
 
 | 能力 | 状态 | 备注 |
 |------|------|------|
-| 10 个页面 + 四件套文件 | ✅ | `project-integrity.test.js` 校验 |
+| 12 个页面 + 四件套文件 | ✅ | `project-integrity.test.js` 校验 |
 | 学习档案首页 | ✅ | `index-presenter.js` 聚合综合摘要、样本覆盖、重点提示、学习记录和下一步建议 |
 | 添加学生并同步创建三条学科档案 | ✅ | `cloud.createStudentWithProfiles()` |
 | 学科隔离与学科工作台 | ✅ | `subject-home-presenter.js` 生成 primaryTask、taskQueue、tools |
@@ -560,8 +560,8 @@ cloudfunctions/
 | 学习记录时间线 + 原图预览 | ✅ | `upload-history.js` 按天聚合报告、试卷、验证上传和照片 |
 | 学习卡点短名称展示 | ✅ | `utils/util.js` 将 LP 编号转为家长可读的短摘要，如“小数分数”“单位换算” |
 | 数据归属校验（openID）+ 参数白名单 | ✅ | 各云函数入口 |
-| 自动化测试覆盖（140 常规用例全绿） | ✅ | `npm test`；真实图片 E2E 脚本需通过 `npm run test:e2e-real-image` 单独运行 |
-| JS 语法检查 | ✅ | `npm run check`（52 个文件） |
+| 自动化测试覆盖（216 常规用例全绿） | ✅ | `npm test`；真实图片 E2E 脚本需通过 `npm run test:e2e-real-image` 单独运行 |
+| JS 语法检查 | ✅ | `npm run check`（74 个文件） |
 | 微信订阅消息推送 | ⚠️ | `sendNotification()` 仍为空实现，待申请模板 |
 | 上传与分析解耦 | ✅ | `uploadAndAnalyze` 不等待 `analyzePhotos` 完成 |
 | 默认试卷跨学生共享模板 | ⚠️ | 仅同学生复用 |

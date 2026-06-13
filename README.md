@@ -37,7 +37,7 @@
 - ✅ 分析进度轮询：学科主页和报告页每 10s 轮询，支持手动重试
 - ✅ 报告 PDF 生成与下载
 - ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 自动化测试：151 个常规用例通过，JS 语法检查 52 文件通过
+- ✅ 自动化测试：216 个常规用例通过，JS 语法检查 74 文件通过
 
 ### 待完善
 
@@ -56,7 +56,7 @@
 | 后端 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI（图像） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI（文本） | CloudBase AI `deepseek-v4-flash` | 用于生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 5 个集合：students / subjectProfiles / reports / papers / analysisTasks |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 7 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites |
 | PDF 生成 | pdfkit | 云函数内生成 A4 试卷/报告 PDF |
 | 测试 | Node.js 内置 test runner | `node --test`，无外部测试框架依赖 |
 
@@ -67,19 +67,22 @@
 ```
 miniprogram-learning-diagnostic/
 ├── miniprogram/                 # 小程序前端
-│   ├── app.js / app.json        # 全局入口与配置（10 个页面路由）
+│   ├── app.js / app.json        # 全局入口与配置（12 个页面路由）
 │   ├── utils/                   # cloud.js（数据访问层）、poller.js（轮询器）、util.js
-│   └── pages/                   # 10 个页面（index / add-student / subject-select /
-│                                #   subject-home / upload / upload-history / report /
-│                                #   generate-verification / default-paper / paper-preview）
-├── cloudfunctions/              # 云函数后端（6 个）
+│   └── pages/                   # 12 个页面（index / add-student / subject-select /
+│                                #   subject-home / upload / upload-history / parent-management /
+│                                #   join-student / report / generate-verification /
+│                                #   default-paper / paper-preview）
+├── cloudfunctions/              # 云函数后端（8 个）
 │   ├── uploadAndAnalyze/        #   入口：校验 → 创建报告 → 触发分析
 │   ├── analyzePhotos/           #   主控：分批 → 串行分析 → 去重 → 合并 → 对比
 │   ├── analyzeBatch/            #   单批次 AI 分析 + 结果标准化
 │   ├── getAnalysisProgress/     #   轻量进度查询
+│   ├── studentAccess/           #   家长成员、邀请和加入管理
+│   ├── studentData/             #   访问感知的学习资料聚合读取
 │   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF
 │   └── generateReportPDF/       #   生成报告 PDF
-├── tests/                       # 自动化测试（151 个常规用例 + 真实图片 E2E 脚本）
+├── tests/                       # 自动化测试（216 个常规用例 + 真实图片 E2E 脚本）
 ├── scripts/                     # check-js.js（语法检查）
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
@@ -111,7 +114,7 @@ cd miniprogram-learning-diagnostic
 
 1. 在云开发控制台开通 `hy3-preview` 和 `deepseek-v4-flash` 两个 AI 模型
 2. 对 `cloudfunctions/` 下每个云函数目录右键 → "上传并部署：云端安装依赖"
-3. 将 `analyzePhotos` 的执行超时调整为 **900 秒**（`uploadAndAnalyze` 负责快速创建报告和启动任务）
+3. 云函数执行超时保持在微信平台允许的 **60 秒以内**；`uploadAndAnalyze` 负责快速创建报告并启动后台分析，长耗时场景通过进度轮询和手动重试恢复
 4. `generatePaper` 和 `generateReportPDF` 已内置 Noto 中文字体，不需要配置 `FONT_FILE_ID`
 
 ### 配置数据库
@@ -123,6 +126,8 @@ cd miniprogram-learning-diagnostic
 - `reports`
 - `papers`
 - `analysisTasks`
+- `studentMembers`
+- `studentInvites`
 
 详细步骤参见 [SETUP.md](./SETUP.md)。
 
@@ -131,7 +136,7 @@ cd miniprogram-learning-diagnostic
 ## 测试
 
 ```bash
-# 运行常规自动化测试（151 用例，不含真实图片 E2E）
+# 运行常规自动化测试（216 用例，不含真实图片 E2E）
 npm test
 
 # 带覆盖率报告

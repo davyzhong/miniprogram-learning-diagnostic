@@ -53,10 +53,12 @@
    - `generatePaper`
    - `generateReportPDF`
    - `getAnalysisProgress`
+   - `studentAccess`
+   - `studentData`
 
 ### 注意：
 - `uploadAndAnalyze` 会在服务端创建报告并 fire-and-forget 启动 `analyzePhotos`，客户端提交成功后即可返回学科主页
-- `analyzePhotos` 执行超时建议在云端配置为 **900 秒**，并需重点执行长耗时真机验收
+- 所有云函数执行超时需保持在微信平台允许的 **60 秒以内**；长耗时分析通过任务进度、轮询和手动重试恢复
 - `analyzeBatch` 按图片返回 OCR 摘要；`analyzePhotos` 使用归一化摘要标记疑似重复照片，并只汇总唯一页面
 - 每个云函数的 `package.json` 都已写好，云端会自动安装依赖
 
@@ -73,15 +75,19 @@
 | `reports` | 仅创建者可读写 | 诊断报告 |
 | `papers` | 仅创建者可读写 | 试卷记录 |
 | `analysisTasks` | 仅创建者可读写 | 分析任务 |
+| `studentMembers` | 云函数访问 | 孩子档案的家长成员关系 |
+| `studentInvites` | 云函数访问 | 扫码加入邀请 |
 
 ### 数据库安全规则（推荐配置）
-对于每个集合，设置安全规则为：
+主学习数据集合（`students` / `subjectProfiles` / `reports` / `papers` / `analysisTasks`）建议保持创建者直接读写规则：
 ```json
 {
   "read": "doc._openid == auth.openid",
   "write": "doc._openid == auth.openid"
 }
 ```
+
+`studentMembers` 和 `studentInvites` 是授权辅助集合，前端不直接读写，统一通过 `studentAccess` 云函数访问；可配置为客户端不可直接读写，由云函数完成 owner/viewer 关系校验。
 
 ### 数据库索引
 
@@ -166,15 +172,17 @@ PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sen
 miniprogram-learning-diagnostic/
 ├── miniprogram/
 │   ├── app.js                 ✅
-│   ├── app.json               ✅（10 个页面路径）
+│   ├── app.json               ✅（12 个页面路径）
 │   ├── app.wxss               ✅
-│   └── pages/                ✅（10 个页面）
+│   └── pages/                ✅（12 个页面）
 │       ├── index/
 │       ├── add-student/
 │       ├── subject-select/
 │       ├── subject-home/
 │       ├── upload/
 │       ├── upload-history/
+│       ├── parent-management/
+│       ├── join-student/
 │       ├── report/
 │       ├── generate-verification/
 │       ├── default-paper/
@@ -185,9 +193,11 @@ miniprogram-learning-diagnostic/
 │   ├── uploadAndAnalyze/     ✅
 │   ├── generatePaper/        ✅
 │   ├── generateReportPDF/    ✅
-│   └── getAnalysisProgress/  ✅
-├── tests/                    ✅（17 个常规测试文件 + 真实图片 E2E 脚本 + helpers，151 常规用例）
-├── scripts/check-js.js       ✅（52 文件语法检查）
+│   ├── getAnalysisProgress/  ✅
+│   ├── studentAccess/        ✅
+│   └── studentData/          ✅
+├── tests/                    ✅（23 个常规测试文件 + 真实图片 E2E 脚本 + helpers，216 常规用例）
+├── scripts/check-js.js       ✅（74 文件语法检查）
 ├── project.config.json        ✅
 ├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / check / verify）
 ├── PROJECT_PLAN.md          ✅
