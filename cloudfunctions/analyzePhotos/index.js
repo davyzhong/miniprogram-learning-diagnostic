@@ -5,64 +5,19 @@ const { compareBottlenecks, buildComparisonSummary } = require('./comparison');
 const { markDuplicatePages } = require('./photo-dedup');
 const { buildProfileSummary } = require('./profile-summary');
 const { aggregateVerificationEvidence, buildVerificationPlan } = require('./verification-evidence');
+const {
+  splitFileBatches,
+  assertCompleteBatchResults,
+  collectPageResults,
+  mergeBatchResults,
+  buildImageFiles,
+} = require('./pipeline');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const _ = db.command;
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const STALE_TASK_MS = 10 * 60 * 1000;
-
-// ========== 合并多批次结果 ==========
-function mergeBatchResults(batchResults, subject) {
-  const allBottlenecks = {};
-  const allErrorDetails = [];
-  let totalErrors = 0;
-
-  for (const batch of batchResults) {
-    if (!batch.success) {
-      console.warn('批次失败：', batch.error);
-      continue;
-    }
-    const data = batch.data;
-    totalErrors += data.totalErrors || 0;
-
-    // 合并 bottlenecks（按 lpCode 聚合）
-    for (const bn of data.bottlenecks || []) {
-      const key = bn.lpCode;
-      if (allBottlenecks[key]) {
-        allBottlenecks[key].errorCount += bn.errorCount;
-        // severity 取最高的
-        const severityRank = { high: 3, medium: 2, low: 1 };
-        if (severityRank[bn.severity] > severityRank[allBottlenecks[key].severity]) {
-          allBottlenecks[key].severity = bn.severity;
-        }
-      } else {
-        allBottlenecks[key] = { ...bn };
-      }
-    }
-
-    // 合并 errorDetails
-    if (data.errorDetails) {
-      allErrorDetails.push(...data.errorDetails);
-    }
-  }
-
-  // 转成数组，按 errorCount 降序
-  const bottlenecks = Object.values(allBottlenecks)
-    .sort((a, b) => b.errorCount - a.errorCount);
-
-  // 生成 summary
-  const topBottlenecks = bottlenecks.slice(0, 3).map(b => b.lpName).join('、');
-  const summary = `共发现 ${totalErrors} 道错题，主要卡点：${topBottlenecks || '待确认'}`;
-
-  return {
-    summary,
-    totalErrors,
-    bottlenecks,
-    errorDetails: allErrorDetails,
-    completedAt: new Date(),
-  };
-}
 
 // ========== 更新 subjectProfiles ==========
 async function getSubjectProfile(studentId, subject) {
@@ -179,6 +134,210 @@ async function sendNotification(studentId, reportId, subject) {
   return { studentId, reportId, subject };
 }
 
+async function loadReportContext(reportId) {
+  const reportRes = await db.collection('reports').doc(reportId).get();
+  const report = reportRes.data;
+  const currentOpenId = cloud.getWXContext().OPENID;
+
+  if (!report) {
+    return { earlyResult: { success: false, error: '报告不存在' } };
+  }
+  if (report._openid && currentOpenId && report._openid !== currentOpenId) {
+    return { earlyResult: { success: false, error: '无权访问该报告' } };
+  }
+
+  const subject = SUBJECTS.has(report.subject) ? report.subject : 'math';
+  const studentId = report.studentId;
+  const mode = report.type === 'verification' ? 'verification' : 'diagnosis';
+  const fileIDs = report.imageFileIds || [];
+
+  return { report, currentOpenId, subject, studentId, mode, fileIDs };
+}
+
+async function finishAlreadyCompletedReport(reportId, report, subject) {
+  if (report.status !== 'completed') return null;
+
+  if (report.isEffective && !report.profileAppliedAt) {
+    const profile = await getSubjectProfile(report.studentId, subject);
+    if (profile && profile.latestEffectiveReportId !== reportId) {
+      const profileSummary = buildProfileSummary(profile, report, report.completedAt || new Date());
+      await updateSubjectProfile(profile, profileSummary, reportId);
+    }
+    await db.collection('reports').doc(reportId).update({
+      data: { profileAppliedAt: new Date() },
+    });
+  }
+  return { success: true, reportId, message: '报告已经分析完成' };
+}
+
+async function recoverStaleAnalysisTask(reportId) {
+  const existingTasksRes = await db.collection('analysisTasks')
+    .where({ reportId })
+    .get();
+  const existingTasks = existingTasksRes.data
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const processingTask = existingTasks.find(task => task.status === 'processing');
+
+  if (!processingTask) return null;
+
+  const age = Date.now() - new Date(processingTask.createdAt).getTime();
+  if (age < STALE_TASK_MS) {
+    return { success: true, reportId, message: '分析任务已经启动' };
+  }
+
+  await db.collection('analysisTasks').doc(processingTask._id).update({
+    data: {
+      status: 'failed',
+      error: '分析任务超时，允许重新启动',
+      completedAt: new Date(),
+    },
+  });
+  return null;
+}
+
+async function createAnalysisTask({ reportId, totalBatches, fileIDs, mode, subject, studentId, openid }) {
+  const taskRes = await db.collection('analysisTasks').add({
+    data: {
+      reportId,
+      totalBatches,
+      completedBatches: 0,
+      status: 'processing',
+      fileIDs,
+      mode,
+      subject,
+      studentId,
+      _openid: openid,
+      createdAt: new Date(),
+    },
+  });
+  return taskRes._id;
+}
+
+async function runAnalyzeBatches({ batches, totalBatches, subject, reportId, verificationPaper, taskId }) {
+  const batchResults = [];
+  for (let i = 0; i < batches.length; i++) {
+    console.log(`处理第 ${i + 1}/${totalBatches} 批，共 ${batches[i].length} 张`);
+    try {
+      const res = await cloud.callFunction({
+        name: 'analyzeBatch',
+        data: {
+          fileIDs: batches[i],
+          subject,
+          batchIndex: i,
+          reportId,
+          verificationPlan: verificationPaper ? verificationPaper.plan : [],
+        },
+      });
+      batchResults.push(res.result);
+
+      await db.collection('analysisTasks').doc(taskId).update({
+        data: { completedBatches: i + 1 },
+      });
+    } catch (err) {
+      console.error(`第 ${i + 1} 批处理失败：`, err);
+      batchResults.push({ success: false, error: err.message });
+    }
+  }
+  return batchResults;
+}
+
+async function buildAnalysisArtifacts({ reportId, report, fileIDs, subject, studentId, mode, verificationPaper, batchResults }) {
+  assertCompleteBatchResults(batchResults);
+
+  const pageResults = collectPageResults(batchResults);
+  const historicalPhotos = await getHistoricalPhotos(studentId, subject);
+  const markedPages = markDuplicatePages(pageResults, historicalPhotos);
+  const uniquePages = markedPages.filter(page => !page.isDuplicate);
+  const merged = mergeBatchResults(
+    uniquePages.map(page => ({ success: true, data: page })),
+    subject
+  );
+  const imageFiles = buildImageFiles({
+    fileIDs,
+    initialImageFiles: Array.isArray(report.imageFiles) ? report.imageFiles : [],
+    markedPages,
+    report,
+  });
+  let previousReport = null;
+  let verificationTargets = [];
+  let comparisonSummary = '';
+
+  if (uniquePages.length === 0) {
+    merged.summary = '本次照片均疑似重复，未更新学习卡点';
+    comparisonSummary = '本次照片均疑似重复，未更新学习卡点。';
+  } else if (mode === 'verification') {
+    previousReport = await getPreviousReport(studentId, subject);
+    verificationTargets = verificationPaper.targets;
+    const verificationEvidence = aggregateVerificationEvidence(verificationPaper.plan, uniquePages);
+    const passedCodes = verificationEvidence.filter(item => item.complete && item.allCorrect).map(item => item.lpCode);
+    merged.bottlenecks = compareBottlenecks(
+      previousReport ? previousReport.bottlenecks : [],
+      merged.bottlenecks,
+      passedCodes
+    );
+    comparisonSummary = buildComparisonSummary(merged.bottlenecks);
+    merged.verificationEvidence = verificationEvidence;
+  } else {
+    merged.bottlenecks = merged.bottlenecks.map(item => ({ ...item, status: 'found' }));
+  }
+
+  const profile = await getSubjectProfile(studentId, subject);
+  const profileSummary = buildProfileSummary(profile || {}, {
+    _id: reportId,
+    type: mode,
+    totalErrors: merged.totalErrors,
+    bottlenecks: merged.bottlenecks,
+    verificationTargets,
+    verificationEvidence: merged.verificationEvidence || [],
+    allPhotosDuplicate: uniquePages.length === 0,
+  }, report.evidenceTime || report.createdAt || new Date());
+
+  return {
+    merged,
+    imageFiles,
+    previousReport,
+    comparisonSummary,
+    verificationTargets,
+    profile,
+    profileSummary,
+  };
+}
+
+async function writeCompletedAnalysis({ reportId, studentId, subject, merged, imageFiles, previousReport, comparisonSummary, verificationTargets, profile, profileSummary }) {
+  await db.collection('reports').doc(reportId).update({
+    data: {
+      status: 'completed',
+      summary: merged.summary,
+      totalErrors: merged.totalErrors,
+      bottlenecks: merged.bottlenecks,
+      errorDetails: merged.errorDetails,
+      imageFiles,
+      previousReportId: previousReport ? previousReport._id : '',
+      comparisonSummary,
+      verificationTargets,
+      verificationEvidence: merged.verificationEvidence || [],
+      isEffective: profileSummary.isEffective,
+      changeSummary: profileSummary.changeSummary,
+      completedAt: merged.completedAt,
+    },
+  });
+
+  if (profileSummary.isEffective) {
+    await updateSubjectProfile(profile, profileSummary, reportId);
+    await db.collection('reports').doc(reportId).update({
+      data: { profileAppliedAt: new Date() },
+    });
+  } else {
+    await clearSubjectProfileAnalysis(studentId, subject);
+  }
+}
+
+async function markAnalysisTaskCompleted(taskId) {
+  await db.collection('analysisTasks').doc(taskId).update({
+    data: { status: 'completed', completedAt: new Date() },
+  });
+}
+
 // ========== 主函数 ==========
 exports.main = async (event) => {
   const { reportId } = event;
@@ -190,222 +349,73 @@ exports.main = async (event) => {
   }
 
   try {
-    const reportRes = await db.collection('reports').doc(reportId).get();
-    report = reportRes.data;
-    const currentOpenId = cloud.getWXContext().OPENID;
+    const context = await loadReportContext(reportId);
+    if (context.earlyResult) return context.earlyResult;
 
-    if (!report) {
-      return { success: false, error: '报告不存在' };
-    }
-    if (report._openid && currentOpenId && report._openid !== currentOpenId) {
-      return { success: false, error: '无权访问该报告' };
-    }
+    ({ report } = context);
+    const { currentOpenId, fileIDs, subject, studentId, mode } = context;
 
-    const fileIDs = report.imageFileIds || [];
-    const subject = SUBJECTS.has(report.subject) ? report.subject : 'math';
-    const studentId = report.studentId;
-    const mode = report.type === 'verification' ? 'verification' : 'diagnosis';
+    const completedResult = await finishAlreadyCompletedReport(reportId, report, subject);
+    if (completedResult) return completedResult;
 
-    if (report.status === 'completed') {
-      if (report.isEffective && !report.profileAppliedAt) {
-        const profile = await getSubjectProfile(studentId, subject);
-        if (profile && profile.latestEffectiveReportId !== reportId) {
-          const profileSummary = buildProfileSummary(profile, report, report.completedAt || new Date());
-          await updateSubjectProfile(profile, profileSummary, reportId);
-        }
-        await db.collection('reports').doc(reportId).update({
-          data: { profileAppliedAt: new Date() },
-        });
-      }
-      return { success: true, reportId, message: '报告已经分析完成' };
-    }
     const verificationPaper = mode === 'verification' ? await getVerificationPaper(report) : null;
     if (fileIDs.length === 0) {
       return { success: false, error: '报告中没有待分析图片' };
     }
 
-    const existingTasksRes = await db.collection('analysisTasks')
-      .where({ reportId })
-      .get();
-    const existingTasks = existingTasksRes.data
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    const processingTask = existingTasks.find(task => task.status === 'processing');
-    if (processingTask) {
-      const age = Date.now() - new Date(processingTask.createdAt).getTime();
-      if (age < STALE_TASK_MS) {
-        return { success: true, reportId, message: '分析任务已经启动' };
-      }
-      await db.collection('analysisTasks').doc(processingTask._id).update({
-        data: {
-          status: 'failed',
-          error: '分析任务超时，允许重新启动',
-          completedAt: new Date(),
-        },
-      });
-    }
+    const activeTaskResult = await recoverStaleAnalysisTask(reportId);
+    if (activeTaskResult) return activeTaskResult;
 
-    // 1. 拆分批次（每批最多 5 张）
-    const batchSize = 5;
-    const batches = [];
-    for (let i = 0; i < fileIDs.length; i += batchSize) {
-      batches.push(fileIDs.slice(i, i + batchSize));
-    }
-
+    const batches = splitFileBatches(fileIDs);
     const totalBatches = batches.length;
     console.log(`共 ${fileIDs.length} 张图片，拆分为 ${totalBatches} 批`);
 
-    // 2. 创建 analysisTasks 记录
-    const taskRes = await db.collection('analysisTasks').add({
-      data: {
-        reportId,
-        totalBatches,
-        completedBatches: 0,
-        status: 'processing',
-        fileIDs,
-        mode,
-        subject,
-        studentId,
-        _openid: report._openid || currentOpenId,
-        createdAt: new Date(),
-      },
-    });
-    taskId = taskRes._id;
-
-    // 3. 串行处理每个批次
-    const batchResults = [];
-    for (let i = 0; i < batches.length; i++) {
-      console.log(`处理第 ${i + 1}/${totalBatches} 批，共 ${batches[i].length} 张`);
-      try {
-        const res = await cloud.callFunction({
-          name: 'analyzeBatch',
-          data: {
-            fileIDs: batches[i],
-            subject,
-            batchIndex: i,
-            reportId,
-            verificationPlan: verificationPaper ? verificationPaper.plan : [],
-          },
-        });
-        batchResults.push(res.result);
-
-        // 更新 completedBatches
-        await db.collection('analysisTasks').doc(taskId).update({
-          data: { completedBatches: i + 1 },
-        });
-      } catch (err) {
-        console.error(`第 ${i + 1} 批处理失败：`, err);
-        batchResults.push({ success: false, error: err.message });
-      }
-    }
-    if (batchResults.some(result => !result || !result.success)) {
-      throw new Error('存在未完成的图片分析批次');
-    }
-
-    // 4. 按图片识别重复内容，保留照片记录但只汇总唯一页面
-    const pageResults = batchResults.flatMap(result => result.data.pageResults || []);
-    if (pageResults.length === 0) {
-      throw new Error('AI 未返回逐页分析结果');
-    }
-    const historicalPhotos = await getHistoricalPhotos(studentId, subject);
-    const markedPages = markDuplicatePages(pageResults, historicalPhotos);
-    const uniquePages = markedPages.filter(page => !page.isDuplicate);
-    const merged = mergeBatchResults(
-      uniquePages.map(page => ({ success: true, data: page })),
-      subject
-    );
-    const initialImageFiles = Array.isArray(report.imageFiles) ? report.imageFiles : [];
-    const pageByFileID = new Map(markedPages.map(page => [page.fileID, page]));
-    const imageFiles = fileIDs.map((fileID, index) => {
-      const initial = initialImageFiles.find(item => item.fileID === fileID) || {};
-      const page = pageByFileID.get(fileID) || {};
-      return {
-        fileID,
-        fileName: initial.fileName || `照片${index + 1}`,
-        fileSize: Number(initial.fileSize) || 0,
-        uploadedAt: initial.uploadedAt || report.evidenceTime || report.createdAt,
-        ocrSummary: page.ocrSummary || '',
-        contentFingerprint: page.contentFingerprint || '',
-        isDuplicate: Boolean(page.isDuplicate),
-        duplicateOf: page.duplicateOf || '',
-      };
-    });
-    let previousReport = null;
-    let verificationTargets = [];
-    let comparisonSummary = '';
-
-    if (uniquePages.length === 0) {
-      merged.summary = '本次照片均疑似重复，未更新学习卡点';
-      comparisonSummary = '本次照片均疑似重复，未更新学习卡点。';
-    } else if (mode === 'verification') {
-      previousReport = await getPreviousReport(studentId, subject);
-      verificationTargets = verificationPaper.targets;
-      const verificationEvidence = aggregateVerificationEvidence(verificationPaper.plan, uniquePages);
-      const passedCodes = verificationEvidence.filter(item => item.complete && item.allCorrect).map(item => item.lpCode);
-      merged.bottlenecks = compareBottlenecks(
-        previousReport ? previousReport.bottlenecks : [],
-        merged.bottlenecks,
-        passedCodes
-      );
-      comparisonSummary = buildComparisonSummary(merged.bottlenecks);
-      merged.verificationEvidence = verificationEvidence;
-    } else {
-      merged.bottlenecks = merged.bottlenecks.map(item => ({ ...item, status: 'found' }));
-    }
-
-    const profile = await getSubjectProfile(studentId, subject);
-    const profileSummary = buildProfileSummary(profile || {}, {
-      _id: reportId,
-      type: mode,
-      totalErrors: merged.totalErrors,
-      bottlenecks: merged.bottlenecks,
-      verificationTargets,
-      verificationEvidence: merged.verificationEvidence || [],
-      allPhotosDuplicate: uniquePages.length === 0,
-    }, report.evidenceTime || report.createdAt || new Date());
-
-    // 5. 更新 reports 集合
-    await db.collection('reports').doc(reportId).update({
-      data: {
-        status: 'completed',
-        summary: merged.summary,
-        totalErrors: merged.totalErrors,
-        bottlenecks: merged.bottlenecks,
-        errorDetails: merged.errorDetails,
-        imageFiles,
-        previousReportId: previousReport ? previousReport._id : '',
-        comparisonSummary,
-        verificationTargets,
-        verificationEvidence: merged.verificationEvidence || [],
-        isEffective: profileSummary.isEffective,
-        changeSummary: profileSummary.changeSummary,
-        completedAt: merged.completedAt,
-      },
+    taskId = await createAnalysisTask({
+      reportId,
+      totalBatches,
+      fileIDs,
+      mode,
+      subject,
+      studentId,
+      openid: report._openid || currentOpenId,
     });
 
-    // 6. 更新 subjectProfiles
-    if (profileSummary.isEffective) {
-      await updateSubjectProfile(profile, profileSummary, reportId);
-      await db.collection('reports').doc(reportId).update({
-        data: { profileAppliedAt: new Date() },
-      });
-    } else {
-      await clearSubjectProfileAnalysis(studentId, subject);
-    }
-
-    // 7. 更新 analysisTasks 状态
-    await db.collection('analysisTasks').doc(taskId).update({
-      data: { status: 'completed', completedAt: new Date() },
+    const batchResults = await runAnalyzeBatches({
+      batches,
+      totalBatches,
+      subject,
+      reportId,
+      verificationPaper,
+      taskId,
+    });
+    const artifacts = await buildAnalysisArtifacts({
+      reportId,
+      report,
+      fileIDs,
+      subject,
+      studentId,
+      mode,
+      verificationPaper,
+      batchResults,
     });
 
-    // 8. 推送订阅消息（异步，不阻塞返回）
+    await writeCompletedAnalysis({
+      reportId,
+      studentId,
+      subject,
+      ...artifacts,
+    });
+
+    await markAnalysisTaskCompleted(taskId);
+
     sendNotification(studentId, reportId, subject).catch(err => console.error('推送异常：', err));
 
     return {
       success: true,
       reportId,
-      totalErrors: merged.totalErrors,
-      bottleneckCount: merged.bottlenecks.length,
-      summary: merged.summary,
+      totalErrors: artifacts.merged.totalErrors,
+      bottleneckCount: artifacts.merged.bottlenecks.length,
+      summary: artifacts.merged.summary,
     };
   } catch (err) {
     console.error('analyzePhotos 失败：', err);
