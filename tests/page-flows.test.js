@@ -2,6 +2,85 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 const util = require('../miniprogram/utils/util')
+const {
+  buildTraceableUrl,
+  fallbackTraceableAction,
+  isTraceableAction,
+  normalizeTraceableAction
+} = require('../miniprogram/utils/traceable-actions')
+
+test('traceable actions build deterministic page urls', () => {
+  assert.equal(
+    buildTraceableUrl({
+      type: 'subject-home',
+      studentId: 'student-1',
+      studentName: '钟青羽',
+      grade: 6,
+      subject: 'math',
+      subjectName: '数学'
+    }),
+    '/pages/subject-home/subject-home?studentId=student-1&subject=math&subjectName=%E6%95%B0%E5%AD%A6&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6'
+  )
+
+  assert.equal(
+    buildTraceableUrl({ type: 'report-detail', id: 'report-1' }),
+    '/pages/report/report?id=report-1'
+  )
+
+  assert.equal(
+    buildTraceableUrl({ type: 'paper-workbench', id: 'paper-1' }),
+    '/pages/paper-preview/paper-preview?paperId=paper-1'
+  )
+
+  assert.equal(
+    buildTraceableUrl({
+      type: 'bottleneck-detail',
+      studentId: 'student-1',
+      subject: 'math',
+      id: 'LP-001',
+      studentName: '钟青羽'
+    }),
+    '/pages/bottleneck-detail/bottleneck-detail?studentId=student-1&subject=math&lpCode=LP-001&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD'
+  )
+})
+
+test('traceable actions support list, permission and empty-state fallbacks', () => {
+  assert.equal(
+    buildTraceableUrl({
+      type: 'learning-records',
+      studentId: 'student-1',
+      studentName: '钟青羽',
+      subject: 'math',
+      filter: 'pending-upload'
+    }),
+    '/pages/upload-history/upload-history?studentId=student-1&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&subject=math&filter=pending-upload'
+  )
+
+  assert.equal(
+    buildTraceableUrl({
+      type: 'permission-info',
+      studentId: 'student-1',
+      title: '共同家长权限'
+    }),
+    '/pages/parent-management/parent-management?studentId=student-1&mode=permission&title=%E5%85%B1%E5%90%8C%E5%AE%B6%E9%95%BF%E6%9D%83%E9%99%90'
+  )
+
+  assert.equal(
+    buildTraceableUrl(fallbackTraceableAction('empty', {
+      studentId: 'student-1',
+      subject: 'math',
+      title: '暂无诊断记录'
+    })),
+    '/pages/upload-history/upload-history?studentId=student-1&subject=math&empty=1&title=%E6%9A%82%E6%97%A0%E8%AF%8A%E6%96%AD%E8%AE%B0%E5%BD%95'
+  )
+})
+
+test('traceable action normalization rejects unknown actions safely', () => {
+  assert.equal(isTraceableAction({ type: 'report-detail', id: 'report-1' }), true)
+  assert.equal(isTraceableAction({ type: 'unknown', id: 'x' }), false)
+  assert.equal(normalizeTraceableAction(null), null)
+  assert.equal(buildTraceableUrl({ type: 'unknown', id: 'x' }), null)
+})
 
 test('add student trims input and creates all subject profiles', async () => {
   let saved = null
@@ -914,11 +993,17 @@ test('paper preview loads a saved paper and opens its upload flow', async () => 
   assert.equal(page.data.workbenchStatus, 'completed')
   assert.equal(page.data.feedback.summary, '计算基础有改善')
   assert.ok(page.data.feedback.chips.includes('1 个卡点有改善'))
+  assert.match(page.data.paperCodeUrl, /paper-preview/)
+  assert.match(page.data.statusUrl, /report-verify/)
+  assert.match(page.data.uploadUrl, /upload/)
+  assert.match(page.data.feedback.reportUrl, /report-verify/)
   assert.doesNotMatch(page.data.bottleneckText, /LP-\d+/)
   page.onToggleQuestions()
   assert.equal(page.data.questionPreview.length, 5)
   page.onViewFeedbackReport()
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /report-verify/)
+  page.onTraceableUrlTap({ currentTarget: { dataset: { url: page.data.paperCodeUrl } } })
+  assert.match(wx.calls.filter(call => call.name === 'navigateTo').pop().payload.url, /paper-preview/)
   page.onUpload()
   const url = wx.calls.filter(call => call.name === 'navigateTo').pop().payload.url
   assert.match(url, /mode=verification/)

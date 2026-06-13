@@ -3,8 +3,8 @@
   <view class="report-header {{isVerification ? 'header-verify' : 'header-diagnosis'}}">
     <text class="report-type">{{isVerification ? '验证报告' : '诊断报告'}}</text>
     <text class="report-date">{{dateText}}</text>
-    <text class="report-date" wx:if="{{evidenceTimeText}}">证据时间：{{evidenceTimeText}}</text>
-    <text class="paper-code-chip" wx:if="{{paperCodeText}}">验证卷 {{paperCodeText}}</text>
+    <text class="report-date traceable-text" wx:if="{{evidenceTimeText}}" bindtap="onTraceableUrlTap" data-url="{{evidenceTimeUrl}}">证据时间：{{evidenceTimeText}}</text>
+    <text class="paper-code-chip" wx:if="{{paperCodeText}}" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">验证卷 {{paperCodeText}}</text>
     <text class="report-headline">{{headline}}</text>
     <text class="report-summary" wx:if="{{trendSummaryText}}">{{trendSummaryText}}</text>
     <text class="report-summary">{{report.summary}}</text>
@@ -27,15 +27,15 @@
       <view class="section-heading"><view class="heading-icon">◎</view><text>本次诊断结论</text></view>
       <text class="conclusion-text">{{headline}}</text>
       <view class="report-metrics">
-        <view><text>{{report.totalErrors || 0}}</text><text>相关错题</text></view>
-        <view><text>{{bottleneckCount}}</text><text>学习卡点</text></view>
-        <view><text>{{sourceImageCount}}</text><text>试卷图片</text></view>
+        <view bindtap="onTraceableUrlTap" data-url="{{metricActions.errorsUrl}}"><text>{{report.totalErrors || 0}}</text><text>相关错题</text></view>
+        <view bindtap="onTraceableUrlTap" data-url="{{metricActions.bottlenecksUrl}}"><text>{{bottleneckCount}}</text><text>学习卡点</text></view>
+        <view bindtap="onTraceableUrlTap" data-url="{{metricActions.sourcesUrl}}"><text>{{sourceImageCount}}</text><text>试卷图片</text></view>
       </view>
     </view>
 
     <view class="card" wx:if="{{hasBottlenecks}}">
       <view class="section-heading"><view class="heading-icon">⌁</view><text>发现的学习卡点</text></view>
-      <view class="bottleneck-item" wx:for="{{bottleneckList}}" wx:key="lpCode">
+      <view class="bottleneck-item" wx:for="{{bottleneckList}}" wx:key="lpCode" bindtap="onTraceableUrlTap" data-url="{{item.detailUrl}}">
         <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
         <view class="bottleneck-copy">
           <view class="bottleneck-title-row">

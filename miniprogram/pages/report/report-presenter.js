@@ -1,5 +1,6 @@
 const { bottleneckLabelOf } = require('../../utils/learning-records')
 const { paperCodeOf } = require('../../utils/paper-display')
+const { buildTraceableUrl } = require('../../utils/traceable-actions')
 
 function pad2(value) {
   return String(value).padStart(2, '0')
@@ -31,6 +32,7 @@ function buildTrendSummary(bottlenecks = []) {
 function buildReportView(report) {
   const isVerification = report.type === 'verification'
   const paperCodeText = paperCodeOf(report.linkedPaper || report.paper)
+  const linkedPaper = report.linkedPaper || report.paper || {}
   const bottlenecks = report.bottlenecks || []
   const errorDetails = report.errorDetails || []
   const maxErrorCount = bottlenecks.length > 0
@@ -49,7 +51,14 @@ function buildReportView(report) {
       ...status,
       displayName,
       metaText: `${item.errorCount || 0} 道相关错题 · ${displayName}`,
-      barWidth: Math.round(((item.errorCount || 0) / maxErrorCount) * 100)
+      barWidth: Math.round(((item.errorCount || 0) / maxErrorCount) * 100),
+      detailUrl: buildTraceableUrl({
+        type: 'bottleneck-detail',
+        studentId: report.studentId,
+        studentName: report.studentName,
+        subject: report.subject,
+        id: item.lpCode
+      })
     }
   })
   const errorDetailList = errorDetails.map((item, index) => ({
@@ -61,9 +70,37 @@ function buildReportView(report) {
   return {
     headline: report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断结果',
     paperCodeText,
+    paperCodeUrl: paperCodeText ? buildTraceableUrl({
+      type: 'paper-workbench',
+      id: linkedPaper._id || report.paperId
+    }) : '',
     evidenceTimeText: formatDateTime(report.evidenceTime || report.createdAt),
+    evidenceTimeUrl: buildTraceableUrl({
+      type: 'learning-records',
+      studentId: report.studentId,
+      studentName: report.studentName,
+      subject: report.subject,
+      filter: 'evidence-time'
+    }),
     trendSummaryText: buildTrendSummary(bottlenecks),
     sourceImageCount: (report.imageFiles || report.imageFileIds || []).length,
+    metricActions: {
+      errorsUrl: buildTraceableUrl({ type: 'report-detail', id: report._id }),
+      bottlenecksUrl: buildTraceableUrl({
+        type: 'bottleneck-center',
+        studentId: report.studentId,
+        studentName: report.studentName,
+        subject: report.subject,
+        filter: isVerification ? 'all' : 'active'
+      }),
+      sourcesUrl: buildTraceableUrl({
+        type: 'learning-records',
+        studentId: report.studentId,
+        studentName: report.studentName,
+        subject: report.subject,
+        filter: 'sources'
+      })
+    },
     isVerification,
     bottleneckCount: bottlenecks.length,
     hasBottlenecks: bottlenecks.length > 0,

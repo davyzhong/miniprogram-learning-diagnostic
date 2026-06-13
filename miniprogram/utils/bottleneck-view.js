@@ -1,4 +1,5 @@
 const { bottleneckLabelOf } = require('./learning-records')
+const { SUBJECT_NAMES } = require('./constants')
 
 const STATUS_META = {
   needs_verification: { text: '待验证', className: 'pending', icon: '?', actionText: '生成验证卷' },
@@ -14,16 +15,18 @@ const TREND_META = {
   recurring: '再次出现'
 }
 
-const SUBJECT_NAMES = {
-  math: '数学',
-  chinese: '语文',
-  english: '英语'
-}
-
 function toDate(value) {
   if (!value) return null
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? null : date
+}
+
+function profileBottlenecks(profile = {}) {
+  if (Array.isArray(profile.currentBottlenecks)) return profile.currentBottlenecks
+  return [
+    ...(profile.pendingBottlenecks || []).map(item => ({ ...item, status: 'needs_verification' })),
+    ...(profile.improvedBottlenecks || []).map(item => ({ ...item, status: 'improved' }))
+  ]
 }
 
 function toTime(value) {
@@ -188,6 +191,7 @@ function findBottleneckView(views = [], lpCode = '') {
 module.exports = {
   STATUS_META,
   TREND_META,
+  profileBottlenecks,
   buildBottleneckView,
   buildBottleneckViews,
   sortBottleneckViews,

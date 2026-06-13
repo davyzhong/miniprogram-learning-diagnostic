@@ -2,8 +2,81 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 
 const { buildLearningProfileHomeView } = require('../miniprogram/pages/index/index-presenter')
+const { buildChildWorkbenchCards } = require('../miniprogram/utils/child-workbench')
 
 const relative = () => '今天'
+
+test('child workbench cards combine pending actions and subject rows for multiple children', () => {
+  const cards = buildChildWorkbenchCards({
+    students: [{
+      _id: 'student-1',
+      name: '钟青羽',
+      grade: 6,
+      memberCount: 2,
+      role: 'owner'
+    }, {
+      _id: 'student-2',
+      name: '弟弟',
+      grade: 3,
+      role: 'viewer'
+    }],
+    profilesByStudentId: {
+      'student-1': [{
+        subject: 'math',
+        totalReports: 2,
+        hidden: false,
+        updatedAt: '2026-06-12T10:00:00+08:00',
+        currentBottlenecks: [
+          { lpCode: 'LP-001', status: 'needs_verification' },
+          { lpCode: 'LP-008', status: 'persisting' },
+          { lpCode: 'LP-009', status: 'improved' }
+        ]
+      }, {
+        subject: 'chinese',
+        hidden: true
+      }]
+    },
+    reportsByStudentId: {
+      'student-1': [{
+        _id: 'report-1',
+        subject: 'math',
+        status: 'completed',
+        type: 'diagnosis',
+        createdAt: '2026-06-12T11:00:00+08:00',
+        bottlenecks: [{ lpCode: 'LP-001' }, { lpCode: 'LP-008' }],
+        imageFiles: [{ fileID: 'cloud://a' }]
+      }]
+    },
+    papersByStudentId: {
+      'student-1': [{
+        _id: 'paper-1',
+        subject: 'math',
+        type: 'verification',
+        paperDisplayCode: '数学-20260612-04',
+        createdAt: '2026-06-12T12:00:00+08:00',
+        questions: [{}, {}, {}, {}, {}, {}],
+        bottleneckSummaries: ['计算基础', '审题理解']
+      }]
+    }
+  }, relative)
+
+  assert.equal(cards.length, 2)
+  assert.equal(cards[0].name, '钟青羽')
+  assert.equal(cards[0].statusItems.find(item => item.key === 'pendingVerification').value, '2')
+  assert.equal(cards[0].statusItems.find(item => item.key === 'pendingUpload').value, '1')
+  assert.equal(cards[0].statusItems.find(item => item.key === 'improved').value, '1')
+  assert.equal(cards[0].subjectRows[0].name, '数学')
+  assert.equal(cards[0].subjectRows[0].summary, '计算基础、审题理解')
+  assert.equal(cards[0].subjectRows[1].statusText, '隐藏')
+  assert.equal(cards[0].nextAction.title, '下一步')
+  assert.match(cards[0].nextAction.url, /paper-preview\/paper-preview/)
+  assert.match(cards[0].nextAction.url, /paperId=paper-1/)
+  assert.match(cards[0].profileUrl, /mode=student-profile/)
+
+  assert.equal(cards[1].name, '弟弟')
+  assert.equal(cards[1].roleText, '共同家长')
+  assert.equal(cards[1].statusText, '无待办')
+})
 
 test('learning profile home summarizes a math-only diagnosis', () => {
   const view = buildLearningProfileHomeView({

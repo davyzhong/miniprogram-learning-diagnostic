@@ -100,18 +100,44 @@ test('bottleneck metadata uses readable names instead of LP codes', () => {
 
 test('verification report exposes linked paper display code', () => {
   const view = buildReportView({
+    studentId: 'student-1',
+    subject: 'math',
     type: 'verification',
     linkedPaper: {
+      _id: 'paper-1',
       paperDisplayCode: '数学-20260613-01'
     },
     bottlenecks: [{ lpCode: 'LP-008', status: 'improved' }]
   })
 
   assert.equal(view.paperCodeText, '数学-20260613-01')
+  assert.match(view.paperCodeUrl, /paper-preview\/paper-preview/)
+  assert.match(view.paperCodeUrl, /paperId=paper-1/)
   assert.equal(view.bottleneckList[0].displayName, '审题理解')
+  assert.match(view.bottleneckList[0].detailUrl, /bottleneck-detail\/bottleneck-detail/)
+  assert.match(view.bottleneckList[0].detailUrl, /lpCode=LP-008/)
 })
 
 test('report headline falls back to comparison summary then summary', () => {
   assert.equal(buildReportView({ comparisonSummary: '单位换算已有改善' }).headline, '单位换算已有改善')
   assert.equal(buildReportView({ summary: '本次诊断摘要' }).headline, '本次诊断摘要')
+})
+
+test('report view exposes traceable metric and evidence urls', () => {
+  const view = buildReportView({
+    _id: 'report-1',
+    studentId: 'student-1',
+    studentName: '钟青羽',
+    subject: 'math',
+    type: 'diagnosis',
+    createdAt: '2026-06-13T12:30:00Z',
+    imageFiles: [{ fileID: 'one' }],
+    totalErrors: 4,
+    bottlenecks: [{ lpCode: 'LP-001', status: 'found', errorCount: 4 }]
+  })
+
+  assert.match(view.metricActions.errorsUrl, /report\/report/)
+  assert.match(view.metricActions.bottlenecksUrl, /bottleneck-center\/bottleneck-center/)
+  assert.match(view.metricActions.sourcesUrl, /upload-history\/upload-history/)
+  assert.match(view.evidenceTimeUrl, /upload-history\/upload-history/)
 })

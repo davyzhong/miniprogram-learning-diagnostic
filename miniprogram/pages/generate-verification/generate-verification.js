@@ -1,7 +1,7 @@
 // pages/generate-verification/generate-verification.js
 const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
-const { buildBottleneckViews } = require('../../utils/bottleneck-view')
+const { buildBottleneckViews, profileBottlenecks } = require('../../utils/bottleneck-view')
 const MAX_SELECTED_BOTTLENECKS = 5
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
 
@@ -11,10 +11,7 @@ function normalizeWeight(item = {}) {
 }
 
 function verificationBottlenecks(profile = {}, targetCodes = []) {
-  const hasCurrent = Array.isArray(profile.currentBottlenecks) && profile.currentBottlenecks.length > 0
-  const raw = hasCurrent
-    ? profile.currentBottlenecks
-    : (profile.pendingBottlenecks || []).map(item => ({ ...item, status: 'needs_verification' }))
+  const raw = profileBottlenecks(profile)
   const targetSet = new Set(targetCodes)
   return buildBottleneckViews(raw
     .filter(item => item.status !== 'improved' || targetSet.has(item.lpCode))

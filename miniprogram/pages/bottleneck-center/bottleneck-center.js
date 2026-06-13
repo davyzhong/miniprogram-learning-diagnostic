@@ -1,7 +1,8 @@
 const cloud = require('../../utils/cloud')
 const {
   buildBottleneckViews,
-  buildBottleneckStats
+  buildBottleneckStats,
+  profileBottlenecks
 } = require('../../utils/bottleneck-view')
 const {
   SUBJECTS,
@@ -21,14 +22,6 @@ const STATUS_FILTERS = [
   { key: 'improved', name: '已改善' }
 ]
 
-function profileBottlenecks(profile = {}) {
-  if (Array.isArray(profile.currentBottlenecks)) return profile.currentBottlenecks
-  return [
-    ...(profile.pendingBottlenecks || []).map(item => ({ ...item, status: 'needs_verification' })),
-    ...(profile.improvedBottlenecks || []).map(item => ({ ...item, status: 'improved' }))
-  ]
-}
-
 function buildViewsFromProfiles(profiles = []) {
   const raw = profiles.flatMap(profile => {
     const subject = profile.subject || 'math'
@@ -44,7 +37,6 @@ function buildViewsFromProfiles(profiles = []) {
 function matchesStatus(item, status) {
   if (status === 'all') return true
   if (status === 'active') return item.status !== 'improved'
-  if (status === 'pending') return item.status === 'needs_verification'
   if (status === 'persisting') return item.status === 'persisting'
   if (status === 'improved') return item.status === 'improved' || item.trend === 'declining'
   if (status === 'recurring') return item.trend === 'recurring'
@@ -76,7 +68,13 @@ Page({
   onLoad(options = {}) {
     const studentId = options.studentId || ''
     const studentName = options.studentName ? decodeURIComponent(options.studentName) : ''
-    this.setData({ studentId, studentName })
+    const activeSubject = SUBJECT_FILTERS.some(item => item.key === options.subject)
+      ? options.subject
+      : 'all'
+    const activeStatus = STATUS_FILTERS.some(item => item.key === options.status)
+      ? options.status
+      : 'all'
+    this.setData({ studentId, studentName, activeSubject, activeStatus })
     if (studentId) {
       return this.loadBottlenecks()
     }
@@ -126,6 +124,12 @@ Page({
 
   onStatusFilterTap(e) {
     this.setData({ activeStatus: e.currentTarget.dataset.status || 'all' })
+    this.applyFilters()
+  },
+
+  onStatTap(e) {
+    const status = e.currentTarget.dataset.status || 'all'
+    this.setData({ activeStatus: status })
     this.applyFilters()
   },
 

@@ -141,9 +141,7 @@ Page({
     const { dayIndex, statusIndex } = e.currentTarget.dataset
     const day = this.data.days[dayIndex]
     const status = day && day.statusItems && day.statusItems[statusIndex]
-    if (status && status.reportId) {
-      wx.navigateTo({ url: `/pages/report/report?id=${status.reportId}` })
-    }
+    this.navigateToRecordUrl(status && (status.url || (status.reportId ? `/pages/report/report?id=${status.reportId}` : '')))
   },
 
   onEventTap(e) {
@@ -151,16 +149,28 @@ Page({
     const day = this.data.days[dayIndex]
     const event = day && day.events[eventIndex]
     if (!event) return
-    if (event.paperId) {
-      wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${event.paperId}` })
-      return
-    }
-    if (event.reportId) {
-      wx.navigateTo({ url: `/pages/report/report?id=${event.reportId}` })
-    }
+    this.navigateToRecordUrl(event.url || (event.paperId
+      ? `/pages/paper-preview/paper-preview?paperId=${event.paperId}`
+      : (event.reportId ? `/pages/report/report?id=${event.reportId}` : '')
+    ))
   },
 
   onReportTap(e) {
     wx.navigateTo({ url: `/pages/report/report?id=${e.currentTarget.dataset.id}` })
+  },
+
+  onTraceableUrlTap(e) {
+    const url = e && e.currentTarget && e.currentTarget.dataset
+      ? e.currentTarget.dataset.url
+      : ''
+    this.navigateToRecordUrl(url)
+  },
+
+  navigateToRecordUrl(url) {
+    if (!url) {
+      wx.showToast({ title: '暂无可查看内容', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url })
   }
 })

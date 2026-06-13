@@ -65,6 +65,18 @@
   min-width: 0;
 }
 
+.traceable-block {
+  position: relative;
+}
+
+.traceable-block:active,
+.status-pill:active,
+.question-tag:active,
+.feedback-chip:active,
+.section-action:active {
+  opacity: 0.72;
+}
+
 .code-label {
   color: #718096;
   display: block;

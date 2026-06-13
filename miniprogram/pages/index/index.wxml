@@ -14,6 +14,93 @@
       </view>
     </view>
 
+    <view class="section-block child-workbench-section" wx:if="{{childCards.length > 0}}">
+      <view class="section-heading between">
+        <view>
+          <text>孩子学习工作台</text>
+          <text class="section-subtitle">点击数字、状态、学科和编号可直接追溯</text>
+        </view>
+        <text class="link-text" bindtap="onManageStudents">添加孩子</text>
+      </view>
+
+      <view
+        class="child-card child-card-{{child.statusClass}}"
+        wx:for="{{childCards}}"
+        wx:key="id"
+        wx:for-item="child"
+        bindtap="onTraceableUrlTap"
+        data-url="{{child.profileUrl}}"
+      >
+        <view class="child-card-top">
+          <view class="child-avatar">{{child.avatarText}}</view>
+          <view class="child-main">
+            <view class="child-title-line">
+              <text class="child-name">{{child.name}}</text>
+              <text class="child-status child-status-{{child.statusClass}}">{{child.statusText}}</text>
+            </view>
+            <text class="child-meta">{{child.gradeText}}<text wx:if="{{child.gradeText && child.roleText}}"> · </text>{{child.roleText}}<text wx:if="{{child.memberText}}"> · {{child.memberText}}</text></text>
+            <text class="child-meta">最近更新：{{child.recentUpdateText}}</text>
+          </view>
+          <text class="arrow">›</text>
+        </view>
+
+        <view class="child-status-grid">
+          <view
+            class="child-status-cell status-cell-{{item.tone}}"
+            wx:for="{{child.statusItems}}"
+            wx:key="key"
+            catchtap="onTraceableUrlTap"
+            data-url="{{item.url}}"
+          >
+            <text class="child-status-num">{{item.value}}</text>
+            <text class="child-status-label">{{item.label}}</text>
+          </view>
+        </view>
+
+        <view class="child-subject-list">
+          <view
+            class="child-subject-row child-subject-{{item.key}} {{item.hidden ? 'is-hidden' : ''}}"
+            wx:for="{{child.subjectRows}}"
+            wx:key="key"
+            catchtap="onTraceableUrlTap"
+            data-url="{{item.url}}"
+          >
+            <view class="subject-row-copy">
+              <text class="subject-row-name">{{item.name}}</text>
+              <text class="subject-row-summary">{{item.summary}}</text>
+            </view>
+            <text class="subject-row-status">{{item.statusText}}</text>
+          </view>
+        </view>
+
+        <view
+          class="child-latest-row"
+          wx:if="{{child.latestValue}}"
+          catchtap="onTraceableUrlTap"
+          data-url="{{child.latestValue.url}}"
+        >
+          <text class="latest-label">{{child.latestValue.kind === 'paper' ? '最近试卷' : '最新报告'}}</text>
+          <view class="latest-copy">
+            <text class="latest-title">{{child.latestValue.title}}</text>
+            <text class="latest-summary">{{child.latestValue.summary}}</text>
+          </view>
+          <text class="latest-action">查看 ›</text>
+        </view>
+
+        <view
+          class="child-next-row"
+          catchtap="onTraceableUrlTap"
+          data-url="{{child.nextAction.url}}"
+        >
+          <view>
+            <text class="next-mini-title">{{child.nextAction.title}}</text>
+            <text class="next-mini-summary">{{child.nextAction.summary}}</text>
+          </view>
+          <text class="next-mini-action">{{child.nextAction.actionText}} ›</text>
+        </view>
+      </view>
+    </view>
+
     <view class="hero-card">
       <image class="hero-image" src="/assets/images/math-diagnostic-guide.jpg" mode="aspectFill"></image>
       <view class="hero-copy">

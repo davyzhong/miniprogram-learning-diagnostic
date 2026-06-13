@@ -255,6 +255,21 @@ Page({
     this.navigateByAction(tool.actionType, tool)
   },
 
+  onQuickStatTap(e) {
+    const target = e.currentTarget.dataset.target || ''
+    if (target === 'records') {
+      this.onUploadHistoryTap()
+      return
+    }
+    if (target === 'pending' || target === 'improved') {
+      const status = target === 'improved' ? 'improved' : 'active'
+      const { studentId, subject, studentName } = this.data
+      wx.navigateTo({
+        url: `/pages/bottleneck-center/bottleneck-center?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&subject=${subject}&status=${status}`
+      })
+    }
+  },
+
   navigateByAction(actionType, payload = {}) {
     if (actionType === 'diagnosis') {
       this.onDiagnosisTap()

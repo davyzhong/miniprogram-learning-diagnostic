@@ -45,7 +45,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 
 | 能力 | 设计要求 | 当前实现 |
 |---|---|---|
-| 微信订阅消息 | P0，分析完成后推送 | `analyzePhotos/sendNotification` 仍为空实现 |
+| 微信订阅消息 | 后续增强，需模板与用户授权 | 当前不承诺推送；上传页提示“完成后可在学习记录查看”，`analyzePhotos/sendNotification` 保留为预留钩子 |
 | 上传与分析解耦 | 创建报告后立即返回，分析独立执行 | 已实现：`uploadAndAnalyze` fire-and-forget 启动 `analyzePhotos` |
 | 默认试卷跨学生缓存 | 不同学生可复用同一套默认试卷 PDF | 当前试卷记录按 `studentId` 查询和归属，尚未实现共享模板 |
 

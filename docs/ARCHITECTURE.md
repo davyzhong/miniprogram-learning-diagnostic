@@ -264,6 +264,7 @@ subject-select（学科入口兼容页）
 subject-home（学科工作台）
   ├── navigateTo → upload?mode=diagnosis（拍照诊断）
   ├── navigateTo → generate-verification（生成验证试卷，可带 targetCode）
+  ├── navigateTo → bottleneck-center（统计块/待处理/已改善入口）
   ├── navigateTo → default-paper（默认诊断试卷）
   ├── navigateTo → upload-history（学习记录）
   ├── navigateTo → report?id=xxx（查看报告）
@@ -274,10 +275,15 @@ upload（拍照上传）
 
 upload-history（学习记录）
   ├── navigateTo → report?id=xxx
-  └── navigateTo → paper-preview?paperId=xxx
+  ├── navigateTo → paper-preview?paperId=xxx
+  ├── navigateTo → bottleneck-center（卡点标签）
+  └── navigateTo → upload?mode=verification（待上传状态）
 
 report（报告详情）
-  └── navigateTo → generate-verification（带卡点参数）
+  ├── navigateTo → generate-verification（带卡点参数）
+  ├── navigateTo → bottleneck-detail（卡点详情）
+  ├── navigateTo → bottleneck-center（指标卡）
+  └── navigateTo → upload-history（证据时间/来源）
 
 generate-verification（验证试卷出卷配置）
   └── navigateTo → paper-preview?fileId=xxx 或 ?paperId=xxx
@@ -286,8 +292,29 @@ default-paper（默认诊断试卷）
   └── navigateTo → paper-preview?fileId=xxx 或 ?paperId=xxx
 
 paper-preview（试卷预览）
-  └── navigateTo → upload?mode=verification/default-paper（作答完成后上传批复）
+  ├── navigateTo → upload?mode=verification/default-paper（作答完成后上传批复）
+  ├── navigateTo → report?id=xxx（验证反馈）
+  └── navigateTo → bottleneck-detail / bottleneck-center（题目卡点）
+
+bottleneck-center（学习卡点中心）
+  ├── navigateTo → bottleneck-detail（卡点详情）
+  └── navigateTo → generate-verification（单卡点验证）
+
+bottleneck-detail（学习卡点详情）
+  ├── navigateTo → report?id=xxx（证据报告）
+  ├── navigateTo → paper-preview?paperId=xxx（关联验证卷）
+  └── redirectTo → bottleneck-center（返回中心，避免回退栈绕路）
 ```
+
+### 全局交互原则：信息即入口
+
+本产品的核心对象是诊断报告、验证试卷、学习卡点和证据链。凡是页面中出现这些对象的摘要、编号、状态、数量或标签，默认都应可点击，并进入最贴近该信息语义的页面：
+
+- 报告摘要、错题数、证据时间 → 报告详情或学习记录。
+- 验证卷编号、题目数、页数、待上传状态 → 验证试卷工作台或上传页。
+- 学习卡点名称、状态、权重、已改善数量 → 卡点详情或卡点中心筛选视图。
+- 中间态和异常态不作为主记录铺开；在学习记录中折叠为状态条，点击后进入可恢复的报告页。
+- 若数据不足以跳转，应给出轻提示，不让用户点了没有反馈。
 
 ### 页面清单
 
@@ -319,7 +346,7 @@ paper-preview（试卷预览）
   │
   ├─→ uploadAndAnalyze ──(fire-and-forget)──→ analyzePhotos ──(同步 await, 串行)──→ analyzeBatch × N
   │                                        │
-  │                                        ├──(异步 fire-and-forget)──→ sendNotification（预留空实现）
+  │                                        ├──(异步 fire-and-forget)──→ sendNotification（预留钩子，当前不承诺推送）
   │                                        │
   │                                        └── 直接 DB 操作：reports / subjectProfiles / analysisTasks
   │
@@ -339,7 +366,7 @@ paper-preview（试卷预览）
 | 客户端 parent-management/join-student | studentAccess | wx.cloud.callFunction | 家长成员管理、邀请创建、扫码加入 |
 | uploadAndAnalyze | analyzePhotos | cloud.callFunction (fire-and-forget) | 服务端触发后台分析，立即返回 reportId |
 | analyzePhotos | analyzeBatch | cloud.callFunction (同步 await, 循环串行) | 每批最多 5 张，逐批处理 |
-| analyzePhotos | sendNotification | Promise.catch (fire-and-forget) | 预留，当前空实现 |
+| analyzePhotos | sendNotification | Promise.catch (fire-and-forget) | 预留钩子；订阅消息模板和授权链路接入前，前端只提示“完成后可在学习记录查看” |
 | 客户端 report 页面 | getAnalysisProgress | wx.cloud.callFunction | 轮询调用 |
 | 客户端 report 页面 | callAnalyzePhotos | wx.cloud.callFunction (20s 超时) | 重试入口（分析报告页发现未完成时） |
 | 客户端 generate-verification | generatePaper | wx.cloud.callFunction | 生成验证试卷 |

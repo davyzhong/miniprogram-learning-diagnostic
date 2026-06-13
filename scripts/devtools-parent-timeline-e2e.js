@@ -16,6 +16,7 @@ const cliPath = '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
 const screenshots = {
   index: '/tmp/learning-diagnostic-parent-timeline-index.png',
   parent: '/tmp/learning-diagnostic-parent-management.png',
+  subject: '/tmp/learning-diagnostic-subject-home.png',
   timeline: '/tmp/learning-diagnostic-learning-timeline.png',
 }
 
@@ -67,6 +68,19 @@ async function tapByText(page, selector, text) {
       await element.tap()
       await page.waitFor(500)
       return element
+    }
+  }
+  throw new Error(`cannot find ${selector} containing text "${text}"`)
+}
+
+async function tapLastByText(page, selector, text) {
+  const elements = await page.$$(selector)
+  for (let i = elements.length - 1; i >= 0; i--) {
+    const elementText = await elements[i].text()
+    if (elementText.includes(text)) {
+      await elements[i].tap()
+      await page.waitFor(500)
+      return elements[i]
     }
   }
   throw new Error(`cannot find ${selector} containing text "${text}"`)
@@ -258,6 +272,11 @@ async function installCloudMocks(miniProgram) {
       return { result: { success: false, error: `unhandled mock call ${name}:${data && data.action}` } }
     }
 
+    const matchesFilter = (item, filter = {}) => {
+      if (!filter || Object.keys(filter).length === 0) return true
+      return Object.keys(filter).every(key => item[key] === filter[key])
+    }
+
     wx.cloud.database = () => ({
       collection(name) {
         return {
@@ -266,13 +285,16 @@ async function installCloudMocks(miniProgram) {
               orderBy() { return this },
               limit() { return this },
               async get() {
-                if (name === 'students') return { data: [student] }
-                if (name === 'subjectProfiles') return { data: subjectProfiles.filter(item => !filter || item.studentId === filter.studentId) }
-                if (name === 'reports') return { data: reports.filter(item => !filter || item.studentId === filter.studentId) }
-                if (name === 'papers') return { data: papers.filter(item => !filter || item.studentId === filter.studentId) }
+                if (name === 'students') return { data: [student].filter(item => matchesFilter(item, filter)) }
+                if (name === 'subjectProfiles') return { data: subjectProfiles.filter(item => matchesFilter(item, filter)) }
+                if (name === 'reports') return { data: reports.filter(item => matchesFilter(item, filter)) }
+                if (name === 'papers') return { data: papers.filter(item => matchesFilter(item, filter)) }
                 return { data: [] }
               },
             }
+          },
+          async add({ data }) {
+            return { _id: `${name}-mock-${Date.now()}`, data }
           },
           doc(id) {
             return {
@@ -367,25 +389,113 @@ async function main() {
     assert.equal(page.path, 'pages/index/index')
   })
 
-  await runCase('点击学习记录查看全部：进入时间线页面', async () => {
+  await runCase('添加孩子页：表单元素可见', async () => {
+    const page = await relaunch(miniProgram, '/pages/add-student/add-student', 1200)
+    const text = await pageText(page)
+    requireText(text, ['学生姓名', '年级', '头像颜色', '保存'])
+    await tapByText(page, '.grade-btn', '3年级')
+    const updatedText = await pageText(page)
+    requireText(updatedText, ['3年级'])
+  })
+
+  await runCase('学科选择页：三科入口可见并可进入数学工作台', async () => {
+    let page = await relaunch(miniProgram, '/pages/subject-select/subject-select?studentId=student-e2e&name=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6', 1600)
+    let text = await pageText(page)
+    requireText(text, ['钟青羽 的学科入口', '数学', '语文', '英语'])
+    await tapByText(page, '.subject-card', '数学')
+    await page.waitFor(1600)
+    page = await miniProgram.currentPage()
+    assert.equal(page.path, 'pages/subject-home/subject-home')
+    text = await pageText(page)
+    requireText(text, ['数学工作台', '生成验证试卷', '待处理队列', '工具', '拍照诊断', '默认试卷', '学习记录', '完整报告'])
+    await miniProgram.screenshot({ path: screenshots.subject })
+  })
+
+  await runCase('学科主页工具：拍照上传、默认试卷、学习记录入口可用', async () => {
+    let page = await relaunch(miniProgram, '/pages/subject-home/subject-home?studentId=student-e2e&subject=math&subjectName=%E6%95%B0%E5%AD%A6&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6', 1600)
+    await tapByText(page, '.tool-item', '拍照诊断')
+    await page.waitFor(1200)
+    page = await miniProgram.currentPage()
+    assert.equal(page.path, 'pages/upload/upload')
+    let text = await pageText(page)
+    requireText(text, ['拍照上传试卷', '光线充足', '试卷铺平', '已选 0/20', '上传并开始分析'])
+
+    page = await relaunch(miniProgram, '/pages/subject-home/subject-home?studentId=student-e2e&subject=math&subjectName=%E6%95%B0%E5%AD%A6&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6', 1600)
+    await tapByText(page, '.tool-item', '默认试卷')
+    await page.waitFor(1600)
+    page = await miniProgram.currentPage()
+    assert.equal(page.path, 'pages/default-paper/default-paper')
+    text = await pageText(page)
+    requireText(text, ['默认诊断试卷', '选择年级', '六年级 A 卷', '预览 PDF', '使用这套试卷'])
+
+    page = await relaunch(miniProgram, '/pages/subject-home/subject-home?studentId=student-e2e&subject=math&subjectName=%E6%95%B0%E5%AD%A6&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6', 1600)
+    await tapByText(page, '.tool-item', '学习记录')
+    await page.waitFor(1200)
+    page = await miniProgram.currentPage()
+    assert.equal(page.path, 'pages/upload-history/upload-history')
+  })
+
+  await runCase('生成验证试卷页：卡点文字、配置和按钮可见', async () => {
+    const page = await relaunch(miniProgram, '/pages/generate-verification/generate-verification?studentId=student-e2e&subject=math&subjectName=%E6%95%B0%E5%AD%A6&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD', 1800)
+    const text = await pageText(page)
+    requireText(text, ['出卷配置', '数学纸质验证卷', '试卷配置', '计算基础', '审题理解', '预览 PDF', '生成 A4 试卷'])
+    assert(!text.includes('LP-001'), 'verification config should prefer readable bottleneck summaries')
+  })
+
+  await runCase('点击学习卡点查看全部：进入卡点中心', async () => {
     let page = await relaunch(miniProgram, '/pages/index/index', 2200)
     await tapByText(page, '.link-text', '查看全部')
+    await page.waitFor(1200)
+    page = await miniProgram.currentPage()
+    assert.equal(page.path, 'pages/bottleneck-center/bottleneck-center')
+    const text = await pageText(page)
+    requireText(text, ['学习卡点中心', '全部卡点', '待跟进', '持续出现', '计算基础', '审题理解'])
+  })
+
+  await runCase('卡点中心筛选与卡点详情：文字摘要、证据链和验证入口可见', async () => {
+    let page = await relaunch(miniProgram, '/pages/bottleneck-center/bottleneck-center?studentId=student-e2e&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD', 1600)
+    await tapByText(page, '.filter-chip', '数学')
+    await page.waitFor(500)
+    let text = await pageText(page)
+    requireText(text, ['计算基础', '审题理解'])
+    assert(!text.includes('LP-001'), 'bottleneck center should prefer text summaries over LP codes')
+
+    await tapByText(page, '.bottleneck-card', '审题理解')
+    await page.waitFor(1200)
+    page = await miniProgram.currentPage()
+    assert.equal(page.path, 'pages/bottleneck-detail/bottleneck-detail')
+    text = await pageText(page)
+    requireText(text, ['数学学习卡点', '审题理解', '证据链', '相关报告', '相关验证卷', '生成验证卷'])
+    assert(!text.includes('LP-008'), 'bottleneck detail should prefer text summaries over LP codes')
+
+    await tapByText(page, '.primary-action', '生成验证卷')
+    await page.waitFor(1200)
+    page = await miniProgram.currentPage()
+    assert.equal(page.path, 'pages/generate-verification/generate-verification')
+  })
+
+  await runCase('点击学习记录查看全部：进入时间线页面', async () => {
+    let page = await relaunch(miniProgram, '/pages/index/index', 2200)
+    await tapLastByText(page, '.link-text', '查看全部')
     await page.waitFor(1200)
     page = await miniProgram.currentPage()
     assert.equal(page.path, 'pages/upload-history/upload-history')
     const text = await pageText(page)
     requireText(text, [
       '学习记录',
+      '3 条主记录',
       '数学诊断报告',
       '生成数学验证试卷',
       '数学-20260613-01',
       '数学验证反馈',
-      '疑似重复',
-      'AI 正在分析',
-      '分析失败'
+      '验证卷编号',
+      '已生成验证反馈',
+      '疑似重复'
     ])
     assert(!text.includes('默认诊断试卷'), 'default diagnostic papers should not be standalone timeline records')
     assert(!text.includes('LP-008、LP-001'), 'timeline should not expose LP codes as primary labels')
+    assert(!text.includes('数学诊断处理中'), 'stale in-progress reports should not pollute main timeline')
+    assert(!text.includes('数学诊断失败'), 'stale failed reports should not pollute main timeline')
     await miniProgram.screenshot({ path: screenshots.timeline })
   })
 

@@ -316,6 +316,15 @@
   margin-top: 12rpx;
 }
 
+.paper-code-row:active,
+.event-status:active,
+.chip:active,
+.event-action:active,
+.status-strip:active,
+.record-card:active {
+  opacity: 0.74;
+}
+
 .paper-code-label,
 .paper-code-value {
   align-items: center;

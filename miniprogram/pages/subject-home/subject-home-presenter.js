@@ -1,17 +1,10 @@
 const {
   buildBottleneckViews,
-  buildBottleneckStats
+  buildBottleneckStats,
+  profileBottlenecks
 } = require('../../utils/bottleneck-view')
 
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
-
-function normalizeBottlenecks(profile = {}) {
-  if (Array.isArray(profile.currentBottlenecks)) return profile.currentBottlenecks
-  return [
-    ...(profile.pendingBottlenecks || []).map(item => ({ ...item, status: 'needs_verification' })),
-    ...(profile.improvedBottlenecks || []).map(item => ({ ...item, status: 'improved' }))
-  ]
-}
 
 function normalizeWeight(item = {}) {
   if (item.weight !== undefined && item.weight !== null) return item.weight
@@ -33,7 +26,7 @@ function buildBottleneckDetail(item) {
 }
 
 function buildSubjectBottleneckViews(profile = {}, options = {}) {
-  return buildBottleneckViews(normalizeBottlenecks(profile).map(item => ({
+  return buildBottleneckViews(profileBottlenecks(profile).map(item => ({
     ...item,
     weight: normalizeWeight(item),
     subject: options.subject || profile.subject || item.subject || '',
@@ -174,7 +167,7 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
 
 module.exports = {
   buildSubjectHomeView,
-  normalizeBottlenecks,
+  normalizeBottlenecks: profileBottlenecks,
   buildBottleneckDetail,
   buildSubjectBottleneckViews
 }

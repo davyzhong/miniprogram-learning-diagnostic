@@ -364,6 +364,7 @@
 }
 
 .primary-action:active,
+.quick-cell:active,
 .task-row:active,
 .tool-item:active {
   transform: scale(.985);
