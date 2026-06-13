@@ -114,9 +114,9 @@ test('bottleneck summary helpers use shared display-name modules', () => {
 
 test('paper display surfaces use the shared paper display helper', () => {
   for (const relativePath of [
-    'miniprogram/pages/paper-preview/paper-preview.js',
+    'miniprogram/pages/paper-preview/paper-preview-presenter.js',
     'miniprogram/pages/upload/upload.js',
-    'miniprogram/pages/upload-history/upload-history.js',
+    'miniprogram/pages/upload-history/upload-history-presenter.js',
     'miniprogram/pages/index/index-presenter.js'
   ]) {
     assert.match(read(relativePath), /paper-display/)
@@ -134,9 +134,20 @@ test('analysis status pages use the shared analysis poller wrapper', () => {
   }
 })
 
+test('heavy pages keep presentation logic in presenter modules', () => {
+  const uploadHistory = read('miniprogram/pages/upload-history/upload-history.js')
+  const paperPreview = read('miniprogram/pages/paper-preview/paper-preview.js')
+
+  assert.match(uploadHistory, /require\('\.\/upload-history-presenter'\)/)
+  assert.match(paperPreview, /require\('\.\/paper-preview-presenter'\)/)
+  assert.doesNotMatch(uploadHistory, /function buildTimelineEvents/)
+  assert.doesNotMatch(paperPreview, /function buildPaperPreviewState/)
+})
+
 test('verification paper workbench exposes paper code, content preview and feedback entry', () => {
   const paperPreviewView = read('miniprogram/pages/paper-preview/paper-preview.wxml')
   const paperPreviewPage = read('miniprogram/pages/paper-preview/paper-preview.js')
+  const paperPreviewPresenter = read('miniprogram/pages/paper-preview/paper-preview-presenter.js')
   const uploadView = read('miniprogram/pages/upload/upload.wxml')
   const uploadPage = read('miniprogram/pages/upload/upload.js')
   const dataFunction = read('cloudfunctions/studentData/index.js')
@@ -145,7 +156,7 @@ test('verification paper workbench exposes paper code, content preview and feedb
   assert.match(paperPreviewView, /\{\{paperCodeText/)
   assert.match(paperPreviewView, /试卷内容预览/)
   assert.match(paperPreviewView, /验证反馈/)
-  assert.match(paperPreviewPage, /latestVerificationReport/)
+  assert.match(paperPreviewPresenter, /latestVerificationReport/)
   assert.match(paperPreviewPage, /onViewFeedbackReport/)
   assert.match(uploadView, /正在上传到/)
   assert.match(uploadPage, /loadPaperContext/)
@@ -348,16 +359,17 @@ test('upload history uses a unified learning timeline with subject filters', () 
 
 test('learning record surfaces use the four-level display taxonomy', () => {
   const page = read('miniprogram/pages/upload-history/upload-history.js')
+  const presenter = read('miniprogram/pages/upload-history/upload-history-presenter.js')
   const view = read('miniprogram/pages/upload-history/upload-history.wxml')
   const style = read('miniprogram/pages/upload-history/upload-history.wxss')
   const indexPresenter = read('miniprogram/pages/index/index-presenter.js')
 
   assert.match(page, /buildTimelineEvents/)
   assert.match(page, /statusItems/)
-  assert.match(page, /foldedEvidence/)
-  assert.match(page, /isMainTimelinePaper/)
-  assert.match(page, /buildPaperCodeById/)
-  assert.match(page, /showPaperCode/)
+  assert.match(presenter, /foldedEvidence/)
+  assert.match(presenter, /isMainTimelinePaper/)
+  assert.match(presenter, /buildPaperCodeById/)
+  assert.match(presenter, /showPaperCode/)
   assert.match(view, /status-strip/)
   assert.match(view, /paper-code-row/)
   assert.match(view, /验证卷编号/)

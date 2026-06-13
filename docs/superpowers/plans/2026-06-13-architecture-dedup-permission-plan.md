@@ -455,15 +455,15 @@ git commit -m "refactor: centralize analysis polling"
 - Test: `tests/learning-records.test.js`
 - Test: `tests/page-flows.test.js`
 
-- [ ] **Step 1: Extract pure timeline presentation**
+- [x] **Step 1: Extract pure timeline presentation**
 
 Move grouping, filter counts, collapsed states, and card view-model construction out of `upload-history.js`.
 
-- [ ] **Step 2: Extract pure paper workbench presentation**
+- [x] **Step 2: Extract pure paper workbench presentation**
 
 Move PDF status, paper metadata, preview list, and feedback state shaping out of `paper-preview.js`.
 
-- [ ] **Step 3: Keep Page files focused**
+- [x] **Step 3: Keep Page files focused**
 
 Page files should mainly handle:
 
@@ -473,7 +473,7 @@ Page files should mainly handle:
 - navigation
 - user actions
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -482,7 +482,7 @@ node --test tests/learning-records.test.js tests/page-flows.test.js
 npm run verify
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add miniprogram tests
