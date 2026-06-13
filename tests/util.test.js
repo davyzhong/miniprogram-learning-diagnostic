@@ -58,6 +58,7 @@ test('formatBottleneckDisplayName hides internal LP codes behind readable names'
   assert.equal(formatBottleneckDisplayName({ lpCode: 'LP-001' }), '计算基础')
   assert.equal(formatBottleneckDisplayName({ lpCode: 'LP-008' }), '审题理解')
   assert.equal(formatBottleneckDisplayName({ lpCode: 'LP-002', lpName: '分数运算错误' }), '分数运算')
+  assert.equal(formatBottleneckDisplayName({ lpCode: 'LP-001', summary: '竖式计算' }), '竖式计算')
   assert.equal(formatBottleneckDisplayName({ lpCode: 'LP-XXX' }), '待确认卡点')
 })
 
