@@ -903,8 +903,8 @@ test('subject home polls the active report instead of whichever report is latest
     modules: {
       '../../utils/cloud': cloud,
       '../../utils/util': { formatRelativeTime: () => '' },
-      '../../utils/poller': {
-        createPoller: options => {
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: options => {
           pollOptions = options
           return { start() {}, stop() {}, isRunning: () => false }
         }
@@ -914,7 +914,7 @@ test('subject home polls the active report instead of whichever report is latest
   page.setData({ studentId: 'student-1', subject: 'math', currentAnalysisId: 'active-report' })
 
   page.startReportPolling()
-  await pollOptions.request()
+  await pollOptions.loadReport()
   assert.deepEqual(requested, ['active-report'])
 })
 
@@ -924,8 +924,8 @@ test('subject home stops polling and surfaces a stale analysis task', async () =
     modules: {
       '../../utils/cloud': {},
       '../../utils/util': { formatRelativeTime: () => '' },
-      '../../utils/poller': {
-        createPoller: options => {
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: options => {
           pollOptions = options
           return { start() {}, stop() {}, isRunning: () => false }
         }
@@ -935,17 +935,8 @@ test('subject home stops polling and surfaces a stale analysis task', async () =
   page.setData({ studentId: 'student-1', subject: 'math', currentAnalysisId: 'active-report' })
 
   page.startReportPolling()
-  const shouldContinue = await pollOptions.onValue({
-    report: { _id: 'active-report', status: 'analyzing' },
-    progress: {
-      status: 'processing',
-      completedBatches: 0,
-      totalBatches: 1,
-      createdAt: '2020-01-01T00:00:00Z'
-    }
-  }, 2)
+  await pollOptions.onTimeoutStatus()
 
-  assert.equal(shouldContinue, false)
   assert.equal(page.data.analysisStatusText, '分析可能超时，可刷新或重试')
 })
 
@@ -955,8 +946,8 @@ test('report exposes retry when an analysis task is stale', async () => {
     modules: {
       '../../utils/cloud': {},
       '../../utils/util': { formatChineseDateTime: () => '' },
-      '../../utils/poller': {
-        createPoller: options => {
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: options => {
           pollOptions = options
           return { start() {}, stop() {} }
         }
@@ -966,17 +957,8 @@ test('report exposes retry when an analysis task is stale', async () => {
   })
 
   page.startPolling('report-1')
-  const shouldContinue = await pollOptions.onValue({
-    report: { _id: 'report-1', status: 'analyzing' },
-    progress: {
-      status: 'processing',
-      completedBatches: 0,
-      totalBatches: 1,
-      createdAt: '2020-01-01T00:00:00Z'
-    }
-  }, 2)
+  await pollOptions.onTimeoutStatus()
 
-  assert.equal(shouldContinue, false)
   assert.equal(page.data.analysisTaskMissing, true)
   assert.equal(page.data.analysisStatusText, '分析超时，请重新分析')
 })
@@ -1572,8 +1554,8 @@ test('subject home resets analysis state and reloads data when polling completes
     modules: {
       '../../utils/cloud': cloud,
       '../../utils/util': { formatRelativeTime: () => '' },
-      '../../utils/poller': {
-        createPoller: options => {
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: options => {
           pollOptions = options
           return { start() {}, stop() {}, isRunning: () => false }
         }
@@ -1587,11 +1569,7 @@ test('subject home resets analysis state and reloads data when polling completes
 
   page.startReportPolling()
   // simulate completion
-  const continueAfterComplete = await pollOptions.onValue(
-    { report: { _id: 'active-report', status: 'completed' }, progress: null },
-    1
-  )
-  assert.equal(continueAfterComplete, false)
+  await pollOptions.onCompleted({ _id: 'active-report', status: 'completed' })
   assert.equal(page.data.analysisStatus, '')
   assert.equal(page.data.currentAnalysisId, '')
   assert.equal(page.data.analysisStatusText, '分析完成')
@@ -1603,11 +1581,7 @@ test('subject home resets analysis state and reloads data when polling completes
   profileLoads = 0
   recordLoads = 0
   wx.calls.length = 0
-  const continueAfterFailure = await pollOptions.onValue(
-    { report: { _id: 'active-report', status: 'failed' }, progress: null },
-    2
-  )
-  assert.equal(continueAfterFailure, false)
+  await pollOptions.onFailed({ _id: 'active-report', status: 'failed' })
   assert.equal(page.data.analysisStatus, '')
   assert.equal(page.data.currentAnalysisId, '')
   assert.equal(page.data.analysisStatusText, '')
