@@ -6,9 +6,13 @@ const {
   bottleneckListText,
   classifyReportDisplay,
   isVisibleTimelineReport,
-  isMainTimelinePaper,
-  paperCodeOf
+  isMainTimelinePaper
 } = require('../../utils/learning-records')
+const {
+  buildPaperCodeMap,
+  buildPaperDisplay,
+  paperCodeOf
+} = require('../../utils/paper-display')
 const {
   SUBJECT_NAMES,
   getSubjectName,
@@ -78,23 +82,6 @@ function dateTimeChip(label, value) {
   return `${label} ${date.getMonth() + 1}月${date.getDate()}日 ${timeText(value)}`
 }
 
-function dateChip(label, value) {
-  if (!value) return ''
-  const date = toDate(`${String(value).slice(0, 10)}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return ''
-  return `${label} ${date.getMonth() + 1}月${date.getDate()}日`
-}
-
-function paperDateCode(value) {
-  if (!value) return ''
-  const text = String(value)
-  const matched = text.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (matched) return `${matched[1]}${matched[2]}${matched[3]}`
-  const date = toDate(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return `${date.getFullYear()}${pad2(date.getMonth() + 1)}${pad2(date.getDate())}`
-}
-
 function dayLabel(value) {
   const date = toDate(value)
   return `${date.getMonth() + 1}月${date.getDate()}日`
@@ -156,8 +143,8 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
   const evidence = report.verificationEvidence || []
   const improvedCount = evidence.filter(item => item.complete && item.allCorrect).length
   const linkedPaper = report.paperId && options.paperById ? options.paperById.get(report.paperId) : null
-  const paperCode = paperCodeOf(linkedPaper)
-    || (report.paperId && options.paperCodeById ? options.paperCodeById.get(report.paperId) : '')
+  const paperCode = (report.paperId && options.paperCodeById ? options.paperCodeById.get(report.paperId) : '')
+    || paperCodeOf(linkedPaper)
   const foldedEvidence = buildPhotoEvidenceRows(photos, isVerification ? 'answer-upload' : 'photo')
 
   return {
@@ -190,16 +177,9 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
 
 function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedReports = [], options = {}) {
   const eventTime = paper.generatedAt || paper.createdAt
-  const questionCount = (paper.questions || []).length || paper.questionCount || 0
-  const paperCode = paperCodeOf(paper) || (options.paperCodeById ? options.paperCodeById.get(paper._id) : '')
-  const bottleneckText = bottleneckListText(
-    (Array.isArray(paper.bottleneckSummaries) && paper.bottleneckSummaries.length > 0)
-      ? paper.bottleneckSummaries
-      : (paper.bottleneckTargets || []).map(code => ({ lpCode: code }))
-  )
-  const totalPages = Number(paper.totalPages) || 0
-  const answerPages = Number(paper.answerPages) || 1
-  const studentPages = Number(paper.studentPages) || (totalPages > answerPages ? totalPages - answerPages : 1)
+  const display = buildPaperDisplay(paper, subjectName, options)
+  const paperCode = display.paperCode
+  const bottleneckText = display.bottleneckText
   const hasFeedback = linkedReports.some(report => report.status === 'completed')
 
   return {
@@ -225,12 +205,7 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     statusText: hasFeedback
       ? '已生成验证反馈'
       : (linkedReports.length > 0 ? '反馈分析中' : '等待打印作答并上传验证'),
-    chips: [
-      dateChip('试卷日期', paper.paperDate),
-      questionCount ? `${questionCount}题` : '',
-      studentPages ? `学生卷${studentPages}页` : '',
-      answerPages ? `答案${answerPages}页` : ''
-    ].filter(Boolean)
+    chips: display.chips
   }
 }
 
@@ -339,38 +314,7 @@ function buildReportsByPaperId(reports = []) {
 }
 
 function buildPaperCodeById(papers = [], fallbackSubjectName = '') {
-  const byId = new Map()
-  const groups = new Map()
-
-  ;(papers || [])
-    .filter(isMainTimelinePaper)
-    .forEach(paper => {
-      if (!paper || !paper._id) return
-      const savedCode = paperCodeOf(paper)
-      if (savedCode) {
-        byId.set(paper._id, savedCode)
-      }
-
-      const eventTime = paper.generatedAt || paper.createdAt || paper.paperDate
-      const codeDate = paperDateCode(paper.paperDate || eventTime)
-      if (!codeDate) return
-      const subjectName = recordSubjectName(paper, fallbackSubjectName) || '学习'
-      const key = `${paper.subject || subjectName}-${codeDate}`
-      const list = groups.get(key) || []
-      list.push({ paper, eventTime, subjectName, codeDate })
-      groups.set(key, list)
-    })
-
-  groups.forEach(list => {
-    list
-      .sort((a, b) => toDate(a.eventTime) - toDate(b.eventTime))
-      .forEach((item, index) => {
-        if (!item.paper._id || byId.has(item.paper._id)) return
-        byId.set(item.paper._id, `${item.subjectName}-${item.codeDate}-${pad2(index + 1)}`)
-      })
-  })
-
-  return byId
+  return buildPaperCodeMap(papers, fallbackSubjectName)
 }
 
 function buildPhotosByReportId(reportPhotos) {

@@ -112,6 +112,17 @@ test('bottleneck summary helpers use shared display-name modules', () => {
   assert.match(pdf, /require\('\.\.\/_shared\/bottleneck-name'\)/)
 })
 
+test('paper display surfaces use the shared paper display helper', () => {
+  for (const relativePath of [
+    'miniprogram/pages/paper-preview/paper-preview.js',
+    'miniprogram/pages/upload/upload.js',
+    'miniprogram/pages/upload-history/upload-history.js',
+    'miniprogram/pages/index/index-presenter.js'
+  ]) {
+    assert.match(read(relativePath), /paper-display/)
+  }
+})
+
 test('verification paper workbench exposes paper code, content preview and feedback entry', () => {
   const paperPreviewView = read('miniprogram/pages/paper-preview/paper-preview.wxml')
   const paperPreviewPage = read('miniprogram/pages/paper-preview/paper-preview.js')

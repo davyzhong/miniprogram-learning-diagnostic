@@ -1,11 +1,8 @@
 const { formatBottleneckDisplayName, formatBottleneckDisplayList } = require('./util')
+const { paperCodeOf } = require('./paper-display')
 
 const STATUS_REPORT_STATES = new Set(['pending', 'uploading', 'analyzing', 'failed', 'timeout'])
 const STALE_STATUS_MS = 30 * 60 * 1000
-
-function paperCodeOf(paper) {
-  return paper && (paper.paperDisplayCode || paper.paperCode || paper.displayCode || '')
-}
 
 function reportTimeOf(report = {}) {
   return report.updatedAt || report.evidenceTime || report.createdAt || report.created_at || ''

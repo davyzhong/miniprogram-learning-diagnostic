@@ -366,7 +366,7 @@ git commit -m "refactor: unify bottleneck display names"
 - Test: `tests/page-flows.test.js`
 - Test: `tests/learning-records.test.js`
 
-- [ ] **Step 1: Extract paper display code**
+- [x] **Step 1: Extract paper display code**
 
 Centralize:
 
@@ -378,11 +378,11 @@ Centralize:
 - `bottleneckSummaryText`
 - `paperStatusText`
 
-- [ ] **Step 2: Replace duplicated page logic**
+- [x] **Step 2: Replace duplicated page logic**
 
 Remove local `getPaperCodeText`, `getPaperName`, `buildBottleneckSummaries` duplicates.
 
-- [ ] **Step 3: Verify timeline and paper workbench**
+- [x] **Step 3: Verify timeline and paper workbench**
 
 Run:
 
@@ -391,7 +391,7 @@ node --test tests/page-flows.test.js tests/learning-records.test.js
 npm run verify
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add miniprogram tests

@@ -1,13 +1,15 @@
 // pages/paper-preview/paper-preview.js
 const cloud = require('../../utils/cloud')
-const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
 const {
-  formatBottleneckDisplayName
-} = require('../../utils/util')
+  buildPaperDisplay,
+  paperBottleneckSummaries,
+  paperCodeOf,
+  paperPageInfo,
+  paperTitleOf
+} = require('../../utils/paper-display')
 const {
   bottleneckLabelOf,
-  bottleneckListText,
-  paperCodeOf
+  bottleneckListText
 } = require('../../utils/learning-records')
 const { getSubjectName } = require('../../utils/constants')
 
@@ -92,12 +94,12 @@ Page({
       }
 
       const isVerification = p.type === 'verification'
-      const uploadMode = isVerification ? 'verification' : 'paper'
-      const bottleneckSummaries = this.buildBottleneckSummaries(p)
       const questions = Array.isArray(p.questions) ? p.questions : []
       this._paperQuestions = questions
       const latestReport = detail.latestVerificationReport || detail.latestReport || null
-      const paperCodeText = this.getPaperCodeText(p)
+      const subjectName = this.getSubjectName(p.subject)
+      const paperDisplay = buildPaperDisplay(p, subjectName)
+      const paperCodeText = paperDisplay.paperCode
       const studentName = detail.student && detail.student.name
         ? detail.student.name
         : await this.getStudentName(p.studentId)
@@ -112,19 +114,19 @@ Page({
         pdfFileId: p.pdfFileId || '',
         typeText: isVerification ? '验证试卷' : '诊断试卷',
         paperType: isVerification ? 'verification' : 'diagnosis',
-        subjectName: this.getSubjectName(p.subject),
+        subjectName,
         studentName,
-        paperName: this.getPaperName(p),
+        paperName: paperDisplay.paperTitle,
         paperCodeText,
         paperDate: p.paperDate || '',
-        questionCount: questions.length,
-        estimatedMinutes: p.estimatedMinutes || (questions.length * 2),
-        pages: p.totalPages || 1,
-        studentPages: p.studentPages || Math.max(1, (p.totalPages || 1) - 1),
-        answerPages: p.answerPages || 1,
-        pageSummary: this.buildPageSummary(p),
+        questionCount: paperDisplay.questionCount,
+        estimatedMinutes: p.estimatedMinutes || (paperDisplay.questionCount * 2),
+        pages: paperDisplay.totalPages,
+        studentPages: paperDisplay.studentPages,
+        answerPages: paperDisplay.answerPages,
+        pageSummary: paperDisplay.pageSummary,
         bottleneckTargets: p.bottleneckTargets || [],
-        bottleneckText: bottleneckSummaries.join('、'),
+        bottleneckText: paperDisplay.bottleneckText,
         questionPreview: this.buildQuestionPreview(questions, false),
         hasMoreQuestions: questions.length > 4,
         allQuestionsExpanded: false,
@@ -257,57 +259,20 @@ Page({
   },
 
   getPaperName(paper) {
-    if (paper.type === 'verification') return '验证试卷'
-    if (paper.type === 'default-diagnosis') {
-      const grade = paper.grade || ''
-      const key = paper.paperKey || ''
-      const variant = key.split('_').pop().toUpperCase()
-      return `${grade}年级 ${variant} 卷`
-    }
-    return '诊断试卷'
+    if (!paper) return ''
+    return paperTitleOf(paper)
   },
 
   getPaperCodeText(paper) {
-    if (!paper) return ''
-    const savedCode = paperCodeOf(paper)
-    if (savedCode) return savedCode
-    const subjectName = this.getSubjectName(paper.subject)
-    const dateText = String(paper.paperDate || '').replace(/-/g, '')
-    if (subjectName && dateText) return `${subjectName}-${dateText}`
-    if (paper._id) return `试卷-${String(paper._id).slice(-6)}`
-    return ''
+    return paperCodeOf(paper, paper ? this.getSubjectName(paper.subject) : '')
   },
 
   buildBottleneckSummaries(paper) {
-    if (Array.isArray(paper.bottleneckSummaries) && paper.bottleneckSummaries.length > 0) {
-      return uniqueBottleneckSummaries(paper.bottleneckSummaries)
-    }
-
-    const questions = Array.isArray(paper.questions) ? paper.questions : []
-    const byCode = {}
-    questions.forEach(question => {
-      if (question.lpCode && question.lpName && !byCode[question.lpCode]) {
-        byCode[question.lpCode] = question.lpName
-      }
-    })
-    const targets = Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : []
-    const targetNames = targets.map(code => byCode[code]).filter(Boolean)
-    if (targetNames.length > 0) return uniqueBottleneckSummaries(targetNames)
-
-    const targetFallbacks = targets.map(code => formatBottleneckDisplayName({ lpCode: code }))
-    if (targetFallbacks.length > 0) return uniqueBottleneckSummaries(targetFallbacks)
-
-    return uniqueBottleneckSummaries(questions)
+    return paperBottleneckSummaries(paper)
   },
 
   buildPageSummary(paper) {
-    const totalPages = Number(paper.totalPages) || 1
-    const answerPages = Number(paper.answerPages) || (totalPages > 1 ? 1 : 0)
-    const studentPages = Number(paper.studentPages) || Math.max(1, totalPages - answerPages)
-    if (answerPages > 0) {
-      return `学生卷 ${studentPages} 页 · 答案 ${answerPages} 页 · 共 ${studentPages + answerPages} 页`
-    }
-    return `共 ${totalPages} 页 · A4 纸张`
+    return paperPageInfo(paper).pageSummary
   },
 
   buildQuestionPreview(questions = [], expanded = false) {

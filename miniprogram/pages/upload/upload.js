@@ -1,6 +1,10 @@
 // pages/upload/upload.js
 const cloud = require('../../utils/cloud')
-const { paperCodeOf } = require('../../utils/learning-records')
+const {
+  paperCodeOf,
+  paperQuestionCount,
+  paperTitleOf
+} = require('../../utils/paper-display')
 const { getSubjectName } = require('../../utils/constants')
 
 function getFileName(filePath, index) {
@@ -79,10 +83,11 @@ Page({
         : { paper: await cloud.getPaper(paperId) }
       const paper = detail.paper
       if (!paper) return
+      const subjectName = this.getSubjectName(paper.subject)
       this.setData({
-        paperCodeText: this.data.paperCodeText || this.getPaperCodeText(paper),
-        paperName: this.getPaperName(paper),
-        paperQuestionCount: (paper.questions || []).length || paper.questionCount || 0
+        paperCodeText: this.data.paperCodeText || paperCodeOf(paper, subjectName),
+        paperName: paperTitleOf(paper),
+        paperQuestionCount: paperQuestionCount(paper)
       })
     } catch (err) {
       console.warn('读取试卷上传上下文失败', err)
@@ -252,20 +257,11 @@ Page({
   },
 
   getPaperName(paper) {
-    if (!paper) return ''
-    if (paper.type === 'verification') return '验证试卷'
-    if (paper.type === 'default-diagnosis') return '诊断试卷'
-    return '试卷'
+    return paper ? paperTitleOf(paper) : ''
   },
 
   getPaperCodeText(paper) {
-    if (!paper) return ''
-    const savedCode = paperCodeOf(paper)
-    if (savedCode) return savedCode
-    const dateText = String(paper.paperDate || '').replace(/-/g, '')
-    if (dateText) return `${this.getSubjectName(paper.subject)}-${dateText}`
-    if (paper._id) return `试卷-${String(paper._id).slice(-6)}`
-    return ''
+    return paperCodeOf(paper, paper ? this.getSubjectName(paper.subject) : '')
   },
 
   onUnload() {
