@@ -14,10 +14,10 @@
 | 后端服务 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI 模型（图像分析） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI 模型（题目生成） | CloudBase AI `deepseek-v4-flash` | 用于 generatePaper 生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 5 个集合：students / subjectProfiles / reports / papers / analysisTasks |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 7 个核心集合：students / studentMembers / studentInvites / subjectProfiles / reports / papers / analysisTasks |
 | 文件存储 | 云开发云存储 | 试卷照片、生成的 PDF 文件 |
 | PDF 生成 | pdfkit（Node.js） | 云函数内生成 A4 试卷/报告 PDF |
-| 中文字体 | 云存储 + `/tmp` 缓存 | 通过 `FONT_FILE_ID` 环境变量指定，首次下载到临时目录后复用 |
+| 中文字体 | 内置 Noto CJK 字体 | `generatePaper` / `generateReportPDF` 随函数部署字体文件，不依赖环境变量 |
 | 本地测试 | Node.js 内置 test runner | `npm test` 运行常规测试；真实图片 E2E 单独运行 |
 
 ---
@@ -33,6 +33,10 @@
 │  │ 学习档案  │  │ home       │  │ generate-*   │  │ 报告展示      │  │
 │  │ 首页      │  │ 学科工作台  │  │ 出卷配置/PDF  │  │ 卡点/错题/PDF │  │
 │  └──────────┘  └────────────┘  └──────────────┘  └──────────────┘  │
+│  ┌──────────────┐  ┌──────────────┐                               │
+│  │parent-       │  │join-student   │                               │
+│  │management    │  │扫码加入档案     │                               │
+│  └──────────────┘  └──────────────┘                               │
 │       ↑              ↑               ↑                  ↑          │
 │       └──────────────┴───────────────┴──────────────────┘          │
 │                    utils/cloud.js（数据访问层）                       │
@@ -57,9 +61,13 @@
 │  ┌──────────────────┐                                               │
 │  │generateReportPDF │    ┌──────────────┐  ┌────────────────────┐   │
 │  │报告PDF生成        │    │ 云数据库      │  │ 云存储              │   │
-│  └──────────────────┘    │ 5 个集合      │  │ photos/ papers/    │   │
+│  └──────────────────┘    │ 7 个核心集合   │  │ photos/ papers/    │   │
 │                           │              │  │ reports/           │   │
 │                           └──────────────┘  └────────────────────┘   │
+│  ┌──────────────────┐    ┌──────────────────┐                       │
+│  │studentAccess     │    │studentData       │                       │
+│  │家长成员/邀请管理   │    │共享家长只读数据层  │                       │
+│  └──────────────────┘    └──────────────────┘                       │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -183,6 +191,56 @@ paper-preview 页面 → 预览/下载 PDF（已下载后显示“已下载”�
 report 页面展示诊断结果（不执行验证对比逻辑）
 ```
 
+### 流程 D：家长管理与扫码加入
+
+```
+owner 在首页点击"家长管理"
+    │
+    ▼
+parent-management 页面
+    ├── cloud.listStudentMembers(studentId) → 展示 owner/viewer 成员
+    └── cloud.createStudentInvite(studentId) → 生成一次性扫码路径
+              │
+              ▼
+         [studentAccess 云函数]
+              ├── 校验当前 OPENID 是档案 owner
+              ├── 生成明文 token + tokenHash
+              └── 写入 studentInvites（7 天有效）
+    │
+    ▼
+另一个微信扫码进入 join-student 页面
+    ├── cloud.getStudentInvite(inviteId, token) → 预览孩子档案
+    └── cloud.acceptStudentInvite(inviteId, token)
+              │
+              ▼
+         [studentAccess 云函数]
+              ├── 校验 tokenHash、状态和过期时间
+              ├── 幂等创建 studentMembers viewer 关系
+              └── 返回 studentId，进入首页/学科页只读查看
+```
+
+### 流程 E：时间化学习卡点追踪
+
+```
+照片上传 / 验证卷上传
+    │
+    ▼
+reports.evidenceTime = 上传进入系统的时间
+imageFiles[].uploadedAt = 每张照片上传时间
+papers.paperDate = 打印试卷的醒目日期
+    │
+    ▼
+analyzePhotos.updateSubjectProfile()
+    ├── 以 evidenceTime 记录 firstSeenAt / lastSeenAt
+    ├── 以验证证据记录 lastVerifiedAt / lastPassedAt / lastFailedVerificationAt
+    ├── 累计 evidenceCount / recentErrorCount / verificationPassCount / verificationFailCount
+    └── 计算 trend + weight：new / persisting / declining / improved / recurring
+    │
+    ▼
+subject-home / report / upload-history
+    └── 展示"最近发现、验证日期、趋势、权重"，但仍保留简化主线，不把复杂分析前置给家长
+```
+
 ---
 
 ## 4. 前端页面路由图
@@ -190,11 +248,15 @@ report 页面展示诊断结果（不执行验证对比逻辑）
 ```
 index（首页 - 学习档案）
   ├── navigateTo → add-student（管理孩子/添加学生）
+  ├── navigateTo → parent-management（家长管理，仅 owner 可见）
   ├── navigateTo → subject-home（重点提示/学科入口）
   ├── navigateTo → upload-history（学习记录）
   ├── navigateTo → report?id=xxx（最近报告）
   ├── navigateTo → paper-preview?paperId=xxx（最近试卷）
   └── navigateTo → generate-verification 或 upload（下一步建议）
+
+join-student（扫码加入孩子档案）
+  └── acceptInvite 成功后 → redirect/reLaunch → index 或 subject-home
 
 subject-select（学科入口兼容页）
   └── navigateTo → subject-home（学科主页）
@@ -233,6 +295,8 @@ paper-preview（试卷预览）
 |----------|------|----------|
 | `pages/index/index` | 学习档案首页：综合摘要、样本覆盖、重点提示、学习记录、下一步建议 | cloud.getStudents, getSubjectProfiles, getReports, getPapers, index-presenter |
 | `pages/add-student/add-student` | 新增学生 + 自动创建三科档案 | cloud.createStudentWithProfiles |
+| `pages/parent-management/parent-management` | 家长成员列表、生成扫码邀请、移除协同家长 | cloud.listStudentMembers, createStudentInvite, revokeStudentMember |
+| `pages/join-student/join-student` | 通过邀请扫码加入孩子档案 | cloud.getStudentInvite, acceptStudentInvite |
 | `pages/subject-select/subject-select` | 学科入口兼容页 | cloud.getSubjectProfiles, ensureSubjectProfile |
 | `pages/subject-home/subject-home` | 学科工作台：主任务、待处理队列、工具入口、状态轮询 | cloud.getSubjectProfile, getReports, getLatestReport, getAnalysisProgress; poller |
 | `pages/upload/upload` | 拍照/选图 + 上传 + 触发分析 | cloud.uploadPhoto, callUploadAndAnalyze, getReports |
@@ -248,6 +312,10 @@ paper-preview（试卷预览）
 
 ```
 客户端
+  │
+  ├─→ studentAccess（家长成员、邀请创建、扫码加入）
+  │
+  ├─→ studentData（共享家长可读的首页、学科、报告、试卷、时间线数据）
   │
   ├─→ uploadAndAnalyze ──(fire-and-forget)──→ analyzePhotos ──(同步 await, 串行)──→ analyzeBatch × N
   │                                        │
@@ -267,6 +335,8 @@ paper-preview（试卷预览）
 | 调用方 | 被调用方 | 方式 | 说明 |
 |--------|----------|------|------|
 | 客户端 upload 页面 | uploadAndAnalyze | wx.cloud.callFunction | 创建报告并启动后台分析 |
+| 客户端 index/subject-home/report/upload-history/paper-preview | studentData | wx.cloud.callFunction | 访问感知的只读数据聚合，支持 owner/viewer |
+| 客户端 parent-management/join-student | studentAccess | wx.cloud.callFunction | 家长成员管理、邀请创建、扫码加入 |
 | uploadAndAnalyze | analyzePhotos | cloud.callFunction (fire-and-forget) | 服务端触发后台分析，立即返回 reportId |
 | analyzePhotos | analyzeBatch | cloud.callFunction (同步 await, 循环串行) | 每批最多 5 张，逐批处理 |
 | analyzePhotos | sendNotification | Promise.catch (fire-and-forget) | 预留，当前空实现 |
@@ -284,16 +354,18 @@ paper-preview（试卷预览）
 
 | 页面 | 调用的 cloud.js 方法 |
 |------|---------------------|
-| index | getStudents, getSubjectProfiles |
+| index | getAccessibleStudents, getStudentDashboard, getStudents, getSubjectProfiles |
 | add-student | createStudentWithProfiles |
+| parent-management | listStudentMembers, createStudentInvite, revokeStudentMember |
+| join-student | getStudentInvite, acceptStudentInvite |
 | subject-select | getSubjectProfiles, ensureSubjectProfile |
-| subject-home | getSubjectProfile, getReports, getLatestReport, getReport, getAnalysisProgress |
+| subject-home | getSubjectDashboard, getSubjectProfile, getReports, getLatestReport, getReport, getAnalysisProgress |
 | upload | getReports, uploadPhoto*, callUploadAndAnalyze |
-| upload-history | getReports, getPapers, getTempFileURLs |
-| report | getReport, getSubjectProfile, getAnalysisProgress, callAnalyzePhotos, callGenerateReportPDF |
+| upload-history | getLearningTimeline, getReports, getPapers, getTempFileURLs |
+| report | getReportDetail, getReport, getSubjectProfile, getAnalysisProgress, callAnalyzePhotos, callGenerateReportPDF |
 | generate-verification | getSubjectProfile, callGeneratePaper |
 | default-paper | getPapers, callGeneratePaper |
-| paper-preview | getPaper, getStudent |
+| paper-preview | getPaperDetail, getPaper, getStudent |
 
 > *uploadPhoto 在 upload 页面内部使用 wx.cloud.uploadFile 直接上传，cloud.js 中的 uploadPhoto 封装了路径生成逻辑。
 
@@ -314,6 +386,7 @@ paper-preview（试卷预览）
 | report | formatChineseDateTime, formatBottleneckDisplayName |
 | generate-verification | formatBottleneckDisplayName |
 | paper-preview | formatBottleneckDisplayList |
+| parent-management | formatRelativeTime |
 
 ### 云函数内部模块依赖
 
@@ -448,6 +521,25 @@ poller.start()
 2. **减少数据库读取**：小程序云数据库单次查询限制 20 条，聚合需要多次分页查询
 3. **写入频率低**：只在分析完成时更新一次，读写比合理
 4. **数据一致性**：通过分析流程的事务性更新保证，失败时 clearSubjectProfileAnalysis 清空状态
+
+### 为什么共享家长只能读，不能写？
+
+**决策**：孩子档案支持多个家长查看，但本轮只开放 owner 写权限。viewer 可以查看首页、学科主页、学习记录、报告和试卷；上传照片、生成试卷、重试分析、邀请家长和移除成员都要求 owner。
+
+**原因**：
+1. **单人 MVP 保持简单**：先解决"另一位家长能看到同一份资料"，不引入协作编辑冲突。
+2. **避免重复分析和重复出卷**：上传、重试、生成试卷都会产生新报告或新文件，多个家长同时写入会让时间线和卡点权重更难解释。
+3. **权限边界清晰**：`studentData` 只读，`studentAccess` 管家长关系，写类云函数各自校验 owner，前后端口径一致。
+4. **后续可扩展**：如果需要开放 member 写权限，只需扩展 permissions 和 owner-only guard，不需要重做数据模型。
+
+### 为什么照片使用上传时间，而试卷使用试卷日期？
+
+**决策**：照片和报告的证据时间以上传进入系统的时间为准；验证试卷单独保存 `paperDate`，并在 PDF 学生卷和答案页醒目显示。
+
+**原因**：
+1. **历史试卷不可追溯真实作答日**：用户上传旧卷时，系统能确定的是"何时被纳入诊断"。
+2. **验证过程需要时间序列**：同一学习卡点经过多套验证卷后，`lastVerifiedAt`、`lastPassedAt`、`trend` 和 `weight` 才能解释改善或反复。
+3. **纸笔场景友好**：打印卷上的日期放大后，家长拍照回传时更容易把本次验证和历史记录对应起来。
 
 ### 为什么 generatePaper 支持 preview 模式不落库？
 

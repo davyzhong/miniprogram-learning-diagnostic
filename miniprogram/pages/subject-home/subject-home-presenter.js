@@ -1,4 +1,4 @@
-const { formatBottleneckDisplayName } = require('../../utils/util')
+const { bottleneckLabelOf } = require('../../utils/learning-records')
 
 const STATUS_META = {
   persisting: { text: '持续出现', className: 'persisting', icon: '!' },
@@ -43,7 +43,7 @@ function buildBottleneckDetail(item, displayName) {
 
 function enrichBottleneck(item) {
   const meta = STATUS_META[item.status] || STATUS_META.needs_verification
-  const displayName = formatBottleneckDisplayName(item)
+  const displayName = bottleneckLabelOf(item)
   return {
     ...item,
     displayName,
@@ -82,7 +82,17 @@ function buildRecentChanges(reports, formatRelativeTime) {
     }))
 }
 
-function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis) {
+function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions = {}) {
+  const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
+  if (!canWrite) {
+    return {
+      title: '当前可查看',
+      summary: `${subjectName}学习资料已开放给你查看，上传和生成试卷由档案创建者操作。`,
+      actionText: '查看学习记录',
+      actionType: 'history'
+    }
+  }
+
   if (taskQueue.length > 0) {
     return {
       title: '下一步建议',
@@ -109,22 +119,23 @@ function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis) {
   }
 }
 
-function buildTools(latestReport) {
+function buildTools(latestReport, permissions = {}) {
+  const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
   return [
-    {
+    canWrite ? {
       key: 'diagnosis',
       title: '拍照诊断',
       desc: '上传新的试卷或练习',
       icon: '⌾',
       actionType: 'diagnosis'
-    },
-    {
+    } : null,
+    canWrite ? {
       key: 'defaultPaper',
       title: '默认试卷',
       desc: '没有新试卷时使用',
       icon: '□',
       actionType: 'defaultPaper'
-    },
+    } : null,
     {
       key: 'history',
       title: '学习记录',
@@ -145,6 +156,7 @@ function buildTools(latestReport) {
 
 function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = () => '', options = {}) {
   const subjectName = options.subjectName || profile.subjectName || '数学'
+  const permissions = options.permissions || {}
   const currentBottlenecks = normalizeBottlenecks(profile).map(enrichBottleneck)
   const taskQueue = currentBottlenecks
     .filter(item => item.status !== 'improved')
@@ -153,7 +165,7 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
   const recentChanges = buildRecentChanges(reports, formatRelativeTime)
   const latestReport = getEffectiveReports(reports)[0] || null
   const hasDiagnosis = currentBottlenecks.length > 0 || recentChanges.length > 0
-  const primaryTask = buildPrimaryTask(subjectName, taskQueue, hasDiagnosis)
+  const primaryTask = buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions)
 
   return {
     subjectTitle: `${subjectName}工作台`,
@@ -162,7 +174,9 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     nextAction: primaryTask.actionText,
     primaryTask,
     taskQueue,
-    tools: buildTools(latestReport),
+    tools: buildTools(latestReport, permissions),
+    permissions,
+    canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
     latestReportId: latestReport ? latestReport._id : '',
     currentBottlenecks,
     recentChanges,

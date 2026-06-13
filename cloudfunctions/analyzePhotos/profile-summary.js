@@ -18,22 +18,60 @@ function isEffectiveReport(report = {}) {
   return (report.verificationEvidence || []).some(isPassedEvidence)
 }
 
+function clampWeight(value) {
+  return Math.max(0, Math.min(100, Number(value) || 0))
+}
+
+function getCurrentWeight(item, fallback = 60) {
+  return Number.isFinite(Number(item && item.weight)) ? Number(item.weight) : fallback
+}
+
+function errorCountOf(bottleneck) {
+  return Math.max(0, Number(bottleneck && (bottleneck.errorCount || bottleneck.relatedErrorCount || bottleneck.evidenceCount)) || 0)
+}
+
+function initialWeight(bottleneck) {
+  return clampWeight(50 + Math.min(30, errorCountOf(bottleneck) * 5))
+}
+
 function normalizeCurrentBottlenecks(profile = {}) {
   if (Array.isArray(profile.currentBottlenecks)) {
-    return profile.currentBottlenecks.map(item => ({ ...item }))
+    return profile.currentBottlenecks.map(item => ({
+      ...item,
+      evidenceCount: Number(item.evidenceCount) || 0,
+      recentErrorCount: Number(item.recentErrorCount) || 0,
+      verificationPassCount: Number(item.verificationPassCount) || 0,
+      verificationFailCount: Number(item.verificationFailCount) || 0,
+      weight: clampWeight(item.weight === undefined ? 60 : item.weight),
+      trend: item.trend || (item.status === STATUS.IMPROVED ? 'improved' : item.status === STATUS.PERSISTING ? 'persisting' : 'new')
+    }))
   }
 
   const pending = (profile.pendingBottlenecks || []).map(item => ({
     ...item,
     status: STATUS.NEEDS_VERIFICATION,
     firstSeenAt: item.sinceDate,
-    lastSeenAt: item.sinceDate
+    lastSeenAt: item.sinceDate,
+    evidenceCount: Number(item.evidenceCount) || 1,
+    recentErrorCount: Number(item.relatedErrorCount || item.errorCount) || 0,
+    verificationPassCount: 0,
+    verificationFailCount: 0,
+    weight: clampWeight(item.weight === undefined ? 60 : item.weight),
+    trend: item.trend || 'new'
   }))
   const improved = (profile.improvedBottlenecks || []).map(item => ({
     ...item,
     status: STATUS.IMPROVED,
     firstSeenAt: item.sinceDate,
-    lastSeenAt: item.improvedDate
+    lastSeenAt: item.improvedDate,
+    lastVerifiedAt: item.improvedDate,
+    lastPassedAt: item.improvedDate,
+    evidenceCount: Number(item.evidenceCount) || 1,
+    recentErrorCount: 0,
+    verificationPassCount: Number(item.verificationPassCount) || 1,
+    verificationFailCount: Number(item.verificationFailCount) || 0,
+    weight: clampWeight(item.weight === undefined ? 30 : item.weight),
+    trend: item.trend || 'improved'
   }))
   return [...pending, ...improved]
 }
@@ -94,14 +132,25 @@ function buildProfileSummary(profile = {}, report = {}, now = new Date()) {
     if (!bottleneck || !bottleneck.lpCode) continue
     const previous = byCode.get(bottleneck.lpCode)
     const status = previous ? STATUS.PERSISTING : STATUS.NEEDS_VERIFICATION
+    const wasImproved = previous && previous.status === STATUS.IMPROVED
+    const evidenceCount = (Number(previous && previous.evidenceCount) || 0) + 1
+    const recentErrorCount = errorCountOf(bottleneck)
     byCode.set(bottleneck.lpCode, {
       ...previous,
       lpCode: bottleneck.lpCode,
       lpName: bottleneck.lpName || (previous && previous.lpName) || bottleneck.lpCode,
       severity: bottleneck.severity || (previous && previous.severity) || 'medium',
       status,
+      trend: wasImproved ? 'recurring' : (previous ? 'persisting' : 'new'),
       firstSeenAt: (previous && previous.firstSeenAt) || now,
       lastSeenAt: now,
+      evidenceCount,
+      recentErrorCount,
+      verificationPassCount: Number(previous && previous.verificationPassCount) || 0,
+      verificationFailCount: Number(previous && previous.verificationFailCount) || 0,
+      weight: previous
+        ? clampWeight(getCurrentWeight(previous) + (wasImproved ? 30 : 20))
+        : initialWeight(bottleneck),
       sourceReportId: report._id || ''
     })
     changes.push({
@@ -114,11 +163,31 @@ function buildProfileSummary(profile = {}, report = {}, now = new Date()) {
   for (const lpCode of report.verificationTargets || []) {
     const previous = byCode.get(lpCode)
     const evidence = getVerificationEvidence(report, lpCode)
-    if (!previous || !isPassedEvidence(evidence)) continue
+    if (!previous || !evidence) continue
+    const lastVerifiedAt = now
+    if (!isPassedEvidence(evidence)) {
+      byCode.set(lpCode, {
+        ...previous,
+        status: previous.status || STATUS.NEEDS_VERIFICATION,
+        trend: previous.trend || 'persisting',
+        lastVerifiedAt,
+        lastFailedVerificationAt: now,
+        verificationFailCount: (Number(previous.verificationFailCount) || 0) + 1,
+        weight: clampWeight(getCurrentWeight(previous) + 15),
+        sourceReportId: report._id || ''
+      })
+      continue
+    }
+    const verificationPassCount = (Number(previous.verificationPassCount) || 0) + 1
     byCode.set(lpCode, {
       ...previous,
       status: STATUS.IMPROVED,
+      trend: verificationPassCount >= 2 ? 'improved' : 'declining',
       lastSeenAt: now,
+      lastVerifiedAt,
+      lastPassedAt: now,
+      verificationPassCount,
+      weight: clampWeight(getCurrentWeight(previous) - (verificationPassCount >= 2 ? 40 : 30)),
       sourceReportId: report._id || ''
     })
     changes.push({ type: 'improved', lpCode, lpName: previous.lpName })

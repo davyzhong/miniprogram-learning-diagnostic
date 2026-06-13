@@ -2,11 +2,60 @@
   min-height: 100vh;
   background: #f5f7fb;
   box-sizing: border-box;
-  padding: 28rpx;
+  padding: 24rpx;
 }
 
 .header {
-  margin-bottom: 30rpx;
+  margin-bottom: 18rpx;
+}
+
+.compact-header {
+  align-items: center;
+  display: flex;
+  gap: 20rpx;
+  justify-content: space-between;
+}
+
+.header-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.header-illustration {
+  align-items: center;
+  background: linear-gradient(135deg, #e8f1ff 0%, #e9f8ef 100%);
+  border: 1rpx solid #dbe8f4;
+  border-radius: 22rpx;
+  box-shadow: 0 6rpx 18rpx rgba(45, 108, 223, 0.08);
+  display: flex;
+  flex-shrink: 0;
+  height: 88rpx;
+  justify-content: center;
+  position: relative;
+  width: 88rpx;
+}
+
+.header-illustration-main {
+  color: #2d6cdf;
+  font-size: 30rpx;
+  font-weight: 820;
+}
+
+.header-illustration-sub {
+  align-items: center;
+  background: #34a36f;
+  border: 2rpx solid #fff;
+  border-radius: 999rpx;
+  bottom: 8rpx;
+  color: #fff;
+  display: flex;
+  font-size: 17rpx;
+  font-weight: 800;
+  height: 34rpx;
+  justify-content: center;
+  position: absolute;
+  right: 4rpx;
+  width: 34rpx;
 }
 
 .title {
@@ -24,10 +73,18 @@
   line-height: 1.5;
 }
 
+.filter-card {
+  background: #fff;
+  border: 1rpx solid #e7edf5;
+  border-radius: 14rpx;
+  box-shadow: 0 3rpx 12rpx rgba(23, 32, 51, 0.04);
+  margin-bottom: 26rpx;
+  padding: 14rpx;
+}
+
 .filter-bar {
   display: flex;
   gap: 12rpx;
-  margin-top: 22rpx;
   overflow-x: auto;
   padding-bottom: 2rpx;
   white-space: nowrap;
@@ -92,7 +149,7 @@
 }
 
 .day-group {
-  margin-bottom: 34rpx;
+  margin-bottom: 30rpx;
 }
 
 .day-header {
@@ -113,10 +170,72 @@
   font-size: 22rpx;
 }
 
+.status-strip {
+  align-items: center;
+  background: #fff8ea;
+  border: 1rpx solid #f0dfbc;
+  border-radius: 12rpx;
+  color: #8b5a00;
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+  padding: 12rpx 16rpx;
+}
+
+.status-failed,
+.status-timeout {
+  background: #fff1f1;
+  border-color: #f4c8c8;
+  color: #a43c3c;
+}
+
+.status-dot {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 999rpx;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 22rpx;
+  font-weight: 850;
+  height: 42rpx;
+  justify-content: center;
+  width: 42rpx;
+}
+
+.status-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.status-title,
+.status-text {
+  display: block;
+}
+
+.status-title {
+  font-size: 23rpx;
+  font-weight: 760;
+}
+
+.status-text {
+  font-size: 20rpx;
+  line-height: 1.35;
+  opacity: 0.86;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-time {
+  flex-shrink: 0;
+  font-size: 20rpx;
+  opacity: 0.72;
+}
+
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 18rpx;
+  gap: 14rpx;
 }
 
 .record-card {
@@ -126,7 +245,7 @@
   border-radius: 12rpx;
   box-shadow: 0 3rpx 14rpx rgba(23, 32, 51, 0.05);
   display: flex;
-  padding: 22rpx;
+  padding: 18rpx 20rpx;
 }
 
 .record-verification-report {
@@ -188,6 +307,14 @@
   line-height: 1.48;
 }
 
+.event-status {
+  color: #2d6cdf;
+  display: block;
+  font-size: 21rpx;
+  font-weight: 680;
+  margin-top: 8rpx;
+}
+
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -202,6 +329,77 @@
   font-size: 20rpx;
   line-height: 1;
   padding: 8rpx 10rpx;
+}
+
+.record-verification-paper .chip:first-child {
+  background: #e7f0ff;
+  color: #2459a5;
+  font-weight: 780;
+}
+
+.folded-evidence {
+  border-top: 1rpx solid #edf2f7;
+  margin-top: 14rpx;
+  padding-top: 8rpx;
+}
+
+.fold-row {
+  align-items: center;
+  border-bottom: 1rpx solid #edf2f7;
+  display: flex;
+  min-height: 64rpx;
+  padding: 10rpx 0;
+}
+
+.fold-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.fold-icon {
+  align-items: center;
+  background: #edf6ff;
+  border-radius: 8rpx;
+  color: #2d6cdf;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 20rpx;
+  font-weight: 760;
+  height: 42rpx;
+  justify-content: center;
+  margin-right: 12rpx;
+  width: 42rpx;
+}
+
+.fold-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.fold-title-row {
+  align-items: center;
+  display: flex;
+  gap: 8rpx;
+  margin-bottom: 2rpx;
+}
+
+.fold-title {
+  color: #334155;
+  font-size: 22rpx;
+  font-weight: 680;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fold-summary {
+  color: #718096;
+  display: block;
+  font-size: 20rpx;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .photo-list {

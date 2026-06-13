@@ -1,51 +1,81 @@
 <!--pages/paper-preview/paper-preview.wxml-->
 <view class="page">
-  <!-- 试卷标签 -->
   <view class="paper-tags">
     <view class="tag tag-{{paperType}}">{{typeText}}</view>
     <view class="tag tag-subject">{{subjectName}}</view>
     <view class="tag tag-student">{{studentName}}</view>
   </view>
 
-  <!-- A4 预览区 -->
-  <view class="preview-area">
-    <view class="a4-frame">
-      <view class="a4-inner">
-        <view class="a4-placeholder" wx:if="{{!pdfReady}}">
-          <text class="a4-icon">📄</text>
-          <text class="a4-text">A4 试卷预览</text>
-          <text class="a4-hint">点击"下载 PDF"查看完整试卷</text>
-        </view>
-        <view class="a4-loaded" wx:if="{{pdfReady}}">
-          <text class="a4-success-icon">✅</text>
-          <text class="a4-success-text">PDF 已准备好</text>
-          <text class="a4-pages">共 {{pages}} 页 · A4 纸张</text>
-        </view>
+  <view class="workbench-card">
+    <view class="workbench-top">
+      <view class="code-block">
+        <text class="code-label">验证试卷编号</text>
+        <text class="paper-code">{{paperCodeText || '待生成编号'}}</text>
+      </view>
+      <view class="status-pill status-{{workbenchStatus}}">{{workbenchStatusText}}</view>
+    </view>
+    <text class="status-desc">{{workbenchStatusDesc}}</text>
+    <view class="meta-grid">
+      <view class="meta-cell" wx:if="{{paperDate}}">
+        <text class="meta-label">试卷日期</text>
+        <text class="meta-value date-strong">{{paperDate}}</text>
+      </view>
+      <view class="meta-cell">
+        <text class="meta-label">题目数量</text>
+        <text class="meta-value">{{questionCount}} 题</text>
+      </view>
+      <view class="meta-cell">
+        <text class="meta-label">页数</text>
+        <text class="meta-value">{{pageSummary}}</text>
+      </view>
+      <view class="meta-cell" wx:if="{{estimatedMinutes > 0}}">
+        <text class="meta-label">预计用时</text>
+        <text class="meta-value">约 {{estimatedMinutes}} 分钟</text>
       </view>
     </view>
   </view>
 
-  <!-- 试卷信息 -->
-  <view class="paper-info card">
+  <view class="paper-info card" wx:if="{{bottleneckText}}">
     <view class="info-row">
-      <text class="info-label">试卷名称</text>
-      <text class="info-value">{{paperName}}</text>
-    </view>
-    <view class="info-row" wx:if="{{questionCount > 0}}">
-      <text class="info-label">题目数量</text>
-      <text class="info-value">{{questionCount}} 题</text>
-    </view>
-    <view class="info-row" wx:if="{{estimatedMinutes > 0}}">
-      <text class="info-label">预计用时</text>
-      <text class="info-value">约 {{estimatedMinutes}} 分钟</text>
-    </view>
-    <view class="info-row" wx:if="{{bottleneckTargets.length > 0}}">
       <text class="info-label">覆盖卡点</text>
       <text class="info-value">{{bottleneckText}}</text>
     </view>
   </view>
 
-  <!-- 操作按钮 -->
+  <view class="question-card card">
+    <view class="section-title-row">
+      <text class="section-title">试卷内容预览</text>
+      <text class="section-action" wx:if="{{hasMoreQuestions}}" bindtap="onToggleQuestions">{{allQuestionsExpanded ? '收起' : '展开全部'}}</text>
+    </view>
+    <view class="question-list" wx:if="{{questionPreview.length > 0}}">
+      <view class="question-item" wx:for="{{questionPreview}}" wx:key="number">
+        <view class="question-head">
+          <text class="question-no">{{item.number}}</text>
+          <text class="question-tag">{{item.bottleneckName}}</text>
+        </view>
+        <text class="question-content">{{item.content}}</text>
+        <view class="answer-space">
+          <text>解题过程 / 演算区</text>
+        </view>
+      </view>
+    </view>
+    <view class="empty-preview" wx:else>
+      <text>完整内容请下载 PDF 查看。</text>
+    </view>
+  </view>
+
+  <view class="feedback-card card">
+    <view class="section-title-row">
+      <text class="section-title">验证反馈</text>
+      <text class="section-action" wx:if="{{feedback.reportId}}" bindtap="onViewFeedbackReport">查看报告</text>
+    </view>
+    <text class="feedback-title">{{feedback.title}}</text>
+    <text class="feedback-summary">{{feedback.summary}}</text>
+    <view class="feedback-chips" wx:if="{{feedback.chips.length > 0}}">
+      <text class="feedback-chip" wx:for="{{feedback.chips}}" wx:key="*this">{{item}}</text>
+    </view>
+  </view>
+
   <view class="action-bar">
     <button class="btn-secondary action-btn" bindtap="onDownload" disabled="{{downloading || pdfDownloaded}}">
       {{pdfDownloaded ? '已下载' : (downloading ? '下载中...' : '下载 PDF')}}
@@ -55,7 +85,6 @@
     </button>
   </view>
 
-  <!-- 主按钮：拍照上传 -->
   <view class="bottom-bar" wx:if="{{mode === 'paper'}}">
     <button class="btn-primary btn-main" bindtap="onUpload">
       {{uploadBtnText}}

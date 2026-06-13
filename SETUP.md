@@ -29,27 +29,15 @@
 
 ---
 
-## 二、CloudBase AI 与环境变量配置
+## 二、CloudBase AI 配置
 
 `analyzeBatch` 和 `generatePaper` 使用当前云开发环境中的 CloudBase AI 能力，不读取 `SECRET_ID`、`SECRET_KEY`、`AI_API_KEY` 或 `AI_API_URL`。部署前需确认当前云开发环境已经开通代码中使用的模型。
 
-在微信开发者工具里，进入「云开发」控制台 → 「云函数」→ 对应函数 → 「环境变量」，为 `generatePaper` 和 `generateReportPDF` 添加：
-
-| 变量名 | 说明 | 示例 |
-|--------|------|------|
-| `FONT_FILE_ID` | 云存储中的中文字体文件 ID | `cloud://xxxxx/SimHei.ttf` |
-
 ---
 
-## 三、中文字体准备
+## 三、中文字体
 
-`generatePaper` 和 `generateReportPDF` 云函数需要中文字体来生成 PDF。
-
-### 步骤：
-1. 下载中文字体（推荐 `SimHei.ttf` 或 `NotoSansCJK-Regular.ttf`）
-2. 在微信开发者工具里，把字体文件上传到云存储
-3. 记录字体文件的 `fileID`（如：`cloud://xxxxx/SimHei.ttf`）
-4. 将 `fileID` 配置到环境变量 `FONT_FILE_ID`
+`generatePaper` 和 `generateReportPDF` 云函数目录内已内置 `NotoSansCJKsc-Regular.otf`。部署时请确认该字体文件随云函数一起上传；不需要再上传字体到云存储，也不需要配置 `FONT_FILE_ID`。
 
 ---
 
@@ -151,8 +139,9 @@ PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sen
 - 查看 `analyzeBatch` 或 `generatePaper` 云函数日志中的模型调用错误
 
 ### Q2：PDF 中文显示乱码？
-- 检查 `FONT_FILE_ID` 环境变量是否配置
-- 确认字体文件已上传到云存储，且 `fileID` 正确
+- 确认 `cloudfunctions/generatePaper/NotoSansCJKsc-Regular.otf` 存在并随函数部署
+- 确认 `cloudfunctions/generateReportPDF/NotoSansCJKsc-Regular.otf` 存在并随函数部署
+- 重新上传并部署 `generatePaper` / `generateReportPDF`
 
 ### Q3：上传图片后，一直显示「分析中」？
 - 检查 `analyzePhotos` 云函数是否部署成功
@@ -197,7 +186,7 @@ miniprogram-learning-diagnostic/
 │   ├── generatePaper/        ✅
 │   ├── generateReportPDF/    ✅
 │   └── getAnalysisProgress/  ✅
-├── tests/                    ✅（16 个常规测试文件 + 真实图片 E2E 脚本 + helpers，136 常规用例）
+├── tests/                    ✅（17 个常规测试文件 + 真实图片 E2E 脚本 + helpers，151 常规用例）
 ├── scripts/check-js.js       ✅（52 文件语法检查）
 ├── project.config.json        ✅
 ├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / check / verify）

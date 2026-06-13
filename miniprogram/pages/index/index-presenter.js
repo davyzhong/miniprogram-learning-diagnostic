@@ -2,6 +2,11 @@ const {
   formatBottleneckDisplayName,
   formatBottleneckDisplayList
 } = require('../../utils/util')
+const {
+  bottleneckListText,
+  isMainTimelinePaper,
+  paperCodeOf
+} = require('../../utils/learning-records')
 
 const SUBJECTS = [
   { key: 'math', name: '数学', shortName: '数' },
@@ -61,23 +66,9 @@ function reportTypeName(report = {}) {
   return '诊断报告'
 }
 
-function buildUploadRecord(report, subjectName, formatRelativeTime) {
-  const imageCount = Array.isArray(report.imageFiles)
-    ? report.imageFiles.length
-    : (report.imageFileIds || []).length
-  if (imageCount <= 0) return null
-  return {
-    kind: 'upload',
-    icon: '图',
-    subject: report.subject,
-    title: `上传${subjectName}试卷照片`,
-    summary: `${formatRelativeTime(report.createdAt)} · ${imageCount} 张图片已识别`,
-    reportId: report._id
-  }
-}
-
 function buildReportRecord(report, subjectName, formatRelativeTime) {
   const observationCount = (report.bottlenecks || []).length
+  const bottleneckText = bottleneckListText(report.bottlenecks || [])
   return {
     kind: report.type === 'verification' ? 'verification-report' : 'diagnosis-report',
     icon: report.type === 'verification' ? '验' : '报',
@@ -87,23 +78,59 @@ function buildReportRecord(report, subjectName, formatRelativeTime) {
       formatRelativeTime(report.createdAt),
       observationCount > 0 ? `发现 ${observationCount} 条学习观察` : '点击阅读本次报告'
     ].filter(Boolean).join(' · '),
+    metaText: [
+      bottleneckText ? `关注 ${bottleneckText}` : '',
+      report.type === 'verification' ? '验证反馈' : '诊断结果'
+    ].filter(Boolean).join(' · '),
+    createdAt: report.createdAt,
     reportId: report._id
   }
 }
 
-function buildRecentRecords(reports, subjectByKey, formatRelativeTime) {
+function buildPaperRecord(paper, subjectName, formatRelativeTime) {
+  const questionCount = (paper.questions || []).length || paper.questionCount || 0
+  const paperCode = paperCodeOf(paper)
+  const bottleneckText = bottleneckListText(
+    (paper.bottleneckSummaries && paper.bottleneckSummaries.length > 0)
+      ? paper.bottleneckSummaries
+      : (paper.bottleneckTargets || []).map(code => ({ lpCode: code }))
+  )
+  return {
+    kind: 'verification-paper',
+    icon: '卷',
+    subject: paper.subject,
+    title: `${subjectName}验证试卷`,
+    summary: [
+      formatRelativeTime(paper.createdAt),
+      paperCode ? `编号 ${paperCode}` : '',
+      questionCount ? `${questionCount} 题` : '',
+      bottleneckText ? `覆盖 ${bottleneckText}` : ''
+    ].filter(Boolean).join(' · '),
+    paperCode,
+    createdAt: paper.createdAt,
+    paperId: paper._id
+  }
+}
+
+function buildRecentRecords(reports, papers, subjectByKey, formatRelativeTime) {
   const records = []
   reports
     .filter(report => report.status === 'completed' && (report.isEffective === undefined || report.isEffective === true))
-    .sort((a, b) => toDate(b.createdAt) - toDate(a.createdAt))
-    .slice(0, 2)
     .forEach(report => {
       const subject = subjectByKey[report.subject] || { name: report.subjectName || '学习' }
-      const uploadRecord = buildUploadRecord(report, subject.name, formatRelativeTime)
-      if (uploadRecord) records.push(uploadRecord)
       records.push(buildReportRecord(report, subject.name, formatRelativeTime))
     })
-  return records.slice(0, 3)
+
+  papers
+    .filter(isMainTimelinePaper)
+    .forEach(paper => {
+      const subject = subjectByKey[paper.subject] || { name: paper.subjectName || '学习' }
+      records.push(buildPaperRecord(paper, subject.name, formatRelativeTime))
+    })
+
+  return records
+    .sort((a, b) => toDate(b.createdAt) - toDate(a.createdAt))
+    .slice(0, 3)
 }
 
 function buildPriorityHighlights(profileBySubject) {
@@ -146,6 +173,8 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
   const student = input.student || {}
   const reports = input.reports || []
   const papers = input.papers || []
+  const permissions = input.permissions || student.permissions || {}
+  const canWriteActions = permissions.canUpload !== false || permissions.canGeneratePaper !== false
   const profileBySubject = new Map((input.profiles || []).map(profile => [profile.subject, profile]))
   const subjectByKey = Object.fromEntries(SUBJECTS.map(subject => [subject.key, subject]))
 
@@ -217,6 +246,28 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
   ]
 
   const nextSubject = (primarySubject && primarySubject.key) || 'math'
+  const nextAction = canWriteActions
+    ? {
+        title: hasPending
+          ? `优先完成${primarySubject ? primarySubject.name : '数学'}验证试卷`
+          : hasImprovedOnly
+            ? '继续上传新试卷观察巩固情况'
+            : '上传第一份试卷，建立学习档案',
+        summary: hasPending
+          ? `用于确认${pendingNames}是否稳定出现。`
+          : '上传试卷后，系统会整理学习观察和诊断报告。',
+        primaryText: hasPending ? '生成验证试卷' : (hasImprovedOnly ? '上传新试卷' : '上传第一份试卷'),
+        secondaryText: hasPending ? '上传新试卷' : '查看学习记录',
+        subject: nextSubject
+      }
+    : {
+        title: '查看最新学习资料',
+        summary: '你当前拥有查看权限，可以阅读诊断报告、验证试卷和学习记录。',
+        primaryText: '查看学习记录',
+        secondaryText: '',
+        subject: nextSubject
+      }
+
   return {
     studentId: student._id || '',
     studentName: student.name || '',
@@ -229,20 +280,10 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
     metrics,
     priorityHighlights,
     observations: priorityHighlights,
-    recentRecords: buildRecentRecords(reports, subjectByKey, formatRelativeTime),
-    nextAction: {
-      title: hasPending
-        ? `优先完成${primarySubject ? primarySubject.name : '数学'}验证试卷`
-        : hasImprovedOnly
-          ? '继续上传新试卷观察巩固情况'
-          : '上传第一份试卷，建立学习档案',
-      summary: hasPending
-        ? `用于确认${pendingNames}是否稳定出现。`
-        : '上传试卷后，系统会整理学习观察和诊断报告。',
-      primaryText: hasPending ? '生成验证试卷' : (hasImprovedOnly ? '上传新试卷' : '上传第一份试卷'),
-      secondaryText: hasPending ? '上传新试卷' : '查看学习记录',
-      subject: nextSubject
-    },
+    recentRecords: buildRecentRecords(reports, papers, subjectByKey, formatRelativeTime),
+    nextAction,
+    permissions,
+    canWriteActions,
     subjects,
     isEmpty: false
   }

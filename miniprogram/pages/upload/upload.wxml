@@ -9,6 +9,12 @@
     </view>
   </view>
 
+  <view class="paper-context" wx:if="{{paperId}}">
+    <text class="context-label">正在上传到</text>
+    <text class="context-code">{{paperCodeText || '当前验证试卷'}}</text>
+    <text class="context-meta">{{paperName}}<text wx:if="{{paperQuestionCount > 0}}"> · {{paperQuestionCount}} 题</text></text>
+  </view>
+
   <!-- 拍照提示 -->
   <view class="photo-tips">
     <text class="tip-item">📸 光线充足</text>

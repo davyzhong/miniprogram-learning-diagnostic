@@ -26,7 +26,10 @@ Page({
     hasAnalysisProgress: false,
     analysisTaskMissing: false,
     retryingAnalysis: false,
-    generatingPdf: false
+    generatingPdf: false,
+    permissions: {},
+    canGeneratePaper: true,
+    canRetryAnalysis: true
   },
 
   onLoad(options) {
@@ -41,7 +44,11 @@ Page({
     wx.showLoading({ title: '加载中...' })
 
     try {
-      const report = await cloud.getReport(id)
+      const detail = typeof cloud.getReportDetail === 'function'
+        ? await cloud.getReportDetail(id)
+        : { report: await cloud.getReport(id), permissions: {} }
+      const report = detail.report
+      const permissions = detail.permissions || {}
 
       if (!report) {
         wx.hideLoading()
@@ -49,13 +56,23 @@ Page({
         return
       }
 
+      const reportWithContext = {
+        ...report,
+        linkedPaper: detail.linkedPaper || detail.paper || report.linkedPaper
+      }
       const dateText = formatChineseDateTime(report.createdAt)
-      const view = buildReportView(report)
+      const view = buildReportView(reportWithContext)
 
       // 待验证卡点数（从 subjectProfile 获取）
       var pendingCount = 0
       try {
-        var profile = await cloud.getSubjectProfile(report.studentId, report.subject)
+        var profile = null
+        if (typeof cloud.getSubjectDashboard === 'function') {
+          var dashboard = await cloud.getSubjectDashboard(report.studentId, report.subject)
+          profile = dashboard.profile
+        } else {
+          profile = await cloud.getSubjectProfile(report.studentId, report.subject)
+        }
         if (profile) {
           pendingCount = Array.isArray(profile.currentBottlenecks)
             ? profile.currentBottlenecks.filter(item => item.status !== 'improved').length
@@ -64,9 +81,12 @@ Page({
       } catch (e) { console.error('获取学科档案失败:', e) }
 
       this.setData({
-        report: report,
+        report: reportWithContext,
         dateText: dateText,
         pendingCount: pendingCount,
+        permissions,
+        canGeneratePaper: permissions.canGeneratePaper !== false,
+        canRetryAnalysis: permissions.canRetryAnalysis !== false,
         ...view
       })
 
@@ -99,6 +119,7 @@ Page({
 
   // ========== 生成验证试卷 ==========
   onGenerateVerification() {
+    if (!this.data.canGeneratePaper) return
     var report = this.data.report
     var studentId = report.studentId
     var subject = report.subject
@@ -142,7 +163,10 @@ Page({
     if (this._poller) this._poller.stop()
     this._poller = createPoller({
       request: async () => {
-        const report = await cloud.getReport(reportId)
+        const detail = typeof cloud.getReportDetail === 'function'
+          ? await cloud.getReportDetail(reportId)
+          : { report: await cloud.getReport(reportId) }
+        const report = detail.report
         let progress = null
         if (report && report.status === 'analyzing') {
           try {
@@ -200,6 +224,7 @@ Page({
   },
 
   onRetryAnalysis() {
+    if (!this.data.canRetryAnalysis) return
     if (this.data.retryingAnalysis) return
     this.setData({
       retryingAnalysis: true,

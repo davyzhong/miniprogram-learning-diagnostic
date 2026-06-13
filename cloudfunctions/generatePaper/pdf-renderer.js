@@ -80,7 +80,38 @@ function getPaperTitle(subject, type) {
   return type === 'verification' ? '学习卡点验证卷' : `${subjectName}学习诊断卷`;
 }
 
-function drawStudentHeader(doc, subject, type, continuation = false) {
+function formatPaperDate(paperDate) {
+  if (!paperDate) return '';
+  const date = new Date(`${String(paperDate).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}年${month}月${day}日`;
+}
+
+function drawPaperDate(doc, paperDate, y) {
+  const text = formatPaperDate(paperDate);
+  if (!text) return y;
+  doc.fillColor(COLORS.blue).fontSize(14)
+    .text(`试卷日期：${text}`, PAGE.left, y, {
+      width: PAGE.contentWidth,
+      align: 'center',
+    });
+  return y + 22;
+}
+
+function drawPaperCode(doc, paperDisplayCode, y) {
+  if (!paperDisplayCode) return y;
+  doc.fillColor(COLORS.navy).fontSize(10.5)
+    .text(`试卷编号：${paperDisplayCode}`, PAGE.left, y, {
+      width: PAGE.contentWidth,
+      align: 'right',
+    });
+  return y + 17;
+}
+
+function drawStudentHeader(doc, subject, type, continuation = false, paperDate = '', paperDisplayCode = '') {
   const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
   const title = getPaperTitle(subject, type);
   if (continuation) {
@@ -89,8 +120,10 @@ function drawStudentHeader(doc, subject, type, continuation = false) {
         width: PAGE.contentWidth,
         align: 'center',
       });
-    drawLine(doc, PAGE.left, 61, PAGE.width - PAGE.right, 61, COLORS.blue, 1.5);
-    return 76;
+    const codeBottom = drawPaperCode(doc, paperDisplayCode, PAGE.top + 19);
+    const dividerY = paperDisplayCode ? codeBottom + 6 : 61;
+    drawLine(doc, PAGE.left, dividerY, PAGE.width - PAGE.right, dividerY, COLORS.blue, 1.5);
+    return dividerY + 15;
   }
 
   doc.fillColor(COLORS.navy).fontSize(22)
@@ -99,7 +132,9 @@ function drawStudentHeader(doc, subject, type, continuation = false) {
       align: 'center',
     });
 
-  const fieldY = 78;
+  let metaY = paperDisplayCode ? drawPaperCode(doc, paperDisplayCode, 62) : 62;
+  const dateBottom = drawPaperDate(doc, paperDate, metaY);
+  const fieldY = (paperDate || paperDisplayCode) ? dateBottom + 4 : 78;
   const fields = [
     { label: '姓名', x: PAGE.left + 92, lineWidth: 94 },
     { label: '日期', x: PAGE.left + 230, lineWidth: 94 },
@@ -111,11 +146,12 @@ function drawStudentHeader(doc, subject, type, continuation = false) {
     drawLine(doc, field.x + 31, fieldY + 13, field.x + 31 + field.lineWidth, fieldY + 13, COLORS.muted, 0.7);
   });
 
-  drawLine(doc, PAGE.left, 101, PAGE.width - PAGE.right, 101, COLORS.blue, 1.8);
+  const dividerY = paperDate ? fieldY + 23 : 101;
+  drawLine(doc, PAGE.left, dividerY, PAGE.width - PAGE.right, dividerY, COLORS.blue, 1.8);
   doc.fillColor(COLORS.text).fontSize(9.5)
     .text('请认真作答，并写出完整计算过程。完成后请花几秒检查答案是否合理。',
-      PAGE.left, 110, { width: PAGE.contentWidth, lineGap: 2 });
-  return 139;
+      PAGE.left, dividerY + 9, { width: PAGE.contentWidth, lineGap: 2 });
+  return dividerY + 38;
 }
 
 function drawGroupBar(doc, group, index, y, type = 'verification') {
@@ -198,20 +234,23 @@ function drawPageNumber(doc, pageNumber, answerPage = false) {
       });
 }
 
-function drawAnswerHeader(doc, subject, type) {
+function drawAnswerHeader(doc, subject, type, paperDate = '', paperDisplayCode = '') {
   const subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || '数学';
   doc.fillColor(COLORS.navy).fontSize(19)
     .text(`${getPaperTitle(subject, type)} · 参考答案`, PAGE.left, PAGE.top + 2, {
       width: PAGE.contentWidth,
       align: 'center',
     });
+  let cursorY = paperDisplayCode ? drawPaperCode(doc, paperDisplayCode, 58) : 60;
+  const dateBottom = drawPaperDate(doc, paperDate, cursorY);
+  const metaY = (paperDate || paperDisplayCode) ? dateBottom + 1 : 69;
   doc.fillColor(COLORS.muted).fontSize(9.5)
     .text('供家长 / 教师使用',
-      PAGE.left, 69, { width: PAGE.contentWidth, align: 'center' });
+      PAGE.left, metaY, { width: PAGE.contentWidth, align: 'center' });
   doc.fillColor(COLORS.muted).fontSize(8.5)
-    .text(subjectName, PAGE.left, 83, { width: PAGE.contentWidth, align: 'center' });
-  drawLine(doc, PAGE.left, 98, PAGE.width - PAGE.right, 98, COLORS.blue, 1.8);
-  return 116;
+    .text(subjectName, PAGE.left, metaY + 14, { width: PAGE.contentWidth, align: 'center' });
+  drawLine(doc, PAGE.left, metaY + 29, PAGE.width - PAGE.right, metaY + 29, COLORS.blue, 1.8);
+  return metaY + 47;
 }
 
 function drawAnswer(doc, question, y) {
@@ -254,17 +293,19 @@ async function generatePDF(questionsData, subject, type, options = {}) {
   const buffers = [];
   doc.on('data', buffers.push.bind(buffers));
   useFont(doc, fontPath);
+  const paperDate = options.paperDate || '';
+  const paperDisplayCode = options.paperDisplayCode || options.paperCode || '';
 
   const groups = groupQuestions(questionsData.questions || []);
   let pageNumber = 1;
-  let y = drawStudentHeader(doc, subject, type);
+  let y = drawStudentHeader(doc, subject, type, false, paperDate, paperDisplayCode);
 
   groups.forEach((group, groupIndex) => {
     if (y + 145 > PAGE.contentBottom) {
       drawPageNumber(doc, pageNumber);
       doc.addPage();
       pageNumber += 1;
-      y = drawStudentHeader(doc, subject, type, true);
+      y = drawStudentHeader(doc, subject, type, true, paperDate, paperDisplayCode);
     }
     y = drawGroupBar(doc, group, groupIndex, y, type);
 
@@ -274,7 +315,7 @@ async function generatePDF(questionsData, subject, type, options = {}) {
         drawPageNumber(doc, pageNumber);
         doc.addPage();
         pageNumber += 1;
-        y = drawStudentHeader(doc, subject, type, true);
+        y = drawStudentHeader(doc, subject, type, true, paperDate, paperDisplayCode);
         y = drawGroupBar(doc, group, groupIndex, y, type);
       }
       y = drawQuestion(doc, question, y);
@@ -284,13 +325,13 @@ async function generatePDF(questionsData, subject, type, options = {}) {
 
   doc.addPage();
   let answerPageNumber = 1;
-  y = drawAnswerHeader(doc, subject, type);
+  y = drawAnswerHeader(doc, subject, type, paperDate, paperDisplayCode);
   groups.forEach((group, groupIndex) => {
     if (y + 70 > PAGE.contentBottom) {
       drawPageNumber(doc, answerPageNumber, true);
       doc.addPage();
       answerPageNumber += 1;
-      y = drawAnswerHeader(doc, subject, type);
+      y = drawAnswerHeader(doc, subject, type, paperDate, paperDisplayCode);
     }
     y = drawGroupBar(doc, group, groupIndex, y, type);
     group.questions.forEach(question => {
@@ -303,7 +344,7 @@ async function generatePDF(questionsData, subject, type, options = {}) {
         drawPageNumber(doc, answerPageNumber, true);
         doc.addPage();
         answerPageNumber += 1;
-        y = drawAnswerHeader(doc, subject, type);
+        y = drawAnswerHeader(doc, subject, type, paperDate, paperDisplayCode);
         y = drawGroupBar(doc, group, groupIndex, y, type);
       }
       y = drawAnswer(doc, question, y);
@@ -313,7 +354,12 @@ async function generatePDF(questionsData, subject, type, options = {}) {
 
   doc.end();
   await new Promise(resolve => doc.on('end', resolve));
-  return Buffer.concat(buffers);
+  return {
+    buffer: Buffer.concat(buffers),
+    studentPages: pageNumber,
+    answerPages: answerPageNumber,
+    totalPages: pageNumber + answerPageNumber,
+  };
 }
 
 module.exports = {

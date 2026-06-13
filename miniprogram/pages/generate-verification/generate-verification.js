@@ -1,7 +1,7 @@
 // pages/generate-verification/generate-verification.js
 const cloud = require('../../utils/cloud')
-const { summarizeBottleneckName, uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
-const { formatBottleneckDisplayName } = require('../../utils/util')
+const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
+const { bottleneckLabelOf } = require('../../utils/learning-records')
 const MAX_SELECTED_BOTTLENECKS = 5
 const SEVERITY_PRIORITY = { high: 0, medium: 1, low: 2 }
 
@@ -59,9 +59,7 @@ Page({
             return (SEVERITY_PRIORITY[a.severity] ?? 3) - (SEVERITY_PRIORITY[b.severity] ?? 3)
           })
           .map((b, index) => {
-            const displayName = b.lpName
-              ? summarizeBottleneckName(b.lpName)
-              : formatBottleneckDisplayName(b)
+            const displayName = bottleneckLabelOf(b)
             const hasInitialTargets = this.data.initialTargetCodes.length > 0
             return {
               ...b,

@@ -1,5 +1,6 @@
 // pages/upload/upload.js
 const cloud = require('../../utils/cloud')
+const { paperCodeOf } = require('../../utils/learning-records')
 
 function getFileName(filePath, index) {
   const cleanPath = String(filePath || '').split('?')[0]
@@ -31,6 +32,9 @@ Page({
     studentName: '',
     grade: '',
     paperId: '',       // 验证/默认试卷上传时有值
+    paperCodeText: '',
+    paperName: '',
+    paperQuestionCount: 0,
 
     pageTitle: '',
     pageDesc: '',
@@ -45,7 +49,7 @@ Page({
   },
 
   onLoad(options) {
-    const { mode, studentId, subject, subjectName, studentName, grade, paperId } = options
+    const { mode, studentId, subject, subjectName, studentName, grade, paperId, paperCode } = options
     const m = mode || 'diagnosis'
     const cfg = MODE_CONFIG[m] || MODE_CONFIG.diagnosis
 
@@ -57,12 +61,31 @@ Page({
       studentName: decodeURIComponent(studentName || ''),
       grade: grade || '',
       paperId: paperId || '',
+      paperCodeText: decodeURIComponent(paperCode || ''),
       pageTitle: cfg.title,
       pageDesc: cfg.desc,
     })
 
     wx.setNavigationBarTitle({ title: cfg.title })
     this.loadExistingFileNames()
+    if (paperId) this.loadPaperContext(paperId)
+  },
+
+  async loadPaperContext(paperId) {
+    try {
+      const detail = typeof cloud.getPaperDetail === 'function'
+        ? await cloud.getPaperDetail(paperId)
+        : { paper: await cloud.getPaper(paperId) }
+      const paper = detail.paper
+      if (!paper) return
+      this.setData({
+        paperCodeText: this.data.paperCodeText || this.getPaperCodeText(paper),
+        paperName: this.getPaperName(paper),
+        paperQuestionCount: (paper.questions || []).length || paper.questionCount || 0
+      })
+    } catch (err) {
+      console.warn('读取试卷上传上下文失败', err)
+    }
   },
 
   async loadExistingFileNames() {
@@ -151,14 +174,26 @@ Page({
     try {
       wx.showLoading({ title: '上传中...' })
 
-      // 1. 逐张上传到云存储
+      // 1. 逐张上传到云存储，重试时复用已经上传成功的图片
       const fileIds = []
       for (let i = 0; i < images.length; i++) {
-        const fileId = await this.uploadOne(images[i].tempPath, i)
+        const image = this.data.images[i]
+        const fileId = image.uploaded && image.fileId
+          ? image.fileId
+          : await this.uploadOne(image, i)
         fileIds.push(fileId)
 
+        const updatedImages = this.data.images.map((item, index) => index === i
+          ? {
+              ...item,
+              fileId,
+              uploaded: true,
+              uploadError: ''
+            }
+          : item)
         const progress = Math.round(((i + 1) / images.length) * 100)
         this.setData({
+          images: updatedImages,
           uploadedCount: i + 1,
           uploadProgress: progress
         })
@@ -169,7 +204,7 @@ Page({
       // 2. 云函数创建报告并 fire-and-forget 启动分析（秒回）
       await cloud.callUploadAndAnalyze({
         fileIDs: fileIds,
-        imageMetas: images.map(image => ({
+        imageMetas: this.data.images.map(image => ({
           fileName: image.fileName,
           fileSize: image.fileSize
         })),
@@ -183,16 +218,23 @@ Page({
       setTimeout(() => wx.navigateBack(), 1200)
     } catch (err) {
       wx.hideLoading()
-      this.setData({ uploading: false })
+      const failedIndex = this.data.images.findIndex(image => !image.uploaded)
+      const errorImages = failedIndex >= 0
+        ? this.data.images.map((image, index) => index === failedIndex
+          ? { ...image, uploadError: err.message || '上传失败' }
+          : image)
+        : this.data.images
+      this.setData({ uploading: false, images: errorImages, submitBtnText: '重试上传并分析' })
       console.error('上传或提交分析失败', err)
       wx.showToast({ title: err.message || '上传失败，请重试', icon: 'none' })
     }
   },
 
   // ========== 上传单张图片 ==========
-  uploadOne(tempPath, index) {
+  uploadOne(image, index) {
     return new Promise((resolve, reject) => {
       const { studentId, subject } = this.data
+      const tempPath = typeof image === 'string' ? image : image.tempPath
       const cloudPath = `uploads/${studentId}/${subject}/${Date.now()}_${index}.jpg`
 
       wx.cloud.uploadFile({
@@ -202,6 +244,28 @@ Page({
         fail: (err) => reject(err)
       })
     })
+  },
+
+  getSubjectName(subject) {
+    const map = { math: '数学', chinese: '语文', english: '英语' }
+    return map[subject] || subject || '试卷'
+  },
+
+  getPaperName(paper) {
+    if (!paper) return ''
+    if (paper.type === 'verification') return '验证试卷'
+    if (paper.type === 'default-diagnosis') return '诊断试卷'
+    return '试卷'
+  },
+
+  getPaperCodeText(paper) {
+    if (!paper) return ''
+    const savedCode = paperCodeOf(paper)
+    if (savedCode) return savedCode
+    const dateText = String(paper.paperDate || '').replace(/-/g, '')
+    if (dateText) return `${this.getSubjectName(paper.subject)}-${dateText}`
+    if (paper._id) return `试卷-${String(paper._id).slice(-6)}`
+    return ''
   },
 
   onUnload() {

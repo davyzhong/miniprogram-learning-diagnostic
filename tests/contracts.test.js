@@ -61,7 +61,9 @@ test('cloud functions use deployment configuration instead of a hard-coded envir
   }
 
   const reportPdfSource = read('cloudfunctions/generateReportPDF/index.js')
-  assert.match(reportPdfSource, /process\.env\.FONT_FILE_ID/)
+  assert.doesNotMatch(reportPdfSource, /process\.env\.FONT_FILE_ID/)
+  assert.match(reportPdfSource, /NotoSansCJKsc-Regular\.otf/)
+  assert.equal(fs.existsSync(path.join(root, 'cloudfunctions/generateReportPDF/NotoSansCJKsc-Regular.otf')), true)
   assert.doesNotMatch(reportPdfSource, /cloud:\/\/cloud1-d6gneg68m5a7a3876/)
 })
 
@@ -75,6 +77,11 @@ test('generatePaper does not silently fall back to a font without Chinese glyphs
   assert.doesNotMatch(source, /FONT_FILE_ID/)
   assert.doesNotMatch(source, /Helvetica/)
   assert.match(source, /pdf-renderer/)
+})
+
+test('default test script includes printable PDF regression tests', () => {
+  const pkg = JSON.parse(read('package.json'))
+  assert.match(pkg.scripts.test, /generate-paper-pdf\.test\.js/)
 })
 
 test('user-facing bottleneck labels do not render LP codes as primary text', () => {
@@ -95,6 +102,25 @@ test('user-facing bottleneck labels do not render LP codes as primary text', () 
   assert.doesNotMatch(reportPage, /· \{\{item\.lpCode\}\}/)
   assert.match(reportPage, /\{\{item\.metaText\}\}/)
   assert.doesNotMatch(pdfRenderer, /text\(question\.lpCode/)
+})
+
+test('verification paper workbench exposes paper code, content preview and feedback entry', () => {
+  const paperPreviewView = read('miniprogram/pages/paper-preview/paper-preview.wxml')
+  const paperPreviewPage = read('miniprogram/pages/paper-preview/paper-preview.js')
+  const uploadView = read('miniprogram/pages/upload/upload.wxml')
+  const uploadPage = read('miniprogram/pages/upload/upload.js')
+  const dataFunction = read('cloudfunctions/studentData/index.js')
+
+  assert.match(paperPreviewView, /验证试卷编号/)
+  assert.match(paperPreviewView, /\{\{paperCodeText/)
+  assert.match(paperPreviewView, /试卷内容预览/)
+  assert.match(paperPreviewView, /验证反馈/)
+  assert.match(paperPreviewPage, /latestVerificationReport/)
+  assert.match(paperPreviewPage, /onViewFeedbackReport/)
+  assert.match(uploadView, /正在上传到/)
+  assert.match(uploadPage, /loadPaperContext/)
+  assert.match(dataFunction, /latestVerificationReport/)
+  assert.match(dataFunction, /paperDisplayCode/)
 })
 
 test('subject home is an action workbench instead of another diagnosis summary', () => {
@@ -284,6 +310,24 @@ test('upload history uses a unified learning timeline with subject filters', () 
   assert.match(view, /wx:for="\{\{filters\}\}"/)
   assert.doesNotMatch(page, /subjectName\}学习记录/)
   assert.doesNotMatch(page, /数学学习记录/)
+})
+
+test('learning record surfaces use the four-level display taxonomy', () => {
+  const page = read('miniprogram/pages/upload-history/upload-history.js')
+  const view = read('miniprogram/pages/upload-history/upload-history.wxml')
+  const style = read('miniprogram/pages/upload-history/upload-history.wxss')
+  const indexPresenter = read('miniprogram/pages/index/index-presenter.js')
+
+  assert.match(page, /buildTimelineEvents/)
+  assert.match(page, /statusItems/)
+  assert.match(page, /foldedEvidence/)
+  assert.match(page, /isMainTimelinePaper/)
+  assert.match(view, /status-strip/)
+  assert.match(view, /onPreviewFoldedEvidence/)
+  assert.match(style, /fold-row/)
+  assert.match(style, /status-strip/)
+  assert.match(indexPresenter, /isMainTimelinePaper/)
+  assert.doesNotMatch(indexPresenter, /buildUploadRecord/)
 })
 
 test('upload filename duplicates only produce a soft warning', () => {

@@ -1,0 +1,197 @@
+.page {
+  min-height: 100vh;
+  padding: 32rpx;
+  background: #f7fafc;
+  color: #1a202c;
+}
+
+.header {
+  padding: 28rpx 0 24rpx;
+}
+
+.eyebrow {
+  color: #2b6cb0;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.title {
+  margin-top: 12rpx;
+  font-size: 44rpx;
+  font-weight: 800;
+}
+
+.subtitle,
+.hint,
+.member-role,
+.empty {
+  color: #718096;
+  font-size: 26rpx;
+}
+
+.notice,
+.error,
+.card {
+  border-radius: 16rpx;
+  background: #ffffff;
+  box-shadow: 0 10rpx 30rpx rgba(26, 54, 93, 0.08);
+}
+
+.notice {
+  padding: 22rpx 24rpx;
+  color: #2b6cb0;
+  background: #ebf8ff;
+}
+
+.error {
+  margin-top: 20rpx;
+  padding: 22rpx 24rpx;
+  color: #c53030;
+  background: #fff5f5;
+}
+
+.card {
+  margin-top: 24rpx;
+  padding: 28rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 0;
+  border-bottom: 1rpx solid #edf2f7;
+}
+
+.member:last-child {
+  border-bottom: 0;
+}
+
+.avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 16rpx;
+  background: #ebf8ff;
+  color: #2b6cb0;
+  font-size: 26rpx;
+  font-weight: 800;
+  line-height: 64rpx;
+  text-align: center;
+}
+
+.member-main {
+  margin-left: 20rpx;
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.member-edit {
+  margin-left: 16rpx;
+  padding: 0 18rpx;
+  height: 56rpx;
+  border-radius: 10rpx;
+  background: #edf2f7;
+  color: #2b6cb0;
+  font-size: 24rpx;
+  line-height: 56rpx;
+}
+
+.member-edit::after {
+  border: none;
+}
+
+.primary {
+  margin-top: 28rpx;
+  height: 96rpx;
+  border-radius: 14rpx;
+  background: #2b6cb0;
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: 800;
+  line-height: 96rpx;
+}
+
+.secondary {
+  margin-top: 28rpx;
+  height: 96rpx;
+  border-radius: 14rpx;
+  background: #ffffff;
+  color: #2b6cb0;
+  border: 2rpx solid #2b6cb0;
+  font-size: 32rpx;
+  font-weight: 800;
+  line-height: 92rpx;
+}
+
+.primary::after,
+.secondary::after {
+  border: none;
+}
+
+.invite-path {
+  margin-top: 20rpx;
+  padding: 20rpx;
+  border-radius: 12rpx;
+  background: #f7fafc;
+  color: #2d3748;
+  font-size: 24rpx;
+  word-break: break-all;
+}
+
+.invite-code {
+  margin-top: 24rpx;
+  padding: 22rpx;
+  border-radius: 14rpx;
+  background: #ebf8ff;
+  color: #1a365d;
+  font-size: 44rpx;
+  font-weight: 900;
+  text-align: center;
+  letter-spacing: 6rpx;
+}
+
+.form-row {
+  margin-top: 24rpx;
+}
+
+.form-label {
+  margin-bottom: 12rpx;
+  color: #718096;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.text-input,
+.picker-value {
+  min-height: 72rpx;
+  padding: 0 20rpx;
+  border-radius: 12rpx;
+  background: #f7fafc;
+  color: #1a202c;
+  font-size: 28rpx;
+  line-height: 72rpx;
+}
+
+.inline-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 28rpx;
+}
+
+.inline-btn {
+  flex: 1;
+  margin-top: 0;
+}
+
+.hint {
+  margin-top: 16rpx;
+}

@@ -37,7 +37,7 @@
 - ✅ 分析进度轮询：学科主页和报告页每 10s 轮询，支持手动重试
 - ✅ 报告 PDF 生成与下载
 - ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 自动化测试：140 个常规用例通过，JS 语法检查 52 文件通过
+- ✅ 自动化测试：151 个常规用例通过，JS 语法检查 52 文件通过
 
 ### 待完善
 
@@ -79,7 +79,7 @@ miniprogram-learning-diagnostic/
 │   ├── getAnalysisProgress/     #   轻量进度查询
 │   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF
 │   └── generateReportPDF/       #   生成报告 PDF
-├── tests/                       # 自动化测试（140 个常规用例 + 真实图片 E2E 脚本）
+├── tests/                       # 自动化测试（151 个常规用例 + 真实图片 E2E 脚本）
 ├── scripts/                     # check-js.js（语法检查）
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
@@ -110,10 +110,9 @@ cd miniprogram-learning-diagnostic
 ### 部署云函数
 
 1. 在云开发控制台开通 `hy3-preview` 和 `deepseek-v4-flash` 两个 AI 模型
-2. 将中文字体（推荐 SimHei.ttf）上传到云存储，记录 fileID
-3. 对 `cloudfunctions/` 下每个云函数目录右键 → "上传并部署：云端安装依赖"
-4. 将 `analyzePhotos` 的执行超时调整为 **900 秒**（`uploadAndAnalyze` 负责快速创建报告和启动任务）
-5. 为 `generatePaper` 和 `generateReportPDF` 配置环境变量 `FONT_FILE_ID`
+2. 对 `cloudfunctions/` 下每个云函数目录右键 → "上传并部署：云端安装依赖"
+3. 将 `analyzePhotos` 的执行超时调整为 **900 秒**（`uploadAndAnalyze` 负责快速创建报告和启动任务）
+4. `generatePaper` 和 `generateReportPDF` 已内置 Noto 中文字体，不需要配置 `FONT_FILE_ID`
 
 ### 配置数据库
 
@@ -132,7 +131,7 @@ cd miniprogram-learning-diagnostic
 ## 测试
 
 ```bash
-# 运行常规自动化测试（140 用例，不含真实图片 E2E）
+# 运行常规自动化测试（151 用例，不含真实图片 E2E）
 npm test
 
 # 带覆盖率报告

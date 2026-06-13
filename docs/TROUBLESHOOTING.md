@@ -37,22 +37,20 @@
 生成的试卷 PDF 或报告 PDF 中，中文字符显示为方框、问号或完全空白；英文和数字正常。
 
 **可能原因**
-- `generatePaper` 或 `generateReportPDF` 缺少 `FONT_FILE_ID` 环境变量
-- 字体文件未上传到云存储，或 fileID 写错
+- `generatePaper` 或 `generateReportPDF` 云函数目录缺少内置字体文件
+- 云函数部署时未把 `NotoSansCJKsc-Regular.otf` 一起上传
 - 字体文件格式不受 pdfkit 支持（仅支持 TTF/OTF）
-- 字体缓存下载失败但代码吞掉了错误
 
 **排查步骤**
-1. 云开发控制台 → 云函数 → `generatePaper` / `generateReportPDF` → 环境变量，确认 `FONT_FILE_ID` 存在
-2. 云存储中核对字体文件是否存在、大小合理（≥ 1MB）、扩展名为 `.ttf` 或 `.otf`
-3. 查看云函数日志是否有 `downloadFile` 失败或 `registerFont` 报错
-4. 本地跑契约测试确认代码读取的是环境变量而非硬编码：`node --test --test-name-pattern="deployment configuration" tests/contracts.test.js`
+1. 确认 `cloudfunctions/generatePaper/NotoSansCJKsc-Regular.otf` 存在且大小合理
+2. 确认 `cloudfunctions/generateReportPDF/NotoSansCJKsc-Regular.otf` 存在且大小合理
+3. 查看云函数日志是否有 `内置中文字体缺失` 或 `registerFont` 报错
+4. 本地跑契约测试确认代码不依赖字体环境变量：`node --test --test-name-pattern="deployment configuration" tests/contracts.test.js`
 
 **解决方案**
-- 补全环境变量：`FONT_FILE_ID=cloud://your-env/SimHei.ttf`
-- 重新上传字体到云存储，确保路径与变量一致
-- 使用推荐的 `SimHei.ttf` 或 `NotoSansCJK-Regular.ttf`，避免使用 TTC 合集
-- 若下载失败是间歇性的，可在云函数中加重试逻辑（当前实现为单次下载）
+- 重新上传并部署 `generatePaper` / `generateReportPDF`
+- 若字体文件误删，从另一云函数目录复制同名 `NotoSansCJKsc-Regular.otf`
+- 避免替换成 TTC 合集字体
 
 ---
 
@@ -302,27 +300,25 @@
 
 ---
 
-## 13. 字体缓存竞态问题
+## 13. 内置字体部署缺失
 
 **症状**
-并发调用 `generatePaper` 或 `generateReportPDF` 时，偶发 `registerFont` 报错或 PDF 生成失败；单独调用正常。
+调用 `generatePaper` 或 `generateReportPDF` 时，日志出现 `内置中文字体缺失` 或 `registerFont` 报错，PDF 生成失败。
 
 **可能原因**
-- 多个云函数实例同时下载同一字体文件到 `/tmp`，发生写入竞争
-- 字体文件下载到一半就被另一个实例读取，导致不完整
-- 云函数复用容器时，`/tmp` 中的字体文件状态不确定
-- 内存中字体缓存未做同步保护
+- 云函数部署包中没有包含 `NotoSansCJKsc-Regular.otf`
+- 字体文件被误删或替换为不受 pdfkit 支持的格式
+- 只部署了代码文件，没有重新上传整个云函数目录
 
 **排查步骤**
-1. 查看云函数日志中 `downloadFile` 与 `registerFont` 的时间戳，是否重叠
-2. 检查字体缓存实现是否使用了文件锁或原子写入
-3. 在高并发场景下复现（如同时生成 3 份以上 PDF）
+1. 确认 `cloudfunctions/generatePaper/NotoSansCJKsc-Regular.otf` 存在
+2. 确认 `cloudfunctions/generateReportPDF/NotoSansCJKsc-Regular.otf` 存在
+3. 在微信开发者工具中对对应云函数执行「上传并部署：云端安装依赖」
 
 **解决方案**
-- 使用原子写入：先下载到临时文件名，完成后 rename
-- 加进程级锁（如 `async-mutex`）保护下载 + 注册流程
-- 在云函数初始化阶段预加载字体（利用容器复用），而非每次请求都下载
-- 若问题频发，考虑将字体打包进云函数部署包（牺牲部署体积换取稳定性）
+- 重新部署 `generatePaper` 和 `generateReportPDF`
+- 如字体文件缺失，从另一函数目录复制同名文件后再部署
+- 不再配置或依赖 `FONT_FILE_ID`
 
 ---
 
