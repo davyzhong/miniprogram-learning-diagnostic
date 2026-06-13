@@ -5,6 +5,7 @@ const {
   buildStatusTitle,
   bottleneckListText,
   classifyReportDisplay,
+  isVisibleTimelineReport,
   isMainTimelinePaper,
   paperCodeOf
 } = require('../../utils/learning-records')
@@ -85,6 +86,16 @@ function dateChip(label, value) {
   return `${label} ${date.getMonth() + 1}月${date.getDate()}日`
 }
 
+function paperDateCode(value) {
+  if (!value) return ''
+  const text = String(value)
+  const matched = text.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (matched) return `${matched[1]}${matched[2]}${matched[3]}`
+  const date = toDate(value)
+  if (Number.isNaN(date.getTime())) return ''
+  return `${date.getFullYear()}${pad2(date.getMonth() + 1)}${pad2(date.getDate())}`
+}
+
 function dayLabel(value) {
   const date = toDate(value)
   return `${date.getMonth() + 1}月${date.getDate()}日`
@@ -147,6 +158,7 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
   const improvedCount = evidence.filter(item => item.complete && item.allCorrect).length
   const linkedPaper = report.paperId && options.paperById ? options.paperById.get(report.paperId) : null
   const paperCode = paperCodeOf(linkedPaper)
+    || (report.paperId && options.paperCodeById ? options.paperCodeById.get(report.paperId) : '')
   const foldedEvidence = buildPhotoEvidenceRows(photos, isVerification ? 'answer-upload' : 'photo')
 
   return {
@@ -177,44 +189,48 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
   }
 }
 
-function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedReports = []) {
+function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedReports = [], options = {}) {
   const eventTime = paper.generatedAt || paper.createdAt
   const questionCount = (paper.questions || []).length || paper.questionCount || 0
-  const paperCode = paperCodeOf(paper)
+  const paperCode = paperCodeOf(paper) || (options.paperCodeById ? options.paperCodeById.get(paper._id) : '')
   const bottleneckText = bottleneckListText(
     (Array.isArray(paper.bottleneckSummaries) && paper.bottleneckSummaries.length > 0)
       ? paper.bottleneckSummaries
       : (paper.bottleneckTargets || []).map(code => ({ lpCode: code }))
   )
-  const pageText = paper.studentPages || paper.answerPages
-    ? `学生卷 ${paper.studentPages || Math.max(1, (paper.totalPages || 1) - (paper.answerPages || 1))} 页`
-    : (paper.totalPages ? `${paper.totalPages} 页` : 'A4 PDF')
+  const totalPages = Number(paper.totalPages) || 0
+  const answerPages = Number(paper.answerPages) || 1
+  const studentPages = Number(paper.studentPages) || (totalPages > answerPages ? totalPages - answerPages : 1)
+  const hasFeedback = linkedReports.some(report => report.status === 'completed')
 
   return {
     id: paper._id,
     subject: paper.subject || fallbackSubject,
     kind: 'verification-paper',
     displayLevel: 'main',
-    icon: '□',
+    icon: '卷',
     title: `生成${subjectName}验证试卷`,
     timeText: timeText(eventTime),
     createdAt: eventTime,
-    summary: bottleneckText ? `覆盖 ${bottleneckText}` : '已生成可打印的 A4 试卷。',
+    summary: bottleneckText
+      ? `复测 ${bottleneckText}。纸面作答后回到本工作台上传。`
+      : '纸面作答后回到本工作台上传验证。',
     actionText: '查看试卷',
     paperId: paper._id,
     paperCode,
+    showPaperCode: Boolean(paperCode),
     photos: [],
     foldedEvidence: linkedReports.flatMap(report => buildPhotoEvidenceRows(getReportPhotos(report), 'answer-upload')),
     photoCount: 0,
     duplicateCount: 0,
-    statusText: linkedReports.some(report => report.status === 'completed')
+    statusText: hasFeedback
       ? '已生成验证反馈'
       : (linkedReports.length > 0 ? '反馈分析中' : '等待打印作答并上传验证'),
     chips: [
-      paperCode ? `编号 ${paperCode}` : '',
       dateChip('试卷日期', paper.paperDate),
-      questionCount ? `${questionCount} 题` : '',
-      pageText
+      questionCount ? `${questionCount}题` : '',
+      studentPages ? `学生卷${studentPages}页` : '',
+      answerPages ? `答案${answerPages}页` : ''
     ].filter(Boolean)
   }
 }
@@ -323,6 +339,41 @@ function buildReportsByPaperId(reports = []) {
   return byPaperId
 }
 
+function buildPaperCodeById(papers = [], fallbackSubjectName = '') {
+  const byId = new Map()
+  const groups = new Map()
+
+  ;(papers || [])
+    .filter(isMainTimelinePaper)
+    .forEach(paper => {
+      if (!paper || !paper._id) return
+      const savedCode = paperCodeOf(paper)
+      if (savedCode) {
+        byId.set(paper._id, savedCode)
+      }
+
+      const eventTime = paper.generatedAt || paper.createdAt || paper.paperDate
+      const codeDate = paperDateCode(paper.paperDate || eventTime)
+      if (!codeDate) return
+      const subjectName = recordSubjectName(paper, fallbackSubjectName) || '学习'
+      const key = `${paper.subject || subjectName}-${codeDate}`
+      const list = groups.get(key) || []
+      list.push({ paper, eventTime, subjectName, codeDate })
+      groups.set(key, list)
+    })
+
+  groups.forEach(list => {
+    list
+      .sort((a, b) => toDate(a.eventTime) - toDate(b.eventTime))
+      .forEach((item, index) => {
+        if (!item.paper._id || byId.has(item.paper._id)) return
+        byId.set(item.paper._id, `${item.subjectName}-${item.codeDate}-${pad2(index + 1)}`)
+      })
+  })
+
+  return byId
+}
+
 function buildPhotosByReportId(reportPhotos) {
   const photosByReportId = new Map()
   reportPhotos.forEach(({ report, photos }) => {
@@ -339,9 +390,11 @@ function withAttachedPhotos(report, photosByReportId) {
 }
 
 function buildTimelineEvents(reports, papers, urlByFileID, activeSubject, fallbackSubjectName) {
+  const visibleReports = (reports || []).filter(report => isVisibleTimelineReport(report))
   const paperById = buildPaperLookup(papers)
-  const verificationReportsByPaperId = buildReportsByPaperId(reports)
-  const reportPhotos = attachTempUrlsToReports(reports, urlByFileID)
+  const paperCodeById = buildPaperCodeById(papers, fallbackSubjectName)
+  const verificationReportsByPaperId = buildReportsByPaperId(visibleReports)
+  const reportPhotos = attachTempUrlsToReports(visibleReports, urlByFileID)
   const photosByReportId = buildPhotosByReportId(reportPhotos)
   const events = []
   const statusItems = []
@@ -353,7 +406,7 @@ function buildTimelineEvents(reports, papers, urlByFileID, activeSubject, fallba
       statusItems.push(buildStatusItem(report, subjectName, activeSubject))
       return
     }
-    events.push(buildReportEvent(report, photos, subjectName, activeSubject, { paperById }))
+    events.push(buildReportEvent(report, photos, subjectName, activeSubject, { paperById, paperCodeById }))
   })
 
   ;(papers || [])
@@ -365,11 +418,21 @@ function buildTimelineEvents(reports, papers, urlByFileID, activeSubject, fallba
         paper,
         recordSubjectName(paper, fallbackSubjectName),
         activeSubject,
-        linkedReports
+        linkedReports,
+        { paperCodeById }
       ))
     })
 
   return { events, statusItems }
+}
+
+async function cleanupStaleRecordsIfPossible(studentId, subject) {
+  if (!studentId || typeof cloud.cleanupStaleLearningRecords !== 'function') return
+  try {
+    await cloud.cleanupStaleLearningRecords({ studentId, subject })
+  } catch (error) {
+    console.warn('学习记录脏状态清理不可用，继续加载可见记录', error && error.message ? error.message : error)
+  }
 }
 
 function photoFromDataset(days, dataset) {
@@ -429,6 +492,8 @@ Page({
       const titleText = buildTitleText(this.data.studentName)
       let reports = []
       let papers = []
+
+      await cleanupStaleRecordsIfPossible(this.data.studentId, activeSubject)
 
       try {
         if (typeof cloud.getLearningTimeline === 'function') {

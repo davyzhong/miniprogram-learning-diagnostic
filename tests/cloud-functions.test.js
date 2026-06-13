@@ -158,11 +158,6 @@ test('viewer cannot perform owner-only write operations', async () => {
     '@cloudbase/node-sdk': createTcbMock(JSON.stringify({ title: '测试', questions: [] })),
     './pdf-renderer': { generatePDF: async () => ({ buffer: Buffer.from('pdf'), studentPages: 1, answerPages: 1, totalPages: 2 }) }
   })
-  const generateReportPDF = loadModule('cloudfunctions/generateReportPDF/index.js', {
-    'wx-server-sdk': viewerCloud,
-    'pdfkit': createPdfKitMock()
-  })
-
   assert.equal((await upload.main({
     fileIDs: ['cloud://photo-1'],
     studentId: 'student-1',
@@ -174,7 +169,6 @@ test('viewer cannot perform owner-only write operations', async () => {
     type: 'verification',
     targets: ['LP-001']
   })).error, '无权执行该操作')
-  assert.equal((await generateReportPDF.main({ reportId: 'report-1' })).error, '无权执行该操作')
 })
 
 test('viewer can read analysis progress for a joined child', async () => {
@@ -775,12 +769,20 @@ test('generatePaper validates default grades and verification target limits befo
   assert.equal(db.dump('papers').length, 0)
 })
 
-test('generateReportPDF checks ownership before producing a document', async () => {
+test('generateReportPDF rejects a non-member before producing a document', async () => {
   const db = createDatabase({
-    reports: [{ _id: 'report-1', _openid: 'owner-1', studentName: '钟青羽', bottlenecks: [], errorDetails: [] }]
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      studentName: '钟青羽',
+      bottlenecks: [],
+      errorDetails: []
+    }],
+    studentMembers: []
   })
   const handler = loadModule('cloudfunctions/generateReportPDF/index.js', {
-    'wx-server-sdk': createCloudMock({ db, openId: 'other-owner' }),
+    'wx-server-sdk': createCloudMock({ db, openId: 'stranger-1' }),
     pdfkit: createPdfKitMock()
   })
 
@@ -806,6 +808,38 @@ test('generateReportPDF uploads and stores the generated file for its owner', as
   })
 
   const result = await handler.main({ reportId: 'report-1' })
+  assert.equal(result.success, true)
+  assert.match(result.pdfFileId, /^cloud:\/\/reports\//)
+  assert.equal(db.dump('reports')[0].pdfFileId, result.pdfFileId)
+})
+
+test('generateReportPDF allows an active joined parent to download a readable report', async () => {
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      studentName: '钟青羽',
+      bottlenecks: [],
+      errorDetails: []
+    }],
+    studentMembers: [{
+      _id: 'member-1',
+      studentId: 'student-1',
+      ownerOpenId: 'owner-1',
+      memberOpenId: 'viewer-1',
+      role: 'viewer',
+      status: 'active'
+    }]
+  })
+  const cloud = createCloudMock({ db, openId: 'viewer-1' })
+  const handler = loadModule('cloudfunctions/generateReportPDF/index.js', {
+    'wx-server-sdk': cloud,
+    pdfkit: createPdfKitMock()
+  })
+
+  const result = await handler.main({ reportId: 'report-1' })
+
   assert.equal(result.success, true)
   assert.match(result.pdfFileId, /^cloud:\/\/reports\//)
   assert.equal(db.dump('reports')[0].pdfFileId, result.pdfFileId)

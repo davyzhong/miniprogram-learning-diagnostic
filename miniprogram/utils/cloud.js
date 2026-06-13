@@ -156,7 +156,7 @@ async function getReports(studentId, subject, limit = 20) {
     .orderBy('createdAt', 'desc')
     .limit(limit)
     .get()
-  return res.data
+  return (res.data || []).filter(report => !report.isArchived && !report.archivedAt)
 }
 
 async function getLatestReport(studentId, subject) {
@@ -276,6 +276,10 @@ async function getLearningTimeline({ studentId, subject } = {}) {
   return callFunction('studentData', { action: 'getLearningTimeline', studentId, subject })
 }
 
+async function cleanupStaleLearningRecords({ studentId, subject } = {}) {
+  return callFunction('studentData', { action: 'cleanupStaleLearningRecords', studentId, subject })
+}
+
 async function getReportDetail(reportId) {
   return callFunction('studentData', { action: 'getReportDetail', reportId })
 }
@@ -319,6 +323,7 @@ module.exports = {
   getStudentDashboard,
   getSubjectDashboard,
   getLearningTimeline,
+  cleanupStaleLearningRecords,
   getReportDetail,
   getPaperDetail,
 }

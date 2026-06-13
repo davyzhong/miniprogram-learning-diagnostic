@@ -9,7 +9,11 @@ const ACTIONS = new Set([
   'getLearningTimeline',
   'getReportDetail',
   'getPaperDetail',
+  'cleanupStaleLearningRecords',
 ]);
+
+const STATUS_REPORT_STATES = new Set(['pending', 'uploading', 'analyzing', 'failed', 'timeout']);
+const STALE_STATUS_MS = 30 * 60 * 1000;
 
 function success(data = {}) {
   return { success: true, ...data };
@@ -21,6 +25,26 @@ function failure(error) {
 
 function toTime(value) {
   return value ? new Date(value).getTime() : 0;
+}
+
+function reportTimeOf(report = {}) {
+  return report.updatedAt || report.evidenceTime || report.createdAt || report.created_at || '';
+}
+
+function isArchivedReport(report = {}) {
+  return Boolean(report.isArchived || report.archivedAt);
+}
+
+function isStaleStatusReport(report = {}, now = Date.now()) {
+  if (!STATUS_REPORT_STATES.has(report.status)) return false;
+  const time = toTime(reportTimeOf(report));
+  if (!time) return false;
+  return now - time > STALE_STATUS_MS;
+}
+
+function visibleReports(reports = []) {
+  const now = Date.now();
+  return reports.filter(report => !isArchivedReport(report) && !isStaleStatusReport(report, now));
 }
 
 function permissionsForRole(role) {
@@ -86,7 +110,7 @@ async function getReports(studentId, subject, limit = 20) {
     .orderBy('createdAt', 'desc')
     .limit(limit)
     .get();
-  return res.data || [];
+  return visibleReports(res.data || []);
 }
 
 async function getPapers(studentId, subject, limit = 20) {
@@ -238,6 +262,64 @@ async function getLearningTimeline(openId, studentId, subjectValue) {
   });
 }
 
+async function getRawReports(studentId, subject, limit = 100) {
+  const filter = subject ? { studentId, subject } : { studentId };
+  const res = await db.collection('reports')
+    .where(filter)
+    .orderBy('createdAt', 'desc')
+    .limit(limit)
+    .get();
+  return res.data || [];
+}
+
+async function cleanupProfileAnalysisState(studentId, subject, reportIds) {
+  if (!studentId || reportIds.size === 0) return;
+  const profiles = await getSubjectProfiles(studentId);
+  const targets = profiles.filter(profile => {
+    if (subject && profile.subject !== subject) return false;
+    return reportIds.has(profile.currentAnalysisId) || profile.analysisStatus === 'analyzing';
+  });
+  await Promise.all(targets.map(profile => db.collection('subjectProfiles').doc(profile._id).update({
+    data: {
+      analysisStatus: null,
+      currentAnalysisId: '',
+      updatedAt: new Date(),
+    },
+  })));
+}
+
+async function cleanupStaleLearningRecords(openId, studentId, subjectValue) {
+  if (!studentId) return failure('缺少 studentId');
+  const access = await getAccess(studentId, openId);
+  if (!access.allowed) return failure('无权访问该学生');
+  if (access.role !== 'owner') return failure('只有档案管理者可以清理历史任务');
+
+  const subject = subjectValue ? normalizeSubject(subjectValue) : '';
+  const now = Date.now();
+  const reports = await getRawReports(studentId, subject, 100);
+  const staleReports = reports.filter(report => !isArchivedReport(report) && isStaleStatusReport(report, now));
+  const archivedAt = new Date();
+
+  await Promise.all(staleReports.map(report => db.collection('reports').doc(report._id).update({
+    data: {
+      isArchived: true,
+      archivedAt,
+      archivedReason: 'stale-analysis-cleanup',
+      status: report.status === 'analyzing' || report.status === 'pending' || report.status === 'uploading'
+        ? 'timeout'
+        : report.status,
+      updatedAt: archivedAt,
+    },
+  })));
+
+  await cleanupProfileAnalysisState(studentId, subject, new Set(staleReports.map(report => report._id)));
+
+  return withAccess(access, {
+    cleanedCount: staleReports.length,
+    cleanedReportIds: staleReports.map(report => report._id),
+  });
+}
+
 async function getReportDetail(openId, reportId) {
   if (!reportId) return failure('缺少 reportId');
   const reportRes = await db.collection('reports').doc(reportId).get();
@@ -301,6 +383,9 @@ exports.main = async (event = {}) => {
     }
     if (action === 'getPaperDetail') {
       return getPaperDetail(openId, event.paperId);
+    }
+    if (action === 'cleanupStaleLearningRecords') {
+      return cleanupStaleLearningRecords(openId, event.studentId, event.subject);
     }
     return failure('操作类型无效');
   } catch (error) {

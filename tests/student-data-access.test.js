@@ -122,6 +122,71 @@ test('timeline sorts papers by generated time while preserving paper date', asyn
   assert.equal(timeline.items[0].paperDate, '2026-06-13')
 })
 
+test('owner can archive stale interrupted analysis records from the timeline', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentMembers: [],
+    subjectProfiles: [{
+      _id: 'profile-math',
+      studentId: 'student-1',
+      subject: 'math',
+      analysisStatus: 'analyzing',
+      currentAnalysisId: 'report-stale',
+      updatedAt: '2026-06-11T23:18:00+08:00'
+    }],
+    reports: [
+      {
+        _id: 'report-stale',
+        _openid: 'owner-1',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'analyzing',
+        createdAt: '2026-06-11T23:18:00+08:00',
+        updatedAt: '2026-06-11T23:18:00+08:00'
+      },
+      {
+        _id: 'report-completed',
+        _openid: 'owner-1',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        summary: '有效报告',
+        createdAt: '2026-06-12T08:47:00+08:00'
+      }
+    ],
+    papers: []
+  })
+  const handler = loadStudentData(db, 'owner-1')
+
+  const cleanup = await handler.main({ action: 'cleanupStaleLearningRecords', studentId: 'student-1', subject: 'math' })
+
+  assert.equal(cleanup.success, true)
+  assert.equal(cleanup.cleanedCount, 1)
+  assert.deepEqual(cleanup.cleanedReportIds, ['report-stale'])
+  const archived = db.dump('reports').find(item => item._id === 'report-stale')
+  assert.equal(archived.isArchived, true)
+  assert.equal(archived.status, 'timeout')
+  assert.equal(archived.archivedReason, 'stale-analysis-cleanup')
+  const profile = db.dump('subjectProfiles')[0]
+  assert.equal(profile.analysisStatus, null)
+  assert.equal(profile.currentAnalysisId, '')
+
+  const timeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1', subject: 'math' })
+  assert.deepEqual(JSON.parse(JSON.stringify(timeline.reports.map(item => item._id))), ['report-completed'])
+})
+
+test('viewer cannot archive stale learning records', async () => {
+  const db = seedDatabase()
+  const handler = loadStudentData(db, 'viewer-1')
+
+  const cleanup = await handler.main({ action: 'cleanupStaleLearningRecords', studentId: 'student-1' })
+
+  assert.equal(cleanup.success, false)
+  assert.equal(cleanup.error, '只有档案管理者可以清理历史任务')
+})
+
 test('non-member cannot read child data through studentData', async () => {
   const db = seedDatabase()
   const handler = loadStudentData(db, 'stranger-1')

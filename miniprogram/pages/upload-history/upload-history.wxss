@@ -263,7 +263,8 @@
 .event-icon {
   align-items: center;
   background: #eef4fb;
-  border-radius: 10rpx;
+  border: 1rpx solid #d8e6fb;
+  border-radius: 14rpx;
   color: #27486c;
   display: flex;
   flex-shrink: 0;
@@ -307,6 +308,38 @@
   line-height: 1.48;
 }
 
+.paper-code-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+
+.paper-code-label,
+.paper-code-value {
+  align-items: center;
+  border-radius: 8rpx;
+  display: flex;
+  line-height: 1;
+  min-height: 38rpx;
+  padding: 0 12rpx;
+}
+
+.paper-code-label {
+  background: #eef6ff;
+  color: #4c6f97;
+  font-size: 19rpx;
+  font-weight: 700;
+}
+
+.paper-code-value {
+  background: #dbeafe;
+  color: #1f5aa6;
+  font-size: 22rpx;
+  font-weight: 850;
+}
+
 .event-status {
   color: #2d6cdf;
   display: block;
@@ -331,10 +364,10 @@
   padding: 8rpx 10rpx;
 }
 
-.record-verification-paper .chip:first-child {
+.record-verification-paper .event-icon {
   background: #e7f0ff;
+  border-color: #b7cff8;
   color: #2459a5;
-  font-weight: 780;
 }
 
 .folded-evidence {

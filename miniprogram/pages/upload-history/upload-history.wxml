@@ -75,6 +75,10 @@
             <text class="event-time">{{event.timeText}}</text>
           </view>
           <text class="event-summary">{{event.summary}}</text>
+          <view class="paper-code-row" wx:if="{{event.showPaperCode}}">
+            <text class="paper-code-label">验证卷编号</text>
+            <text class="paper-code-value">{{event.paperCode}}</text>
+          </view>
           <text class="event-status" wx:if="{{event.statusText}}">{{event.statusText}}</text>
           <view class="chips" wx:if="{{event.chips.length > 0}}">
             <text class="chip" wx:for="{{event.chips}}" wx:key="*this" wx:for-item="chip">{{chip}}</text>
