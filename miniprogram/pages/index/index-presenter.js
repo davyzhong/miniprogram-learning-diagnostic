@@ -4,9 +4,9 @@ const {
 } = require('../../utils/util')
 const {
   bottleneckListText,
-  isMainTimelinePaper,
-  paperCodeOf
+  isMainTimelinePaper
 } = require('../../utils/learning-records')
+const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-display')
 const {
   SUBJECTS: SUBJECT_KEYS,
   SUBJECT_NAMES,
@@ -92,14 +92,8 @@ function buildReportRecord(report, subjectName, formatRelativeTime) {
   }
 }
 
-function buildPaperRecord(paper, subjectName, formatRelativeTime) {
-  const questionCount = (paper.questions || []).length || paper.questionCount || 0
-  const paperCode = paperCodeOf(paper)
-  const bottleneckText = bottleneckListText(
-    (paper.bottleneckSummaries && paper.bottleneckSummaries.length > 0)
-      ? paper.bottleneckSummaries
-      : (paper.bottleneckTargets || []).map(code => ({ lpCode: code }))
-  )
+function buildPaperRecord(paper, subjectName, formatRelativeTime, paperCodeById) {
+  const display = buildPaperDisplay(paper, subjectName, { paperCodeById })
   return {
     kind: 'verification-paper',
     icon: '卷',
@@ -107,11 +101,11 @@ function buildPaperRecord(paper, subjectName, formatRelativeTime) {
     title: `${subjectName}验证试卷`,
     summary: [
       formatRelativeTime(paper.createdAt),
-      paperCode ? `编号 ${paperCode}` : '',
-      questionCount ? `${questionCount} 题` : '',
-      bottleneckText ? `覆盖 ${bottleneckText}` : ''
+      display.paperCode ? `编号 ${display.paperCode}` : '',
+      display.questionCount ? `${display.questionCount} 题` : '',
+      display.bottleneckText ? `覆盖 ${display.bottleneckText}` : ''
     ].filter(Boolean).join(' · '),
-    paperCode,
+    paperCode: display.paperCode,
     createdAt: paper.createdAt,
     paperId: paper._id
   }
@@ -119,6 +113,7 @@ function buildPaperRecord(paper, subjectName, formatRelativeTime) {
 
 function buildRecentRecords(reports, papers, subjectByKey, formatRelativeTime) {
   const records = []
+  const paperCodeById = buildPaperCodeMap(papers)
   reports
     .filter(report => report.status === 'completed' && (report.isEffective === undefined || report.isEffective === true))
     .forEach(report => {
@@ -130,7 +125,7 @@ function buildRecentRecords(reports, papers, subjectByKey, formatRelativeTime) {
     .filter(isMainTimelinePaper)
     .forEach(paper => {
       const subject = subjectByKey[paper.subject] || { name: paper.subjectName || '学习' }
-      records.push(buildPaperRecord(paper, subject.name, formatRelativeTime))
+      records.push(buildPaperRecord(paper, subject.name, formatRelativeTime, paperCodeById))
     })
 
   return records
