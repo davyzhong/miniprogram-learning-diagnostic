@@ -4,6 +4,7 @@ const cloud = require('wx-server-sdk');
 const tcb = require('@cloudbase/node-sdk');
 const { generatePDF } = require('./pdf-renderer');
 const { summarizeBottleneckName, uniqueBottleneckSummaries } = require('./bottleneck-display');
+const { getStudentAccess, canOperateLearning } = require('../_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -59,17 +60,6 @@ async function createPaperCodes(studentId, subject, paperDate) {
     paperCode: `${normalizedSubject}-${dateCode}-${sequence}`,
     paperDisplayCode: `${subjectName}-${dateCode}-${sequence}`,
   };
-}
-
-async function hasOwnerAccess(student, openId) {
-  if (student && student._openid === openId) return true;
-  const res = await db.collection('studentMembers').where({
-    studentId: student._id,
-    memberOpenId: openId,
-    role: 'owner',
-    status: 'active',
-  }).get();
-  return (res.data || []).length > 0;
 }
 
 function normalizeQuestionsData(data, expectedCount) {
@@ -216,13 +206,13 @@ exports.main = async (event) => {
   const normalizedPaperDate = normalizePaperDate(paperDate);
 
   try {
-    const studentRes = await db.collection('students').doc(studentId).get();
-    const student = studentRes.data;
     const currentOpenId = cloud.getWXContext().OPENID;
+    const access = await getStudentAccess(db, studentId, currentOpenId);
+    const student = access.student;
     if (!student) {
       return { success: false, error: '学生不存在' };
     }
-    if (!(await hasOwnerAccess(student, currentOpenId))) {
+    if (!canOperateLearning(access)) {
       return { success: false, error: '无权执行该操作' };
     }
 

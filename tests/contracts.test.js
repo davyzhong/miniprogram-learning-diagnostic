@@ -207,10 +207,14 @@ test('subject profile reads avoid a compound student and subject index', () => {
   }
 })
 
-test('analysis progress endpoint checks report ownership', () => {
+test('analysis progress endpoint uses shared resource access checks', () => {
   const source = read('cloudfunctions/getAnalysisProgress/index.js')
+  const accessSource = read('cloudfunctions/_shared/access.js')
   assert.match(source, /cloud\.getWXContext\(\)\.OPENID/)
-  assert.match(source, /report\._openid/)
+  assert.match(source, /getLearningResourceAccess/)
+  assert.match(source, /canReadLearning/)
+  assert.match(accessSource, /resource\._openid/)
+  assert.match(accessSource, /getActiveMember/)
 })
 
 test('analysis is started reliably by the server entrypoint', () => {

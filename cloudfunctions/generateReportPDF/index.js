@@ -4,22 +4,12 @@ const pdfkit = require('pdfkit');
 const cloud = require('wx-server-sdk');
 const fs = require('fs');
 const path = require('path');
+const { getLearningResourceAccess, canOperateLearning } = require('../_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 
 const DEFAULT_FONT_PATH = path.join(__dirname, 'NotoSansCJKsc-Regular.otf');
-
-async function canReadReport(reportData, openId) {
-  if (reportData && reportData._openid === openId) return true;
-  if (!reportData || !reportData.studentId) return false;
-  const res = await db.collection('studentMembers').where({
-    studentId: reportData.studentId,
-    memberOpenId: openId,
-    status: 'active',
-  }).get();
-  return (res.data || []).length > 0;
-}
 
 function useChineseFont(doc) {
   if (!fs.existsSync(DEFAULT_FONT_PATH)) {
@@ -144,7 +134,8 @@ exports.main = async (event) => {
     }
     const reportData = reportRes.data;
     const currentOpenId = cloud.getWXContext().OPENID;
-    if (!(await canReadReport(reportData, currentOpenId))) {
+    const access = await getLearningResourceAccess(db, reportData, currentOpenId);
+    if (!canOperateLearning(access)) {
       return { success: false, error: '无权执行该操作' };
     }
 

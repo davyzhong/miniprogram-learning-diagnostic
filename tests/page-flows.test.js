@@ -212,7 +212,7 @@ test('learning profile home shows a message when parent management has no active
   assert.equal(wx.calls.find(call => call.name === 'showToast').payload.title, '缺少孩子档案信息')
 })
 
-test('learning profile home uses shared access and routes viewers to records', async () => {
+test('learning profile home uses shared access and lets co-parents operate learning workflows', async () => {
   const wx = createWxMock()
   const cloud = {
     getAccessibleStudents: async () => [{
@@ -220,12 +220,12 @@ test('learning profile home uses shared access and routes viewers to records', a
       name: '钟青羽',
       grade: 6,
       role: 'viewer',
-      permissions: { canView: true, canManageParents: false, canUpload: false, canGeneratePaper: false }
+      permissions: { canView: true, canManageParents: false, canUpload: true, canGeneratePaper: true }
     }],
     getSubjectProfiles: async () => [],
     getStudentDashboard: async studentId => ({
       student: { _id: studentId, name: '钟青羽', grade: 6 },
-      permissions: { canView: true, canManageParents: false, canUpload: false, canGeneratePaper: false },
+      permissions: { canView: true, canManageParents: false, canUpload: true, canGeneratePaper: true },
       subjectProfiles: [{
         subject: 'math',
         totalReports: 1,
@@ -244,11 +244,12 @@ test('learning profile home uses shared access and routes viewers to records', a
   })
 
   await page.loadStudents()
-  assert.equal(page.data.permissions.canUpload, false)
-  assert.equal(page.data.home.nextAction.primaryText, '查看学习记录')
+  assert.equal(page.data.permissions.canUpload, true)
+  assert.equal(page.data.permissions.canManageParents, false)
+  assert.equal(page.data.home.nextAction.primaryText, '生成验证试卷')
 
   page.onPrimaryAction()
-  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /upload-history/)
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
 })
 
 test('subject selection ensures a profile before entering the subject home', async () => {
@@ -310,10 +311,10 @@ test('subject home loads a compact action workbench', async () => {
   assert.ok(page.data.tools.some(item => item.key === 'latestReport'))
 })
 
-test('subject home hides write tools for viewer access', async () => {
+test('subject home shows learning workflow tools for co-parent access', async () => {
   const cloud = {
     getSubjectDashboard: async () => ({
-      permissions: { canView: true, canUpload: false, canGeneratePaper: false, canRetryAnalysis: false },
+      permissions: { canView: true, canManageParents: false, canUpload: true, canGeneratePaper: true, canRetryAnalysis: true },
       profile: {
         totalReports: 1,
         currentBottlenecks: [
@@ -341,12 +342,12 @@ test('subject home hides write tools for viewer access', async () => {
   })
 
   await page.loadProfile()
-  assert.equal(page.data.canWriteActions, false)
-  assert.deepEqual(page.data.tools.map(item => item.key), ['history', 'latestReport'])
-  assert.equal(page.data.primaryTask.actionType, 'history')
+  assert.equal(page.data.canWriteActions, true)
+  assert.deepEqual(page.data.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history', 'latestReport'])
+  assert.equal(page.data.primaryTask.actionType, 'verification')
 
   page.onTaskTap({ currentTarget: { dataset: { code: 'LP-001' } } })
-  assert.equal(wx.calls.find(call => call.name === 'navigateTo'), undefined)
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
 })
 
 test('subject home task and primary actions open the focused workflow', () => {
@@ -1487,11 +1488,11 @@ test('report loads diagnosis data and toggles error details', async () => {
   assert.equal(page.data.errorDetailList[0].expanded, true)
 })
 
-test('report viewer can read details but cannot generate paper or retry analysis', async () => {
+test('report co-parent can generate paper and retry analysis', async () => {
   let retryCalled = false
   const cloud = {
     getReportDetail: async () => ({
-      permissions: { canView: true, canGeneratePaper: false, canRetryAnalysis: false },
+      permissions: { canView: true, canManageParents: false, canGeneratePaper: true, canRetryAnalysis: true },
       report: {
         _id: 'report-1',
         studentId: 'student-1',
@@ -1517,13 +1518,13 @@ test('report viewer can read details but cannot generate paper or retry analysis
   })
 
   await page.loadReport('report-1')
-  assert.equal(page.data.canGeneratePaper, false)
-  assert.equal(page.data.canRetryAnalysis, false)
+  assert.equal(page.data.canGeneratePaper, true)
+  assert.equal(page.data.canRetryAnalysis, true)
 
   page.onGenerateVerification()
   page.onRetryAnalysis()
-  assert.equal(retryCalled, false)
-  assert.equal(wx.calls.find(call => call.name === 'navigateTo'), undefined)
+  assert.equal(retryCalled, true)
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
 })
 
 test('report generates, downloads and opens its printable PDF', async () => {
