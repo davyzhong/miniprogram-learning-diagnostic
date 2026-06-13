@@ -123,6 +123,17 @@ test('paper display surfaces use the shared paper display helper', () => {
   }
 })
 
+test('analysis status pages use the shared analysis poller wrapper', () => {
+  for (const relativePath of [
+    'miniprogram/pages/subject-home/subject-home.js',
+    'miniprogram/pages/report/report.js'
+  ]) {
+    const source = read(relativePath)
+    assert.match(source, /analysis-poller/)
+    assert.doesNotMatch(source, /utils\/poller/)
+  }
+})
+
 test('verification paper workbench exposes paper code, content preview and feedback entry', () => {
   const paperPreviewView = read('miniprogram/pages/paper-preview/paper-preview.wxml')
   const paperPreviewPage = read('miniprogram/pages/paper-preview/paper-preview.js')

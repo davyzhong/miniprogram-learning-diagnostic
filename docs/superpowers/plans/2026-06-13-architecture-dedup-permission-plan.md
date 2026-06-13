@@ -410,11 +410,11 @@ git commit -m "refactor: centralize paper display helpers"
 - Test: `tests/poller.test.js`
 - Test: `tests/page-flows.test.js`
 
-- [ ] **Step 1: Keep low-level `createPoller` unchanged**
+- [x] **Step 1: Keep low-level `createPoller` unchanged**
 
 Do not rewrite the timer primitive. Add a business wrapper on top.
 
-- [ ] **Step 2: Create `createAnalysisPoller`**
+- [x] **Step 2: Create `createAnalysisPoller`**
 
 Centralize:
 
@@ -422,11 +422,11 @@ Centralize:
 - completed/failed/timeout decisions.
 - progress callback shape.
 
-- [ ] **Step 3: Replace page-specific branches**
+- [x] **Step 3: Replace page-specific branches**
 
 `subject-home` and `report` should provide callbacks, not duplicate state-machine logic.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -435,7 +435,7 @@ node --test tests/poller.test.js tests/page-flows.test.js
 npm run verify
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add miniprogram tests
