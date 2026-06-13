@@ -174,7 +174,7 @@ node --test tests/cloud-functions.test.js tests/student-access.test.js tests/stu
 npm run verify
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add cloudfunctions tests
@@ -238,7 +238,7 @@ node --test tests/page-flows.test.js tests/parent-management-page-flows.test.js
 npm run verify
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add miniprogram/pages tests
@@ -266,7 +266,7 @@ git commit -m "fix: allow co-parent learning actions"
 - Test: `tests/contracts.test.js`
 - Test: `tests/coverage-gap.test.js`
 
-- [ ] **Step 1: Add frontend constants**
+- [x] **Step 1: Add frontend constants**
 
 Use one source:
 
@@ -284,15 +284,15 @@ const SUBJECT_COLORS = {
 }
 ```
 
-- [ ] **Step 2: Replace page-local maps**
+- [x] **Step 2: Replace page-local maps**
 
 Replace duplicated subject maps in pages and utils.
 
-- [ ] **Step 3: Add cloud constants**
+- [x] **Step 3: Add cloud constants**
 
 Use the same semantic values in cloud functions.
 
-- [ ] **Step 4: Verify**
+- [x] **Step 4: Verify**
 
 Run:
 
@@ -301,7 +301,7 @@ node --test tests/contracts.test.js tests/coverage-gap.test.js
 npm run verify
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add miniprogram cloudfunctions tests

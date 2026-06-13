@@ -4,6 +4,7 @@ const { formatRelativeTime } = require('../../utils/util')
 const { buildStatusText } = require('../../utils/learning-records')
 const { createPoller } = require('../../utils/poller')
 const { buildSubjectHomeView } = require('./subject-home-presenter')
+const { getSubjectColor } = require('../../utils/constants')
 const STALE_ANALYSIS_MS = 10 * 60 * 1000
 
 Page({
@@ -66,12 +67,7 @@ Page({
 
   setNavColor() {
     const { subject } = this.data
-    const colors = {
-      math:    { bg: '#1a365d', fg: '#ffffff' },
-      chinese: { bg: '#1c4532', fg: '#ffffff' },
-      english: { bg: '#7b341e', fg: '#ffffff' },
-    }
-    const c = colors[subject] || colors.math
+    const c = getSubjectColor(subject)
     wx.setNavigationBarColor({
       frontColor: c.fg,
       backgroundColor: c.bg,

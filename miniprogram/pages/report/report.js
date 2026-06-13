@@ -3,6 +3,7 @@ const cloud = require('../../utils/cloud')
 const { formatChineseDateTime } = require('../../utils/util')
 const { createPoller } = require('../../utils/poller')
 const { buildReportView } = require('./report-presenter')
+const { getSubjectName } = require('../../utils/constants')
 const STALE_ANALYSIS_MS = 10 * 60 * 1000
 
 Page({
@@ -123,7 +124,7 @@ Page({
     var report = this.data.report
     var studentId = report.studentId
     var subject = report.subject
-    var subjectName = { math: '数学', chinese: '语文', english: '英语' }[subject] || ''
+    var subjectName = getSubjectName(subject)
 
     // 获取卡点列表，传给验证试卷生成页
     var bottlenecks = (report.bottlenecks || [])
@@ -151,7 +152,7 @@ Page({
 
   onViewSources() {
     const report = this.data.report
-    const subjectName = { math: '数学', chinese: '语文', english: '英语' }[report.subject] || ''
+    const subjectName = getSubjectName(report.subject)
     wx.navigateTo({
       url: `/pages/upload-history/upload-history?studentId=${report.studentId}&subject=${report.subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(report.studentName || '')}`
     })
