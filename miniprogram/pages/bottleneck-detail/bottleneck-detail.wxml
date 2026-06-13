@@ -1,0 +1,123 @@
+<view class="page">
+  <view class="loading-state" wx:if="{{loading}}">
+    <text>正在整理卡点证据...</text>
+  </view>
+
+  <view wx:elif="{{bottleneck}}">
+    <view class="hero-card bottleneck-{{bottleneck.statusClass}}">
+      <view class="hero-top">
+        <view class="status-icon">{{bottleneck.statusIcon}}</view>
+        <view class="hero-copy">
+          <text class="kicker">{{subjectName}}学习卡点</text>
+          <text class="title">{{bottleneck.displayName}}</text>
+          <text class="summary">{{bottleneck.evidenceText}}</text>
+        </view>
+      </view>
+      <view class="chip-row">
+        <text class="chip priority-{{bottleneck.priorityClass}}">{{bottleneck.priorityText}}</text>
+        <text class="chip state-{{bottleneck.statusClass}}">{{bottleneck.statusText}}</text>
+        <text class="chip" wx:if="{{bottleneck.weightText}}">{{bottleneck.weightText}}</text>
+      </view>
+    </view>
+
+    <view class="metrics">
+      <view class="metric">
+        <text class="metric-value">{{bottleneck.evidenceCount}}</text>
+        <text class="metric-label">证据</text>
+      </view>
+      <view class="metric">
+        <text class="metric-value">{{bottleneck.recentErrorCount}}</text>
+        <text class="metric-label">相关错题</text>
+      </view>
+      <view class="metric">
+        <text class="metric-value">{{bottleneck.verificationPassCount}}</text>
+        <text class="metric-label">通过</text>
+      </view>
+      <view class="metric">
+        <text class="metric-value">{{bottleneck.verificationFailCount}}</text>
+        <text class="metric-label">未通过</text>
+      </view>
+    </view>
+
+    <view class="time-card" wx:if="{{bottleneck.timeText}}">
+      <text class="time-title">时间线索</text>
+      <text class="time-text">{{bottleneck.timeText}}</text>
+    </view>
+
+    <view class="section">
+      <view class="section-heading">证据链</view>
+      <view class="surface" wx:if="{{evidenceChain.length > 0}}">
+        <view
+          class="evidence-row"
+          wx:for="{{evidenceChain}}"
+          wx:key="id"
+          bindtap="onEvidenceTap"
+          data-id="{{item.id}}"
+          data-type="{{item.type}}"
+        >
+          <view class="row-icon row-{{item.type}}">{{item.icon}}</view>
+          <view class="row-copy">
+            <view class="row-title-line">
+              <text class="row-title">{{item.title}}</text>
+              <text class="row-time">{{item.timeText}}</text>
+            </view>
+            <text class="row-desc">{{item.summary}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="surface empty" wx:else>
+        <text>还没有关联证据，完成一次诊断或验证后会自动补充。</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-heading">相关报告</view>
+      <view class="compact-list" wx:if="{{relatedReports.length > 0}}">
+        <view
+          class="compact-row"
+          wx:for="{{relatedReports}}"
+          wx:key="_id"
+          bindtap="onViewReport"
+          data-id="{{item._id}}"
+        >
+          <text class="compact-title">{{item.type === 'verification' ? '验证反馈' : '诊断报告'}}</text>
+          <text class="compact-desc">{{item.comparisonSummary || item.changeSummary || item.summary || '查看完整报告'}}</text>
+          <text class="arrow">›</text>
+        </view>
+      </view>
+      <view class="surface empty" wx:else>
+        <text>暂无关联报告。</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <view class="section-heading">相关验证卷</view>
+      <view class="compact-list" wx:if="{{relatedPapers.length > 0}}">
+        <view
+          class="compact-row"
+          wx:for="{{relatedPapers}}"
+          wx:key="_id"
+          bindtap="onViewPaper"
+          data-id="{{item._id}}"
+        >
+          <text class="compact-title">{{item.paperDisplayCode || item.paperCode || '验证试卷'}}</text>
+          <text class="compact-desc">{{item.questions.length || 0}} 题 · 完成后上传作答照片形成反馈</text>
+          <text class="arrow">›</text>
+        </view>
+      </view>
+      <view class="surface empty" wx:else>
+        <text>还没有生成过验证卷。</text>
+      </view>
+    </view>
+
+    <view class="action-panel">
+      <view class="secondary-action" bindtap="onBackToCenter">返回卡点中心</view>
+      <view class="primary-action" bindtap="onGenerateVerification">生成验证卷</view>
+    </view>
+  </view>
+
+  <view class="empty-state" wx:else>
+    <text class="empty-title">{{emptyText || '没有找到这个学习卡点'}}</text>
+    <view class="primary-action small" bindtap="onBackToCenter">返回卡点中心</view>
+  </view>
+</view>

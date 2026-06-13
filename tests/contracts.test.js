@@ -30,6 +30,11 @@ test('report PDF download uses pdfFileId consistently', () => {
   assert.match(report, /result\.pdfFileId/)
 })
 
+test('report PDF missing-document check does not treat doc data as an array', () => {
+  const backend = read('cloudfunctions/generateReportPDF/index.js')
+  assert.doesNotMatch(backend, /reportRes\.data\.length/)
+})
+
 test('multi-page report PDF buffers pages before adding page numbers', () => {
   const backend = read('cloudfunctions/generateReportPDF/index.js')
   assert.match(backend, /bufferPages:\s*true/)
@@ -115,6 +120,8 @@ test('user-facing bottleneck labels do not render LP codes as primary text', () 
   const subjectHomePage = read('miniprogram/pages/subject-home/subject-home.wxml')
   const subjectHomeJs = read('miniprogram/pages/subject-home/subject-home.js')
   const verificationPage = read('miniprogram/pages/generate-verification/generate-verification.wxml')
+  const centerPage = read('miniprogram/pages/bottleneck-center/bottleneck-center.wxml')
+  const detailPage = read('miniprogram/pages/bottleneck-detail/bottleneck-detail.wxml')
   const paperPreview = read('miniprogram/pages/paper-preview/paper-preview.wxml')
   const reportPage = read('miniprogram/pages/report/report.wxml')
   const pdfRenderer = read('cloudfunctions/generatePaper/pdf-renderer.js')
@@ -125,10 +132,42 @@ test('user-facing bottleneck labels do not render LP codes as primary text', () 
   assert.doesNotMatch(subjectHomePage, /需要进一步验证确认/)
   assert.doesNotMatch(verificationPage, /\{\{item\.lpCode\}\}/)
   assert.match(verificationPage, /\{\{item\.displayName\}\}/)
+  assert.doesNotMatch(centerPage, /<text[^>]*>\s*\{\{item\.lpCode\}\}/)
+  assert.match(centerPage, /\{\{item\.displayName\}\}/)
+  assert.doesNotMatch(detailPage, /<text[^>]*>\s*\{\{bottleneck\.lpCode\}\}/)
+  assert.match(detailPage, /\{\{bottleneck\.displayName\}\}/)
   assert.match(paperPreview, /\{\{bottleneckText\}\}/)
   assert.doesNotMatch(reportPage, /· \{\{item\.lpCode\}\}/)
   assert.match(reportPage, /\{\{item\.metaText\}\}/)
   assert.doesNotMatch(pdfRenderer, /text\(question\.lpCode/)
+})
+
+test('bottleneck center and detail pages are registered and share the bottleneck presenter', () => {
+  const app = JSON.parse(read('miniprogram/app.json'))
+  assert.ok(app.pages.includes('pages/bottleneck-center/bottleneck-center'))
+  assert.ok(app.pages.includes('pages/bottleneck-detail/bottleneck-detail'))
+
+  for (const relativePath of [
+    'miniprogram/pages/index/index-presenter.js',
+    'miniprogram/pages/subject-home/subject-home-presenter.js',
+    'miniprogram/pages/bottleneck-center/bottleneck-center.js',
+    'miniprogram/pages/bottleneck-detail/bottleneck-detail.js',
+    'miniprogram/pages/generate-verification/generate-verification.js'
+  ]) {
+    assert.match(read(relativePath), /bottleneck-view/, `${relativePath} should use shared bottleneck presenter`)
+  }
+})
+
+test('single bottleneck actions carry target codes into verification paper generation', () => {
+  const indexPage = read('miniprogram/pages/index/index.js')
+  const centerPage = read('miniprogram/pages/bottleneck-center/bottleneck-center.js')
+  const detailPage = read('miniprogram/pages/bottleneck-detail/bottleneck-detail.js')
+  const subjectHomePage = read('miniprogram/pages/subject-home/subject-home.js')
+
+  assert.match(indexPage, /targetCode=\$\{encodeURIComponent\(lpCode\)\}/)
+  assert.match(centerPage, /targetCode=\$\{encodeURIComponent\(lpCode\)\}/)
+  assert.match(detailPage, /targetCode=\$\{encodeURIComponent\(this\.data\.lpCode\)\}/)
+  assert.match(subjectHomePage, /bottleneck-detail\/bottleneck-detail/)
 })
 
 test('bottleneck summary helpers use shared display-name modules', () => {

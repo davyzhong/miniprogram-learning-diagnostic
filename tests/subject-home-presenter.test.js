@@ -26,7 +26,9 @@ test('builds a subject workbench from current bottlenecks and latest reports', (
   assert.equal(view.primaryTask.actionText, '生成验证试卷')
   assert.equal(view.primaryTask.summary, '2 个学习卡点等待验证，建议先做一张纸质验证卷。')
   assert.deepEqual(view.taskQueue.map(item => item.displayName), ['审题理解', '计算基础'])
-  assert.deepEqual(view.taskQueue.map(item => item.evidenceText), ['相关错题 2', '相关错题 4'])
+  assert.deepEqual(view.taskQueue.map(item => item.evidenceText), ['最近 2 道相关错题', '最近 4 道相关错题'])
+  assert.deepEqual(view.taskQueue.map(item => item.actionText), ['生成验证卷', '生成验证卷'])
+  assert.equal(view.taskQueue[0].priorityText, '高优先级')
   assert.ok(view.taskQueue.every(item => item.status !== 'improved'))
   assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history', 'latestReport'])
   assert.equal(view.latestReportId, 'report-1')
@@ -42,7 +44,7 @@ test('builds a compatible workbench from legacy profile fields', () => {
   assert.equal(view.pendingCount, 1)
   assert.equal(view.improvedCount, 1)
   assert.deepEqual(view.taskQueue.map(item => item.displayName), ['分数运算'])
-  assert.equal(view.taskQueue[0].evidenceText, '相关错题 1')
+  assert.equal(view.taskQueue[0].evidenceText, '最近 1 道相关错题')
 })
 
 test('empty profile exposes a first-use workbench action', () => {

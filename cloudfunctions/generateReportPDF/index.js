@@ -130,7 +130,7 @@ exports.main = async (event) => {
   try {
     // 1. 读取报告数据
     const reportRes = await db.collection('reports').doc(reportId).get();
-    if (!reportRes.data || reportRes.data.length === 0) {
+    if (!reportRes.data) {
       return { success: false, error: '报告不存在' };
     }
     const reportData = reportRes.data;

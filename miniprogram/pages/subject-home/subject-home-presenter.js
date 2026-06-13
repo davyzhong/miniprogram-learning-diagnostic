@@ -1,19 +1,9 @@
-const { bottleneckLabelOf } = require('../../utils/learning-records')
+const {
+  buildBottleneckViews,
+  buildBottleneckStats
+} = require('../../utils/bottleneck-view')
 
-const STATUS_META = {
-  persisting: { text: '持续出现', className: 'persisting', icon: '!' },
-  needs_verification: { text: '需要验证', className: 'pending', icon: '?' },
-  improved: { text: '已有改善', className: 'improved', icon: '✓' }
-}
-
-const SEVERITY_TEXT = {
-  high: '高优先级',
-  medium: '中等优先级',
-  low: '低优先级'
-}
-
-const STATUS_PRIORITY = { persisting: 0, needs_verification: 1, improved: 2 }
-const SEVERITY_PRIORITY = { high: 0, medium: 1, low: 2 }
+const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
 
 function normalizeBottlenecks(profile = {}) {
   if (Array.isArray(profile.currentBottlenecks)) return profile.currentBottlenecks
@@ -23,43 +13,35 @@ function normalizeBottlenecks(profile = {}) {
   ]
 }
 
-function buildEvidenceText(item) {
-  const evidence = Number(item.errorCount || item.relatedErrorCount || item.evidenceCount || 0)
-  return evidence > 0 ? `相关错题 ${evidence}` : '等待验证'
+function normalizeWeight(item = {}) {
+  if (item.weight !== undefined && item.weight !== null) return item.weight
+  return SEVERITY_WEIGHT[item.severity] || 0
 }
 
-function buildBottleneckDetail(item, displayName) {
-  const evidenceText = buildEvidenceText(item)
-  const severityText = SEVERITY_TEXT[item.severity] || ''
+function buildBottleneckDetail(item) {
+  const displayName = item.displayName || ''
+  const evidenceText = item.evidenceText || '等待补充证据'
+  const priorityText = item.priorityText || ''
 
   if (item.status === 'persisting') {
-    return [`${displayName}在不同记录中再次出现`, evidenceText, severityText].filter(Boolean).join(' · ')
+    return [`${displayName}在不同记录中再次出现`, evidenceText, priorityText].filter(Boolean).join(' · ')
   }
   if (item.status === 'improved') {
     return [`${displayName}已通过验证`, '继续观察巩固'].filter(Boolean).join(' · ')
   }
-  return [`建议用验证题确认${displayName}`, evidenceText, severityText].filter(Boolean).join(' · ')
+  return [`建议用验证题确认${displayName}`, evidenceText, priorityText].filter(Boolean).join(' · ')
 }
 
-function enrichBottleneck(item) {
-  const meta = STATUS_META[item.status] || STATUS_META.needs_verification
-  const displayName = bottleneckLabelOf(item)
-  return {
+function buildSubjectBottleneckViews(profile = {}, options = {}) {
+  return buildBottleneckViews(normalizeBottlenecks(profile).map(item => ({
     ...item,
-    displayName,
-    detailText: buildBottleneckDetail(item, displayName),
-    evidenceText: buildEvidenceText(item),
-    severityText: SEVERITY_TEXT[item.severity] || '',
-    statusText: meta.text,
-    statusClass: meta.className,
-    statusIcon: meta.icon
-  }
-}
-
-function compareBottlenecks(a, b) {
-  const statusDiff = (STATUS_PRIORITY[a.status] ?? 3) - (STATUS_PRIORITY[b.status] ?? 3)
-  if (statusDiff !== 0) return statusDiff
-  return (SEVERITY_PRIORITY[a.severity] ?? 3) - (SEVERITY_PRIORITY[b.severity] ?? 3)
+    weight: normalizeWeight(item),
+    subject: options.subject || profile.subject || item.subject || '',
+    subjectName: options.subjectName || profile.subjectName || item.subjectName || ''
+  }))).map(item => ({
+    ...item,
+    detailText: buildBottleneckDetail(item)
+  }))
 }
 
 function getEffectiveReports(reports = []) {
@@ -157,11 +139,12 @@ function buildTools(latestReport, permissions = {}) {
 function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = () => '', options = {}) {
   const subjectName = options.subjectName || profile.subjectName || '数学'
   const permissions = options.permissions || {}
-  const currentBottlenecks = normalizeBottlenecks(profile).map(enrichBottleneck)
-  const taskQueue = currentBottlenecks
-    .filter(item => item.status !== 'improved')
-    .slice()
-    .sort(compareBottlenecks)
+  const currentBottlenecks = buildSubjectBottleneckViews(profile, {
+    subject: options.subject,
+    subjectName
+  })
+  const taskQueue = currentBottlenecks.filter(item => item.status !== 'improved')
+  const bottleneckStats = buildBottleneckStats(currentBottlenecks)
   const recentChanges = buildRecentChanges(reports, formatRelativeTime)
   const latestReport = getEffectiveReports(reports)[0] || null
   const hasDiagnosis = currentBottlenecks.length > 0 || recentChanges.length > 0
@@ -179,13 +162,19 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
     latestReportId: latestReport ? latestReport._id : '',
     currentBottlenecks,
+    bottleneckStats,
     recentChanges,
-    persistingCount: currentBottlenecks.filter(item => item.status === 'persisting').length,
-    pendingCount: currentBottlenecks.filter(item => item.status === 'needs_verification').length,
-    improvedCount: currentBottlenecks.filter(item => item.status === 'improved').length,
+    persistingCount: bottleneckStats.persistingCount,
+    pendingCount: bottleneckStats.pendingCount,
+    improvedCount: bottleneckStats.improvedCount,
     hasDiagnosis,
     isFirstUse: !hasDiagnosis
   }
 }
 
-module.exports = { buildSubjectHomeView, normalizeBottlenecks, buildBottleneckDetail }
+module.exports = {
+  buildSubjectHomeView,
+  normalizeBottlenecks,
+  buildBottleneckDetail,
+  buildSubjectBottleneckViews
+}

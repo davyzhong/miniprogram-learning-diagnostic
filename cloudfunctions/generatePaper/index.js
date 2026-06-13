@@ -66,21 +66,23 @@ function normalizeQuestionsData(data, expectedCount) {
     throw new Error('AI 返回的试卷结构无效');
   }
 
-  const questions = data.questions
-    .slice(0, expectedCount)
-    .map((question, index) => ({
-      index: index + 1,
-      content: cleanPromptText(question.content, 500),
-      answer: cleanPromptText(question.answer, 300),
-      points: Number(question.points) || 10,
-      lpCode: cleanPromptText(question.lpCode, 30),
-      lpName: cleanPromptText(question.lpName, 80),
+  const completeQuestions = data.questions
+    .map(question => ({
+      content: cleanPromptText(question?.content, 500),
+      answer: cleanPromptText(question?.answer, 300),
+      points: Number(question?.points) || 10,
+      lpCode: cleanPromptText(question?.lpCode, 30),
+      lpName: cleanPromptText(question?.lpName, 80),
     }))
     .filter(question => question.content && question.answer);
 
-  if (questions.length !== expectedCount) {
-    throw new Error(`AI 返回题目数量不正确：期望 ${expectedCount} 道，实际 ${questions.length} 道`);
+  if (completeQuestions.length < expectedCount) {
+    throw new Error(`AI 返回题目数量不足：期望 ${expectedCount} 道，实际 ${completeQuestions.length} 道`);
   }
+
+  const questions = completeQuestions
+    .slice(0, expectedCount)
+    .map((question, index) => ({ ...question, index: index + 1 }));
 
   return {
     title: cleanPromptText(data.title, 80) || '学习卡点验证试卷',

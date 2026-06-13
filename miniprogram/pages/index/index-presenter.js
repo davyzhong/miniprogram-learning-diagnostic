@@ -8,6 +8,10 @@ const {
 } = require('../../utils/learning-records')
 const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-display')
 const {
+  buildBottleneckViews,
+  buildBottleneckStats
+} = require('../../utils/bottleneck-view')
+const {
   SUBJECTS: SUBJECT_KEYS,
   SUBJECT_NAMES,
   SUBJECT_SHORT_NAMES
@@ -42,6 +46,18 @@ function profileBottlenecks(profile = {}) {
 
 function activeBottlenecks(profile = {}) {
   return profileBottlenecks(profile).filter(item => item.status !== 'improved')
+}
+
+function allSubjectBottleneckViews(profileBySubject) {
+  const rawItems = SUBJECTS.flatMap(subject => {
+    const profile = profileBySubject.get(subject.key) || {}
+    return profileBottlenecks(profile).map(item => ({
+      ...item,
+      subject: subject.key,
+      subjectName: subject.name
+    }))
+  })
+  return buildBottleneckViews(rawItems)
 }
 
 function hasSubjectEvidence(subject, profile, reports) {
@@ -89,6 +105,45 @@ function buildReportRecord(report, subjectName, formatRelativeTime) {
     ].filter(Boolean).join(' · '),
     createdAt: report.createdAt,
     reportId: report._id
+  }
+}
+
+function reportPhotoCount(report = {}) {
+  if (Array.isArray(report.imageFiles)) return report.imageFiles.length
+  if (Array.isArray(report.imageFileIds)) return report.imageFileIds.length
+  return 0
+}
+
+function buildPrimaryReport(reports, subjectByKey, formatRelativeTime) {
+  const report = (reports || [])
+    .filter(item => item.status === 'completed' && (item.isEffective === undefined || item.isEffective === true))
+    .sort((a, b) => toDate(b.createdAt) - toDate(a.createdAt))[0]
+
+  if (!report) return null
+
+  const subject = subjectByKey[report.subject] || { name: report.subjectName || '学习' }
+  const isVerification = report.type === 'verification'
+  const bottleneckText = bottleneckListText(report.bottlenecks || [])
+  const photoCount = reportPhotoCount(report)
+  const evidenceParts = [
+    photoCount > 0 ? `${photoCount} 张照片` : '',
+    report.totalErrors > 0 ? `${report.totalErrors} 道相关错题` : '',
+    !photoCount && !report.totalErrors ? formatRelativeTime(report.createdAt) : ''
+  ].filter(Boolean)
+
+  return {
+    kind: isVerification ? 'verification-report' : 'diagnosis-report',
+    icon: isVerification ? '验' : '报',
+    subject: report.subject,
+    title: `最新${subject.name}${isVerification ? '验证反馈' : '诊断报告'}`,
+    summary: report.comparisonSummary || report.changeSummary || report.summary || (
+      bottleneckText ? `重点关注：${bottleneckText}` : '点击阅读本次报告'
+    ),
+    bottleneckText,
+    evidenceText: evidenceParts.join(' · '),
+    reportId: report._id,
+    actionText: '阅读完整报告',
+    createdAt: report.createdAt
   }
 }
 
@@ -213,6 +268,8 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
   const latestText = latest ? formatRelativeTime(latest) : '暂无'
 
   const priorityHighlights = buildPriorityHighlights(profileBySubject)
+  const bottleneckViews = allSubjectBottleneckViews(profileBySubject)
+  const bottleneckStats = buildBottleneckStats(bottleneckViews)
   const primarySubject = priorityHighlights[0] && subjectByKey[priorityHighlights[0].subject]
   const pendingNames = formatBottleneckDisplayList(pendingBottlenecks)
   const hasPending = pendingBottlenecks.length > 0
@@ -279,7 +336,11 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
     sampleCoverageText: buildCoverageText(analyzedSubjects, missingSubjects),
     metrics,
     priorityHighlights,
+    priorityBottlenecks: bottleneckViews.slice(0, 3),
+    bottleneckStats,
+    hasBottleneckBoard: bottleneckViews.length > 0,
     observations: priorityHighlights,
+    primaryReport: buildPrimaryReport(reports, subjectByKey, formatRelativeTime),
     recentRecords: buildRecentRecords(reports, papers, subjectByKey, formatRelativeTime),
     nextAction,
     permissions,

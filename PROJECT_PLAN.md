@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序 — 项目开发计划
 
 **创建日期**: 2026-06-09
-**最后更新**: 2026-06-13
-**项目状态**: MVP 编码完成，常规自动化测试通过（216/216），JS 语法检查 74 文件通过，待真机验收
+**最后更新**: 2026-06-14
+**项目状态**: MVP 编码完成，常规自动化测试通过（228/228），JS 语法检查 78 文件通过，待真机验收
 **负责人**: qiming
 
 ---
@@ -61,12 +61,12 @@ miniprogram-learning-diagnostic/
 ├── project.config.json              # 微信开发者工具项目配置（cloudbaseRoot: cloud1-d6gneg68m5a7a3876）
 ├── package.json                     # npm scripts: test / test:coverage / check / verify
 ├── PROJECT_PLAN.md                  # 本文件
-├── PRD.md                           # 产品设计文档（v2.6）
+├── PRD.md                           # 产品设计文档（v2.7）
 ├── SETUP.md                         # 部署指南
 │
 ├── miniprogram/                     # 小程序前端代码
 │   ├── app.js                       # 全局入口，初始化云开发（env: cloud1-d6gneg68m5a7a3876）
-│   ├── app.json                     # 全局配置（12 个页面路由）
+│   ├── app.json                     # 全局配置（14 个页面路由）
 │   ├── app.wxss                     # 全局样式
 │   ├── sitemap.json                 # 站点地图配置
 │   │
@@ -136,7 +136,7 @@ miniprogram-learning-diagnostic/
     └── superpowers/plans/           # 规划辅助材料
 ```
 
-**文件总数**: 74 个 JavaScript 文件（`npm run check` 校验），216 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
+**文件总数**: 78 个 JavaScript 文件（`npm run check` 校验），228 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
 
 ### 2.2 相关文件索引
 
@@ -432,11 +432,12 @@ System Prompt 包含：
 | **验证对比** | ✅ | `analyzePhotos/comparison.js` 输出 improved/worsened/new/persisting + 摘要文案 |
 | **上传分析解耦** | ✅ | `uploadAndAnalyze` 创建报告后 fire-and-forget 启动 `analyzePhotos`；`report.onRetryAnalysis()` 支持手动重启 |
 | **参数校验与归属校验** | ✅ | 各云函数入口检查 fileIDs/studentId/subject/mode/paperId/openID |
-| **PRD.md** | ✅ | v2.6，含页面职责边界和实现状态总览 |
+| **PRD.md** | ✅ | v2.7，含页面职责边界、卡点透出体系和实现状态总览 |
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 索引 + 字体 + 云函数部署） |
-| **自动化测试** | ✅ | 216 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
+| **学习卡点透出体系** | ✅ | 首页高优先级卡点、卡点中心、单卡点工作台和验证卷 `targetCode` 闭环已接通 |
+| **自动化测试** | ✅ | 228 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
 | **端到端真实图片脚本** | ✅ | `tests/e2e-real-image.test.js` 单独运行，串通上传 → AI 分析 → 报告生成链路 |
-| **JS 语法检查** | ✅ | `npm run check` 校验 74 个文件 |
+| **JS 语法检查** | ✅ | `npm run check` 校验 78 个文件 |
 | **学科隔离** | ✅ | 数/语/英三科独立档案，首页提供学科入口，单学科工作台承接具体操作 |
 | **20张照片支持** | ✅ | `upload` 页面限制 20 张，`analyzePhotos` 自动分批（5张/批） |
 | **学习记录** | ✅ | `upload-history` 按天展示诊断报告、验证试卷、验证批复和原始照片 |

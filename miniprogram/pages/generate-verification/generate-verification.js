@@ -1,9 +1,31 @@
 // pages/generate-verification/generate-verification.js
 const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
-const { bottleneckLabelOf } = require('../../utils/learning-records')
+const { buildBottleneckViews } = require('../../utils/bottleneck-view')
 const MAX_SELECTED_BOTTLENECKS = 5
-const SEVERITY_PRIORITY = { high: 0, medium: 1, low: 2 }
+const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
+
+function normalizeWeight(item = {}) {
+  if (item.weight !== undefined && item.weight !== null) return item.weight
+  return SEVERITY_WEIGHT[item.severity] || 0
+}
+
+function verificationBottlenecks(profile = {}, targetCodes = []) {
+  const hasCurrent = Array.isArray(profile.currentBottlenecks) && profile.currentBottlenecks.length > 0
+  const raw = hasCurrent
+    ? profile.currentBottlenecks
+    : (profile.pendingBottlenecks || []).map(item => ({ ...item, status: 'needs_verification' }))
+  const targetSet = new Set(targetCodes)
+  return buildBottleneckViews(raw
+    .filter(item => item.status !== 'improved' || targetSet.has(item.lpCode))
+    .map(item => ({
+      ...item,
+      status: item.status || 'needs_verification',
+      weight: normalizeWeight(item),
+      subject: profile.subject,
+      subjectName: profile.subjectName
+    })))
+}
 
 Page({
   data: {
@@ -53,23 +75,15 @@ Page({
 
       let bottlenecks = []
       if (profile) {
-        bottlenecks = (profile.pendingBottlenecks || [])
-          .slice()
-          .sort((a, b) => {
-            return (SEVERITY_PRIORITY[a.severity] ?? 3) - (SEVERITY_PRIORITY[b.severity] ?? 3)
-          })
-          .map((b, index) => {
-            const displayName = bottleneckLabelOf(b)
-            const hasInitialTargets = this.data.initialTargetCodes.length > 0
-            return {
-              ...b,
-              displayName,
-              selected: hasInitialTargets
-                ? this.data.initialTargetCodes.includes(b.lpCode)
-                : index < MAX_SELECTED_BOTTLENECKS,
-              sinceDateText: this.formatDate(b.sinceDate)
-            }
-          })
+        const hasInitialTargets = this.data.initialTargetCodes.length > 0
+        bottlenecks = verificationBottlenecks(profile, this.data.initialTargetCodes)
+          .map((b, index) => ({
+            ...b,
+            selected: hasInitialTargets
+              ? this.data.initialTargetCodes.includes(b.lpCode)
+              : index < MAX_SELECTED_BOTTLENECKS,
+            sinceDateText: this.formatDate(b.sinceDate || b.firstSeenAt)
+          }))
       }
 
       this.setSelectionState(bottlenecks)

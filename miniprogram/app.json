@@ -9,6 +9,8 @@
     "pages/parent-management/parent-management",
     "pages/join-student/join-student",
     "pages/report/report",
+    "pages/bottleneck-center/bottleneck-center",
+    "pages/bottleneck-detail/bottleneck-detail",
     "pages/generate-verification/generate-verification",
     "pages/default-paper/default-paper",
     "pages/paper-preview/paper-preview"
