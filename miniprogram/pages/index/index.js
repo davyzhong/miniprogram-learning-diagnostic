@@ -224,6 +224,44 @@ Page({
     })
   },
 
+  findHomeBottleneck(subject, lpCode) {
+    const home = this.data.home || {}
+    return (home.priorityBottlenecks || []).find(item =>
+      item.subject === subject && item.lpCode === lpCode
+    ) || null
+  },
+
+  onViewAllBottlenecks() {
+    const student = this.data.activeStudent || {}
+    wx.navigateTo({
+      url: `/pages/bottleneck-center/bottleneck-center?studentId=${student._id || this.data.activeStudentId}&studentName=${encodeURIComponent(student.name || '')}`
+    })
+  },
+
+  onBottleneckTap(e) {
+    const { subject = 'math', lpCode = '' } = e.currentTarget.dataset
+    const student = this.data.activeStudent || {}
+    if (!lpCode) return
+    wx.navigateTo({
+      url: `/pages/bottleneck-detail/bottleneck-detail?studentId=${student._id || this.data.activeStudentId}&subject=${subject}&lpCode=${encodeURIComponent(lpCode)}&studentName=${encodeURIComponent(student.name || '')}`
+    })
+  },
+
+  onBottleneckAction(e) {
+    const { subject = 'math', lpCode = '' } = e.currentTarget.dataset
+    if (!lpCode) return
+    const bottleneck = this.findHomeBottleneck(subject, lpCode)
+    if (bottleneck && bottleneck.active === false) {
+      this.onBottleneckTap(e)
+      return
+    }
+    const student = this.data.activeStudent || {}
+    const subjectName = getSubjectName(subject, '数学')
+    wx.navigateTo({
+      url: `/pages/generate-verification/generate-verification?studentId=${student._id || this.data.activeStudentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}&targetCode=${encodeURIComponent(lpCode)}`
+    })
+  },
+
   onRecordTap(e) {
     const index = e.currentTarget.dataset.index
     const record = this.data.home && this.data.home.recentRecords[index]
@@ -234,6 +272,13 @@ Page({
     }
     if (record.reportId) {
       wx.navigateTo({ url: `/pages/report/report?id=${record.reportId}` })
+    }
+  },
+
+  onPrimaryReportTap() {
+    const report = this.data.home && this.data.home.primaryReport
+    if (report && report.reportId) {
+      wx.navigateTo({ url: `/pages/report/report?id=${report.reportId}` })
     }
   },
 

@@ -78,7 +78,7 @@ test('learning profile home loads the active student summary', async () => {
       return []
     }
   }
-  const { page } = loadPage('miniprogram/pages/index/index.js', {
+  const { page, wx } = loadPage('miniprogram/pages/index/index.js', {
     modules: {
       '../../utils/cloud': cloud,
       '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
@@ -88,8 +88,19 @@ test('learning profile home loads the active student summary', async () => {
   await page.loadStudents()
   assert.equal(page.data.home.studentName, '钟青羽')
   assert.match(page.data.home.priorityHighlights[0].title, /数学/)
+  assert.equal(page.data.home.priorityBottlenecks[0].displayName, '计算基础')
   assert.equal(page.data.activeStudentId, 'student-1')
   assert.equal(page.data.permissions.canManageParents, true)
+
+  page.onViewAllBottlenecks()
+  page.onBottleneckTap({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
+  page.onBottleneckAction({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
+  const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
+  assert.match(urls[0], /pages\/bottleneck-center\/bottleneck-center/)
+  assert.match(urls[1], /pages\/bottleneck-detail\/bottleneck-detail/)
+  assert.match(urls[1], /lpCode=LP-001/)
+  assert.match(urls[2], /pages\/generate-verification\/generate-verification/)
+  assert.match(urls[2], /targetCode=LP-001/)
 })
 
 test('learning profile home falls back to legacy student reads when shared access is unavailable', async () => {
@@ -252,6 +263,114 @@ test('learning profile home uses shared access and lets co-parents operate learn
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
 })
 
+test('bottleneck center loads dashboard bottlenecks and filters by status', async () => {
+  const cloud = {
+    getStudentDashboard: async studentId => {
+      assert.equal(studentId, 'student-1')
+      return {
+        student: { _id: 'student-1', name: '钟青羽' },
+        subjectProfiles: [{
+          subject: 'math',
+          currentBottlenecks: [
+            { lpCode: 'LP-001', status: 'persisting', trend: 'persisting', weight: 80, evidenceCount: 3 },
+            { lpCode: 'LP-008', status: 'improved', trend: 'declining', weight: 30, verificationPassCount: 1 }
+          ]
+        }]
+      }
+    }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/bottleneck-center/bottleneck-center.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({ studentId: 'student-1', studentName: encodeURIComponent('钟青羽') })
+
+  assert.equal(page.data.stats.totalCount, 2)
+  assert.equal(page.data.stats.activeCount, 1)
+  assert.equal(page.data.filteredBottlenecks[0].displayName, '计算基础')
+
+  page.onStatusFilterTap({ currentTarget: { dataset: { status: 'improved' } } })
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.filteredBottlenecks.map(item => item.displayName))), ['审题理解'])
+
+  page.onBottleneckTap({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
+  page.onGenerateForBottleneck({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
+  const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
+  assert.match(urls[0], /pages\/bottleneck-detail\/bottleneck-detail/)
+  assert.match(urls[1], /pages\/generate-verification\/generate-verification/)
+  assert.match(urls[1], /targetCode=LP-001/)
+})
+
+test('bottleneck detail builds a focused evidence workbench', async () => {
+  const cloud = {
+    getSubjectDashboard: async (studentId, subject) => {
+      assert.equal(studentId, 'student-1')
+      assert.equal(subject, 'math')
+      return {
+        profile: {
+          subject: 'math',
+          currentBottlenecks: [{
+            lpCode: 'LP-001',
+            status: 'persisting',
+            trend: 'persisting',
+            weight: 82,
+            evidenceCount: 3,
+            recentErrorCount: 5,
+            firstSeenAt: '2026-06-08T09:00:00+08:00',
+            lastSeenAt: '2026-06-12T09:00:00+08:00'
+          }]
+        },
+        reports: [{
+          _id: 'report-1',
+          subject: 'math',
+          type: 'diagnosis',
+          status: 'completed',
+          createdAt: '2026-06-12T09:30:00+08:00',
+          summary: '计算基础需要继续验证',
+          bottlenecks: [{ lpCode: 'LP-001' }]
+        }],
+        papers: [{
+          _id: 'paper-1',
+          subject: 'math',
+          type: 'verification',
+          createdAt: '2026-06-12T10:30:00+08:00',
+          paperDisplayCode: '数学-20260612-01',
+          questions: [{}, {}, {}, {}, {}, {}],
+          bottleneckTargets: ['LP-001'],
+          bottleneckSummaries: ['计算基础']
+        }]
+      }
+    }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({
+    studentId: 'student-1',
+    subject: 'math',
+    lpCode: 'LP-001',
+    studentName: encodeURIComponent('钟青羽')
+  })
+
+  assert.equal(page.data.bottleneck.displayName, '计算基础')
+  assert.equal(page.data.relatedReports.length, 1)
+  assert.equal(page.data.relatedPapers.length, 1)
+  assert.equal(page.data.evidenceChain.length, 2)
+
+  page.onGenerateVerification()
+  page.onViewReport({ currentTarget: { dataset: { id: 'report-1' } } })
+  page.onViewPaper({ currentTarget: { dataset: { id: 'paper-1' } } })
+  const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
+  assert.match(urls[0], /pages\/generate-verification\/generate-verification/)
+  assert.match(urls[0], /targetCode=LP-001/)
+  assert.match(urls[1], /pages\/report\/report\?id=report-1/)
+  assert.match(urls[2], /pages\/paper-preview\/paper-preview\?paperId=paper-1/)
+})
+
 test('subject selection ensures a profile before entering the subject home', async () => {
   let ensured = null
   const cloud = {
@@ -347,7 +466,7 @@ test('subject home shows learning workflow tools for co-parent access', async ()
   assert.equal(page.data.primaryTask.actionType, 'verification')
 
   page.onTaskTap({ currentTarget: { dataset: { code: 'LP-001' } } })
-  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /bottleneck-detail/)
 })
 
 test('subject home task and primary actions open the focused workflow', () => {
@@ -373,8 +492,8 @@ test('subject home task and primary actions open the focused workflow', () => {
   page.onPrimaryAction()
 
   const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
-  assert.match(urls[0], /pages\/generate-verification\/generate-verification/)
-  assert.match(urls[0], /targetCode=LP-001/)
+  assert.match(urls[0], /pages\/bottleneck-detail\/bottleneck-detail/)
+  assert.match(urls[0], /lpCode=LP-001/)
   assert.match(urls[1], /pages\/generate-verification\/generate-verification/)
 })
 
@@ -550,6 +669,31 @@ test('verification page focuses the workbench target code when provided', async 
   assert.equal(page.data.selectedSummary, '审题理解')
   assert.equal(page.data.paperConfig.scopeText, '审题理解')
   assert.equal(page.data.paperConfig.questionCount, 3)
+})
+
+test('verification page uses current bottlenecks with shared priority sorting', async () => {
+  const cloud = {
+    getSubjectProfile: async () => ({
+      currentBottlenecks: [
+        { lpCode: 'LP-004', status: 'improved', weight: 20 },
+        { lpCode: 'LP-001', status: 'needs_verification', weight: 55 },
+        { lpCode: 'LP-008', status: 'persisting', trend: 'recurring', weight: 40 }
+      ]
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/generate-verification/generate-verification.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+  page.setData({ studentId: 'student-1', subject: 'math' })
+
+  await page.loadPendingBottlenecks()
+
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(page.data.bottlenecks.map(item => item.displayName))),
+    ['审题理解', '计算基础']
+  )
+  assert.equal(page.data.selectedCount, 2)
+  assert.equal(page.data.selectedSummary, '审题理解、计算基础')
 })
 
 test('verification page shows readable bottleneck summaries instead of LP codes', async () => {

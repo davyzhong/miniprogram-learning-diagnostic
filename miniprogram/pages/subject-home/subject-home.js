@@ -206,6 +206,14 @@ Page({
     })
   },
 
+  navigateToBottleneckDetail(lpCode = '') {
+    if (!lpCode) return
+    const { studentId, subject, subjectName, studentName } = this.data
+    wx.navigateTo({
+      url: `/pages/bottleneck-detail/bottleneck-detail?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}&lpCode=${encodeURIComponent(lpCode)}`
+    })
+  },
+
   onDefaultPaperTap() {
     if (!this.data.canWriteActions) return
     const { studentId, subject, subjectName, studentName, grade } = this.data
@@ -236,9 +244,8 @@ Page({
   },
 
   onTaskTap(e) {
-    if (!this.data.canWriteActions) return
     const { code } = e.currentTarget.dataset
-    this.navigateToVerification(code || '')
+    this.navigateToBottleneckDetail(code || '')
   },
 
   onToolTap(e) {

@@ -69,6 +69,75 @@ test('learning profile home summarizes a math-only diagnosis', () => {
   assert.equal(view.isEmpty, false)
 })
 
+test('learning profile home surfaces the latest effective report as a primary report card', () => {
+  const view = buildLearningProfileHomeView({
+    student: { _id: 'student-1', name: '钟青羽', grade: 6 },
+    profiles: [{
+      subject: 'math',
+      totalReports: 2,
+      currentBottlenecks: [
+        { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification' },
+        { lpCode: 'LP-008', lpName: '审题错误', status: 'needs_verification' }
+      ]
+    }],
+    reports: [{
+      _id: 'report-old',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      createdAt: '2026-06-11T10:00:00+08:00',
+      bottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误（加减乘除）' }],
+      imageFiles: [{ fileID: 'cloud://old-photo' }]
+    }, {
+      _id: 'report-latest',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      isEffective: true,
+      createdAt: '2026-06-12T09:30:00+08:00',
+      summary: '发现计算基础和审题理解两个学习卡点',
+      totalErrors: 5,
+      bottlenecks: [
+        { lpCode: 'LP-001', lpName: '计算错误（加减乘除）' },
+        { lpCode: 'LP-008', lpName: '审题错误' }
+      ],
+      imageFiles: [{ fileID: 'cloud://a' }, { fileID: 'cloud://b' }]
+    }],
+    papers: []
+  }, relative)
+
+  assert.equal(view.primaryReport.reportId, 'report-latest')
+  assert.equal(view.primaryReport.title, '最新数学诊断报告')
+  assert.equal(view.primaryReport.summary, '发现计算基础和审题理解两个学习卡点')
+  assert.equal(view.primaryReport.bottleneckText, '计算基础、审题理解')
+  assert.equal(view.primaryReport.evidenceText, '2 张照片 · 5 道相关错题')
+  assert.equal(view.primaryReport.actionText, '阅读完整报告')
+})
+
+test('learning profile home surfaces priority bottlenecks below the primary report', () => {
+  const view = buildLearningProfileHomeView({
+    student: { _id: 'student-1', name: '钟青羽', grade: 6 },
+    profiles: [{
+      subject: 'math',
+      subjectName: '数学',
+      currentBottlenecks: [
+        { lpCode: 'LP-001', status: 'persisting', trend: 'persisting', weight: 80, recentErrorCount: 5, evidenceCount: 3 },
+        { lpCode: 'LP-008', status: 'improved', trend: 'declining', weight: 35, verificationPassCount: 1 }
+      ]
+    }],
+    reports: [],
+    papers: []
+  }, relative)
+
+  assert.equal(view.priorityBottlenecks.length, 2)
+  assert.equal(view.priorityBottlenecks[0].displayName, '计算基础')
+  assert.equal(view.priorityBottlenecks[0].actionText, '生成验证卷')
+  assert.equal(view.priorityBottlenecks[0].subjectName, '数学')
+  assert.equal(view.bottleneckStats.activeCount, 1)
+  assert.equal(view.bottleneckStats.improvedCount, 1)
+  assert.equal(view.hasBottleneckBoard, true)
+})
+
 test('learning profile home exposes an empty first-use state', () => {
   const view = buildLearningProfileHomeView({
     student: { _id: 'student-1', name: '钟青羽', grade: 6 },

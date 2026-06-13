@@ -172,9 +172,9 @@ PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sen
 miniprogram-learning-diagnostic/
 ├── miniprogram/
 │   ├── app.js                 ✅
-│   ├── app.json               ✅（12 个页面路径）
+│   ├── app.json               ✅（14 个页面路径）
 │   ├── app.wxss               ✅
-│   └── pages/                ✅（12 个页面）
+│   └── pages/                ✅（14 个页面）
 │       ├── index/
 │       ├── add-student/
 │       ├── subject-select/
@@ -196,12 +196,12 @@ miniprogram-learning-diagnostic/
 │   ├── getAnalysisProgress/  ✅
 │   ├── studentAccess/        ✅
 │   └── studentData/          ✅
-├── tests/                    ✅（23 个常规测试文件 + 真实图片 E2E 脚本 + helpers，216 常规用例）
-├── scripts/check-js.js       ✅（74 文件语法检查）
+├── tests/                    ✅（24 个常规测试文件 + 真实图片 E2E 脚本 + helpers，228 常规用例）
+├── scripts/check-js.js       ✅（78 文件语法检查）
 ├── project.config.json        ✅
 ├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / check / verify）
 ├── PROJECT_PLAN.md          ✅
-├── PRD.md                   ✅（v2.5）
+├── PRD.md                   ✅（v2.7）
 ├── SETUP.md                ✅（本文件）
 └── docs/TEST_MATRIX.md     ✅
 ```

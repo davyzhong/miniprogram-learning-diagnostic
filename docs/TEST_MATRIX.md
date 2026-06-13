@@ -2,7 +2,7 @@
 
 > 更新日期：2026-06-13
 > 范围：`PRD.md`、`PROJECT_PLAN.md` 中的 MVP P0 功能
-> 自动化结果：`npm test` → 216/216 通过；`npm run check` → 74 个 JS 文件语法正确
+> 自动化结果：`npm test` → 228/228 通过；`npm run check` → 78 个 JS 文件语法正确
 
 ## 1. 自动化验证命令
 
@@ -71,16 +71,17 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/helpers/cloud-function-harness.js` | 执行真实云函数并模拟数据库、存储和函数调用 | — |
 | `tests/analyze-batch-result.test.js` | analyzeBatch 结果标准化 | 3 |
 | `tests/analyze-photos-pipeline.test.js` | analyzePhotos 管线辅助函数 | 5 |
-| `tests/cloud-functions.test.js` | 云函数集成流程、权限和边界 | 22 |
+| `tests/bottleneck-view.test.js` | 共享学习卡点视图模型、排序和统计规则 | 3 |
+| `tests/cloud-functions.test.js` | 云函数集成流程、权限和边界 | 23 |
 | `tests/comparison.test.js` | 验证报告对比算法 | 4 |
-| `tests/contracts.test.js` | 跨模块契约和已修复缺陷回归保护 | 35 |
+| `tests/contracts.test.js` | 跨模块契约和已修复缺陷回归保护 | 38 |
 | `tests/coverage-gap.test.js` | 覆盖缺口补全 | 7 |
 | `tests/data-layer.test.js` | 统一数据访问层 | 8 |
 | `tests/e2e-real-image.test.js` | 端到端真实图片测试脚本 | 1（含云端条件步骤） |
 | `tests/generate-paper-pdf.test.js` | 可打印 PDF 中文字体、分页和答案页回归 | 4 |
-| `tests/index-presenter.test.js` | 学习档案首页视图模型 | 5 |
+| `tests/index-presenter.test.js` | 学习档案首页视图模型 | 7 |
 | `tests/learning-records.test.js` | 学习记录四级分类、试卷编号和卡点名称规则 | 8 |
-| `tests/page-flows.test.js` | 页面主流程与错误恢复 | 48 |
+| `tests/page-flows.test.js` | 页面主流程与错误恢复 | 51 |
 | `tests/parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
 | `tests/photo-dedup.test.js` | OCR 去重算法 | 3 |
 | `tests/poller.test.js` | 通用轮询器与分析轮询包装 | 6 |
@@ -93,4 +94,4 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/time-aware-bottlenecks.test.js` | 时间化学习卡点趋势和权重 | 5 |
 | `tests/verification-evidence.test.js` | 验证试卷证据完整性 | 2 |
 | `tests/util.test.js` | 工具函数 | 11 |
-| **合计** | | **216 常规用例** |
+| **合计** | | **228 常规用例** |

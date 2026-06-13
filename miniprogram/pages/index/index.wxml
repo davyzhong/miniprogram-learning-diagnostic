@@ -30,6 +30,76 @@
       </view>
     </view>
 
+    <view class="primary-report-card" wx:if="{{home.primaryReport}}" bindtap="onPrimaryReportTap">
+      <view class="report-mark report-{{home.primaryReport.kind}}">{{home.primaryReport.icon}}</view>
+      <view class="primary-report-copy">
+        <view class="report-title-line">
+          <text class="primary-report-title">{{home.primaryReport.title}}</text>
+          <text class="report-action">{{home.primaryReport.actionText}}</text>
+        </view>
+        <text class="primary-report-summary">{{home.primaryReport.summary}}</text>
+        <view class="report-chip-row">
+          <text class="report-chip report-chip-main" wx:if="{{home.primaryReport.bottleneckText}}">{{home.primaryReport.bottleneckText}}</text>
+          <text class="report-chip" wx:if="{{home.primaryReport.evidenceText}}">{{home.primaryReport.evidenceText}}</text>
+        </view>
+      </view>
+      <text class="arrow">›</text>
+    </view>
+
+    <view class="section-block bottleneck-board" wx:if="{{home.hasBottleneckBoard}}">
+      <view class="section-heading between">
+        <view>
+          <text>当前学习卡点</text>
+          <text class="section-subtitle">优先处理最近仍在影响作答的观察</text>
+        </view>
+        <text class="link-text" bindtap="onViewAllBottlenecks">查看全部</text>
+      </view>
+      <view class="bottleneck-stats">
+        <view class="bottleneck-stat">
+          <text class="stat-value">{{home.bottleneckStats.activeCount}}</text>
+          <text class="stat-label">待跟进</text>
+        </view>
+        <view class="bottleneck-stat">
+          <text class="stat-value">{{home.bottleneckStats.persistingCount}}</text>
+          <text class="stat-label">持续出现</text>
+        </view>
+        <view class="bottleneck-stat">
+          <text class="stat-value">{{home.bottleneckStats.improvedCount}}</text>
+          <text class="stat-label">已改善</text>
+        </view>
+      </view>
+      <view class="bottleneck-list">
+        <view
+          class="bottleneck-card bottleneck-{{item.statusClass}}"
+          wx:for="{{home.priorityBottlenecks}}"
+          wx:key="lpCode"
+          bindtap="onBottleneckTap"
+          data-subject="{{item.subject}}"
+          data-lp-code="{{item.lpCode}}"
+        >
+          <view class="bottleneck-icon">{{item.statusIcon}}</view>
+          <view class="bottleneck-copy">
+            <view class="bottleneck-title-line">
+              <text class="bottleneck-name">{{item.displayName}}</text>
+              <text class="bottleneck-subject">{{item.subjectName}}</text>
+            </view>
+            <text class="bottleneck-evidence">{{item.evidenceText}}</text>
+            <text class="bottleneck-time" wx:if="{{item.timeText}}">{{item.timeText}}</text>
+            <view class="bottleneck-chip-row">
+              <text class="bottleneck-chip priority-{{item.priorityClass}}">{{item.priorityText}}</text>
+              <text class="bottleneck-chip state-{{item.statusClass}}">{{item.statusText}}</text>
+            </view>
+          </view>
+          <view
+            class="bottleneck-action"
+            catchtap="onBottleneckAction"
+            data-subject="{{item.subject}}"
+            data-lp-code="{{item.lpCode}}"
+          >{{item.actionText}}</view>
+        </view>
+      </view>
+    </view>
+
     <view class="coverage-card">
       <view class="coverage-icon">i</view>
       <view class="coverage-copy">

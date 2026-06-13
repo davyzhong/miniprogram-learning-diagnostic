@@ -370,6 +370,49 @@ test('generatePaper stores and returns printable PDF page metadata', async () =>
   assert.deepEqual(paper.bottleneckSummaries, ['计算错误', '审题错误'])
 })
 
+test('generatePaper filters incomplete AI questions before trimming to expected count', async () => {
+  const questions = Array.from({ length: 7 }, (_, index) => ({
+    index: index + 1,
+    content: `计算题 ${index + 1}`,
+    answer: index === 2 ? '' : String(index + 1),
+    points: 10,
+    lpCode: index < 3 ? 'LP-001' : 'LP-008',
+    lpName: index < 3 ? '计算错误' : '审题错误'
+  }))
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      pendingBottlenecks: [
+        { lpCode: 'LP-001', lpName: '计算错误' },
+        { lpCode: 'LP-008', lpName: '审题错误' }
+      ]
+    }],
+    papers: []
+  })
+  const handler = loadModule('cloudfunctions/generatePaper/index.js', {
+    'wx-server-sdk': createCloudMock({ db }),
+    '@cloudbase/node-sdk': createTcbMock(JSON.stringify({ title: '数学验证试卷', questions })),
+    './pdf-renderer': { generatePDF: async () => ({ buffer: Buffer.from('pdf'), studentPages: 1, answerPages: 1, totalPages: 2 }) }
+  })
+
+  const result = await handler.main({
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'verification',
+    targets: ['LP-001', 'LP-008']
+  })
+  const paper = db.dump('papers')[0]
+
+  assert.equal(result.success, true)
+  assert.equal(result.questionCount, 6)
+  assert.equal(paper.questions.length, 6)
+  assert.equal(paper.questions.some(question => question.content === '计算题 3'), false)
+  assert.equal(paper.questions.at(-1).content, '计算题 7')
+})
+
 test('analyzePhotos splits batches, excludes duplicate pages and updates the profile', async () => {
   const fileIDs = Array.from({ length: 6 }, (_, index) => `cloud://photo-${index + 1}`)
   const db = createDatabase({

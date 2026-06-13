@@ -23,6 +23,8 @@
 
 - ✅ 学生管理：添加/选择学生，每人独立档案
 - ✅ 学习档案首页：首屏展示综合摘要、样本覆盖、重点提示、学习记录和下一步建议
+- ✅ 学习卡点透出：首页展示当前高优先级卡点，支持进入卡点中心和单卡点工作台
+- ✅ 学习卡点中心：按学科和状态筛选待验证、持续出现、复发和已改善卡点
 - ✅ 学科工作台：数学/语文/英语三科独立，学科页只承载待处理队列、主任务和工具入口
 - ✅ 拍照诊断：支持最多 20 张照片批量上传，异步 AI 分析
 - ✅ 诊断报告：卡点排行条形图 + 错题详情折叠列表 + 改善状态标注
@@ -37,7 +39,7 @@
 - ✅ 分析进度轮询：学科主页和报告页每 10s 轮询，支持手动重试
 - ✅ 报告 PDF 生成与下载
 - ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 自动化测试：216 个常规用例通过，JS 语法检查 74 文件通过
+- ✅ 自动化测试：228 个常规用例通过，JS 语法检查 78 文件通过
 
 ### 待完善
 
@@ -67,9 +69,9 @@
 ```
 miniprogram-learning-diagnostic/
 ├── miniprogram/                 # 小程序前端
-│   ├── app.js / app.json        # 全局入口与配置（12 个页面路由）
+│   ├── app.js / app.json        # 全局入口与配置（14 个页面路由）
 │   ├── utils/                   # cloud.js（数据访问层）、poller.js（轮询器）、util.js
-│   └── pages/                   # 12 个页面（index / add-student / subject-select /
+│   └── pages/                   # 14 个页面（index / add-student / subject-select /
 │                                #   subject-home / upload / upload-history / parent-management /
 │                                #   join-student / report / generate-verification /
 │                                #   default-paper / paper-preview）
@@ -82,7 +84,7 @@ miniprogram-learning-diagnostic/
 │   ├── studentData/             #   访问感知的学习资料聚合读取
 │   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF
 │   └── generateReportPDF/       #   生成报告 PDF
-├── tests/                       # 自动化测试（216 个常规用例 + 真实图片 E2E 脚本）
+├── tests/                       # 自动化测试（228 个常规用例 + 真实图片 E2E 脚本）
 ├── scripts/                     # check-js.js（语法检查）
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
@@ -136,7 +138,7 @@ cd miniprogram-learning-diagnostic
 ## 测试
 
 ```bash
-# 运行常规自动化测试（216 用例，不含真实图片 E2E）
+# 运行常规自动化测试（228 用例，不含真实图片 E2E）
 npm test
 
 # 带覆盖率报告
@@ -160,7 +162,7 @@ npm run test:e2e-real-image
 
 | 文档 | 说明 |
 |------|------|
-| [PRD.md](./PRD.md) | 产品设计文档 v2.6：学习档案首页、页面职责边界、数据模型、异步架构、学习记录、实现状态总览 |
+| [PRD.md](./PRD.md) | 产品设计文档 v2.7：学习档案首页、卡点透出体系、页面职责边界、数据模型、异步架构、学习记录、实现状态总览 |
 | [PROJECT_PLAN.md](./PROJECT_PLAN.md) | 技术架构、目录结构、AI 分析流程、部署步骤、版本规划 |
 | [SETUP.md](./SETUP.md) | 部署指南：环境配置、云函数部署、字体配置、数据库索引、真机验收 |
 | [docs/TEST_MATRIX.md](./docs/TEST_MATRIX.md) | 测试矩阵与验收清单 |
