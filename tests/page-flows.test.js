@@ -1043,7 +1043,8 @@ test('learning records group uploads reports and verification papers by day', as
   ])
   assert.equal(page.data.days[0].events[2].photos[0].fileName, '历史照片1')
   assert.ok(page.data.days[0].events[0].chips.some(chip => /证据时间 6月11日/.test(chip)))
-  assert.ok(page.data.days[0].events[1].chips.includes('编号 数学-20260611-01'))
+  assert.equal(page.data.days[0].events[1].paperCode, '数学-20260611-01')
+  assert.equal(page.data.days[0].events[1].showPaperCode, true)
   assert.ok(page.data.days[0].events[1].chips.includes('试卷日期 6月11日'))
   assert.match(page.data.days[0].events[2].photos[0].summaryText, /暂无 OCR/)
   page.onPreviewPhoto({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 2, photoIndex: 0 } } })
@@ -1139,16 +1140,107 @@ test('learning records fold evidence, compact transient states, and hide low fre
     'verification-paper',
     'diagnosis-report'
   ])
-  assert.equal(day.statusItems.length, 2)
-  assert.deepEqual(JSON.parse(JSON.stringify(day.statusItems.map(item => item.status))), ['failed', 'analyzing'])
+  assert.equal(day.statusItems.length, 0)
   assert.equal(day.events.some(event => event.paperId === 'default-paper'), false)
   assert.equal(day.events.find(event => event.kind === 'diagnosis-report').foldedEvidence.length, 2)
   assert.equal(day.events.find(event => event.kind === 'verification-paper').paperCode, '数学-20260612-01')
+  assert.equal(day.events.find(event => event.kind === 'verification-paper').showPaperCode, true)
+  assert.ok(day.events.find(event => event.kind === 'verification-paper').chips.includes('学生卷1页'))
+  assert.ok(day.events.find(event => event.kind === 'verification-paper').chips.includes('答案1页'))
   assert.ok(day.events.find(event => event.kind === 'verification-report').chips.includes('关联 数学-20260612-01'))
   assert.ok(day.events.find(event => event.kind === 'diagnosis-report').chips.includes('计算基础'))
 
   page.onPreviewFoldedEvidence({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 2, evidenceIndex: 0 } } })
   assert.equal(wx.calls.find(call => call.name === 'previewImage').payload.current, 'https://temp/photo-1')
+})
+
+test('learning records show only fresh transient states and hide stale dirty tasks', async () => {
+  const now = new Date()
+  const freshTime = new Date(now.getTime() - 5 * 60 * 1000).toISOString()
+  const staleTime = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
+  const cloud = {
+    getReports: async () => [
+      {
+        _id: 'report-fresh',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'analyzing',
+        createdAt: freshTime,
+        updatedAt: freshTime
+      },
+      {
+        _id: 'report-stale',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'failed',
+        createdAt: staleTime,
+        updatedAt: staleTime
+      }
+    ],
+    getPapers: async () => [],
+    getTempFileURLs: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', activeSubject: 'math' })
+
+  await page.loadHistory()
+
+  const statuses = page.data.days.flatMap(day => day.statusItems)
+  assert.deepEqual(JSON.parse(JSON.stringify(statuses.map(item => item.reportId))), ['report-fresh'])
+  assert.equal(statuses[0].status, 'analyzing')
+})
+
+test('learning records surface stable readable codes for legacy verification papers', async () => {
+  const cloud = {
+    getReports: async () => [],
+    getPapers: async () => [
+      {
+        _id: 'paper-early',
+        subject: 'math',
+        type: 'verification',
+        createdAt: '2026-06-12T09:47:00+08:00',
+        generatedAt: '2026-06-12T09:47:00+08:00',
+        paperDate: '2026-06-12',
+        questionCount: 6,
+        totalPages: 2,
+        bottleneckTargets: ['LP-001']
+      },
+      {
+        _id: 'paper-late',
+        subject: 'math',
+        type: 'verification',
+        createdAt: '2026-06-12T10:34:00+08:00',
+        generatedAt: '2026-06-12T10:34:00+08:00',
+        paperDate: '2026-06-12',
+        questionCount: 6,
+        totalPages: 2,
+        bottleneckTargets: ['LP-008']
+      }
+    ],
+    getTempFileURLs: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', activeSubject: 'math' })
+
+  await page.loadHistory()
+
+  const eventsById = new Map(page.data.days[0].events.map(event => [event.paperId, event]))
+  assert.equal(eventsById.get('paper-early').paperCode, '数学-20260612-01')
+  assert.equal(eventsById.get('paper-late').paperCode, '数学-20260612-02')
+  assert.equal(eventsById.get('paper-late').showPaperCode, true)
+  assert.ok(eventsById.get('paper-late').chips.includes('6题'))
+  assert.ok(eventsById.get('paper-late').chips.includes('学生卷1页'))
+  assert.ok(eventsById.get('paper-late').chips.includes('答案1页'))
 })
 
 test('learning records load all subjects when no subject filter is provided', async () => {

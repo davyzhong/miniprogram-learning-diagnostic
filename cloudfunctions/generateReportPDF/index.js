@@ -10,13 +10,12 @@ const db = cloud.database();
 
 const DEFAULT_FONT_PATH = path.join(__dirname, 'NotoSansCJKsc-Regular.otf');
 
-async function hasOwnerAccess(reportData, openId) {
+async function canReadReport(reportData, openId) {
   if (reportData && reportData._openid === openId) return true;
   if (!reportData || !reportData.studentId) return false;
   const res = await db.collection('studentMembers').where({
     studentId: reportData.studentId,
     memberOpenId: openId,
-    role: 'owner',
     status: 'active',
   }).get();
   return (res.data || []).length > 0;
@@ -145,7 +144,7 @@ exports.main = async (event) => {
     }
     const reportData = reportRes.data;
     const currentOpenId = cloud.getWXContext().OPENID;
-    if (!(await hasOwnerAccess(reportData, currentOpenId))) {
+    if (!(await canReadReport(reportData, currentOpenId))) {
       return { success: false, error: '无权执行该操作' };
     }
 

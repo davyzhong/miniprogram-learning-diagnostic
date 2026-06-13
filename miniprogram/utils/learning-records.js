@@ -1,9 +1,29 @@
 const { formatBottleneckDisplayName, formatBottleneckDisplayList } = require('./util')
 
 const STATUS_REPORT_STATES = new Set(['pending', 'uploading', 'analyzing', 'failed', 'timeout'])
+const STALE_STATUS_MS = 30 * 60 * 1000
 
 function paperCodeOf(paper) {
   return paper && (paper.paperDisplayCode || paper.paperCode || paper.displayCode || '')
+}
+
+function reportTimeOf(report = {}) {
+  return report.updatedAt || report.evidenceTime || report.createdAt || report.created_at || ''
+}
+
+function isArchivedReport(report = {}) {
+  return Boolean(report.isArchived || report.archivedAt)
+}
+
+function isStaleStatusReport(report = {}, now = Date.now()) {
+  if (!STATUS_REPORT_STATES.has(report.status)) return false
+  const time = new Date(reportTimeOf(report)).getTime()
+  if (!time || Number.isNaN(time)) return false
+  return now - time > STALE_STATUS_MS
+}
+
+function isVisibleTimelineReport(report = {}, now = Date.now()) {
+  return !isArchivedReport(report) && !isStaleStatusReport(report, now)
 }
 
 function isMainTimelinePaper(paper) {
@@ -66,7 +86,12 @@ function buildStatusTitle(report = {}, subjectName = '') {
 
 module.exports = {
   STATUS_REPORT_STATES,
+  STALE_STATUS_MS,
   paperCodeOf,
+  reportTimeOf,
+  isArchivedReport,
+  isStaleStatusReport,
+  isVisibleTimelineReport,
   isMainTimelinePaper,
   classifyReportDisplay,
   classifyPaperDisplay,
