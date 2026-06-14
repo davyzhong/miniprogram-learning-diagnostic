@@ -9,6 +9,7 @@
   <view class="config-card" wx:if="{{selectedCount > 0}}">
     <view class="section-title">试卷配置</view>
     <text class="scope-text">{{paperConfig.scopeText}}</text>
+    <text class="strategy-text">{{paperConfig.strategyText}}</text>
     <view class="preview-stats">
       <view class="preview-stat">
         <text class="preview-num">{{selectedCount}}</text>

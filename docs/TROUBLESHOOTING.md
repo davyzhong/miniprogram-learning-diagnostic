@@ -98,7 +98,7 @@
 
 **解决方案**
 - 若 profile 卡在 `analyzing` 但 report 已是终态：手动将 `analysisStatus` 置为 null、`currentAnalysisId` 置空（应急手段）
-- 若 AI 超时：保持云函数超时在 60 秒以内，进入报告页点击"重试分析"，或减少单次上传图片数量后重新触发
+- 若 AI 超时：保持云函数超时在 60 秒以内，进入报告页点击"重试分析"；当前后台会按图片串行处理大批量上传，不应通过调高超时时间解决
 - 若轮询已达上限：点击报告页的"重试分析"按钮触发 `onRetryAnalysis`
 - 根因修复参考测试：`node --test --test-name-pattern="clears profile analysis state" tests/coverage-gap.test.js`
 

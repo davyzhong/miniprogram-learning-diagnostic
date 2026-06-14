@@ -22,13 +22,15 @@
 ### 已实现
 
 - ✅ 学生管理：添加/选择学生，每人独立档案
+- ✅ 家庭学习工作台：0 个孩子显示空态，1 个孩子直接进入学习档案，多个孩子显示高密度家庭工作台
+- ✅ 家长共享：孩子档案支持 owner / viewer 家长成员，共同家长除家庭成员管理外可查看、上传、生成试卷和重试分析
 - ✅ 学习档案首页：首屏展示综合摘要、样本覆盖、重点提示、学习记录和下一步建议
 - ✅ 学习卡点透出：首页展示当前高优先级卡点，支持进入卡点中心和单卡点工作台
 - ✅ 学习卡点中心：按学科和状态筛选待验证、持续出现、复发和已改善卡点
 - ✅ 学科工作台：数学/语文/英语三科独立，学科页只承载待处理队列、主任务和工具入口
-- ✅ 拍照诊断：支持最多 20 张照片批量上传，异步 AI 分析
+- ✅ 拍照诊断：支持最多 20 张照片批量上传，HEIF 自动转 JPEG 或给出可读提示，后台按图片串行异步分析
 - ✅ 诊断报告：卡点排行条形图 + 错题详情折叠列表 + 改善状态标注
-- ✅ 验证试卷出卷配置：基于历史卡点选择出题范围，生成 A4 PDF 下载打印
+- ✅ 验证试卷出卷配置：基于历史卡点选择出题范围，每个卡点生成 5 题（3 核心验证 + 2 迁移延展），生成 A4 PDF 下载打印
 - ✅ 默认诊断试卷：按年级动态生成标准诊断卷（1-6 年级 A/B 卷），无需预存题库
 - ✅ 试卷预览与打印：A4 预览 + PDF 下载 + 分享打印
 - ✅ 试卷下载状态：同一份 PDF 下载后显示「已下载」，避免重复下载
@@ -38,8 +40,9 @@
 - ✅ 验证报告对比：标注改善 / 加重 / 新增 / 持续四种状态
 - ✅ 分析进度轮询：学科主页和报告页每 10s 轮询，支持手动重试
 - ✅ 报告 PDF 生成与下载
+- ✅ Skill / CLI P0：封装诊断、报告、卡点、验证卷、反馈和时间线能力，提供 `ldx` 本地 CLI 合同测试
 - ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 自动化测试：228 个常规用例通过，JS 语法检查 78 文件通过
+- ✅ 自动化测试：261 个常规用例通过，JS 语法检查 86 文件通过
 
 ### 待完善
 
@@ -69,12 +72,13 @@
 ```
 miniprogram-learning-diagnostic/
 ├── miniprogram/                 # 小程序前端
-│   ├── app.js / app.json        # 全局入口与配置（14 个页面路由）
+│   ├── app.js / app.json        # 全局入口与配置（15 个页面路由）
 │   ├── utils/                   # cloud.js（数据访问层）、poller.js（轮询器）、util.js
-│   └── pages/                   # 14 个页面（index / add-student / subject-select /
-│                                #   subject-home / upload / upload-history / parent-management /
-│                                #   join-student / report / generate-verification /
-│                                #   default-paper / paper-preview）
+│   └── pages/                   # 15 个页面（index / student-profile / add-student /
+│                                #   subject-select / subject-home / upload / upload-history /
+│                                #   parent-management / join-student / report /
+│                                #   bottleneck-center / bottleneck-detail /
+│                                #   generate-verification / default-paper / paper-preview）
 ├── cloudfunctions/              # 云函数后端（8 个）
 │   ├── uploadAndAnalyze/        #   入口：校验 → 创建报告 → 触发分析
 │   ├── analyzePhotos/           #   主控：分批 → 串行分析 → 去重 → 合并 → 对比
@@ -84,7 +88,9 @@ miniprogram-learning-diagnostic/
 │   ├── studentData/             #   访问感知的学习资料聚合读取
 │   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF
 │   └── generateReportPDF/       #   生成报告 PDF
-├── tests/                       # 自动化测试（228 个常规用例 + 真实图片 E2E 脚本）
+├── services/skills/             # P0 Skill 能力内核
+├── cli/ldx.js                   # 本地 CLI 入口
+├── tests/                       # 自动化测试（261 个常规用例 + 真实图片 E2E 脚本）
 ├── scripts/                     # check-js.js（语法检查）
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
@@ -138,7 +144,7 @@ cd miniprogram-learning-diagnostic
 ## 测试
 
 ```bash
-# 运行常规自动化测试（228 用例，不含真实图片 E2E）
+# 运行常规自动化测试（261 用例，不含真实图片 E2E）
 npm test
 
 # 带覆盖率报告
@@ -162,9 +168,10 @@ npm run test:e2e-real-image
 
 | 文档 | 说明 |
 |------|------|
-| [PRD.md](./PRD.md) | 产品设计文档 v2.7：学习档案首页、卡点透出体系、页面职责边界、数据模型、异步架构、学习记录、实现状态总览 |
+| [PRD.md](./PRD.md) | 产品设计文档 v2.8：多孩子工作台、学习档案、卡点透出体系、页面职责边界、异步架构、学习记录、实现状态总览 |
 | [PROJECT_PLAN.md](./PROJECT_PLAN.md) | 技术架构、目录结构、AI 分析流程、部署步骤、版本规划 |
 | [SETUP.md](./SETUP.md) | 部署指南：环境配置、云函数部署、字体配置、数据库索引、真机验收 |
+| [docs/SKILL_AND_CLI_DESIGN.md](./docs/SKILL_AND_CLI_DESIGN.md) | Skill / CLI 设计与 P0 实现说明 |
 | [docs/TEST_MATRIX.md](./docs/TEST_MATRIX.md) | 测试矩阵与验收清单 |
 
 ---

@@ -135,7 +135,7 @@ test('uploadAndAnalyze rejects invalid uploads and students owned by another use
 })
 
 test('joined parent can perform learning workflow operations', async () => {
-  const questions = Array.from({ length: 3 }, (_, index) => ({
+  const questions = Array.from({ length: 5 }, (_, index) => ({
     index: index + 1,
     content: `计算题 ${index + 1}`,
     answer: String(index + 1),
@@ -303,13 +303,13 @@ test('getAnalysisProgress returns the newest task and rejects other owners', asy
 })
 
 test('generatePaper stores and returns printable PDF page metadata', async () => {
-  const questions = Array.from({ length: 6 }, (_, index) => ({
+  const questions = Array.from({ length: 10 }, (_, index) => ({
     index: index + 1,
     content: `计算题 ${index + 1}`,
     answer: String(index + 1),
     points: 10,
-    lpCode: index < 3 ? 'LP-001' : 'LP-008',
-    lpName: index < 3 ? '计算错误' : '审题错误'
+    lpCode: index < 5 ? 'LP-001' : 'LP-008',
+    lpName: index < 5 ? '计算错误' : '审题错误'
   }))
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
@@ -351,7 +351,7 @@ test('generatePaper stores and returns printable PDF page metadata', async () =>
   const paper = db.dump('papers')[0]
 
   assert.equal(result.success, true)
-  assert.equal(result.questionCount, 6)
+  assert.equal(result.questionCount, 10)
   assert.equal(result.studentPages, 1)
   assert.equal(result.answerPages, 1)
   assert.equal(result.totalPages, 2)
@@ -371,13 +371,13 @@ test('generatePaper stores and returns printable PDF page metadata', async () =>
 })
 
 test('generatePaper filters incomplete AI questions before trimming to expected count', async () => {
-  const questions = Array.from({ length: 7 }, (_, index) => ({
+  const questions = Array.from({ length: 12 }, (_, index) => ({
     index: index + 1,
     content: `计算题 ${index + 1}`,
     answer: index === 2 ? '' : String(index + 1),
     points: 10,
-    lpCode: index < 3 ? 'LP-001' : 'LP-008',
-    lpName: index < 3 ? '计算错误' : '审题错误'
+    lpCode: index < 6 ? 'LP-001' : 'LP-008',
+    lpName: index < 6 ? '计算错误' : '审题错误'
   }))
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
@@ -407,10 +407,59 @@ test('generatePaper filters incomplete AI questions before trimming to expected 
   const paper = db.dump('papers')[0]
 
   assert.equal(result.success, true)
-  assert.equal(result.questionCount, 6)
-  assert.equal(paper.questions.length, 6)
+  assert.equal(result.questionCount, 10)
+  assert.equal(paper.questions.length, 10)
   assert.equal(paper.questions.some(question => question.content === '计算题 3'), false)
-  assert.equal(paper.questions.at(-1).content, '计算题 7')
+  assert.equal(paper.questions.at(-1).content, '计算题 11')
+})
+
+test('generatePaper asks verification papers to include core and extension questions', async () => {
+  let prompt = ''
+  const questions = Array.from({ length: 5 }, (_, index) => ({
+    index: index + 1,
+    content: `计算题 ${index + 1}`,
+    answer: String(index + 1),
+    points: 10,
+    lpCode: 'LP-001',
+    lpName: '计算错误'
+  }))
+  const aiApp = {
+    ai: () => ({
+      createModel: () => ({
+        generateText: async ({ messages }) => {
+          prompt = messages[0].content
+          return { text: JSON.stringify({ title: '数学验证试卷', questions }) }
+        }
+      })
+    })
+  }
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      pendingBottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误' }]
+    }],
+    papers: []
+  })
+  const handler = loadModule('cloudfunctions/generatePaper/index.js', {
+    'wx-server-sdk': createCloudMock({ db }),
+    '@cloudbase/node-sdk': { init: () => aiApp },
+    './pdf-renderer': { generatePDF: async () => ({ buffer: Buffer.from('pdf'), studentPages: 1, answerPages: 1, totalPages: 2 }) }
+  })
+
+  const result = await handler.main({
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'verification',
+    targets: ['LP-001']
+  })
+
+  assert.equal(result.success, true)
+  assert.match(prompt, /每个卡点 5 道/)
+  assert.match(prompt, /3 道核心验证题/)
+  assert.match(prompt, /2 道迁移延展题/)
 })
 
 test('analyzePhotos splits batches, excludes duplicate pages and updates the profile', async () => {

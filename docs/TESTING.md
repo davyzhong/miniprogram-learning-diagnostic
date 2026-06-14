@@ -57,25 +57,25 @@ npm run test:coverage
 | 文件 | 职责 | 用例数 |
 |------|------|--------|
 | `analyze-batch-result.test.js` | `analyzeBatch/result-normalizer.js` 字段截断、严重度归一 | 3 |
-| `analyze-photos-pipeline.test.js` | `analyzePhotos/pipeline.js` 分批、逐页完整性、合并与 imageFiles 构造 | 5 |
+| `analyze-photos-pipeline.test.js` | `analyzePhotos/pipeline.js` 分批、逐页完整性、合并与 imageFiles 构造 | 7 |
 | `bottleneck-view.test.js` | 共享学习卡点视图模型、排序和统计规则 | 3 |
-| `cloud-functions.test.js` | 8 个云函数的集成流程、权限校验、边界条件 | 23 |
+| `cloud-functions.test.js` | 8 个云函数的集成流程、权限校验、边界条件 | 28 |
 | `cli-p0.test.js` | P0 `ldx` CLI 命令合同，使用 fixture adapter 离线验证 | 4 |
 | `comparison.test.js` | 验证报告对比算法（improved/worsened/new/persisting） | 4 |
-| `contracts.test.js` | 跨模块契约、命名一致性、已修复缺陷回归保护 | 38 |
+| `contracts.test.js` | 跨模块契约、命名一致性、已修复缺陷回归保护 | 39 |
 | `coverage-gap.test.js` | 历史修复的回归场景、轮询器/数据层边界分支 | 7 |
 | `data-layer.test.js` | `miniprogram/utils/cloud.js` 统一数据访问层 | 8 |
 | `e2e-real-image.test.js` | 端到端真实图片链路脚本，单独运行 | 1（含云端条件步骤） |
 | `generate-paper-pdf.test.js` | 验证试卷 PDF 中文字体、分页和答案页回归 | 4 |
-| `index-presenter.test.js` | 孩子档案视图模型、家庭工作台卡片、样本覆盖、重点提示、卡点透出和空态 | 8 |
-| `learning-records.test.js` | 学习记录四级分类、验证卷编号和卡点名称共享规则 | 8 |
-| `page-flows.test.js` | 主要页面的主流程、首页 0/1/多孩子分流、孩子档案页、错误恢复、导航跳转 | 57 |
+| `index-presenter.test.js` | 孩子档案视图模型、家庭工作台卡片、样本覆盖、重点提示、卡点透出和空态 | 9 |
+| `learning-records.test.js` | 学习记录四级分类、验证卷编号和卡点名称共享规则 | 10 |
+| `page-flows.test.js` | 主要页面的主流程、首页 0/1/多孩子分流、孩子档案页、错误恢复、导航跳转 | 59 |
 | `parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
 | `photo-dedup.test.js` | OCR 摘要去重算法（含完全重复分支） | 3 |
 | `poller.test.js` | 通用轮询器与分析轮询包装 | 6 |
 | `project-integrity.test.js` | 页面四件套完整性、WXML 事件绑定匹配、品牌资产完整性 | 3 |
 | `profile-summary.test.js` | 当前综合诊断状态规则 | 6 |
-| `report-presenter.test.js` | 报告视图预计算与展示文本 | 8 |
+| `report-presenter.test.js` | 报告视图预计算与展示文本 | 9 |
 | `skills-p0.test.js` | P0 Skill 能力内核，覆盖诊断、报告、卡点、验证卷、验证反馈、时间线 | 8 |
 | `student-access.test.js` | `studentAccess` 家长成员、邀请、加入、移除权限和首次建表兜底 | 8 |
 | `student-data-access.test.js` | `studentData` 共享家长学习数据访问 | 6 |
@@ -83,7 +83,7 @@ npm run test:coverage
 | `time-aware-bottlenecks.test.js` | 时间化学习卡点趋势和权重 | 5 |
 | `util.test.js` | 时间、卡点短名称等纯工具函数 | 11 |
 | `verification-evidence.test.js` | 验证试卷证据完整性 | 2 |
-| **合计** | | **248 常规用例 + 1 个真实图片 E2E 脚本** |
+| **合计** | | **261 常规用例 + 1 个真实图片 E2E 脚本** |
 
 > 注：常规测试以 `npm test` 输出为准；真实图片 E2E 由于依赖本机文件和云端环境，始终单独运行。
 

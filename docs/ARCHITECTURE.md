@@ -161,7 +161,7 @@ generate-verification 页面
               │
               ▼
          [generatePaper 云函数]
-              ├── generateQuestionsWithAI(deepseek-v4-flash) → 每个卡点 3 道题
+              ├── generateQuestionsWithAI(deepseek-v4-flash) → 每个卡点 5 道题（3 核心验证 + 2 迁移延展）
               ├── generatePDF(pdfkit) → Buffer
               ├── uploadFile() → 云存储
               └── 写入 papers 集合

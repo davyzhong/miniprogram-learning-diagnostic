@@ -63,6 +63,14 @@
   line-height: 1.45;
 }
 
+.strategy-text {
+  display: block;
+  margin-top: 10rpx;
+  color: #53657a;
+  font-size: 23rpx;
+  line-height: 1.4;
+}
+
 .preview-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

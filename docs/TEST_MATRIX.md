@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序测试矩阵
 
-> 更新日期：2026-06-13
+> 更新日期：2026-06-14
 > 范围：`PRD.md`、`PROJECT_PLAN.md` 中的 MVP P0 功能
-> 自动化结果：`npm test` → 228/228 通过；`npm run check` → 78 个 JS 文件语法正确
+> 自动化结果：`npm test` → 261/261 通过；`npm run check` → 86 个 JS 文件语法正确
 
 ## 1. 自动化验证命令
 
@@ -32,7 +32,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | 时间化学习卡点趋势和权重 | `time-aware-bottlenecks.test.js`、`profile-summary.test.js`、`cloud-functions.test.js`、`page-flows.test.js` | 已覆盖；照片证据以上传时间为准，验证卷保留 paperDate |
 | 学科工作台主任务、待处理队列和工具入口 | `subject-home-presenter.test.js`、`page-flows.test.js`、`contracts.test.js` | 已覆盖；学科主页不再重复综合诊断摘要 |
 | 验证报告与改善证据判定 | `comparison.test.js`、`verification-evidence.test.js`、`cloud-functions.test.js` | 已覆盖；只有全部预期题目清晰作答且全对才确认改善 |
-| 验证试卷出卷配置、生成、PDF 下载、已下载状态、答题上传 | `page-flows.test.js`、`cloud-functions.test.js`、`generate-paper-pdf.test.js` | 已覆盖；支持 targetCode 预选，PDF 包含学生卷和答案页，真实 AI 题目质量和打印效果需人工验收 |
+| 验证试卷出卷配置、生成、PDF 下载、已下载状态、答题上传 | `page-flows.test.js`、`cloud-functions.test.js`、`generate-paper-pdf.test.js` | 已覆盖；支持 targetCode 预选，每个卡点 5 题（3 核心验证 + 2 迁移延展），PDF 包含学生卷和答案页，真实 AI 题目质量和打印效果需人工验收 |
 | 默认诊断试卷选择、年级、缓存复用、答题上传 | `page-flows.test.js`、`cloud-functions.test.js` | 同一学生复用已覆盖；跨学生复用未实现 |
 | 报告 PDF 生成和下载 | `cloud-functions.test.js`、`page-flows.test.js`、`contracts.test.js` | 已覆盖；中文字体已内置，真实 A4 排版需人工验收 |
 | 分析超时、任务缺失和手动重试 | `poller.test.js`、`page-flows.test.js`、`contracts.test.js` | 客户端恢复路径已覆盖 |
@@ -40,6 +40,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | 数据归属校验、参数白名单、无堆栈返回 | `cloud-functions.test.js`、`contracts.test.js`、`student-access.test.js`、`student-data-access.test.js` | 已覆盖主要云函数入口；学习流程操作走成员权限，家庭成员管理 owner-only |
 | 覆盖缺口补全（边界与回归） | `coverage-gap.test.js` | 已覆盖历史修复的回归场景 |
 | 端到端真实图片链路 | `e2e-real-image.test.js` | 本地校验真实图片文件；CloudBase AI 缺少本地凭据时自动跳过云端步骤 |
+| Skill / CLI P0 | `skills-p0.test.js`、`cli-p0.test.js` | 已覆盖；诊断、报告、卡点、验证卷、验证反馈和时间线能力可通过本地能力内核与 CLI 调用 |
 
 ## 3. 尚未完成的设计能力
 
@@ -70,23 +71,25 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/helpers/page-harness.js` | 执行真实小程序页面控制器 | — |
 | `tests/helpers/cloud-function-harness.js` | 执行真实云函数并模拟数据库、存储和函数调用 | — |
 | `tests/analyze-batch-result.test.js` | analyzeBatch 结果标准化 | 3 |
-| `tests/analyze-photos-pipeline.test.js` | analyzePhotos 管线辅助函数 | 5 |
+| `tests/analyze-photos-pipeline.test.js` | analyzePhotos 管线辅助函数 | 7 |
 | `tests/bottleneck-view.test.js` | 共享学习卡点视图模型、排序和统计规则 | 3 |
-| `tests/cloud-functions.test.js` | 云函数集成流程、权限和边界 | 23 |
+| `tests/cli-p0.test.js` | P0 CLI 命令合同，使用 fixture adapter 离线验证 | 4 |
+| `tests/cloud-functions.test.js` | 云函数集成流程、权限和边界 | 28 |
 | `tests/comparison.test.js` | 验证报告对比算法 | 4 |
 | `tests/contracts.test.js` | 跨模块契约和已修复缺陷回归保护 | 38 |
 | `tests/coverage-gap.test.js` | 覆盖缺口补全 | 7 |
 | `tests/data-layer.test.js` | 统一数据访问层 | 8 |
 | `tests/e2e-real-image.test.js` | 端到端真实图片测试脚本 | 1（含云端条件步骤） |
 | `tests/generate-paper-pdf.test.js` | 可打印 PDF 中文字体、分页和答案页回归 | 4 |
-| `tests/index-presenter.test.js` | 孩子档案视图模型与家庭工作台卡片 | 8 |
-| `tests/learning-records.test.js` | 学习记录四级分类、试卷编号和卡点名称规则 | 8 |
-| `tests/page-flows.test.js` | 页面主流程、首页分流与错误恢复 | 57 |
+| `tests/index-presenter.test.js` | 孩子档案视图模型与家庭工作台卡片 | 9 |
+| `tests/learning-records.test.js` | 学习记录四级分类、试卷编号和卡点名称规则 | 10 |
+| `tests/page-flows.test.js` | 页面主流程、首页分流与错误恢复 | 59 |
 | `tests/parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
 | `tests/photo-dedup.test.js` | OCR 去重算法 | 3 |
 | `tests/poller.test.js` | 通用轮询器与分析轮询包装 | 6 |
 | `tests/project-integrity.test.js` | 页面文件、事件绑定和品牌资产完整性 | 3 |
-| `tests/report-presenter.test.js` | 报告视图预计算 | 8 |
+| `tests/report-presenter.test.js` | 报告视图预计算 | 9 |
+| `tests/skills-p0.test.js` | P0 Skill 能力内核 | 8 |
 | `tests/profile-summary.test.js` | 当前综合诊断状态规则 | 6 |
 | `tests/student-access.test.js` | 家长成员、邀请、加入、移除权限和首次建表兜底 | 8 |
 | `tests/student-data-access.test.js` | 共享家长学习数据访问 | 6 |
@@ -94,4 +97,4 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/time-aware-bottlenecks.test.js` | 时间化学习卡点趋势和权重 | 5 |
 | `tests/verification-evidence.test.js` | 验证试卷证据完整性 | 2 |
 | `tests/util.test.js` | 工具函数 | 11 |
-| **合计** | | **228 常规用例** |
+| **合计** | | **261 常规用例** |

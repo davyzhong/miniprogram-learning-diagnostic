@@ -3,6 +3,9 @@ const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
 const { buildBottleneckViews, profileBottlenecks } = require('../../utils/bottleneck-view')
 const MAX_SELECTED_BOTTLENECKS = 5
+const CORE_QUESTIONS_PER_BOTTLENECK = 3
+const EXTENSION_QUESTIONS_PER_BOTTLENECK = 2
+const QUESTIONS_PER_BOTTLENECK = CORE_QUESTIONS_PER_BOTTLENECK + EXTENSION_QUESTIONS_PER_BOTTLENECK
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
 
 function normalizeWeight(item = {}) {
@@ -41,7 +44,8 @@ Page({
       questionCount: 0,
       estimatedMinutes: 0,
       pages: 1,
-      paperSize: 'A4'
+      paperSize: 'A4',
+      strategyText: ''
     }
   },
 
@@ -117,6 +121,7 @@ Page({
     const { studentId, subject, bottlenecks, paperConfig } = this.data
     const selected = bottlenecks.filter(b => b.selected)
     if (selected.length === 0 || this.data.previewing) return
+    const questionCount = this.questionCountForSelection(selected.length, paperConfig.questionCount)
 
     this.setData({ previewing: true })
     wx.showLoading({ title: '生成预览...' })
@@ -127,7 +132,7 @@ Page({
         subject,
         type: 'verification',
         targets: selected.map(b => b.lpCode),
-        questionCount: paperConfig.questionCount,
+        questionCount,
         preview: true
       })
 
@@ -153,6 +158,7 @@ Page({
     const { studentId, subject, subjectName, bottlenecks, paperConfig } = this.data
     const selected = bottlenecks.filter(b => b.selected)
     if (selected.length === 0 || this.data.generating) return
+    const questionCount = this.questionCountForSelection(selected.length, paperConfig.questionCount)
 
     this.setData({ generating: true })
     wx.showLoading({ title: '生成试卷...' })
@@ -163,7 +169,7 @@ Page({
         subject,
         type: 'verification',
         targets: selected.map(b => b.lpCode),
-        questionCount: paperConfig.questionCount,
+        questionCount,
         preview: false
       })
 
@@ -218,13 +224,19 @@ Page({
   },
 
   buildPaperConfig(selectedCount, selectedSummary) {
-    const questionCount = selectedCount * 3
+    const questionCount = this.questionCountForSelection(selectedCount)
     return {
       scopeText: selectedSummary || '未选择学习卡点',
       questionCount,
-      estimatedMinutes: selectedCount * 5,
+      estimatedMinutes: Math.max(0, selectedCount * 8),
       pages: Math.max(1, Math.ceil(questionCount / 10)),
-      paperSize: 'A4'
+      paperSize: 'A4',
+      strategyText: `每个卡点 ${CORE_QUESTIONS_PER_BOTTLENECK} 道核心题 + ${EXTENSION_QUESTIONS_PER_BOTTLENECK} 道迁移题`
     }
+  },
+
+  questionCountForSelection(selectedCount, configuredCount = 0) {
+    const expectedCount = selectedCount * QUESTIONS_PER_BOTTLENECK
+    return expectedCount || Number(configuredCount) || 0
   }
 })

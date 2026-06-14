@@ -2,7 +2,7 @@
 
 **创建日期**: 2026-06-09
 **最后更新**: 2026-06-14
-**项目状态**: MVP 编码完成，常规自动化测试通过（228/228），JS 语法检查 78 文件通过，待真机验收
+**项目状态**: MVP 编码完成，常规自动化测试通过（261/261），JS 语法检查 86 文件通过，待真机验收
 **负责人**: qiming
 
 ---
@@ -11,13 +11,13 @@
 
 ### 1.1 项目背景
 
-本项目是"AI Learning OS"体系的移动端入口。此前已通过 QoderWork 完成了钟青羽的学习卡点诊断（第一版 + 第二版，共分析 132 张试卷图片、80+ 道错题、10 大类卡点），并生成了诊断报告、验证卷等纸质材料。
+本项目是学习诊断 MVP 的微信小程序产品。此前已通过纯 AI 流程完成了钟青羽的学习卡点诊断（第一版 + 第二版，共分析 132 张试卷图片、80+ 道错题、10 大类卡点），并生成了诊断报告、验证卷等纸质材料。
 
 核心问题是：诊断流程依赖电脑端操作（拍照 → 传到电脑 → QoderWork 分析），不够便捷。需要一个微信小程序，让家长可以直接用手机拍照上传试卷，自动完成 AI 分析并查看诊断报告。
 
 ### 1.2 产品定位
 
-面向家长的轻量级学习诊断工具：拍照 → AI 分析 → 看报告。
+面向家长的轻量级学习诊断工具：拍照上传试卷 → AI 定位学习卡点 → 生成报告 → 出验证卷 → 上传作答反馈。
 
 ### 1.3 核心功能（V1）
 
@@ -34,12 +34,13 @@ MVP 三条诊断路径：
 | 功能 | 说明 |
 |------|------|
 | 学习档案首页 | 首屏展示综合摘要、样本覆盖、重点提示、学习记录和下一步建议 |
-| 学生管理 | 添加孩子、管理当前孩子档案 |
+| 家庭工作台 / 学生管理 | 0/1/多孩子自适应入口，多孩子显示家庭工作台，单孩子直接进入学习档案 |
+| 家长成员管理 | owner 可邀请共同家长，共同家长除成员管理外具备学习流程操作权限 |
 | 学科工作台 | 数/语/英三科独立，学科页承接主任务、待处理队列和工具入口 |
-| 拍照上传 | 支持最多 20 张，上传即返回，分析异步进行 |
+| 拍照上传 | 支持最多 20 张，支持 HEIF 转换或提示，上传即返回，分析异步进行 |
 | AI 诊断分析 | 云函数分批处理（5张/批），混元 hy3-preview 视觉模型 |
 | 诊断报告 | 卡点排行、错题详情、改善/加重/新增状态对比 |
-| 验证试卷生成 | 出卷配置器选择范围，AI 生成 3 题/卡点，A4 PDF 下载 |
+| 验证试卷生成 | 出卷配置器选择范围，AI 生成 5 题/卡点（3 核心验证 + 2 迁移延展），A4 PDF 下载 |
 | 默认诊断试卷 | AI 按年级动态生成，无需预存题库 |
 | 学习记录 | 按天聚合诊断报告、验证试卷、验证上传和原始照片 |
 | 卡点短名称 | 对家长和学生展示“小数分数、单位换算”等短摘要，不直接暴露 LP 编号 |
@@ -61,12 +62,12 @@ miniprogram-learning-diagnostic/
 ├── project.config.json              # 微信开发者工具项目配置（cloudbaseRoot: cloud1-d6gneg68m5a7a3876）
 ├── package.json                     # npm scripts: test / test:coverage / check / verify
 ├── PROJECT_PLAN.md                  # 本文件
-├── PRD.md                           # 产品设计文档（v2.7）
+├── PRD.md                           # 产品设计文档（v2.8）
 ├── SETUP.md                         # 部署指南
 │
 ├── miniprogram/                     # 小程序前端代码
 │   ├── app.js                       # 全局入口，初始化云开发（env: cloud1-d6gneg68m5a7a3876）
-│   ├── app.json                     # 全局配置（14 个页面路由）
+│   ├── app.json                     # 全局配置（15 个页面路由）
 │   ├── app.wxss                     # 全局样式
 │   ├── sitemap.json                 # 站点地图配置
 │   │
@@ -78,8 +79,9 @@ miniprogram-learning-diagnostic/
 │   ├── components/                  # 自定义组件目录（当前为空占位）
 │   ├── images/                      # 静态图片资源目录（当前为空占位）
 │   │
-│   └── pages/                       # 12 个注册页面
-│       ├── index/                   # Page 1：首页（学习档案）
+│   └── pages/                       # 15 个注册页面
+│       ├── index/                   # Page 1：首页（空态/家庭工作台/单孩子分流）
+│       ├── student-profile/         # Page 1A：单孩子学习档案
 │       ├── add-student/             # 添加学生页（创建学生+三条学科档案）
 │       ├── subject-select/          # Page 2：学科入口（兼容路由）
 │       ├── subject-home/            # Page 3：学科工作台（主任务 + 待处理队列 + 工具）
@@ -88,6 +90,8 @@ miniprogram-learning-diagnostic/
 │       ├── parent-management/       # Page 5A：家庭成员管理
 │       ├── join-student/            # Page 5B：扫码加入孩子档案
 │       ├── report/                  # Page 6：诊断/验证报告（含 presenter）
+│       ├── bottleneck-center/       # Page 6A：学习卡点中心
+│       ├── bottleneck-detail/       # Page 6B：单卡点详情与证据链
 │       ├── generate-verification/   # Page 7：验证试卷出卷配置器
 │       ├── default-paper/           # Page 8：默认诊断试卷选择
 │       └── paper-preview/           # Page 9：试卷预览/打印
@@ -108,7 +112,8 @@ miniprogram-learning-diagnostic/
 │   └── generateReportPDF/           # 生成报告 PDF，回写 reports.pdfFileId
 │
 ├── cloud1-d6gneg68m5a7a3876/        # cloudbaseRoot 本地映射（微信开发者工具使用）
-├── cloudfunctions_old_backup/       # ⚠️ 已废弃，请勿使用
+├── services/skills/                 # P0 Skill 能力内核
+├── cli/ldx.js                       # 本地 CLI 入口
 │
 ├── tests/                           # Node.js 内置测试运行器用例
 │   ├── helpers/
@@ -136,7 +141,7 @@ miniprogram-learning-diagnostic/
     └── superpowers/plans/           # 规划辅助材料
 ```
 
-**文件总数**: 78 个 JavaScript 文件（`npm run check` 校验），228 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
+**文件总数**: 86 个 JavaScript 文件（`npm run check` 校验），261 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
 
 ### 2.2 相关文件索引
 
@@ -422,8 +427,8 @@ System Prompt 包含：
 
 | 类别 | 状态 | 说明 |
 |------|------|------|
-| **前端页面（10个）** | ✅ | `index` / `add-student` / `subject-select` / `subject-home` / `upload` / `upload-history` / `report` / `generate-verification` / `default-paper` / `paper-preview`，全部四件套完整且 WXML 事件绑定正确 |
-| **云函数（6个）** | ✅ | `uploadAndAnalyze` / `analyzePhotos`（含 comparison.js、photo-dedup.js）/ `analyzeBatch`（含 result-normalizer.js）/ `getAnalysisProgress` / `generatePaper` / `generateReportPDF` |
+| **前端页面（15个）** | ✅ | `index` / `student-profile` / `add-student` / `subject-select` / `subject-home` / `upload` / `upload-history` / `parent-management` / `join-student` / `report` / `bottleneck-center` / `bottleneck-detail` / `generate-verification` / `default-paper` / `paper-preview`，全部四件套完整且 WXML 事件绑定正确 |
+| **云函数（8个）** | ✅ | `uploadAndAnalyze` / `analyzePhotos`（含 comparison.js、photo-dedup.js）/ `analyzeBatch`（含 result-normalizer.js）/ `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `generateReportPDF` |
 | **数据访问层** | ✅ | `utils/cloud.js` 封装学生/学科档案/报告/试卷/分析进度/云函数调用；无过时 photos 集合引用 |
 | **通用轮询器** | ✅ | `utils/poller.js` 支持 stop/onTimeout/异步 request，被 subject-home 与 report 使用 |
 | **卡点短名称展示** | ✅ | `utils/util.js` 提供 `formatBottleneckDisplayName/List`，页面不再向家长展示裸 LP 编号 |
@@ -432,12 +437,13 @@ System Prompt 包含：
 | **验证对比** | ✅ | `analyzePhotos/comparison.js` 输出 improved/worsened/new/persisting + 摘要文案 |
 | **上传分析解耦** | ✅ | `uploadAndAnalyze` 创建报告后 fire-and-forget 启动 `analyzePhotos`；`report.onRetryAnalysis()` 支持手动重启 |
 | **参数校验与归属校验** | ✅ | 各云函数入口检查 fileIDs/studentId/subject/mode/paperId/openID |
-| **PRD.md** | ✅ | v2.7，含页面职责边界、卡点透出体系和实现状态总览 |
+| **PRD.md** | ✅ | v2.8，含多孩子工作台、页面职责边界、卡点透出体系和实现状态总览 |
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 索引 + 字体 + 云函数部署） |
 | **学习卡点透出体系** | ✅ | 首页高优先级卡点、卡点中心、单卡点工作台和验证卷 `targetCode` 闭环已接通 |
-| **自动化测试** | ✅ | 228 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、覆盖缺口补全 |
+| **Skill / CLI P0** | ✅ | `services/skills` 和 `cli/ldx.js` 覆盖诊断、报告、卡点、验证卷、反馈和时间线能力 |
+| **自动化测试** | ✅ | 261 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、Skill/CLI 和覆盖缺口补全 |
 | **端到端真实图片脚本** | ✅ | `tests/e2e-real-image.test.js` 单独运行，串通上传 → AI 分析 → 报告生成链路 |
-| **JS 语法检查** | ✅ | `npm run check` 校验 78 个文件 |
+| **JS 语法检查** | ✅ | `npm run check` 校验 86 个文件 |
 | **学科隔离** | ✅ | 数/语/英三科独立档案，首页提供学科入口，单学科工作台承接具体操作 |
 | **20张照片支持** | ✅ | `upload` 页面限制 20 张，`analyzePhotos` 自动分批（5张/批） |
 | **学习记录** | ✅ | `upload-history` 按天展示诊断报告、验证试卷、验证批复和原始照片 |

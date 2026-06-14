@@ -1,6 +1,6 @@
 # Learning Diagnostic MVP 产品设计文档（PRD）
 
-> 版本：v2.7 | 日期：2026-06-14 | 状态：MVP 编码完成，常规自动化测试 228/228 通过，JS 语法检查 78 文件通过，待真机验收
+> 版本：v2.8 | 日期：2026-06-14 | 状态：MVP 编码完成，常规自动化测试 261/261 通过，JS 语法检查 86 文件通过，待真机验收
 
 ---
 
@@ -33,26 +33,37 @@
 
 ---
 
-## 3. 页面设计（共 10 页）
+## 3. 页面设计（共 15 页）
 
-### Page 1：首页（学习档案）
+### Page 1：首页 / 家庭学习工作台
 
 **路由**：`pages/index/index`
 
 | 区域 | 内容 |
 |------|------|
-| 顶部 | "学习档案" + 管理孩子入口 |
-| 首屏 | 当前综合摘要：孩子姓名、年级、最近更新、学习线索总述 |
-| 样本覆盖 | 展示当前结论基于哪些学科材料，哪些学科暂无有效诊断记录 |
-| 指标 | 待验证数、有效报告数、最近更新或已改善数 |
-| 重点提示 | 跨学科汇总当前最高优先级学习卡点，不展示裸 LP 编号，不承载完整诊断解释 |
-| 学习记录 | 最近上传照片、诊断报告、验证试卷和验证反馈，支持查看全部 |
-| 下一步建议 | 根据是否有待验证观察，推荐生成验证试卷或上传新试卷 |
-| 学科入口 | 数学/语文/英语三科入口，进入单学科详情 |
+| 空态 | 没有孩子档案时显示添加第一个孩子 |
+| 单孩子 | 直接进入该孩子学习档案，不额外显示家庭工作台 |
+| 多孩子 | 显示高密度家庭学习工作台，每个孩子卡片透出待办、学科状态、最近试卷和下一步入口 |
+| 交互原则 | 卡片内的状态块、数字、学科块和试卷块都可点击，直接进入对应列表、学科页、报告页或试卷页 |
 
-**交互**：点击重点提示或学科入口 → 进入 Page 3；点击学习记录 → 进入报告或试卷预览；点击「查看全部」→ 进入 Page 4A；点击「管理孩子」→ 跳转 `add-student` 页。
+**交互**：点击孩子卡片主体 → 进入 Page 1A；点击具体状态块 → 进入对应筛选后的学习记录或学科工作台；点击「添加孩子」→ 跳转 `add-student` 页。
 
 **实现状态**：✅ 已上线。`index.js` 调用 `cloud.getStudents()`、`cloud.getSubjectProfiles()`、`cloud.getReports()` 与 `cloud.getPapers()`，再通过 `index-presenter.js` 生成学习档案首页视图。
+
+### Page 1A：单孩子学习档案
+
+**路由**：`pages/student-profile/student-profile`
+
+| 区域 | 内容 |
+|------|------|
+| 顶部 | 孩子姓名、年级、家长管理、返回首页 |
+| 首屏 | 当前综合摘要：最近报告生成时间、证据时间、学习线索总述 |
+| 最新报告 | 透出最新诊断报告的生成时间、主要结论、照片数、相关错题数和阅读完整报告入口 |
+| 当前学习卡点 | 当前待跟进、持续出现、已改善卡点统计和重点卡点卡片 |
+| 学科入口 | 数学/语文/英语三科入口，进入单学科工作台 |
+| 学习记录 | 最近诊断报告、验证试卷、验证反馈和原始照片 |
+
+**交互**：点击最新报告 → Page 6；点击学习卡点 → Page 11/12；点击学科 → Page 3；点击家长管理 → Page 5A。
 
 ---
 
@@ -111,6 +122,7 @@
 | 说明条 | 当前场景说明（拍照诊断/验证上传/试卷上传，由 `mode` 参数控制文案） |
 | 拍照提示 | 光线充足、试卷铺平、字迹清晰、红笔批注可见 |
 | 照片网格 | 4×5 网格，最多 20 张，支持拍照和相册选择，每张可删除 |
+| 格式处理 | HEIF/HEIC 图片会尽量自动转为 JPEG；无法转换时给出可读提示并跳过 |
 | 上传进度 | 上传中时显示进度条（已上传 X/总数） |
 | 异步提示 | "上传完成后即可返回，AI 将在后台分析，完成后推送通知" |
 | 底部按钮 | 「上传并开始分析 (N张)」 |
@@ -190,6 +202,7 @@
 - 从学科工作台点击单个卡点进入时，默认只选该卡点
 - 其他入口默认按严重度优先选中最多 5 个卡点
 - 最低选 1 个卡点，最多选 5 个
+- 每个卡点默认生成 5 道题：3 道核心验证题 + 2 道迁移延展题
 - 点击「生成试卷」→ AI 根据卡点 + 年级生成题目 → 生成 A4 PDF → 跳转 Page 9
 
 **实现状态**：✅ 已上线。`generate-verification.js` 限制最多 5 个卡点，支持 `targetCode` 预选，实时生成 `paperConfig`；预览模式调用 `callGeneratePaper({ preview: true })` 直接跳转预览页，正式生成后再写库。
@@ -477,12 +490,17 @@ cloudfunctions/
 {
   "pages": [
     "pages/index/index",
+    "pages/student-profile/student-profile",
     "pages/add-student/add-student",
     "pages/subject-select/subject-select",
     "pages/subject-home/subject-home",
     "pages/upload/upload",
     "pages/upload-history/upload-history",
+    "pages/parent-management/parent-management",
+    "pages/join-student/join-student",
     "pages/report/report",
+    "pages/bottleneck-center/bottleneck-center",
+    "pages/bottleneck-detail/bottleneck-detail",
     "pages/generate-verification/generate-verification",
     "pages/default-paper/default-paper",
     "pages/paper-preview/paper-preview"
@@ -490,7 +508,7 @@ cloudfunctions/
 }
 ```
 
-共 10 个注册页面（含 `add-student`，Page 5 已移除）。`app.json` 中已按上述顺序注册。
+共 15 个注册页面。`app.json` 中已按上述顺序注册。
 
 ---
 
@@ -500,8 +518,8 @@ cloudfunctions/
 
 | 功能 | 页面 | 说明 |
 |------|------|------|
-| 学习档案首页 | Page 1 | 综合摘要、样本覆盖、重点提示、学习记录、下一步建议 |
-| 学生管理 | Page 1 | 添加孩子、管理当前孩子档案 |
+| 家庭工作台 / 学习档案 | Page 1 / Page 1A | 多孩子显示家庭工作台，单孩子直接进入学习档案 |
+| 学生与家长管理 | Page 1 / Page 5A / Page 5B | 添加孩子、邀请共同家长、扫码加入孩子档案 |
 | 学科入口 | Page 1/2 | 首页直接进入学科详情，Page 2 作为兼容入口 |
 | 拍照诊断 | Page 3→4 | 上传→异步分析→报告 |
 | 诊断报告 | Page 6 | 卡点排行 + 错题详情 |
@@ -536,15 +554,16 @@ cloudfunctions/
 
 ---
 
-## 10. MVP 实现状态总览（2026-06-13）
+## 10. MVP 实现状态总览（2026-06-14）
 
 | 能力 | 状态 | 备注 |
 |------|------|------|
-| 14 个页面 + 四件套文件 | ✅ | `project-integrity.test.js` 校验 |
-| 学习档案首页 | ✅ | `index-presenter.js` 聚合综合摘要、样本覆盖、重点提示、学习记录和下一步建议 |
+| 15 个页面 + 四件套文件 | ✅ | `project-integrity.test.js` 校验 |
+| 家庭工作台 + 单孩子学习档案 | ✅ | `index` 处理 0/1/多孩子分流，`student-profile` 承载单孩子完整档案 |
+| 家长成员管理 | ✅ | owner 可邀请/移除共同家长，viewer 除成员管理外可参与学习流程 |
 | 添加学生并同步创建三条学科档案 | ✅ | `cloud.createStudentWithProfiles()` |
 | 学科隔离与学科工作台 | ✅ | `subject-home-presenter.js` 生成 primaryTask、taskQueue、tools |
-| 最多 20 张照片上传 + 同名软提示 | ✅ | `upload.js` |
+| 最多 20 张照片上传 + 同名软提示 + HEIF 处理 | ✅ | `upload.js` |
 | 服务端可靠触发分析 + 前端立即返回 | ✅ | `uploadAndAnalyze/index.js` |
 | 5 张/批串行分析 + 进度写入 analysisTasks | ✅ | `analyzePhotos/index.js` |
 | AI 结果标准化（字段截断、严重度归一） | ✅ | `analyzeBatch/result-normalizer.js` |
@@ -553,16 +572,17 @@ cloudfunctions/
 | 验证报告对比（improved/worsened/new/persisting） | ✅ | `analyzePhotos/comparison.js` |
 | 学科主页 / 报告页轮询分析状态 | ✅ | `utils/poller.js`，每 10s，最多 30 次 |
 | 分析任务缺失时手动重试 | ✅ | `report.onRetryAnalysis()` |
-| 验证试卷出卷配置（≤5 卡点 × 3 题） | ✅ | `generate-verification.js` 支持 targetCode 预选和 paperConfig |
+| 验证试卷出卷配置（≤5 卡点 × 5 题） | ✅ | 每个卡点 3 道核心验证题 + 2 道迁移延展题，支持 targetCode 预选和 paperConfig |
 | 默认诊断试卷（1-6 年级 A/B 卷 + 同学生缓存） | ✅ | `default-paper.js` + `generatePaper` paperKey 查询 |
 | 报告 PDF 生成与下载 | ✅ | `generateReportPDF/index.js` + `report.onDownloadPDF()` |
 | 试卷预览/打印/分享 | ✅ | `paper-preview.js` 支持 paperId 与 fileId 两种模式，并记录已下载状态 |
 | 学习记录时间线 + 原图预览 | ✅ | `upload-history.js` 按天聚合报告、试卷、验证上传和照片 |
 | 学习卡点中心 + 单卡点工作台 | ✅ | `bottleneck-center` / `bottleneck-detail` 基于共享 `BottleneckView` 展示卡点、证据链和验证入口 |
 | 学习卡点短名称展示 | ✅ | `utils/util.js` 将 LP 编号转为家长可读的短摘要，如“小数分数”“单位换算” |
+| Skill / CLI P0 | ✅ | `services/skills` 与 `cli/ldx.js` 封装诊断、报告、卡点、验证卷、反馈和时间线能力 |
 | 数据归属校验（openID）+ 参数白名单 | ✅ | 各云函数入口 |
-| 自动化测试覆盖（228 常规用例全绿） | ✅ | `npm test`；真实图片 E2E 脚本需通过 `npm run test:e2e-real-image` 单独运行 |
-| JS 语法检查 | ✅ | `npm run check`（78 个文件） |
+| 自动化测试覆盖（261 常规用例全绿） | ✅ | `npm test`；真实图片 E2E 脚本需通过 `npm run test:e2e-real-image` 单独运行 |
+| JS 语法检查 | ✅ | `npm run check`（86 个文件） |
 | 微信订阅消息推送 | ⚠️ | `sendNotification()` 仍为空实现，待申请模板 |
 | 上传与分析解耦 | ✅ | `uploadAndAnalyze` 不等待 `analyzePhotos` 完成 |
 | 默认试卷跨学生共享模板 | ⚠️ | 仅同学生复用 |
