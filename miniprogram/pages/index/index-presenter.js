@@ -1,6 +1,7 @@
 const {
   formatBottleneckDisplayName,
-  formatBottleneckDisplayList
+  formatBottleneckDisplayList,
+  formatChineseDateTime
 } = require('../../utils/util')
 const {
   bottleneckListText,
@@ -107,10 +108,29 @@ function reportPhotoCount(report = {}) {
   return 0
 }
 
+function reportEvidenceTime(report = {}) {
+  if (report.evidenceTime) return report.evidenceTime
+  if (report.verificationUploadedAt) return report.verificationUploadedAt
+  const firstPhoto = Array.isArray(report.imageFiles)
+    ? report.imageFiles.find(item => item && item.uploadedAt)
+    : null
+  return (firstPhoto && firstPhoto.uploadedAt) || report.createdAt
+}
+
+function buildPrimaryReportFinding(totalErrors, bottleneckText) {
+  if (totalErrors > 0 && bottleneckText) {
+    return `共发现 ${totalErrors} 道相关错题，主要卡点：${bottleneckText}`
+  }
+  if (totalErrors > 0) return `共发现 ${totalErrors} 道相关错题`
+  if (bottleneckText) return `主要卡点：${bottleneckText}`
+  return ''
+}
+
 function buildPrimaryReport(reports, subjectByKey, formatRelativeTime) {
-  const report = (reports || [])
+  const completedReports = (reports || [])
     .filter(item => item.status === 'completed' && (item.isEffective === undefined || item.isEffective === true))
-    .sort((a, b) => toDate(b.createdAt) - toDate(a.createdAt))[0]
+    .sort((a, b) => toDate(b.createdAt) - toDate(a.createdAt))
+  const report = completedReports.find(item => item.type !== 'verification') || completedReports[0]
 
   if (!report) return null
 
@@ -118,6 +138,13 @@ function buildPrimaryReport(reports, subjectByKey, formatRelativeTime) {
   const isVerification = report.type === 'verification'
   const bottleneckText = bottleneckListText(report.bottlenecks || [])
   const photoCount = reportPhotoCount(report)
+  const generatedAtText = formatChineseDateTime(report.createdAt)
+  const evidenceTimeText = formatChineseDateTime(reportEvidenceTime(report))
+  const findingText = buildPrimaryReportFinding(report.totalErrors || 0, bottleneckText)
+  const infoRows = [
+    generatedAtText ? { label: '报告生成', value: generatedAtText } : null,
+    evidenceTimeText ? { label: '证据时间', value: evidenceTimeText } : null
+  ].filter(Boolean)
   const evidenceParts = [
     photoCount > 0 ? `${photoCount} 张照片` : '',
     report.totalErrors > 0 ? `${report.totalErrors} 道相关错题` : '',
@@ -132,6 +159,10 @@ function buildPrimaryReport(reports, subjectByKey, formatRelativeTime) {
     summary: report.comparisonSummary || report.changeSummary || report.summary || (
       bottleneckText ? `重点关注：${bottleneckText}` : '点击阅读本次报告'
     ),
+    generatedAtText,
+    evidenceTimeText,
+    findingText,
+    infoRows,
     bottleneckText,
     evidenceText: evidenceParts.join(' · '),
     reportId: report._id,

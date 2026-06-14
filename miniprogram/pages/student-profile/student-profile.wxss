@@ -1,0 +1,6 @@
+@import "../index/index.wxss";
+
+/* pages/student-profile/student-profile.wxss */
+.profile-home {
+  min-height: 100vh;
+}

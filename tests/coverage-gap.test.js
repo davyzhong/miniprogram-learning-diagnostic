@@ -156,11 +156,8 @@ test('analyzePhotos clears profile analysis state when all batches fail', async 
       type: 'diagnosis',
       status: 'analyzing',
       createdAt: '2026-06-11T10:00:00Z',
-      imageFileIds: ['cloud://photo-1', 'cloud://photo-2'],
-      imageFiles: [
-        { fileID: 'cloud://photo-1' },
-        { fileID: 'cloud://photo-2' }
-      ]
+      imageFileIds: ['cloud://photo-1'],
+      imageFiles: [{ fileID: 'cloud://photo-1' }]
     }],
     subjectProfiles: [{
       _id: 'profile-1',

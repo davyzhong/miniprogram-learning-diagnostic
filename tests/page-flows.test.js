@@ -103,10 +103,12 @@ test('add student trims input and creates all subject profiles', async () => {
   assert.equal(page.data.saving, false)
 })
 
-test('student list combines profile report counts and opens subject selection', async () => {
+test('single-child index opens directly as that child learning profile', async () => {
   const cloud = {
     getStudents: async () => [{ _id: 'student-1', name: '钟青羽', grade: 5 }],
-    getSubjectProfiles: async () => [{ totalReports: 2, updatedAt: '2026-06-11T10:00:00Z' }]
+    getSubjectProfiles: async () => [{ subject: 'math', totalReports: 2, updatedAt: '2026-06-11T10:00:00Z' }],
+    getReports: async () => [],
+    getPapers: async () => []
   }
   const wx = createWxMock()
   const { page } = loadPage('miniprogram/pages/index/index.js', {
@@ -118,10 +120,65 @@ test('student list combines profile report counts and opens subject selection', 
   })
 
   await page.loadStudents()
+  assert.equal(page.data.homeMode, 'single-profile')
   assert.equal(page.data.students[0].totalReports, 2)
   assert.equal(page.data.students[0].gradeText, '5年级')
+  assert.equal(page.data.home.studentName, '钟青羽')
+  assert.equal(page.data.childCards.length, 0)
   page.onStudentTap({ currentTarget: { dataset: { id: 'student-1', name: '钟青羽', grade: 5 } } })
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/student-profile\/student-profile/)
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /studentId=student-1/)
+})
+
+test('empty index stays in add-first-child mode', async () => {
+  const cloud = {
+    getAccessibleStudents: async () => [],
+    getStudents: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.loadStudents()
+
+  assert.equal(page.data.homeMode, 'empty')
+  assert.equal(page.data.hasStudents, false)
+  assert.equal(page.data.home, null)
+  assert.equal(page.data.childCards.length, 0)
+})
+
+test('multi-child index shows only the family workbench and routes child cards to profile pages', async () => {
+  const cloud = {
+    getStudents: async () => [
+      { _id: 'student-1', name: '钟青羽', grade: 6 },
+      { _id: 'student-2', name: '弟弟', grade: 3 }
+    ],
+    getSubjectProfiles: async studentId => studentId === 'student-1'
+      ? [{ subject: 'math', totalReports: 2, currentBottlenecks: [{ lpCode: 'LP-001', status: 'needs_verification' }] }]
+      : [{ subject: 'math', totalReports: 0, currentBottlenecks: [] }],
+    getReports: async () => [],
+    getPapers: async () => []
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.loadStudents()
+
+  assert.equal(page.data.homeMode, 'family-workbench')
+  assert.equal(page.data.home, null)
+  assert.equal(page.data.childCards.length, 2)
+  assert.match(page.data.childCards[0].profileUrl, /pages\/student-profile\/student-profile/)
+  page.onStudentTap({ currentTarget: { dataset: { id: 'student-1', name: '钟青羽', grade: 6 } } })
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/student-profile\/student-profile/)
 })
 
 test('learning profile home loads the active student summary', async () => {
@@ -165,6 +222,7 @@ test('learning profile home loads the active student summary', async () => {
   })
 
   await page.loadStudents()
+  assert.equal(page.data.homeMode, 'single-profile')
   assert.equal(page.data.home.studentName, '钟青羽')
   assert.match(page.data.home.priorityHighlights[0].title, /数学/)
   assert.equal(page.data.home.priorityBottlenecks[0].displayName, '计算基础')
@@ -220,6 +278,7 @@ test('learning profile home falls back to legacy student reads when shared acces
 
   await page.loadStudents()
 
+  assert.equal(page.data.homeMode, 'single-profile')
   assert.equal(page.data.hasStudents, true)
   assert.equal(page.data.activeStudent.name, '钟青羽')
   assert.equal(page.data.home.recentRecords.length, 2)
@@ -248,6 +307,7 @@ test('learning profile home falls back to legacy student reads when shared acces
 
   await page.loadStudents()
 
+  assert.equal(page.data.homeMode, 'single-profile')
   assert.equal(page.data.hasStudents, true)
   assert.equal(page.data.activeStudentId, 'student-legacy')
   assert.equal(page.data.activeStudent.name, '钟青羽')
@@ -334,12 +394,59 @@ test('learning profile home uses shared access and lets co-parents operate learn
   })
 
   await page.loadStudents()
+  assert.equal(page.data.homeMode, 'single-profile')
   assert.equal(page.data.permissions.canUpload, true)
   assert.equal(page.data.permissions.canManageParents, false)
   assert.equal(page.data.home.nextAction.primaryText, '生成验证试卷')
 
   page.onPrimaryAction()
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
+})
+
+test('student profile page loads one child and keeps profile actions clickable', async () => {
+  const wx = createWxMock()
+  const cloud = {
+    getStudentDashboard: async studentId => {
+      assert.equal(studentId, 'student-1')
+      return {
+        student: { _id: 'student-1', name: '钟青羽', grade: 6 },
+        permissions: { canView: true, canManageParents: true, canUpload: true, canGeneratePaper: true },
+        subjectProfiles: [{
+          subject: 'math',
+          totalReports: 1,
+          currentBottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification' }]
+        }],
+        recentReports: [{
+          _id: 'report-1',
+          subject: 'math',
+          type: 'diagnosis',
+          status: 'completed',
+          createdAt: '2026-06-12T10:00:00Z',
+          bottlenecks: [{ lpCode: 'LP-001' }]
+        }],
+        recentPapers: []
+      }
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/student-profile/student-profile.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.onLoad({ studentId: 'student-1' })
+
+  assert.equal(page.data.home.studentName, '钟青羽')
+  assert.equal(page.data.home.nextAction.primaryText, '生成验证试卷')
+  page.onPrimaryReportTap()
+  page.onViewAllRecords()
+  page.onSubjectTap({ currentTarget: { dataset: { subject: 'math' } } })
+  const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
+  assert.match(urls[0], /pages\/report\/report\?id=report-1/)
+  assert.match(urls[1], /pages\/upload-history\/upload-history/)
+  assert.match(urls[2], /pages\/subject-home\/subject-home/)
 })
 
 test('bottleneck center loads dashboard bottlenecks and filters by status', async () => {
@@ -381,7 +488,7 @@ test('bottleneck center loads dashboard bottlenecks and filters by status', asyn
   assert.match(urls[1], /targetCode=LP-001/)
 })
 
-test('bottleneck detail builds a focused evidence workbench', async () => {
+test('bottleneck detail builds a focused evidence workbench without repetitive report and paper lists', async () => {
   const cloud = {
     getSubjectDashboard: async (studentId, subject) => {
       assert.equal(studentId, 'student-1')
@@ -400,25 +507,56 @@ test('bottleneck detail builds a focused evidence workbench', async () => {
             lastSeenAt: '2026-06-12T09:00:00+08:00'
           }]
         },
-        reports: [{
-          _id: 'report-1',
-          subject: 'math',
-          type: 'diagnosis',
-          status: 'completed',
-          createdAt: '2026-06-12T09:30:00+08:00',
-          summary: '计算基础需要继续验证',
-          bottlenecks: [{ lpCode: 'LP-001' }]
-        }],
-        papers: [{
-          _id: 'paper-1',
-          subject: 'math',
-          type: 'verification',
-          createdAt: '2026-06-12T10:30:00+08:00',
-          paperDisplayCode: '数学-20260612-01',
-          questions: [{}, {}, {}, {}, {}, {}],
-          bottleneckTargets: ['LP-001'],
-          bottleneckSummaries: ['计算基础']
-        }]
+        reports: [
+          {
+            _id: 'report-2',
+            subject: 'math',
+            type: 'verification',
+            status: 'completed',
+            paperId: 'paper-1',
+            createdAt: '2026-06-12T11:30:00+08:00',
+            comparisonSummary: '计算基础已改善，仍需观察口算稳定性',
+            verificationTargets: ['LP-001'],
+            verificationEvidence: [{ lpCode: 'LP-001', complete: true, allCorrect: true }]
+          },
+          {
+            _id: 'report-1',
+            subject: 'math',
+            type: 'diagnosis',
+            status: 'completed',
+            createdAt: '2026-06-12T09:30:00+08:00',
+            summary: '计算基础需要继续验证',
+            totalErrors: 5,
+            imageFiles: [{}, {}],
+            bottlenecks: [{ lpCode: 'LP-001' }]
+          }
+        ],
+        papers: [
+          {
+            _id: 'paper-2',
+            subject: 'math',
+            type: 'verification',
+            createdAt: '2026-06-13T10:30:00+08:00',
+            paperDisplayCode: '数学-20260613-01',
+            questionCount: 8,
+            studentPages: 2,
+            answerPages: 1,
+            bottleneckTargets: ['LP-001'],
+            bottleneckSummaries: ['计算基础']
+          },
+          {
+            _id: 'paper-1',
+            subject: 'math',
+            type: 'verification',
+            createdAt: '2026-06-12T10:30:00+08:00',
+            paperDisplayCode: '数学-20260612-01',
+            questions: [{}, {}, {}, {}, {}, {}],
+            studentPages: 1,
+            answerPages: 1,
+            bottleneckTargets: ['LP-001'],
+            bottleneckSummaries: ['计算基础']
+          }
+        ]
       }
     }
   }
@@ -436,9 +574,20 @@ test('bottleneck detail builds a focused evidence workbench', async () => {
   })
 
   assert.equal(page.data.bottleneck.displayName, '计算基础')
-  assert.equal(page.data.relatedReports.length, 1)
-  assert.equal(page.data.relatedPapers.length, 1)
-  assert.equal(page.data.evidenceChain.length, 2)
+  assert.equal(page.data.relatedReports.length, 2)
+  assert.equal(page.data.relatedPapers.length, 2)
+  assert.equal(page.data.evidenceChain.length, 4)
+  assert.equal(page.data.visibleEvidenceChain.length, 3)
+  assert.equal(page.data.hiddenEvidenceCount, 1)
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.visibleEvidenceChain.map(item => item.category))), ['验证试卷', '验证反馈', '验证试卷'])
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.visibleEvidenceChain.map(item => item.title))), ['数学-20260613-01', '验证反馈', '数学-20260612-01'])
+  assert.ok(page.data.visibleEvidenceChain[0].metaChips.includes('待上传'))
+  assert.ok(page.data.visibleEvidenceChain[1].metaChips.includes('关联 数学-20260612-01'))
+  assert.ok(page.data.visibleEvidenceChain[2].metaChips.includes('已反馈'))
+
+  page.onToggleEvidence()
+  assert.equal(page.data.visibleEvidenceChain.length, 4)
+  assert.equal(page.data.showAllEvidence, true)
 
   page.onGenerateVerification()
   page.onViewReport({ currentTarget: { dataset: { id: 'report-1' } } })
@@ -595,6 +744,68 @@ test('upload selection warns about duplicate filenames but keeps the images', ()
   assert.equal(page.data.images.length, 2)
   assert.ok(page.data.images.every(image => image.nameDuplicate))
   assert.equal(wx.calls.find(call => call.name === 'showToast').payload.title, '发现同名照片，仍可继续上传')
+})
+
+test('upload converts HEIF selections to JPEG before upload', async () => {
+  let uploaded = null
+  const wx = createWxMock({
+    chooseMedia: options => options.success({
+      tempFiles: [
+        { tempFilePath: '/tmp/paper.HEIC', size: 100 }
+      ]
+    }),
+    compressImage: options => {
+      assert.equal(options.src, '/tmp/paper.HEIC')
+      options.success({ tempFilePath: '/tmp/paper-converted.jpg' })
+    },
+    cloud: {
+      uploadFile: options => {
+        uploaded = options
+        options.success({ fileID: 'cloud://paper-converted' })
+      }
+    }
+  })
+  const { page } = loadPage('miniprogram/pages/upload/upload.js', {
+    wx,
+    modules: { '../../utils/cloud': {} }
+  })
+  page.setData({ studentId: 'student-1', subject: 'math' })
+
+  await page.onChooseImage()
+
+  assert.equal(page.data.images.length, 1)
+  assert.equal(page.data.images[0].tempPath, '/tmp/paper-converted.jpg')
+  assert.equal(page.data.images[0].originalTempPath, '/tmp/paper.HEIC')
+  assert.equal(page.data.images[0].fileName, 'paper.jpg')
+  assert.equal(page.data.images[0].originalFileName, 'paper.HEIC')
+  assert.equal(page.data.images[0].convertedFromHeif, true)
+
+  const fileId = await page.uploadOne(page.data.images[0], 0)
+  assert.equal(fileId, 'cloud://paper-converted')
+  assert.equal(uploaded.filePath, '/tmp/paper-converted.jpg')
+  assert.match(uploaded.cloudPath, /\.jpg$/)
+})
+
+test('upload skips HEIF images that cannot be converted with a readable toast', async () => {
+  const wx = createWxMock({
+    chooseMedia: options => options.success({
+      tempFiles: [
+        { tempFilePath: '/tmp/broken.heif', size: 100 }
+      ]
+    }),
+    compressImage: options => options.fail(new Error('unsupported format'))
+  })
+  const { page } = loadPage('miniprogram/pages/upload/upload.js', {
+    wx,
+    modules: { '../../utils/cloud': {} }
+  })
+
+  await page.onChooseImage()
+
+  assert.equal(page.data.images.length, 0)
+  assert.equal(page.data.canSubmit, false)
+  const toastTitles = wx.calls.filter(call => call.name === 'showToast').map(call => call.payload.title)
+  assert.ok(toastTitles.some(title => /HEIF/.test(title)))
 })
 
 test('upload submits file metadata and navigates back on success', async () => {

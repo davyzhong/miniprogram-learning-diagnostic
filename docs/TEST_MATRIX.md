@@ -19,7 +19,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | 设计功能 | 自动化覆盖 | 当前结论 |
 |---|---|---|
 | 添加学生并创建数/语/英档案 | `data-layer.test.js`、`page-flows.test.js` | 已覆盖 |
-| 学习档案首页、学科入口和学科隔离 | `index-presenter.test.js`、`page-flows.test.js` | 已覆盖；首页展示综合摘要、样本覆盖、重点提示、学习记录和下一步建议 |
+| 自适应首页、孩子档案、学科入口和学科隔离 | `index-presenter.test.js`、`page-flows.test.js` | 已覆盖；0 个孩子显示空态，1 个孩子直接显示学习档案，多孩子显示家庭工作台并进入孩子档案 |
 | 多家长查看同一孩子档案 | `student-access.test.js`、`student-data-access.test.js`、`parent-management-page-flows.test.js`、`page-flows.test.js` | 已覆盖；owner 可邀请/移除，共同家长可参与学习流程但不能管理家庭成员 |
 | 最多 20 张照片上传、文件元数据保存 | `cloud-functions.test.js`、`page-flows.test.js` | 核心规则已覆盖；相机和云存储需真机验证 |
 | 同名照片软提示、OCR 摘要去重、学习记录照片查看 | `photo-dedup.test.js`、`cloud-functions.test.js`、`page-flows.test.js` | 已覆盖，包括全部重复时不更新卡点 |
@@ -79,9 +79,9 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/data-layer.test.js` | 统一数据访问层 | 8 |
 | `tests/e2e-real-image.test.js` | 端到端真实图片测试脚本 | 1（含云端条件步骤） |
 | `tests/generate-paper-pdf.test.js` | 可打印 PDF 中文字体、分页和答案页回归 | 4 |
-| `tests/index-presenter.test.js` | 学习档案首页视图模型 | 7 |
+| `tests/index-presenter.test.js` | 孩子档案视图模型与家庭工作台卡片 | 8 |
 | `tests/learning-records.test.js` | 学习记录四级分类、试卷编号和卡点名称规则 | 8 |
-| `tests/page-flows.test.js` | 页面主流程与错误恢复 | 51 |
+| `tests/page-flows.test.js` | 页面主流程、首页分流与错误恢复 | 57 |
 | `tests/parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
 | `tests/photo-dedup.test.js` | OCR 去重算法 | 3 |
 | `tests/poller.test.js` | 通用轮询器与分析轮询包装 | 6 |

@@ -8,6 +8,8 @@ const { bottleneckListText } = require('../../utils/learning-records')
 const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-display')
 const { SUBJECT_NAMES } = require('../../utils/constants')
 
+const EVIDENCE_PREVIEW_LIMIT = 3
+
 function toDate(value) {
   if (!value) return null
   const date = new Date(value)
@@ -25,6 +27,22 @@ function formatDateTime(value) {
   const hour = String(date.getHours()).padStart(2, '0')
   const minute = String(date.getMinutes()).padStart(2, '0')
   return `${date.getMonth() + 1}月${date.getDate()}日 ${hour}:${minute}`
+}
+
+function compactText(text = '', maxLength = 34) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim()
+  if (value.length <= maxLength) return value
+  return `${value.slice(0, maxLength)}...`
+}
+
+function countRelatedErrors(report = {}, lpCode = '') {
+  const matched = (report.bottlenecks || []).find(item => item.lpCode === lpCode)
+  if (matched && matched.errorCount !== undefined) return Number(matched.errorCount) || 0
+  const details = Array.isArray(report.errorDetails)
+    ? report.errorDetails.filter(item => !lpCode || item.lpCode === lpCode)
+    : []
+  if (details.length > 0) return details.length
+  return Number(report.totalErrors) || 0
 }
 
 function reportCodes(report = {}) {
@@ -83,31 +101,94 @@ function buildPaperSummary(display = {}) {
   ].filter(Boolean).join(' · ') || '点击查看验证试卷'
 }
 
-function buildEvidenceChain(reports, papers, subjectName) {
+function buildReportStatusText(report = {}, lpCode = '') {
+  if (report.type === 'verification') {
+    const evidence = (report.verificationEvidence || []).find(item => (
+      item.lpCode === lpCode || item.targetCode === lpCode || item.bottleneckCode === lpCode
+    ))
+    if (evidence && evidence.complete && evidence.allCorrect) return '已改善'
+    if (evidence && evidence.complete) return '仍需观察'
+    return '已反馈'
+  }
+  const text = `${report.changeSummary || ''}${report.summary || ''}`
+  if (/再次|持续|仍需|复现/.test(text)) return '再次出现'
+  return '发现'
+}
+
+function buildVerificationMeta(report = {}, paperCode = '', lpCode = '') {
+  const evidenceList = (report.verificationEvidence || []).filter(item => (
+    item.lpCode === lpCode || item.targetCode === lpCode || item.bottleneckCode === lpCode
+  ))
+  const complete = evidenceList.filter(item => item.complete).length
+  const passed = evidenceList.filter(item => item.complete && item.allCorrect).length
+  return [
+    paperCode ? `关联 ${paperCode}` : '',
+    complete ? `${passed}/${complete}通过` : '',
+  ].filter(Boolean)
+}
+
+function buildEvidenceChain(reports, papers, subjectName, lpCode = '') {
   const paperCodeById = buildPaperCodeMap(papers)
+  const paperCodeOfId = id => paperCodeById.get(id) || ''
+  const verificationByPaperId = new Map()
+  reports
+    .filter(report => report.type === 'verification' && report.paperId)
+    .forEach(report => verificationByPaperId.set(report.paperId, report))
   const reportRows = reports.map(report => ({
     id: report._id,
     type: 'report',
+    kind: report.type === 'verification' ? 'verification-report' : 'diagnosis-report',
     icon: report.type === 'verification' ? '验' : '报',
+    category: reportTypeName(report),
     title: reportTypeName(report),
-    summary: buildReportSummary(report),
+    statusText: buildReportStatusText(report, lpCode),
+    statusClass: report.type === 'verification' ? 'feedback' : 'diagnosis',
+    summary: compactText(buildReportSummary(report), 42),
+    metaChips: [
+      formatDateTime(report.evidenceTime || report.createdAt || report.updatedAt),
+      report.type === 'verification' ? '' : `${countRelatedErrors(report, lpCode)}道相关错题`,
+      report.type === 'verification' ? '' : (Array.isArray(report.imageFiles) && report.imageFiles.length ? `${report.imageFiles.length}张照片` : ''),
+      ...buildVerificationMeta(report, paperCodeOfId(report.paperId), lpCode)
+    ].filter(Boolean),
     timeText: formatDateTime(report.createdAt || report.updatedAt),
     createdAt: report.createdAt || report.updatedAt
   }))
   const paperRows = papers.map(paper => {
     const display = buildPaperDisplay(paper, subjectName, { paperCodeById })
+    const feedbackReport = verificationByPaperId.get(paper._id)
     return {
       id: paper._id,
       type: 'paper',
+      kind: 'verification-paper',
       icon: '卷',
-      title: display.paperCode ? `验证试卷 ${display.paperCode}` : '验证试卷',
-      summary: buildPaperSummary(display),
+      category: '验证试卷',
+      title: display.paperCode || '验证试卷',
+      statusText: feedbackReport ? '已反馈' : '待上传',
+      statusClass: feedbackReport ? 'done' : 'pending',
+      summary: display.bottleneckText ? `覆盖 ${display.bottleneckText}` : buildPaperSummary(display),
       paperCode: display.paperCode,
+      metaChips: [
+        display.questionCount ? `${display.questionCount}题` : '',
+        display.studentPagesText,
+        display.answerPagesText,
+        feedbackReport ? '已反馈' : '待上传'
+      ].filter(Boolean),
       timeText: formatDateTime(paper.createdAt || paper.paperDate),
       createdAt: paper.createdAt || paper.paperDate
     }
   })
   return [...reportRows, ...paperRows].sort((a, b) => timeOf(b.createdAt) - timeOf(a.createdAt))
+}
+
+function evidenceVisibility(evidenceChain = [], showAll = false) {
+  const visibleEvidenceChain = showAll
+    ? evidenceChain
+    : evidenceChain.slice(0, EVIDENCE_PREVIEW_LIMIT)
+  return {
+    visibleEvidenceChain,
+    hiddenEvidenceCount: Math.max(0, evidenceChain.length - visibleEvidenceChain.length),
+    showAllEvidence: showAll
+  }
 }
 
 Page({
@@ -122,6 +203,9 @@ Page({
     relatedReports: [],
     relatedPapers: [],
     evidenceChain: [],
+    visibleEvidenceChain: [],
+    hiddenEvidenceCount: 0,
+    showAllEvidence: false,
     emptyText: ''
   },
 
@@ -171,11 +255,13 @@ Page({
       const relatedPapers = papers
         .filter(paper => paperMatches(paper, this.data.lpCode))
         .sort((a, b) => timeOf(b.createdAt || b.paperDate) - timeOf(a.createdAt || a.paperDate))
+      const evidenceChain = buildEvidenceChain(relatedReports, relatedPapers, this.data.subjectName, this.data.lpCode)
       this.setData({
         bottleneck,
         relatedReports,
         relatedPapers,
-        evidenceChain: buildEvidenceChain(relatedReports, relatedPapers, this.data.subjectName),
+        evidenceChain,
+        ...evidenceVisibility(evidenceChain),
         loading: false,
         emptyText: ''
       })
@@ -210,6 +296,11 @@ Page({
       return
     }
     this.onViewReport(e)
+  },
+
+  onToggleEvidence() {
+    const showAll = !this.data.showAllEvidence
+    this.setData(evidenceVisibility(this.data.evidenceChain, showAll))
   },
 
   onMetricTap(e) {

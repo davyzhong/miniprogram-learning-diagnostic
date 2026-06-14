@@ -21,6 +21,7 @@ Page({
     activeStudent: null,
     permissions: {},
     hasStudents: false,
+    homeMode: 'empty',
     home: null,
     childCards: []
   },
@@ -58,6 +59,7 @@ Page({
           activeStudent: null,
           permissions: {},
           hasStudents: false,
+          homeMode: 'empty',
           home: null,
           childCards: [],
           loading: false
@@ -140,32 +142,40 @@ Page({
         }
       }))
 
-      const childCards = buildChildWorkbenchCards({
-        students: viewModels,
-        profilesByStudentId: profileLists,
-        reportsByStudentId,
-        papersByStudentId
-      }, formatRelativeTime)
+      const hasMultipleChildren = viewModels.length > 1
+      const childCards = hasMultipleChildren
+        ? buildChildWorkbenchCards({
+            students: viewModels,
+            profilesByStudentId: profileLists,
+            reportsByStudentId,
+            papersByStudentId
+          }, formatRelativeTime)
+        : []
 
-      const activeStudent = viewModels[0]
-      const activeProfiles = profileLists[activeStudent._id] || []
-      const reports = reportsByStudentId[activeStudent._id] || []
-      const papers = papersByStudentId[activeStudent._id] || []
-      const permissions = permissionsByStudentId[activeStudent._id] || activeStudent.permissions || OWNER_PERMISSIONS
-      const home = buildLearningProfileHomeView({
-        student: activeStudent,
-        profiles: activeProfiles,
-        reports,
-        papers,
-        permissions
-      }, formatRelativeTime)
+      const activeStudent = hasMultipleChildren ? null : viewModels[0]
+      const activeProfiles = activeStudent ? (profileLists[activeStudent._id] || []) : []
+      const reports = activeStudent ? (reportsByStudentId[activeStudent._id] || []) : []
+      const papers = activeStudent ? (papersByStudentId[activeStudent._id] || []) : []
+      const permissions = activeStudent
+        ? (permissionsByStudentId[activeStudent._id] || activeStudent.permissions || OWNER_PERMISSIONS)
+        : {}
+      const home = activeStudent
+        ? buildLearningProfileHomeView({
+            student: activeStudent,
+            profiles: activeProfiles,
+            reports,
+            papers,
+            permissions
+          }, formatRelativeTime)
+        : null
 
       this.setData({
         students: viewModels,
-        activeStudentId: activeStudent._id,
-        activeStudent: { ...activeStudent, permissions },
+        activeStudentId: activeStudent ? activeStudent._id : '',
+        activeStudent: activeStudent ? { ...activeStudent, permissions } : null,
         permissions,
         hasStudents: true,
+        homeMode: hasMultipleChildren ? 'family-workbench' : 'single-profile',
         home,
         childCards,
         loading: false
@@ -179,11 +189,11 @@ Page({
     }
   },
 
-  // 点击学生卡片 → 进入学科选择页
+  // 点击学生卡片 → 进入该孩子的学习档案
   onStudentTap(e) {
     const { id, name, grade } = e.currentTarget.dataset
     wx.navigateTo({
-      url: `/pages/subject-select/subject-select?studentId=${id}&name=${encodeURIComponent(name)}&grade=${grade || ''}`
+      url: `/pages/student-profile/student-profile?studentId=${id}&name=${encodeURIComponent(name || '')}&grade=${grade || ''}`
     })
   },
 

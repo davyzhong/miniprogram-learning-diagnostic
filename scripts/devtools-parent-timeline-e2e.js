@@ -90,6 +90,7 @@ async function installCloudMocks(miniProgram) {
   await miniProgram.evaluate(() => {
     const now = '2026-06-13T09:30:00+08:00'
     const student = { _id: 'student-e2e', name: '钟青羽', grade: 6 }
+    const secondStudent = { _id: 'student-e2e-2', name: '钟小羽', grade: 3 }
     const ownerPermissions = {
       canView: true,
       canManageParents: true,
@@ -119,6 +120,15 @@ async function installCloudMocks(miniProgram) {
         { lpCode: 'LP-001', lpName: '计算基础', status: 'needs_verification', severity: 'medium' },
         { lpCode: 'LP-008', lpName: '审题理解', status: 'persisting', severity: 'high' },
       ],
+    }]
+    const secondSubjectProfiles = [{
+      _id: 'profile-second-math',
+      studentId: 'student-e2e-2',
+      subject: 'math',
+      subjectName: '数学',
+      totalReports: 0,
+      updatedAt: now,
+      currentBottlenecks: [],
     }]
     const reports = [{
       _id: 'report-e2e',
@@ -223,7 +233,15 @@ async function installCloudMocks(miniProgram) {
     wx.cloud.callFunction = async ({ name, data }) => {
       if (name === 'studentAccess') {
         if (data.action === 'getAccessibleStudents') {
-          return { result: { success: true, students: [{ ...student, role: 'owner', permissions: ownerPermissions }] } }
+          return {
+            result: {
+              success: true,
+              students: [
+                { ...student, role: 'owner', permissions: ownerPermissions },
+                { ...secondStudent, role: 'owner', permissions: ownerPermissions },
+              ],
+            },
+          }
         }
         if (data.action === 'listMembers') {
           return { result: { success: true, student, role: 'owner', permissions: ownerPermissions, members } }
@@ -250,6 +268,9 @@ async function installCloudMocks(miniProgram) {
       }
       if (name === 'studentData') {
         if (data.action === 'getStudentDashboard') {
+          if (data.studentId === secondStudent._id) {
+            return { result: { success: true, student: secondStudent, permissions: ownerPermissions, subjectProfiles: secondSubjectProfiles, recentReports: [], recentPapers: [] } }
+          }
           return { result: { success: true, student, permissions: ownerPermissions, subjectProfiles, recentReports: reports, recentPapers: papers } }
         }
         if (data.action === 'getSubjectDashboard') {
@@ -285,8 +306,8 @@ async function installCloudMocks(miniProgram) {
               orderBy() { return this },
               limit() { return this },
               async get() {
-                if (name === 'students') return { data: [student].filter(item => matchesFilter(item, filter)) }
-                if (name === 'subjectProfiles') return { data: subjectProfiles.filter(item => matchesFilter(item, filter)) }
+                if (name === 'students') return { data: [student, secondStudent].filter(item => matchesFilter(item, filter)) }
+                if (name === 'subjectProfiles') return { data: [...subjectProfiles, ...secondSubjectProfiles].filter(item => matchesFilter(item, filter)) }
                 if (name === 'reports') return { data: reports.filter(item => matchesFilter(item, filter)) }
                 if (name === 'papers') return { data: papers.filter(item => matchesFilter(item, filter)) }
                 return { data: [] }
@@ -299,7 +320,7 @@ async function installCloudMocks(miniProgram) {
           doc(id) {
             return {
               async get() {
-                if (name === 'students') return { data: student }
+                if (name === 'students') return { data: [student, secondStudent].find(item => item._id === id) || student }
                 if (name === 'reports') return { data: reports.find(item => item._id === id) }
                 if (name === 'papers') return { data: papers.find(item => item._id === id) }
                 return { data: null }
@@ -309,7 +330,10 @@ async function installCloudMocks(miniProgram) {
           orderBy() { return this },
           limit() { return this },
           async get() {
-            if (name === 'students') return { data: [student] }
+            if (name === 'students') return { data: [student, secondStudent] }
+            if (name === 'subjectProfiles') return { data: [...subjectProfiles, ...secondSubjectProfiles] }
+            if (name === 'reports') return { data: reports }
+            if (name === 'papers') return { data: papers }
             return { data: [] }
           },
         }
@@ -352,12 +376,35 @@ async function main() {
     assert(stack.length > 0)
   })
 
-  await runCase('学习档案首页真实加载：有档案、有家长管理、有学习记录', async () => {
+  await runCase('家庭工作台真实加载：多个孩子只显示工作台', async () => {
     const page = await relaunch(miniProgram, '/pages/index/index', 2200)
     const text = await pageText(page)
-    requireText(text, ['学习档案', '钟青羽', '家长管理', '学习记录', '当前综合摘要'])
+    requireText(text, ['家庭学习工作台', '点击数字、状态、学科和编号可直接追溯', '钟青羽', '钟小羽', '待验证', '待上传'])
     assert(!text.includes('还没有学习档案'), 'home should not show empty profile state')
+    assert(!text.includes('当前综合摘要'), 'multi-child home should not mix in one child profile details')
+    assert(!text.includes('孩子学习工作台'), 'family home should not render a duplicated child workbench heading')
+    assert.equal((text.match(/添加孩子/g) || []).length, 1, 'family home should render one add-child entry')
     await miniProgram.screenshot({ path: screenshots.index })
+  })
+
+  await runCase('点击孩子卡片主体：进入该孩子学习档案', async () => {
+    let page = await miniProgram.currentPage()
+    await tapByText(page, '.child-card-top', '钟青羽')
+    await page.waitFor(1600)
+    page = await miniProgram.currentPage()
+    assert.equal(page.path, 'pages/student-profile/student-profile')
+    const text = await pageText(page)
+    requireText(text, [
+      '钟青羽 · 学习档案',
+      '当前综合摘要',
+      '最新数学诊断报告',
+      '报告生成',
+      '证据时间',
+      '共发现 2 道相关错题',
+      '家长管理',
+      '学习记录',
+      '当前学习卡点'
+    ])
   })
 
   await runCase('点击家长管理：进入家庭成员页面', async () => {
@@ -387,6 +434,8 @@ async function main() {
     await page.waitFor(1200)
     page = await miniProgram.currentPage()
     assert.equal(page.path, 'pages/index/index')
+    text = await pageText(page)
+    requireText(text, ['家庭学习工作台', '钟青羽'])
   })
 
   await runCase('添加孩子页：表单元素可见', async () => {
@@ -443,7 +492,7 @@ async function main() {
   })
 
   await runCase('点击学习卡点查看全部：进入卡点中心', async () => {
-    let page = await relaunch(miniProgram, '/pages/index/index', 2200)
+    let page = await relaunch(miniProgram, '/pages/student-profile/student-profile?studentId=student-e2e', 2200)
     await tapByText(page, '.link-text', '查看全部')
     await page.waitFor(1200)
     page = await miniProgram.currentPage()
@@ -465,7 +514,9 @@ async function main() {
     page = await miniProgram.currentPage()
     assert.equal(page.path, 'pages/bottleneck-detail/bottleneck-detail')
     text = await pageText(page)
-    requireText(text, ['数学学习卡点', '审题理解', '证据链', '相关报告', '相关验证卷', '生成验证卷'])
+    requireText(text, ['数学学习卡点', '审题理解', '卡点证据链', '验证反馈', '验证试卷', '诊断报告', '数学-20260613-01', '已反馈', '生成验证卷'])
+    assert(!text.includes('相关报告'), 'bottleneck detail should not render a duplicate related report list')
+    assert(!text.includes('相关验证卷'), 'bottleneck detail should not render a duplicate related paper list')
     assert(!text.includes('LP-008'), 'bottleneck detail should prefer text summaries over LP codes')
 
     await tapByText(page, '.primary-action', '生成验证卷')
@@ -475,7 +526,7 @@ async function main() {
   })
 
   await runCase('点击学习记录查看全部：进入时间线页面', async () => {
-    let page = await relaunch(miniProgram, '/pages/index/index', 2200)
+    let page = await relaunch(miniProgram, '/pages/student-profile/student-profile?studentId=student-e2e', 2200)
     await tapLastByText(page, '.link-text', '查看全部')
     await page.waitFor(1200)
     page = await miniProgram.currentPage()

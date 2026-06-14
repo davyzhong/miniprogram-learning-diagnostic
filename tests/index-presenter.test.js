@@ -71,7 +71,8 @@ test('child workbench cards combine pending actions and subject rows for multipl
   assert.equal(cards[0].nextAction.title, '下一步')
   assert.match(cards[0].nextAction.url, /paper-preview\/paper-preview/)
   assert.match(cards[0].nextAction.url, /paperId=paper-1/)
-  assert.match(cards[0].profileUrl, /mode=student-profile/)
+  assert.match(cards[0].profileUrl, /pages\/student-profile\/student-profile/)
+  assert.match(cards[0].profileUrl, /studentId=student-1/)
 
   assert.equal(cards[1].name, '弟弟')
   assert.equal(cards[1].roleText, '共同家长')
@@ -168,6 +169,7 @@ test('learning profile home surfaces the latest effective report as a primary re
       status: 'completed',
       isEffective: true,
       createdAt: '2026-06-12T09:30:00+08:00',
+      evidenceTime: '2026-06-12T09:10:00+08:00',
       summary: '发现计算基础和审题理解两个学习卡点',
       totalErrors: 5,
       bottlenecks: [
@@ -182,9 +184,48 @@ test('learning profile home surfaces the latest effective report as a primary re
   assert.equal(view.primaryReport.reportId, 'report-latest')
   assert.equal(view.primaryReport.title, '最新数学诊断报告')
   assert.equal(view.primaryReport.summary, '发现计算基础和审题理解两个学习卡点')
+  assert.equal(view.primaryReport.generatedAtText, '2026年6月12日 9:30')
+  assert.equal(view.primaryReport.evidenceTimeText, '2026年6月12日 9:10')
+  assert.equal(view.primaryReport.findingText, '共发现 5 道相关错题，主要卡点：计算基础、审题理解')
   assert.equal(view.primaryReport.bottleneckText, '计算基础、审题理解')
   assert.equal(view.primaryReport.evidenceText, '2 张照片 · 5 道相关错题')
+  assert.deepEqual(view.primaryReport.infoRows, [
+    { label: '报告生成', value: '2026年6月12日 9:30' },
+    { label: '证据时间', value: '2026年6月12日 9:10' }
+  ])
   assert.equal(view.primaryReport.actionText, '阅读完整报告')
+})
+
+test('learning profile primary report prefers the latest diagnosis over a newer verification feedback', () => {
+  const view = buildLearningProfileHomeView({
+    student: { _id: 'student-1', name: '钟青羽', grade: 6 },
+    profiles: [{
+      subject: 'math',
+      currentBottlenecks: [{ lpCode: 'LP-001', status: 'needs_verification' }]
+    }],
+    reports: [{
+      _id: 'diagnosis-report',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      createdAt: '2026-06-12T09:30:00+08:00',
+      summary: '诊断发现计算基础需要继续观察',
+      totalErrors: 5,
+      bottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误（加减乘除）' }]
+    }, {
+      _id: 'verification-report',
+      subject: 'math',
+      type: 'verification',
+      status: 'completed',
+      createdAt: '2026-06-12T10:30:00+08:00',
+      comparisonSummary: '验证反馈显示部分改善'
+    }],
+    papers: []
+  }, relative)
+
+  assert.equal(view.primaryReport.reportId, 'diagnosis-report')
+  assert.equal(view.primaryReport.title, '最新数学诊断报告')
+  assert.equal(view.recentRecords[0].kind, 'verification-report')
 })
 
 test('learning profile home surfaces priority bottlenecks below the primary report', () => {

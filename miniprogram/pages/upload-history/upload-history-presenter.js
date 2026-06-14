@@ -105,12 +105,37 @@ function reportSummary(report) {
   return '查看这次学习诊断的详细结果。'
 }
 
+function cleanPhotoSummary(summary = '') {
+  const text = String(summary || '').trim()
+  if (!text) return ''
+  return text
+    .replace(/^(本页|此页|该页)(为|是)(小学)?[一二三四五六七八九十\d]+年级[^，,。；;]*(，|,|。|；|;)\s*/, '')
+    .trim()
+}
+
+function isMachineGeneratedFileName(fileName = '') {
+  const name = String(fileName || '').trim()
+  if (!name) return false
+  const stem = name.replace(/\.[a-z0-9]{2,5}$/i, '')
+  if (stem.length < 24) return false
+  if (/^[a-f0-9]{24,}$/i.test(stem)) return true
+  if (/^[A-Za-z0-9_-]{24,}$/.test(stem) && !/[\u4e00-\u9fa5\s]/.test(stem)) return true
+  return false
+}
+
+function displayPhotoTitle(photo = {}, index = 0, kind = 'photo') {
+  const fallback = kind === 'answer-upload' ? `验证卷作答${index + 1}` : `试卷照片${index + 1}`
+  const fileName = String(photo.fileName || '').trim()
+  if (!fileName || isMachineGeneratedFileName(fileName)) return fallback
+  return fileName
+}
+
 function buildPhotoEvidenceRows(photos = [], kind = 'photo') {
   return photos.map((photo, index) => ({
     kind,
     icon: kind === 'answer-upload' ? '传' : '片',
-    title: photo.fileName || (kind === 'answer-upload' ? `验证卷作答${index + 1}` : `试卷照片${index + 1}`),
-    summary: photo.summaryText || photo.ocrSummary || '暂无 OCR 摘要',
+    title: displayPhotoTitle(photo, index, kind),
+    summary: cleanPhotoSummary(photo.summaryText || photo.ocrSummary) || '暂无 OCR 摘要',
     isDuplicate: Boolean(photo.isDuplicate),
     fileID: photo.fileID || '',
     tempFileURL: photo.tempFileURL || ''
@@ -348,14 +373,19 @@ function collectFileIDs(reports) {
 }
 
 function attachTempUrlsToReports(reports, urlByFileID) {
-  return reports.map(report => ({
-    report,
-    photos: getReportPhotos(report).map(photo => ({
-      ...photo,
-      tempFileURL: urlByFileID.get(photo.fileID) || '',
-      summaryText: photo.ocrSummary || '此照片来自旧报告，暂无 OCR 识别摘要'
-    }))
-  }))
+  return reports.map(report => {
+    const reportPhotos = getReportPhotos(report)
+    const kind = report.type === 'verification' ? 'answer-upload' : 'photo'
+    return {
+      report,
+      photos: reportPhotos.map((photo, index) => ({
+        ...photo,
+        fileName: displayPhotoTitle(photo, index, kind),
+        tempFileURL: urlByFileID.get(photo.fileID) || '',
+        summaryText: cleanPhotoSummary(photo.ocrSummary) || '此照片来自旧报告，暂无 OCR 识别摘要'
+      }))
+    }
+  })
 }
 
 function buildPaperLookup(papers = []) {

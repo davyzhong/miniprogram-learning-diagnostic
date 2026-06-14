@@ -230,6 +230,18 @@ test('verification paper workbench exposes paper code, content preview and feedb
   assert.match(dataFunction, /paperDisplayCode/)
 })
 
+test('bottleneck detail uses one differentiated evidence chain instead of duplicate lists', () => {
+  const view = read('miniprogram/pages/bottleneck-detail/bottleneck-detail.wxml')
+  const page = read('miniprogram/pages/bottleneck-detail/bottleneck-detail.js')
+
+  assert.match(view, /卡点证据链/)
+  assert.match(view, /visibleEvidenceChain/)
+  assert.match(view, /metaChips/)
+  assert.match(page, /hiddenEvidenceCount/)
+  assert.doesNotMatch(view, /相关报告/)
+  assert.doesNotMatch(view, /相关验证卷/)
+})
+
 test('subject home is an action workbench instead of another diagnosis summary', () => {
   const subjectHomePage = read('miniprogram/pages/subject-home/subject-home.wxml')
 
@@ -250,13 +262,25 @@ test('verification page is framed as a paper configurator', () => {
   assert.doesNotMatch(verificationPage, /系统针对每个卡点生成 3 道验证题/)
 })
 
-test('index page is framed as a learning profile home', () => {
+test('index page is an adaptive entry and child cards route through student profile tap', () => {
   const indexPage = read('miniprogram/pages/index/index.wxml')
+  const studentProfilePage = read('miniprogram/pages/student-profile/student-profile.wxml')
   assert.doesNotMatch(indexPage, /选择学生开始诊断/)
   assert.doesNotMatch(indexPage, /home\.observations/)
-  for (const text of ['学习档案', '当前综合摘要', '样本覆盖', '重点提示', '学习记录', '下一步建议']) {
+  assert.doesNotMatch(indexPage, /孩子学习工作台/)
+  assert.equal((indexPage.match(/添加孩子/g) || []).length, 1)
+  for (const text of ['家庭学习工作台', '学习档案', '当前综合摘要', '样本覆盖', '重点提示', '学习记录', '下一步建议']) {
     assert.match(indexPage, new RegExp(text))
   }
+  for (const page of [indexPage, studentProfilePage]) {
+    assert.match(page, /home\.primaryReport\.generatedAtText/)
+    assert.match(page, /home\.primaryReport\.evidenceTimeText/)
+    assert.match(page, /home\.primaryReport\.findingText/)
+  }
+  assert.match(indexPage, /class="child-card[\s\S]*bindtap="onStudentTap"/)
+  assert.match(indexPage, /data-id="\{\{child\.id\}\}"/)
+  assert.match(indexPage, /wx:if="\{\{homeMode === 'family-workbench' && childCards\.length > 0\}\}"/)
+  assert.match(indexPage, /wx:if="\{\{homeMode === 'single-profile'\}\}"/)
 })
 
 test('subject select is framed as a secondary subject entry', () => {
@@ -388,6 +412,7 @@ test('photo analysis stores per-image OCR summaries and duplicate state', () => 
 
   assert.match(batch, /pageResults/)
   assert.match(batch, /ocrSummary/)
+  assert.match(batch, /不要推断年级/)
   assert.match(analyzer, /markDuplicatePages/)
   assert.match(analyzer, /imageFiles/)
   assert.match(upload, /imageFiles/)

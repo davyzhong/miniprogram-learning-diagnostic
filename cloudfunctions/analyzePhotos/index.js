@@ -1,5 +1,5 @@
 // analyzePhotos/index.js
-// 主控函数：拆分批次、串行调用 analyzeBatch、合并结果、更新数据库、推送通知
+// 主控函数：拆分单图批次、严格串行续跑 analyzeBatch、合并结果、更新数据库、推送通知
 const cloud = require('wx-server-sdk');
 const { compareBottlenecks, buildComparisonSummary } = require('./comparison');
 const { markDuplicatePages } = require('./photo-dedup');
@@ -7,7 +7,8 @@ const { buildProfileSummary } = require('./profile-summary');
 const { aggregateVerificationEvidence, buildVerificationPlan } = require('./verification-evidence');
 const {
   splitFileBatches,
-  assertCompleteBatchResults,
+  assertUsableBatchResults,
+  batchFailureSummary,
   collectPageResults,
   mergeBatchResults,
   buildImageFiles,
@@ -18,6 +19,28 @@ const db = cloud.database();
 const _ = db.command;
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const STALE_TASK_MS = 10 * 60 * 1000;
+const ANALYSIS_BATCH_SIZE = 1;
+const MAX_CONCURRENT_BATCHES = 1;
+const MAX_BATCHES_PER_INVOCATION = 1;
+const MAX_BATCH_ATTEMPTS = 2;
+const BATCH_RETRY_DELAY_MS = 600;
+
+function analysisErrorMessage(err) {
+  const message = err && err.message ? err.message : String(err || '');
+  return (message || '图片分析失败，请稍后重试').slice(0, 240);
+}
+
+function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function failedBatchDebugMessage(failedBatches = []) {
+  const detail = failedBatches
+    .slice(0, 3)
+    .map(item => `第${item.batchIndex + 1}批${item.error ? `：${item.error}` : ''}`)
+    .join('；');
+  return detail ? `存在未完成的图片分析批次（${detail}）` : '';
+}
 
 // ========== 更新 subjectProfiles ==========
 async function getSubjectProfile(studentId, subject) {
@@ -196,6 +219,19 @@ async function recoverStaleAnalysisTask(reportId) {
 }
 
 async function createAnalysisTask({ reportId, totalBatches, fileIDs, mode, subject, studentId, openid }) {
+  await db.collection('reports').doc(reportId).update({
+    data: {
+      status: 'analyzing',
+      error: '',
+      debugError: '',
+      partialSuccess: false,
+      analysisWarning: '',
+      failedBatchCount: 0,
+      failedImageFiles: [],
+      updatedAt: new Date(),
+    },
+  });
+
   const taskRes = await db.collection('analysisTasks').add({
     data: {
       reportId,
@@ -207,44 +243,127 @@ async function createAnalysisTask({ reportId, totalBatches, fileIDs, mode, subje
       subject,
       studentId,
       _openid: openid,
+      nextBatchIndex: 0,
+      batchResults: [],
       createdAt: new Date(),
+      updatedAt: new Date(),
     },
   });
   return taskRes._id;
 }
 
-async function runAnalyzeBatches({ batches, totalBatches, subject, reportId, verificationPaper, taskId }) {
-  const batchResults = [];
-  for (let i = 0; i < batches.length; i++) {
-    console.log(`处理第 ${i + 1}/${totalBatches} 批，共 ${batches[i].length} 张`);
-    try {
-      const res = await cloud.callFunction({
-        name: 'analyzeBatch',
-        data: {
-          fileIDs: batches[i],
-          subject,
-          batchIndex: i,
-          reportId,
-          verificationPlan: verificationPaper ? verificationPaper.plan : [],
-        },
-      });
-      batchResults.push(res.result);
+async function loadAnalysisTask(taskId, reportId) {
+  if (!taskId) return null;
+  const taskRes = await db.collection('analysisTasks').doc(taskId).get();
+  const task = taskRes.data;
+  if (!task || task.reportId !== reportId || task.status !== 'processing') {
+    throw new Error('分析任务不存在或已结束');
+  }
+  return task;
+}
 
-      await db.collection('analysisTasks').doc(taskId).update({
-        data: { completedBatches: i + 1 },
-      });
-    } catch (err) {
-      console.error(`第 ${i + 1} 批处理失败：`, err);
-      batchResults.push({ success: false, error: err.message });
+function mergeStoredBatchResults(storedResults = [], batchResults = [], offset = 0) {
+  const merged = Array.isArray(storedResults) ? storedResults.slice() : [];
+  batchResults.forEach((result, index) => {
+    merged[offset + index] = result;
+  });
+  return merged;
+}
+
+async function persistBatchProgress({ taskId, batchResults, nextBatchIndex }) {
+  await db.collection('analysisTasks').doc(taskId).update({
+    data: {
+      batchResults,
+      nextBatchIndex,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+function scheduleAnalysisContinuation({ reportId, taskId }) {
+  cloud.callFunction({
+    name: 'analyzePhotos',
+    data: {
+      reportId,
+      taskId,
+      continuation: true,
+    },
+  }).catch(err => {
+    console.error('续跑 analyzePhotos 失败：', err);
+  });
+}
+
+async function runAnalyzeBatches({ batches, batchOffset = 0, totalBatches, subject, reportId, verificationPaper, taskId }) {
+  const batchResults = new Array(batches.length);
+  let nextIndex = 0;
+
+  async function runOne(i) {
+    const globalIndex = batchOffset + i;
+    console.log(`处理第 ${globalIndex + 1}/${totalBatches} 批，共 ${batches[i].length} 张`);
+    let lastError = '';
+    for (let attempt = 1; attempt <= MAX_BATCH_ATTEMPTS; attempt += 1) {
+      try {
+        const res = await cloud.callFunction({
+          name: 'analyzeBatch',
+          data: {
+            fileIDs: batches[i],
+            subject,
+            batchIndex: globalIndex,
+            reportId,
+            verificationPlan: verificationPaper ? verificationPaper.plan : [],
+          },
+        });
+        const result = res.result || { success: false, error: '图片分析失败，请稍后重试' };
+        if (result.success || attempt === MAX_BATCH_ATTEMPTS) {
+          batchResults[i] = attempt > 1 && result.success
+            ? { ...result, retryAttempt: attempt }
+            : result;
+          break;
+        }
+        lastError = analysisErrorMessage(result.error);
+        console.warn(`第 ${globalIndex + 1} 批第 ${attempt} 次返回失败，准备重试：${lastError}`);
+      } catch (err) {
+        lastError = analysisErrorMessage(err);
+        console.error(`第 ${globalIndex + 1} 批第 ${attempt} 次处理失败：`, err);
+        if (attempt === MAX_BATCH_ATTEMPTS) {
+          batchResults[i] = { success: false, error: lastError };
+          break;
+        }
+      }
+      await wait(BATCH_RETRY_DELAY_MS);
+    }
+
+    if (!batchResults[i]) {
+      batchResults[i] = { success: false, error: lastError || '图片分析失败，请稍后重试' };
+    }
+    await db.collection('analysisTasks').doc(taskId).update({
+      data: { completedBatches: _.inc(1) },
+    }).catch(() => {});
+  }
+
+  async function worker() {
+    while (nextIndex < batches.length) {
+      const i = nextIndex;
+      nextIndex += 1;
+      await runOne(i);
     }
   }
+
+  const workerCount = Math.min(MAX_CONCURRENT_BATCHES, batches.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
   return batchResults;
 }
 
-async function buildAnalysisArtifacts({ reportId, report, fileIDs, subject, studentId, mode, verificationPaper, batchResults }) {
-  assertCompleteBatchResults(batchResults);
+async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subject, studentId, mode, verificationPaper, batchResults }) {
+  assertUsableBatchResults(batchResults);
 
   const pageResults = collectPageResults(batchResults);
+  const failedBatches = batchFailureSummary(batchResults, batches);
+  const failedImageFiles = failedBatches.flatMap(item => item.fileIDs.map(fileID => ({
+    fileID,
+    batchIndex: item.batchIndex,
+    error: item.error,
+  })));
   const historicalPhotos = await getHistoricalPhotos(studentId, subject);
   const markedPages = markDuplicatePages(pageResults, historicalPhotos);
   const uniquePages = markedPages.filter(page => !page.isDuplicate);
@@ -256,11 +375,15 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, subject, stud
     fileIDs,
     initialImageFiles: Array.isArray(report.imageFiles) ? report.imageFiles : [],
     markedPages,
-    report,
+    report: { ...report, failedImageFiles },
   });
   let previousReport = null;
   let verificationTargets = [];
   let comparisonSummary = '';
+  const partialSuccess = failedBatches.length > 0;
+  const analysisWarning = partialSuccess
+    ? `${fileIDs.length - failedImageFiles.length}/${fileIDs.length} 张照片完成分析，${failedImageFiles.length} 张照片因超时或服务异常未纳入。`
+    : '';
 
   if (uniquePages.length === 0) {
     merged.summary = '本次照片均疑似重复，未更新学习卡点';
@@ -300,13 +423,18 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, subject, stud
     verificationTargets,
     profile,
     profileSummary,
+    partialSuccess,
+    analysisWarning,
+    failedBatches,
+    failedImageFiles,
   };
 }
 
-async function writeCompletedAnalysis({ reportId, studentId, subject, merged, imageFiles, previousReport, comparisonSummary, verificationTargets, profile, profileSummary }) {
+async function writeCompletedAnalysis({ reportId, studentId, subject, merged, imageFiles, previousReport, comparisonSummary, verificationTargets, profile, profileSummary, partialSuccess, analysisWarning, failedBatches, failedImageFiles }) {
   await db.collection('reports').doc(reportId).update({
     data: {
       status: 'completed',
+      error: '',
       summary: merged.summary,
       totalErrors: merged.totalErrors,
       bottlenecks: merged.bottlenecks,
@@ -318,6 +446,11 @@ async function writeCompletedAnalysis({ reportId, studentId, subject, merged, im
       verificationEvidence: merged.verificationEvidence || [],
       isEffective: profileSummary.isEffective,
       changeSummary: profileSummary.changeSummary,
+      partialSuccess,
+      analysisWarning,
+      failedBatchCount: failedBatches.length,
+      failedImageFiles,
+      debugError: partialSuccess ? failedBatchDebugMessage(failedBatches) : '',
       completedAt: merged.completedAt,
     },
   });
@@ -332,15 +465,21 @@ async function writeCompletedAnalysis({ reportId, studentId, subject, merged, im
   }
 }
 
-async function markAnalysisTaskCompleted(taskId) {
+async function markAnalysisTaskCompleted(taskId, artifacts = {}) {
   await db.collection('analysisTasks').doc(taskId).update({
-    data: { status: 'completed', completedAt: new Date() },
+    data: {
+      status: 'completed',
+      partialSuccess: Boolean(artifacts.partialSuccess),
+      warning: artifacts.analysisWarning || '',
+      failedBatchCount: artifacts.failedBatches ? artifacts.failedBatches.length : 0,
+      completedAt: new Date(),
+    },
   });
 }
 
 // ========== 主函数 ==========
 exports.main = async (event) => {
-  const { reportId } = event;
+  const { reportId, taskId: continuationTaskId } = event;
   let taskId = '';
   let report = null;
 
@@ -363,40 +502,74 @@ exports.main = async (event) => {
       return { success: false, error: '报告中没有待分析图片' };
     }
 
-    const activeTaskResult = await recoverStaleAnalysisTask(reportId);
-    if (activeTaskResult) return activeTaskResult;
-
-    const batches = splitFileBatches(fileIDs);
+    const batches = splitFileBatches(fileIDs, ANALYSIS_BATCH_SIZE);
     const totalBatches = batches.length;
     console.log(`共 ${fileIDs.length} 张图片，拆分为 ${totalBatches} 批`);
 
-    taskId = await createAnalysisTask({
-      reportId,
-      totalBatches,
-      fileIDs,
-      mode,
-      subject,
-      studentId,
-      openid: report._openid || currentOpenId,
-    });
+    let task = null;
+    if (continuationTaskId) {
+      task = await loadAnalysisTask(continuationTaskId, reportId);
+      taskId = task._id;
+    } else {
+      const activeTaskResult = await recoverStaleAnalysisTask(reportId);
+      if (activeTaskResult) return activeTaskResult;
+
+      taskId = await createAnalysisTask({
+        reportId,
+        totalBatches,
+        fileIDs,
+        mode,
+        subject,
+        studentId,
+        openid: report._openid || currentOpenId,
+      });
+      task = { _id: taskId, batchResults: [], nextBatchIndex: 0 };
+    }
+
+    const startBatchIndex = Math.max(0, Number(task.nextBatchIndex) || 0);
+    const runBatches = batches.slice(startBatchIndex, startBatchIndex + MAX_BATCHES_PER_INVOCATION);
+    if (runBatches.length === 0 && startBatchIndex < totalBatches) {
+      throw new Error('分析任务批次进度异常');
+    }
 
     const batchResults = await runAnalyzeBatches({
-      batches,
+      batches: runBatches,
+      batchOffset: startBatchIndex,
       totalBatches,
       subject,
       reportId,
       verificationPaper,
       taskId,
     });
+    const allBatchResults = mergeStoredBatchResults(task.batchResults, batchResults, startBatchIndex);
+    const nextBatchIndex = startBatchIndex + runBatches.length;
+
+    await persistBatchProgress({
+      taskId,
+      batchResults: allBatchResults,
+      nextBatchIndex,
+    });
+
+    if (nextBatchIndex < totalBatches) {
+      scheduleAnalysisContinuation({ reportId, taskId });
+      return {
+        success: true,
+        reportId,
+        status: 'processing',
+        message: `已完成 ${nextBatchIndex}/${totalBatches} 批，继续分析中`,
+      };
+    }
+
     const artifacts = await buildAnalysisArtifacts({
       reportId,
       report,
       fileIDs,
+      batches,
       subject,
       studentId,
       mode,
       verificationPaper,
-      batchResults,
+      batchResults: allBatchResults,
     });
 
     await writeCompletedAnalysis({
@@ -406,7 +579,7 @@ exports.main = async (event) => {
       ...artifacts,
     });
 
-    await markAnalysisTaskCompleted(taskId);
+    await markAnalysisTaskCompleted(taskId, artifacts);
 
     sendNotification(studentId, reportId, subject).catch(err => console.error('推送异常：', err));
 
@@ -416,19 +589,22 @@ exports.main = async (event) => {
       totalErrors: artifacts.merged.totalErrors,
       bottleneckCount: artifacts.merged.bottlenecks.length,
       summary: artifacts.merged.summary,
+      partialSuccess: artifacts.partialSuccess,
+      warning: artifacts.analysisWarning,
     };
   } catch (err) {
     console.error('analyzePhotos 失败：', err);
+    const debugError = analysisErrorMessage(err);
 
     // 更新 reports 状态为 failed
     if (reportId) {
       await db.collection('reports').doc(reportId).update({
-        data: { status: 'failed', error: '图片分析失败，请稍后重试', updatedAt: new Date() },
+        data: { status: 'failed', error: '图片分析失败，请稍后重试', debugError, updatedAt: new Date() },
       }).catch(() => {});
     }
     if (taskId) {
       await db.collection('analysisTasks').doc(taskId).update({
-        data: { status: 'failed', error: '图片分析失败，请稍后重试', completedAt: new Date() },
+        data: { status: 'failed', error: debugError, completedAt: new Date() },
       }).catch(() => {});
     }
     if (report) {

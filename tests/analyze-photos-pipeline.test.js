@@ -3,24 +3,32 @@ const assert = require('node:assert/strict')
 
 const {
   splitFileBatches,
-  assertCompleteBatchResults,
+  assertUsableBatchResults,
+  batchFailureSummary,
   collectPageResults,
   buildImageFiles,
   mergeBatchResults
 } = require('../cloudfunctions/analyzePhotos/pipeline')
 
-test('photo analysis pipeline splits files into platform-sized batches', () => {
+test('photo analysis pipeline splits files into single-image batches by default', () => {
   assert.deepEqual(splitFileBatches(['a', 'b', 'c', 'd', 'e', 'f']), [
-    ['a', 'b', 'c', 'd', 'e'],
+    ['a'],
+    ['b'],
+    ['c'],
+    ['d'],
+    ['e'],
     ['f']
   ])
   assert.deepEqual(splitFileBatches([], 5), [])
 })
 
-test('photo analysis pipeline rejects incomplete batch results before merging', () => {
-  assert.doesNotThrow(() => assertCompleteBatchResults([{ success: true, data: { pageResults: [] } }]))
+test('photo analysis pipeline accepts partial batch results but rejects all-failed output', () => {
+  assert.doesNotThrow(() => assertUsableBatchResults([
+    { success: true, data: { pageResults: [] } },
+    { success: false, error: 'timeout' }
+  ]))
   assert.throws(
-    () => assertCompleteBatchResults([{ success: true, data: {} }, { success: false, error: 'timeout' }]),
+    () => assertUsableBatchResults([{ success: false, error: 'timeout' }]),
     /存在未完成的图片分析批次/
   )
 })
@@ -28,6 +36,7 @@ test('photo analysis pipeline rejects incomplete batch results before merging', 
 test('photo analysis pipeline collects page results and rejects empty AI output', () => {
   assert.deepEqual(collectPageResults([
     { success: true, data: { pageResults: [{ fileID: 'a' }] } },
+    { success: false, error: 'timeout' },
     { success: true, data: { pageResults: [{ fileID: 'b' }] } }
   ]), [{ fileID: 'a' }, { fileID: 'b' }])
 
@@ -57,7 +66,9 @@ test('photo analysis pipeline rebuilds image files while preserving upload metad
       ocrSummary: '第一页',
       contentFingerprint: 'fp-a',
       isDuplicate: false,
-      duplicateOf: ''
+      duplicateOf: '',
+      analysisStatus: 'completed',
+      analysisError: ''
     },
     {
       fileID: 'cloud://b',
@@ -67,8 +78,40 @@ test('photo analysis pipeline rebuilds image files while preserving upload metad
       ocrSummary: '第二页',
       contentFingerprint: '',
       isDuplicate: true,
-      duplicateOf: 'cloud://a'
+      duplicateOf: 'cloud://a',
+      analysisStatus: 'completed',
+      analysisError: ''
     }
+  ])
+})
+
+test('photo analysis pipeline marks failed images in rebuilt image files', () => {
+  const imageFiles = buildImageFiles({
+    fileIDs: ['cloud://a', 'cloud://b'],
+    markedPages: [{ fileID: 'cloud://a', ocrSummary: '第一页' }],
+    report: {
+      evidenceTime: '2026-06-12T10:00:00+08:00',
+      failedImageFiles: [{ fileID: 'cloud://b', error: 'timeout' }]
+    }
+  })
+
+  assert.equal(imageFiles[0].analysisStatus, 'completed')
+  assert.equal(imageFiles[1].analysisStatus, 'failed')
+  assert.equal(imageFiles[1].analysisError, 'timeout')
+})
+
+test('photo analysis pipeline summarizes failed batches with file ids', () => {
+  assert.deepEqual(batchFailureSummary([
+    { success: true, data: {} },
+    { success: false, error: 'timeout' },
+    null
+  ], [
+    ['cloud://a'],
+    ['cloud://b'],
+    ['cloud://c']
+  ]), [
+    { batchIndex: 1, fileIDs: ['cloud://b'], error: 'timeout' },
+    { batchIndex: 2, fileIDs: ['cloud://c'], error: '图片分析失败，请稍后重试' }
   ])
 })
 
