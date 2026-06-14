@@ -1,6 +1,6 @@
 // Pure helpers for the analyzePhotos workflow. Keep cloud/database writes in index.js.
 
-function splitFileBatches(fileIDs = [], batchSize = 5) {
+function splitFileBatches(fileIDs = [], batchSize = 1) {
   const batches = [];
   for (let i = 0; i < fileIDs.length; i += batchSize) {
     batches.push(fileIDs.slice(i, i + batchSize));
@@ -8,18 +8,53 @@ function splitFileBatches(fileIDs = [], batchSize = 5) {
   return batches;
 }
 
-function assertCompleteBatchResults(batchResults = []) {
-  if (batchResults.some(result => !result || !result.success)) {
-    throw new Error('存在未完成的图片分析批次');
+function failedBatchItems(batchResults = []) {
+  return batchResults
+    .map((result, index) => ({ result, index }))
+    .filter(item => !item.result || !item.result.success);
+}
+
+function successfulBatchItems(batchResults = []) {
+  return batchResults
+    .map((result, index) => ({ result, index }))
+    .filter(item => item.result && item.result.success);
+}
+
+function summarizeFailedBatchResults(batchResults = []) {
+  const failed = batchResults
+    .map((result, index) => ({ result, index }))
+    .filter(item => !item.result || !item.result.success)
+    .slice(0, 3)
+    .map(item => `第${item.index + 1}批${item.result && item.result.error ? `：${item.result.error}` : ''}`)
+    .join('；');
+  return failed ? `存在未完成的图片分析批次（${failed}）` : '';
+}
+
+function assertUsableBatchResults(batchResults = []) {
+  const successful = successfulBatchItems(batchResults);
+  if (successful.length > 0) {
+    return;
   }
+  const detail = summarizeFailedBatchResults(batchResults);
+  throw new Error(detail || 'AI 未返回可用的图片分析结果');
 }
 
 function collectPageResults(batchResults = []) {
-  const pageResults = batchResults.flatMap(result => result.data.pageResults || []);
+  const pageResults = batchResults
+    .filter(result => result && result.success)
+    .flatMap(result => result.data.pageResults || []);
   if (pageResults.length === 0) {
     throw new Error('AI 未返回逐页分析结果');
   }
   return pageResults;
+}
+
+function batchFailureSummary(batchResults = [], batches = []) {
+  return failedBatchItems(batchResults).map(({ result, index }) => ({
+    batchIndex: index,
+    fileIDs: batches[index] || [],
+    error: result && result.error ? result.error : '图片分析失败，请稍后重试',
+  }));
 }
 
 function mergeBatchResults(batchResults) {
@@ -70,9 +105,11 @@ function mergeBatchResults(batchResults) {
 
 function buildImageFiles({ fileIDs = [], initialImageFiles = [], markedPages = [], report = {} } = {}) {
   const pageByFileID = new Map(markedPages.map(page => [page.fileID, page]));
+  const failedFiles = new Map((report.failedImageFiles || []).map(item => [item.fileID, item]));
   return fileIDs.map((fileID, index) => {
     const initial = initialImageFiles.find(item => item.fileID === fileID) || {};
     const page = pageByFileID.get(fileID) || {};
+    const failed = failedFiles.get(fileID);
     return {
       fileID,
       fileName: initial.fileName || `照片${index + 1}`,
@@ -82,13 +119,17 @@ function buildImageFiles({ fileIDs = [], initialImageFiles = [], markedPages = [
       contentFingerprint: page.contentFingerprint || '',
       isDuplicate: Boolean(page.isDuplicate),
       duplicateOf: page.duplicateOf || '',
+      analysisStatus: failed ? 'failed' : (page.fileID ? 'completed' : ''),
+      analysisError: failed ? failed.error : '',
     };
   });
 }
 
 module.exports = {
   splitFileBatches,
-  assertCompleteBatchResults,
+  assertUsableBatchResults,
+  summarizeFailedBatchResults,
+  batchFailureSummary,
   collectPageResults,
   mergeBatchResults,
   buildImageFiles,

@@ -282,7 +282,7 @@ wx.cloud.callFunction({
 
 ### 功能描述
 
-分析主控函数：根据 `reportId` 读取报告，将图片拆分为每批最多 5 张，串行调用 `analyzeBatch`，合并结果、去重、对比历史卡点，更新 `reports / subjectProfiles / analysisTasks`。当前保留 `sendNotification` 钩子，但在订阅消息模板和用户授权链路完成前，不向用户承诺推送。
+分析主控函数：根据 `reportId` 读取报告，将图片拆分为单图批次，严格按顺序调用 `analyzeBatch`。每次 `analyzePhotos` 云函数调用只处理 1 张图片，处理完成后异步续跑下一张；全部图片完成后再合并结果、去重、对比历史卡点，并更新 `reports / subjectProfiles / analysisTasks`。当前保留 `sendNotification` 钩子，但在订阅消息模板和用户授权链路完成前，不向用户承诺推送。
 
 ### 调用方式
 
@@ -325,6 +325,17 @@ wx.cloud.callFunction({
 { "success": true, "reportId": "report_xxx", "message": "分析任务已经启动" }
 ```
 
+**异步续跑中**
+
+```json
+{
+  "success": true,
+  "reportId": "report_xxx",
+  "status": "processing",
+  "message": "已完成 1/6 批，继续分析中"
+}
+```
+
 **失败**
 
 ```json
@@ -353,7 +364,7 @@ wx.cloud.callFunction({
 ### 超时配置建议
 
 - **推荐云函数超时：60s**。这是当前平台允许的上限。
-- 单报告图片数过多时仍可能触发超时；前端会展示分析中/超时提示，报告页可重新触发分析。后续批量独立执行方案应继续降低单次函数运行时长。
+- 单报告图片数过多时，总耗时会随图片数量线性增长；但单次 `analyzePhotos` 只处理 1 张图片，降低触发 60s 超时的概率。前端会展示分析中/超时提示，报告页可重新触发分析。
 
 ### 依赖的外部服务
 
@@ -364,13 +375,14 @@ wx.cloud.callFunction({
 
 ### 内部调用关系
 
-- ➡️ `cloud.callFunction({ name: 'analyzeBatch', ... })`（串行，每批一次）
+- ➡️ `cloud.callFunction({ name: 'analyzeBatch', ... })`（串行，每批 1 张）
+- ➡️ `cloud.callFunction({ name: 'analyzePhotos', data: { reportId, taskId, continuation: true } })`（未完成时 fire-and-forget 续跑下一张）
 - ⬅️ 被 `uploadAndAnalyze` 调用
 - 📦 使用本地模块：`./comparison.js`、`./photo-dedup.js`
 
 ### 注意事项
 
-1. **串行执行批次**：保证进度可追踪，但总耗时线性增长。
+1. **串行执行批次**：每批 1 张、每次云函数调用只处理 1 批，保证顺序、进度可追踪，但总耗时线性增长。
 2. **僵尸任务保护**：若存在 `status === 'processing'` 且创建时间超过 10 分钟的任务，会自动标记为 failed 并允许重新启动。
 3. **去重逻辑**：基于 OCR 摘要指纹识别重复页面，重复页不参与卡点合并，但仍保留在 `imageFiles` 中（带 `isDuplicate: true`）。
 4. **验证模式对比**：会从 papers 集合读取 `bottleneckTargets`，仅对目标卡点做 improved/persisting/worsened/new 分类。
@@ -383,7 +395,7 @@ wx.cloud.callFunction({
 
 ### 功能描述
 
-单批次分析（最多 5 张图片）：将 fileID 转为临时 URL，调用 CloudBase AI（hy3-preview 多模态模型）进行 OCR + 错题根因分析，返回结构化 JSON。
+单批次分析：将 fileID 转为临时 URL，调用 CloudBase AI（hy3-preview 多模态模型）进行 OCR + 错题根因分析，返回结构化 JSON。当前由 `analyzePhotos` 按单图批次调用。
 
 ### 调用方式
 

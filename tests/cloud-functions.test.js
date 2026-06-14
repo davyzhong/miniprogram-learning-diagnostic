@@ -414,7 +414,7 @@ test('generatePaper filters incomplete AI questions before trimming to expected 
 })
 
 test('analyzePhotos splits batches, excludes duplicate pages and updates the profile', async () => {
-  const fileIDs = Array.from({ length: 6 }, (_, index) => `cloud://photo-${index + 1}`)
+  const fileIDs = Array.from({ length: 2 }, (_, index) => `cloud://photo-${index + 1}`)
   const db = createDatabase({
     reports: [
       {
@@ -450,10 +450,15 @@ test('analyzePhotos splits batches, excludes duplicate pages and updates the pro
     }],
     analysisTasks: []
   })
+  const scheduledContinuations = []
   const batchCalls = []
   const cloud = createCloudMock({
     db,
     callFunction: async payload => {
+      if (payload.name === 'analyzePhotos') {
+        scheduledContinuations.push(payload.data)
+        return { result: { success: true } }
+      }
       batchCalls.push(payload.data.fileIDs)
       return {
         result: {
@@ -481,16 +486,27 @@ test('analyzePhotos splits batches, excludes duplicate pages and updates the pro
     'wx-server-sdk': cloud
   })
 
-  const result = await handler.main({ reportId: 'report-1' })
+  const first = await handler.main({ reportId: 'report-1' })
+  const taskAfterFirstRun = db.dump('analysisTasks')[0]
+
+  assert.equal(first.status, 'processing')
+  assert.equal(first.message, '已完成 1/2 批，继续分析中')
+  assert.equal(scheduledContinuations.length, 1)
+
+  const result = await handler.main({
+    reportId: 'report-1',
+    taskId: taskAfterFirstRun._id,
+    continuation: true
+  })
   const report = db.dump('reports').find(item => item._id === 'report-1')
   const profile = db.dump('subjectProfiles')[0]
 
   assert.equal(result.success, true)
-  assert.deepEqual(batchCalls.map(batch => batch.length), [5, 1])
+  assert.deepEqual(batchCalls.map(batch => batch.length), [1, 1])
   assert.equal(report.imageFiles[0].isDuplicate, true)
   assert.equal(new Date(report.imageFiles[0].uploadedAt).getTime(), new Date('2026-06-11T09:50:00Z').getTime())
-  assert.equal(report.totalErrors, 5)
-  assert.equal(report.bottlenecks[0].errorCount, 5)
+  assert.equal(report.totalErrors, 1)
+  assert.equal(report.bottlenecks[0].errorCount, 1)
   assert.equal(report.isEffective, true)
   assert.match(report.changeSummary, /计算/)
   assert.ok(report.profileAppliedAt)
@@ -499,6 +515,337 @@ test('analyzePhotos splits batches, excludes duplicate pages and updates the pro
   assert.match(profile.currentSummary, /计算/)
   assert.equal(profile.analysisStatus, null)
   assert.equal(db.dump('analysisTasks')[0].status, 'completed')
+})
+
+test('analyzePhotos runs one image at a time and schedules the next image asynchronously', async () => {
+  const fileIDs = Array.from({ length: 2 }, (_, index) => `cloud://photo-${index + 1}`)
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'analyzing',
+      createdAt: '2026-06-11T10:00:00Z',
+      imageFileIds: fileIDs,
+      imageFiles: fileIDs.map(fileID => ({ fileID }))
+    }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      totalReports: 0,
+      pendingBottlenecks: [],
+      improvedBottlenecks: []
+    }],
+    analysisTasks: []
+  })
+  let active = 0
+  let maxActive = 0
+  const scheduledContinuations = []
+  const cloud = createCloudMock({
+    db,
+    callFunction: async payload => {
+      if (payload.name === 'analyzePhotos') {
+        scheduledContinuations.push(payload.data)
+        return { result: { success: true } }
+      }
+      active += 1
+      maxActive = Math.max(maxActive, active)
+      await new Promise(resolve => setTimeout(resolve, 5))
+      active -= 1
+      return {
+        result: {
+          success: true,
+          data: {
+            pageResults: [{
+              fileID: payload.data.fileIDs[0],
+              imageIndex: 1,
+              ocrSummary: `页面${payload.data.fileIDs[0]}`,
+              totalErrors: 0,
+              bottlenecks: [],
+              errorDetails: []
+            }]
+          }
+        }
+      }
+    }
+  })
+  const handler = loadModule('cloudfunctions/analyzePhotos/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({ reportId: 'report-1' })
+  const task = db.dump('analysisTasks')[0]
+  const calls = cloud.calls.filter(call => call.name === 'callFunction')
+
+  assert.equal(result.success, true)
+  assert.equal(result.status, 'processing')
+  assert.equal(result.message, '已完成 1/2 批，继续分析中')
+  assert.deepEqual(calls.filter(call => call.payload.name === 'analyzeBatch').map(call => call.payload.data.fileIDs.length), [1])
+  assert.equal(scheduledContinuations.length, 1)
+  assert.equal(task.totalBatches, 2)
+  assert.equal(task.completedBatches, 1)
+  assert.equal(task.nextBatchIndex, 1)
+  assert.equal(task.batchResults.length, 1)
+  assert.equal(maxActive, 1)
+})
+
+test('analyzePhotos retries a transient single-image batch failure before completing', async () => {
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'failed',
+      error: '旧失败',
+      debugError: '旧调试信息',
+      partialSuccess: true,
+      analysisWarning: '旧警告',
+      failedBatchCount: 3,
+      createdAt: '2026-06-11T10:00:00Z',
+      imageFileIds: ['cloud://photo-1'],
+      imageFiles: [{ fileID: 'cloud://photo-1' }]
+    }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      totalReports: 0,
+      pendingBottlenecks: [],
+      improvedBottlenecks: []
+    }],
+    analysisTasks: []
+  })
+  let attempts = 0
+  const cloud = createCloudMock({
+    db,
+    callFunction: async payload => {
+      attempts += 1
+      if (attempts === 1) {
+        return { result: { success: false, error: 'AI 服务繁忙' } }
+      }
+      return {
+        result: {
+          success: true,
+          data: {
+            pageResults: [{
+              fileID: payload.data.fileIDs[0],
+              imageIndex: 1,
+              ocrSummary: '第一页',
+              totalErrors: 1,
+              bottlenecks: [{ lpCode: 'LP-001', lpName: '计算', errorCount: 1, severity: 'medium' }],
+              errorDetails: [{ questionContent: '1+1=' }]
+            }]
+          }
+        }
+      }
+    }
+  })
+  const handler = loadModule('cloudfunctions/analyzePhotos/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({ reportId: 'report-1' })
+  const report = db.dump('reports').find(item => item._id === 'report-1')
+  const task = db.dump('analysisTasks')[0]
+
+  assert.equal(result.success, true)
+  assert.equal(attempts, 2)
+  assert.equal(report.status, 'completed')
+  assert.equal(report.error, '')
+  assert.equal(report.partialSuccess, false)
+  assert.equal(report.analysisWarning, '')
+  assert.equal(report.failedBatchCount, 0)
+  assert.equal(task.completedBatches, 1)
+  assert.equal(task.status, 'completed')
+})
+
+test('analyzePhotos continues large uploads across multiple cloud invocations', async () => {
+  const fileIDs = Array.from({ length: 3 }, (_, index) => `cloud://photo-${index + 1}`)
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'analyzing',
+      createdAt: '2026-06-11T10:00:00Z',
+      imageFileIds: fileIDs,
+      imageFiles: fileIDs.map(fileID => ({ fileID }))
+    }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      totalReports: 0,
+      pendingBottlenecks: [],
+      improvedBottlenecks: []
+    }],
+    analysisTasks: []
+  })
+  const scheduledContinuations = []
+  const cloud = createCloudMock({
+    db,
+    callFunction: async payload => {
+      if (payload.name === 'analyzePhotos') {
+        scheduledContinuations.push(payload.data)
+        return { result: { success: true } }
+      }
+      const fileID = payload.data.fileIDs[0]
+      return {
+        result: {
+          success: true,
+          data: {
+            pageResults: [{
+              fileID,
+              imageIndex: 1,
+              ocrSummary: `页面${fileID}`,
+              totalErrors: 1,
+              bottlenecks: [{ lpCode: 'LP-001', lpName: '计算', errorCount: 1, severity: 'medium' }],
+              errorDetails: [{ questionContent: fileID }]
+            }]
+          }
+        }
+      }
+    }
+  })
+  const handler = loadModule('cloudfunctions/analyzePhotos/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const first = await handler.main({ reportId: 'report-1' })
+  const taskAfterFirstRun = db.dump('analysisTasks')[0]
+  const reportAfterFirstRun = db.dump('reports').find(item => item._id === 'report-1')
+
+  assert.equal(first.success, true)
+  assert.equal(first.status, 'processing')
+  assert.equal(first.message, '已完成 1/3 批，继续分析中')
+  assert.equal(taskAfterFirstRun.completedBatches, 1)
+  assert.equal(taskAfterFirstRun.nextBatchIndex, 1)
+  assert.equal(taskAfterFirstRun.batchResults.length, 1)
+  assert.equal(reportAfterFirstRun.status, 'analyzing')
+  assert.equal(scheduledContinuations.length, 1)
+  assert.equal(scheduledContinuations[0].taskId, taskAfterFirstRun._id)
+
+  const second = await handler.main({
+    reportId: 'report-1',
+    taskId: taskAfterFirstRun._id,
+    continuation: true
+  })
+  const taskAfterSecondRun = db.dump('analysisTasks')[0]
+
+  assert.equal(second.success, true)
+  assert.equal(second.status, 'processing')
+  assert.equal(second.message, '已完成 2/3 批，继续分析中')
+  assert.equal(taskAfterSecondRun.completedBatches, 2)
+  assert.equal(taskAfterSecondRun.nextBatchIndex, 2)
+
+  const third = await handler.main({
+    reportId: 'report-1',
+    taskId: taskAfterSecondRun._id,
+    continuation: true
+  })
+  const report = db.dump('reports').find(item => item._id === 'report-1')
+  const task = db.dump('analysisTasks')[0]
+
+  assert.equal(third.success, true)
+  assert.equal(report.status, 'completed')
+  assert.equal(report.totalErrors, 3)
+  assert.equal(task.completedBatches, 3)
+  assert.equal(task.nextBatchIndex, 3)
+  assert.equal(task.status, 'completed')
+})
+
+test('analyzePhotos completes with a partial warning when some image batches fail', async () => {
+  const fileIDs = ['cloud://photo-1', 'cloud://photo-2']
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'analyzing',
+      createdAt: '2026-06-11T10:00:00Z',
+      imageFileIds: fileIDs,
+      imageFiles: fileIDs.map(fileID => ({ fileID }))
+    }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      totalReports: 0,
+      pendingBottlenecks: [],
+      improvedBottlenecks: []
+    }],
+    analysisTasks: []
+  })
+  const scheduledContinuations = []
+  const cloud = createCloudMock({
+    db,
+    callFunction: async payload => {
+      if (payload.name === 'analyzePhotos') {
+        scheduledContinuations.push(payload.data)
+        return { result: { success: true } }
+      }
+      const fileID = payload.data.fileIDs[0]
+      if (fileID === 'cloud://photo-2') {
+        return { result: { success: false, error: 'AI 服务繁忙' } }
+      }
+      return {
+        result: {
+          success: true,
+          data: {
+            pageResults: [{
+              fileID,
+              imageIndex: 1,
+              ocrSummary: `页面${fileID}`,
+              totalErrors: 1,
+              bottlenecks: [{ lpCode: 'LP-001', lpName: '计算', errorCount: 1, severity: 'medium' }],
+              errorDetails: [{ questionContent: fileID }]
+            }]
+          }
+        }
+      }
+    }
+  })
+  const handler = loadModule('cloudfunctions/analyzePhotos/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const first = await handler.main({ reportId: 'report-1' })
+  const taskAfterFirstRun = db.dump('analysisTasks')[0]
+
+  assert.equal(first.status, 'processing')
+  assert.equal(first.message, '已完成 1/2 批，继续分析中')
+  assert.equal(scheduledContinuations.length, 1)
+
+  const result = await handler.main({
+    reportId: 'report-1',
+    taskId: taskAfterFirstRun._id,
+    continuation: true
+  })
+  const report = db.dump('reports').find(item => item._id === 'report-1')
+  const task = db.dump('analysisTasks')[0]
+
+  assert.equal(result.success, true)
+  assert.equal(result.partialSuccess, true)
+  assert.equal(report.status, 'completed')
+  assert.equal(report.totalErrors, 1)
+  assert.equal(report.partialSuccess, true)
+  assert.equal(report.failedBatchCount, 1)
+  assert.equal(report.failedImageFiles[0].fileID, 'cloud://photo-2')
+  assert.match(report.analysisWarning, /1\/2 张照片完成分析/)
+  assert.match(report.debugError, /第2批/)
+  assert.equal(report.imageFiles[1].analysisStatus, 'failed')
+  assert.equal(task.status, 'completed')
+  assert.equal(task.partialSuccess, true)
+  assert.equal(task.failedBatchCount, 1)
 })
 
 test('analyzePhotos completes an all-duplicate upload without changing learning bottlenecks', async () => {
@@ -986,7 +1333,10 @@ test('analyzePhotos marks task and profile as failed when a batch returns failur
 
   assert.equal(result.success, false)
   assert.equal(report.status, 'failed')
+  assert.match(report.debugError, /AI 服务繁忙/)
   assert.equal(task.status, 'failed')
+  assert.match(task.error, /第1批/)
+  assert.match(task.error, /AI 服务繁忙/)
   assert.equal(profile.analysisStatus, null)
   assert.equal(profile.currentAnalysisId, '')
   assert.deepEqual(profile.pendingBottlenecks, [{ lpCode: 'LP-001', lpName: '计算' }])

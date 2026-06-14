@@ -67,7 +67,7 @@ function buildTraceableUrl(action) {
   } = normalized
 
   if (type === 'student-profile') {
-    return withQuery('/pages/index/index', { studentId, mode: 'student-profile', title })
+    return withQuery('/pages/student-profile/student-profile', { studentId, title })
   }
 
   if (type === 'subject-home') {

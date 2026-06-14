@@ -177,6 +177,54 @@ test('upload history presenter builds timeline state and paper events without pa
   assert.equal(state.filters.find(item => item.key === 'math').count, 2)
 })
 
+test('photo evidence summaries hide unreliable AI-inferred grade labels', () => {
+  const reports = [{
+    _id: 'report-grade',
+    type: 'diagnosis',
+    status: 'completed',
+    subject: 'math',
+    createdAt: '2026-06-14T20:03:00+08:00',
+    imageFiles: [{
+      fileID: 'cloud://photo-grade',
+      fileName: '数学照片.jpg',
+      ocrSummary: '本页为小学三年级数学作业，包含10道两位数加减法计算题，红笔批改显示有2处错误。'
+    }],
+    bottlenecks: [{ lpCode: 'LP-001' }]
+  }]
+
+  const { events } = buildTimelineEvents(reports, [], new Map(), 'math', '数学')
+  const summary = events[0].photos[0].summaryText || events[0].photos[0].summary
+
+  assert.doesNotMatch(summary, /三年级/)
+  assert.doesNotMatch(summary, /本页为小学/)
+  assert.match(summary, /包含10道两位数加减法计算题/)
+})
+
+test('photo evidence titles hide machine-generated hash file names', () => {
+  const reports = [{
+    _id: 'report-hash',
+    type: 'diagnosis',
+    status: 'completed',
+    subject: 'math',
+    createdAt: '2026-06-14T20:03:00+08:00',
+    imageFiles: [{
+      fileID: 'cloud://photo-hash',
+      fileName: '7sM83Cph7HBna4b3c540c3cad8e2359aa805f930.jpg',
+      ocrSummary: '包含10道两位数加减法计算题，红笔批改显示有2处错误。'
+    }],
+    bottlenecks: [{ lpCode: 'LP-001' }]
+  }]
+
+  const { events } = buildTimelineEvents(reports, [], new Map(), 'math', '数学')
+  const photo = events[0].photos[0]
+  const evidence = events[0].foldedEvidence[0]
+
+  assert.equal(photo.fileName, '试卷照片1')
+  assert.equal(evidence.title, '试卷照片1')
+  assert.match(photo.summaryText, /包含10道两位数加减法计算题/)
+  assert.doesNotMatch(photo.fileName, /7sM83Cph/)
+})
+
 test('paper preview presenter builds workbench state, question preview and feedback copy', () => {
   const paper = {
     _id: 'paper-1',

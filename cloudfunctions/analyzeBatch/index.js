@@ -104,8 +104,9 @@ ${taxonomy.map(t => `- ${t.code}：${t.name}——${t.desc}`).join('\n')}
 3. 只分析清晰可见的错题，模糊不清的题目跳过
 4. 每一张图片都必须返回一个 pageResults 项，即使本页没有错题
 5. ocrSummary 应包含足够区分本页内容的信息，但不要逐字抄录整页
-6. 非验证试卷的 verificationEvidence 返回空数组
-7. 返回纯JSON，不要有任何其他文字`;
+6. ocrSummary 不要推断年级、学段或教材版本，只描述题目内容、学生作答和批改信息
+7. 非验证试卷的 verificationEvidence 返回空数组
+8. 返回纯JSON，不要有任何其他文字`;
 }
 
 // ========== 调用 CloudBase AI（多模态） ==========

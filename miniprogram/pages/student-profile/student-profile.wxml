@@ -1,104 +1,18 @@
-<!--pages/index/index.wxml-->
 <view class="page">
   <view class="loading-state" wx:if="{{loading}}">
     <image class="loading-logo" src="/assets/images/app-logo-share.jpg" mode="aspectFit" />
     <text>正在整理学习档案...</text>
   </view>
 
-  <view class="profile-home" wx:elif="{{hasStudents}}">
+  <view class="profile-home" wx:elif="{{home}}">
     <view class="top-row">
-      <view class="top-copy">
-        <text class="page-title">{{homeMode === 'family-workbench' ? '家庭学习工作台' : '学习档案'}}</text>
-        <text class="page-subtitle" wx:if="{{homeMode === 'family-workbench'}}">点击数字、状态、学科和编号可直接追溯</text>
-      </view>
+      <text class="page-title">{{home.studentName}} · 学习档案</text>
       <view class="manage-actions">
-        <view class="manage-link" wx:if="{{homeMode === 'single-profile' && permissions.canManageParents}}" bindtap="onParentManagement">家长管理</view>
-        <view class="manage-link" bindtap="onManageStudents">{{homeMode === 'family-workbench' ? '添加孩子' : '管理孩子'}}</view>
+        <view class="manage-link" wx:if="{{permissions.canManageParents}}" bindtap="onParentManagement">家长管理</view>
+        <view class="manage-link" bindtap="onBackHome">返回首页</view>
       </view>
     </view>
 
-    <view class="section-block child-workbench-section" wx:if="{{homeMode === 'family-workbench' && childCards.length > 0}}">
-      <view
-        class="child-card child-card-{{child.statusClass}}"
-        wx:for="{{childCards}}"
-        wx:key="id"
-        wx:for-item="child"
-        bindtap="onStudentTap"
-        data-id="{{child.id}}"
-        data-name="{{child.name}}"
-        data-grade="{{child.gradeText}}"
-      >
-        <view class="child-card-top">
-          <view class="child-avatar">{{child.avatarText}}</view>
-          <view class="child-main">
-            <view class="child-title-line">
-              <text class="child-name">{{child.name}}</text>
-              <text class="child-status child-status-{{child.statusClass}}">{{child.statusText}}</text>
-            </view>
-            <text class="child-meta">{{child.gradeText}}<text wx:if="{{child.gradeText && child.roleText}}"> · </text>{{child.roleText}}<text wx:if="{{child.memberText}}"> · {{child.memberText}}</text></text>
-            <text class="child-meta">最近更新：{{child.recentUpdateText}}</text>
-          </view>
-          <text class="arrow">›</text>
-        </view>
-
-        <view class="child-status-grid">
-          <view
-            class="child-status-cell status-cell-{{item.tone}}"
-            wx:for="{{child.statusItems}}"
-            wx:key="key"
-            catchtap="onTraceableUrlTap"
-            data-url="{{item.url}}"
-          >
-            <text class="child-status-num">{{item.value}}</text>
-            <text class="child-status-label">{{item.label}}</text>
-          </view>
-        </view>
-
-        <view class="child-subject-list">
-          <view
-            class="child-subject-row child-subject-{{item.key}} {{item.hidden ? 'is-hidden' : ''}}"
-            wx:for="{{child.subjectRows}}"
-            wx:key="key"
-            catchtap="onTraceableUrlTap"
-            data-url="{{item.url}}"
-          >
-            <view class="subject-row-copy">
-              <text class="subject-row-name">{{item.name}}</text>
-              <text class="subject-row-summary">{{item.summary}}</text>
-            </view>
-            <text class="subject-row-status">{{item.statusText}}</text>
-          </view>
-        </view>
-
-        <view
-          class="child-latest-row"
-          wx:if="{{child.latestValue}}"
-          catchtap="onTraceableUrlTap"
-          data-url="{{child.latestValue.url}}"
-        >
-          <text class="latest-label">{{child.latestValue.kind === 'paper' ? '最近试卷' : '最新报告'}}</text>
-          <view class="latest-copy">
-            <text class="latest-title">{{child.latestValue.title}}</text>
-            <text class="latest-summary">{{child.latestValue.summary}}</text>
-          </view>
-          <text class="latest-action">查看 ›</text>
-        </view>
-
-        <view
-          class="child-next-row"
-          catchtap="onTraceableUrlTap"
-          data-url="{{child.nextAction.url}}"
-        >
-          <view>
-            <text class="next-mini-title">{{child.nextAction.title}}</text>
-            <text class="next-mini-summary">{{child.nextAction.summary}}</text>
-          </view>
-          <text class="next-mini-action">{{child.nextAction.actionText}} ›</text>
-        </view>
-      </view>
-    </view>
-
-    <block wx:if="{{homeMode === 'single-profile'}}">
     <view class="hero-card">
       <image class="hero-image" src="/assets/images/math-diagnostic-guide.jpg" mode="aspectFill"></image>
       <view class="hero-copy">
@@ -288,13 +202,12 @@
         </view>
       </view>
     </view>
-    </block>
   </view>
 
   <view class="empty-state" wx:else>
     <image class="empty-logo" src="/assets/images/app-logo-share.jpg" mode="aspectFit" />
-    <text class="text">还没有学习档案</text>
-    <text class="sub-text">添加第一个孩子后，上传试卷建立学习记录。</text>
-    <view class="empty-action" bindtap="onAddStudent">添加第一个孩子</view>
+    <text class="text">没有找到学习档案</text>
+    <text class="sub-text">请回到首页重新选择孩子。</text>
+    <view class="empty-action" bindtap="onBackHome">返回首页</view>
   </view>
 </view>

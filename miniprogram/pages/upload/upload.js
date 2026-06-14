@@ -12,6 +12,33 @@ function getFileName(filePath, index) {
   return cleanPath.split('/').pop() || `照片${index + 1}.jpg`
 }
 
+function cleanPathOf(filePath) {
+  return String(filePath || '').split('?')[0]
+}
+
+function isHeifImage(filePath) {
+  return /\.(heic|heif)$/i.test(cleanPathOf(filePath))
+}
+
+function replaceFileExtension(fileName, extension) {
+  const ext = String(extension || 'jpg').replace(/^\./, '')
+  const name = String(fileName || '').trim()
+  if (!name) return `照片.${ext}`
+  return name.replace(/\.[^/.]+$/, '') + `.${ext}`
+}
+
+function getImageExtension(fileName, fallback = 'jpg') {
+  const match = cleanPathOf(fileName).match(/\.([a-z0-9]+)$/i)
+  const ext = match ? match[1].toLowerCase() : fallback
+  if (ext === 'jpeg') return 'jpg'
+  if (['jpg', 'png', 'webp'].includes(ext)) return ext
+  return fallback
+}
+
+function formatChosenImagesCount(count) {
+  return '上传并开始分析 (' + count + '张)'
+}
+
 // 场景配置
 const MODE_CONFIG = {
   diagnosis: {
@@ -115,39 +142,106 @@ Page({
       return
     }
 
-    wx.chooseMedia({
+    return wx.chooseMedia({
       count: remain,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
       sizeType: ['compressed'],
-      success: (res) => {
+      success: async (res) => {
+        const tempFiles = Array.isArray(res.tempFiles) ? res.tempFiles : []
+        const hasHeif = tempFiles.some(file => isHeifImage(file.tempFilePath))
+        if (hasHeif) wx.showLoading({ title: '转换照片中...' })
+
         const knownNames = new Set([
           ...this.data.existingFileNames,
           ...images.map(image => image.fileName)
         ])
-        const newImages = res.tempFiles.map((f, index) => {
-          const fileName = getFileName(f.tempFilePath, images.length + index)
-          const nameDuplicate = knownNames.has(fileName)
-          knownNames.add(fileName)
-          return {
-            tempPath: f.tempFilePath,
-            fileName,
-            fileSize: Number(f.size) || 0,
-            nameDuplicate,
-            fileId: '',
-            uploaded: false
+
+        let skippedHeifCount = 0
+        const newImages = []
+        for (let index = 0; index < tempFiles.length; index++) {
+          try {
+            const normalized = this.normalizeChosenImage(tempFiles[index], images.length + index)
+            const image = normalized && typeof normalized.then === 'function'
+              ? await normalized
+              : normalized
+            const nameDuplicate = knownNames.has(image.fileName)
+            knownNames.add(image.fileName)
+            newImages.push({ ...image, nameDuplicate })
+          } catch (err) {
+            console.warn('HEIF 图片转换失败', err)
+            skippedHeifCount += 1
           }
-        })
+        }
+
+        if (hasHeif) wx.hideLoading()
+        if (skippedHeifCount > 0) {
+          wx.showToast({
+            title: 'HEIF无法转换，请截图上传',
+            icon: 'none'
+          })
+        }
+
+        if (newImages.length === 0) return
+
         const updated = images.concat(newImages)
         this.setData({
           images: updated,
           canSubmit: updated.length > 0,
-          submitBtnText: '上传并开始分析 (' + updated.length + '张)'
+          submitBtnText: formatChosenImagesCount(updated.length)
         })
         if (newImages.some(image => image.nameDuplicate)) {
           wx.showToast({ title: '发现同名照片，仍可继续上传', icon: 'none' })
         }
       }
+    })
+  },
+
+  normalizeChosenImage(file, index) {
+    const originalTempPath = file.tempFilePath
+    const originalFileName = getFileName(originalTempPath, index)
+    const baseImage = {
+      tempPath: originalTempPath,
+      fileName: originalFileName,
+      fileSize: Number(file.size) || 0,
+      originalTempPath: '',
+      originalFileName: '',
+      convertedFromHeif: false,
+      fileId: '',
+      uploaded: false
+    }
+
+    if (!isHeifImage(originalTempPath)) return baseImage
+
+    return this.convertHeifToJpeg(originalTempPath).then(convertedPath => ({
+      ...baseImage,
+      tempPath: convertedPath,
+      fileName: replaceFileExtension(originalFileName, 'jpg'),
+      originalTempPath,
+      originalFileName,
+      convertedFromHeif: true
+    }))
+  },
+
+  convertHeifToJpeg(tempPath) {
+    return new Promise((resolve, reject) => {
+      if (typeof wx.compressImage !== 'function') {
+        reject(new Error('当前微信版本暂不支持 HEIF 转换'))
+        return
+      }
+
+      wx.compressImage({
+        src: tempPath,
+        quality: 92,
+        success: res => {
+          if (res && res.tempFilePath) {
+            resolve(res.tempFilePath)
+            return
+          }
+          reject(new Error('HEIF 转换未返回可上传文件'))
+        },
+        fail: reject
+      })
     })
   },
 
@@ -159,7 +253,7 @@ Page({
     this.setData({
       images: updated,
       canSubmit: updated.length > 0,
-      submitBtnText: '上传并开始分析 (' + updated.length + '张)'
+      submitBtnText: formatChosenImagesCount(updated.length)
     })
   },
 
@@ -241,7 +335,8 @@ Page({
     return new Promise((resolve, reject) => {
       const { studentId, subject } = this.data
       const tempPath = typeof image === 'string' ? image : image.tempPath
-      const cloudPath = `uploads/${studentId}/${subject}/${Date.now()}_${index}.jpg`
+      const extension = getImageExtension(typeof image === 'string' ? image : image.fileName)
+      const cloudPath = `uploads/${studentId}/${subject}/${Date.now()}_${index}.${extension}`
 
       wx.cloud.uploadFile({
         cloudPath,

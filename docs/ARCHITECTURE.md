@@ -11,6 +11,8 @@
 | 层级 | 技术 | 说明 |
 |------|------|------|
 | 前端框架 | 微信小程序原生 | WXML/WXSS/JS，不使用第三方框架 |
+| 能力层 | `services/skills` | 诊断、报告、学习卡点、验证卷、验证反馈、时间线等 P0 Skill |
+| CLI | `cli/ldx.js` | 面向批量处理、自动化测试和运营调试的命令入口；当前使用 fixture adapter 离线验证 |
 | 后端服务 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI 模型（图像分析） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI 模型（题目生成） | CloudBase AI `deepseek-v4-flash` | 用于 generatePaper 生成试卷题目 |
@@ -29,9 +31,9 @@
 │                       微信小程序（前端）                              │
 │                                                                     │
 │  ┌──────────┐  ┌────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ index    │→│ subject-   │→│ upload /      │→│ report       │  │
-│  │ 学习档案  │  │ home       │  │ generate-*   │  │ 报告展示      │  │
-│  │ 首页      │  │ 学科工作台  │  │ 出卷配置/PDF  │  │ 卡点/错题/PDF │  │
+│  │ index    │→│ student-   │→│ subject-     │→│ report       │  │
+│  │ 自适应首页 │  │ profile    │  │ home         │  │ 报告展示      │  │
+│  │/家庭工作台│  │ 孩子档案     │  │ 学科工作台     │  │ 卡点/错题/PDF │  │
 │  └──────────┘  └────────────┘  └──────────────┘  └──────────────┘  │
 │  ┌──────────────┐  ┌──────────────┐                               │
 │  │parent-       │  │join-student   │                               │
@@ -73,6 +75,30 @@
 
 ---
 
+### 2.1 Skill 与 CLI 能力层
+
+P0 阶段新增 `services/skills` 和 `cli/ldx.js`：
+
+- `services/skills` 把诊断闭环抽象为可复用能力，包括上传诊断、分析状态、诊断报告、学习卡点、验证试卷、验证反馈和学习时间线。
+- `cli/ldx.js` 是命令行入口，当前通过 `--fixture` 使用离线 adapter 验证命令合同，后续可接入真实 CloudBase adapter。
+- 小程序现有页面仍继续通过 `miniprogram/utils/cloud.js` 调用云函数；Skill 层先作为独立能力内核和自动化入口，不改变现有页面运行链路。
+- 新增测试文件 `tests/skills-p0.test.js` 和 `tests/cli-p0.test.js` 已纳入 `npm test`。
+
+当前 P0 CLI 命令覆盖：
+
+```bash
+ldx upload photos
+ldx analyze status
+ldx report show
+ldx report pdf
+ldx bottleneck list
+ldx paper generate
+ldx verification upload
+ldx timeline show
+```
+
+---
+
 ## 3. 数据流图
 
 ### 流程 A：拍照诊断
@@ -98,7 +124,7 @@ cloud.callUploadAndAnalyze({ fileIDs, studentId, subject, mode:'diagnosis' })
               ├── 1. 读取 reports.imageFileIds
               ├── 2. 检查陈旧 processing 任务（>10min → 标记 failed）
               ├── 3. 创建 analysisTasks 记录（status='processing'）
-              ├── 4. 按 5 张/批拆分，串行调用 analyzeBatch × N
+              ├── 4. 按 1 张/批拆分，每次函数只处理 1 批，完成后异步续跑下一批
               │       │
               │       ▼
               │  [analyzeBatch 云函数]
@@ -246,8 +272,14 @@ subject-home / report / upload-history
 ## 4. 前端页面路由图
 
 ```
-index（首页 - 学习档案）
+index（自适应首页）
+  ├── 0 个孩子 → 显示添加孩子空状态
+  ├── 1 个孩子 → 直接渲染该孩子学习档案
+  ├── 多个孩子 → 显示家庭学习工作台
   ├── navigateTo → add-student（管理孩子/添加学生）
+  └── navigateTo → student-profile（点击某个孩子卡片）
+
+student-profile（孩子学习档案）
   ├── navigateTo → parent-management（家长管理，仅 owner 可见）
   ├── navigateTo → subject-home（重点提示/学科入口）
   ├── navigateTo → upload-history（学习记录）
@@ -316,11 +348,21 @@ bottleneck-detail（学习卡点详情）
 - 中间态和异常态不作为主记录铺开；在学习记录中折叠为状态条，点击后进入可恢复的报告页。
 - 若数据不足以跳转，应给出轻提示，不让用户点了没有反馈。
 
+### 首页与孩子档案边界
+
+`pages/index/index` 是自适应入口，不固定承担孩子档案详情：
+
+- 没有孩子时，只显示添加第一个孩子的空状态。
+- 只有一个孩子时，首页直接显示该孩子的学习档案，不额外显示"孩子学习工作台"。
+- 有多个孩子时，首页只显示家庭学习工作台，不混入某一个孩子的完整档案。
+- 多孩子场景点击孩子卡片后进入 `pages/student-profile/student-profile`，该页面展示单个孩子的诊断报告、学习卡点、学习记录、学科入口和下一步建议。
+
 ### 页面清单
 
 | 页面路径 | 功能 | 核心依赖 |
 |----------|------|----------|
-| `pages/index/index` | 学习档案首页：综合摘要、样本覆盖、重点提示、学习记录、下一步建议 | cloud.getStudents, getSubjectProfiles, getReports, getPapers, index-presenter |
+| `pages/index/index` | 自适应首页：0 个孩子显示空状态，1 个孩子显示学习档案，多孩子显示家庭工作台 | cloud.getStudents, getAccessibleStudents, getStudentDashboard, child-workbench, index-presenter |
+| `pages/student-profile/student-profile` | 单个孩子学习档案：综合摘要、报告、卡点、学习记录、学科入口和下一步建议 | cloud.getStudentDashboard, getSubjectProfiles, getReports, getPapers, index-presenter |
 | `pages/add-student/add-student` | 新增学生 + 自动创建三科档案 | cloud.createStudentWithProfiles |
 | `pages/parent-management/parent-management` | 家长成员列表、生成扫码邀请、移除协同家长 | cloud.listStudentMembers, createStudentInvite, revokeStudentMember |
 | `pages/join-student/join-student` | 通过邀请扫码加入孩子档案 | cloud.getStudentInvite, acceptStudentInvite |
@@ -365,7 +407,7 @@ bottleneck-detail（学习卡点详情）
 | 客户端 index/subject-home/report/upload-history/paper-preview | studentData | wx.cloud.callFunction | 访问感知的学习数据聚合，支持 owner/viewer |
 | 客户端 parent-management/join-student | studentAccess | wx.cloud.callFunction | 家长成员管理、邀请创建、扫码加入 |
 | uploadAndAnalyze | analyzePhotos | cloud.callFunction (fire-and-forget) | 服务端触发后台分析，立即返回 reportId |
-| analyzePhotos | analyzeBatch | cloud.callFunction (同步 await, 循环串行) | 每批最多 5 张，逐批处理 |
+| analyzePhotos | analyzeBatch | cloud.callFunction (同步 await, 单图续跑) | 每批 1 张；每次 analyzePhotos 调用只处理 1 批，完成后异步触发下一次 |
 | analyzePhotos | sendNotification | Promise.catch (fire-and-forget) | 预留钩子；订阅消息模板和授权链路接入前，前端只提示“完成后可在学习记录查看” |
 | 客户端 report 页面 | getAnalysisProgress | wx.cloud.callFunction | 轮询调用 |
 | 客户端 report 页面 | callAnalyzePhotos | wx.cloud.callFunction (20s 超时) | 重试入口（分析报告页发现未完成时） |
@@ -501,14 +543,14 @@ poller.start()
 
 ### 为什么用串行而非并行批处理？
 
-**决策**：analyzePhotos 中 5 张/批串行调用 analyzeBatch，不用 Promise.all 并行。
+**决策**：analyzePhotos 中 1 张/批串行调用 analyzeBatch；每次云函数调用只处理 1 批，随后 fire-and-forget 续跑下一批，不用 Promise.all 并行。
 
 **原因**：
 1. **CloudBase AI 并发限制**：hy3-preview 模型有 QPS 限制，并行调用容易触发限流导致整批失败
-2. **云函数内存约束**：每个 analyzeBatch 需要加载多张图片的临时 URL 并传递给 AI，并行会导致内存峰值过高
+2. **云函数内存约束**：每个 analyzeBatch 需要加载图片临时 URL 并传递给 AI，并行会导致内存峰值过高
 3. **进度追踪精度**：串行可以精确更新 `analysisTasks.completedBatches`，客户端能看到真实进度；并行时进度更新变得复杂且不准确
 4. **故障隔离**：某一批失败只影响该批，不会因并行 reject 导致所有批次结果丢失
-5. **总耗时可接受**：20 张照片 = 4 批，每批约 15-30 秒，总计 1-2 分钟，在异步分析场景下用户体验可接受
+5. **稳定性优先**：20 张照片会拆成 20 次后台续跑，耗时线性增加，但上传入口已异步返回，用户可以离开页面后在学习记录中等待报告完成
 
 ### 为什么 uploadAndAnalyze 使用 fire-and-forget 启动 analyzePhotos？
 

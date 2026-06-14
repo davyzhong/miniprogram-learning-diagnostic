@@ -45,68 +45,48 @@
     </view>
 
     <view class="section">
-      <view class="section-heading">证据链</view>
-      <view class="surface" wx:if="{{evidenceChain.length > 0}}">
+      <view class="section-title-line">
+        <view>
+          <view class="section-heading">卡点证据链</view>
+          <text class="section-subtitle">按时间串起诊断、验证卷和反馈，避免重复列表混在一起。</text>
+        </view>
+        <text class="section-count" wx:if="{{evidenceChain.length > 0}}">{{evidenceChain.length}} 条</text>
+      </view>
+      <view class="evidence-list" wx:if="{{visibleEvidenceChain.length > 0}}">
         <view
-          class="evidence-row"
-          wx:for="{{evidenceChain}}"
+          class="evidence-card evidence-{{item.kind}}"
+          wx:for="{{visibleEvidenceChain}}"
           wx:key="id"
           bindtap="onEvidenceTap"
           data-id="{{item.id}}"
           data-type="{{item.type}}"
         >
-          <view class="row-icon row-{{item.type}}">{{item.icon}}</view>
-          <view class="row-copy">
-            <view class="row-title-line">
-              <text class="row-title">{{item.title}}</text>
+          <view class="evidence-icon row-{{item.type}}">{{item.icon}}</view>
+          <view class="evidence-copy">
+            <view class="evidence-head">
+              <text class="evidence-category">{{item.category}}</text>
+              <text class="evidence-status status-{{item.statusClass}}">{{item.statusText}}</text>
+            </view>
+            <view class="evidence-title-line">
+              <text class="evidence-title">{{item.title}}</text>
               <text class="row-time">{{item.timeText}}</text>
             </view>
-            <text class="row-desc">{{item.summary}}</text>
+            <text class="evidence-desc">{{item.summary}}</text>
+            <view class="evidence-chip-row" wx:if="{{item.metaChips.length > 0}}">
+              <text class="evidence-chip" wx:for="{{item.metaChips}}" wx:for-item="chip" wx:key="*this">{{chip}}</text>
+            </view>
           </view>
+          <text class="arrow">›</text>
+        </view>
+        <view class="expand-row" wx:if="{{hiddenEvidenceCount > 0}}" bindtap="onToggleEvidence">
+          展开全部 {{hiddenEvidenceCount}} 条证据
+        </view>
+        <view class="expand-row" wx:elif="{{showAllEvidence && evidenceChain.length > 3}}" bindtap="onToggleEvidence">
+          收起证据链
         </view>
       </view>
       <view class="surface empty" wx:else>
         <text>还没有关联证据，完成一次诊断或验证后会自动补充。</text>
-      </view>
-    </view>
-
-    <view class="section">
-      <view class="section-heading">相关报告</view>
-      <view class="compact-list" wx:if="{{relatedReports.length > 0}}">
-        <view
-          class="compact-row"
-          wx:for="{{relatedReports}}"
-          wx:key="_id"
-          bindtap="onViewReport"
-          data-id="{{item._id}}"
-        >
-          <text class="compact-title">{{item.type === 'verification' ? '验证反馈' : '诊断报告'}}</text>
-          <text class="compact-desc">{{item.comparisonSummary || item.changeSummary || item.summary || '查看完整报告'}}</text>
-          <text class="arrow">›</text>
-        </view>
-      </view>
-      <view class="surface empty" wx:else>
-        <text>暂无关联报告。</text>
-      </view>
-    </view>
-
-    <view class="section">
-      <view class="section-heading">相关验证卷</view>
-      <view class="compact-list" wx:if="{{relatedPapers.length > 0}}">
-        <view
-          class="compact-row"
-          wx:for="{{relatedPapers}}"
-          wx:key="_id"
-          bindtap="onViewPaper"
-          data-id="{{item._id}}"
-        >
-          <text class="compact-title">{{item.paperDisplayCode || item.paperCode || '验证试卷'}}</text>
-          <text class="compact-desc">{{item.questions.length || 0}} 题 · 完成后上传作答照片形成反馈</text>
-          <text class="arrow">›</text>
-        </view>
-      </view>
-      <view class="surface empty" wx:else>
-        <text>还没有生成过验证卷。</text>
       </view>
     </view>
 
