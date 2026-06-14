@@ -214,7 +214,7 @@
 | 字段名 | 类型 | 描述 | 示例值 |
 |--------|------|------|--------|
 | `lpCode` | String | 验证目标卡点编码 | `"LP-001"` |
-| `expectedQuestionCount` | Number | 验证试卷中该卡点的预期题数 | `3` |
+| `expectedQuestionCount` | Number | 验证试卷中该卡点的预期题数；当前验证卷默认每卡点 5 题 | `5` |
 | `attemptedQuestionCount` | Number | OCR 明确识别到已经作答的题数 | `3` |
 | `incorrectQuestionCount` | Number | 已识别作答中的错题数 | `0` |
 | `complete` | Boolean | 是否已识别全部预期作答 | `true` |
@@ -245,6 +245,8 @@
 | `answerPages` | Number | 否 | 计算值 | 参考答案页数 | `1` |
 | `totalPages` | Number | 是 | 计算值 | PDF 总页数，包含学生卷和答案页 | `2` |
 | `createdAt` | Date | 是 | new Date() | 创建时间 | `ISODate("2025-06-01T09:00:00Z")` |
+
+> 验证试卷的题量规则：`questions.length = bottleneckTargets.length × 5`。每个学习卡点包含 3 道核心验证题和 2 道迁移延展题；默认诊断试卷仍使用 `questionCount` 参数（6-20，默认 12）。
 
 #### questions 子结构
 

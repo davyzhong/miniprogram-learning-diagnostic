@@ -128,11 +128,13 @@ PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sen
 2. 用手机微信扫描二维码
 3. 进入小程序，完成以下测试：
    - 添加学生
+   - 如有多个学生，确认首页显示家庭学习工作台；如只有一个学生，确认直接进入该学生学习档案
+   - 进入家长管理，确认 owner 可创建邀请，共同家长可查看学习资料但不能管理成员
    - 选择学科
-   - 上传试卷照片（1-5 张）
+   - 上传试卷照片（1-20 张；如手机相册包含 HEIF，确认可自动转为 JPEG 或给出清晰提示）
    - 等待分析完成
    - 查看诊断报告
-   - 生成验证试卷
+   - 生成验证试卷，确认每个学习卡点生成 5 题（3 道核心验证题 + 2 道迁移延展题）
    - 下载 PDF，并确认按钮变为「已下载」且再次点击不会重复下载
    - 进入「学习记录」，确认当天能看到诊断报告、生成的试卷、验证上传和原始照片
 
@@ -152,7 +154,8 @@ PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sen
 ### Q3：上传图片后，一直显示「分析中」？
 - 检查 `analyzePhotos` 云函数是否部署成功
 - 查看云函数日志（云开发控制台 → 「日志」）
-- 可能是混元 API 调用超时，需要增大云函数超时时间
+- 微信云函数超时时间最高只能在平台允许的 60 秒以内配置；不要尝试调到 60 秒以上
+- 当前架构会先返回报告 ID，再由后台按图片串行分析；如中途失败，可在报告页或学习记录页手动重试
 
 ### Q4：小程序预览时，报错「云函数不存在」？
 - 确认云函数已部署到云端
@@ -172,10 +175,11 @@ PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sen
 miniprogram-learning-diagnostic/
 ├── miniprogram/
 │   ├── app.js                 ✅
-│   ├── app.json               ✅（14 个页面路径）
+│   ├── app.json               ✅（15 个页面路径）
 │   ├── app.wxss               ✅
-│   └── pages/                ✅（14 个页面）
+│   └── pages/                ✅（15 个页面）
 │       ├── index/
+│       ├── student-profile/
 │       ├── add-student/
 │       ├── subject-select/
 │       ├── subject-home/
@@ -184,6 +188,8 @@ miniprogram-learning-diagnostic/
 │       ├── parent-management/
 │       ├── join-student/
 │       ├── report/
+│       ├── bottleneck-center/
+│       ├── bottleneck-detail/
 │       ├── generate-verification/
 │       ├── default-paper/
 │       └── paper-preview/
@@ -196,12 +202,14 @@ miniprogram-learning-diagnostic/
 │   ├── getAnalysisProgress/  ✅
 │   ├── studentAccess/        ✅
 │   └── studentData/          ✅
-├── tests/                    ✅（24 个常规测试文件 + 真实图片 E2E 脚本 + helpers，228 常规用例）
-├── scripts/check-js.js       ✅（78 文件语法检查）
+├── services/skills/          ✅（P0 Skill 能力内核）
+├── cli/ldx.js                ✅（本地 CLI 入口）
+├── tests/                    ✅（26 个常规测试文件 + 真实图片 E2E 脚本 + helpers，261 常规用例）
+├── scripts/check-js.js       ✅（86 文件语法检查）
 ├── project.config.json        ✅
 ├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / check / verify）
 ├── PROJECT_PLAN.md          ✅
-├── PRD.md                   ✅（v2.7）
+├── PRD.md                   ✅（v2.8）
 ├── SETUP.md                ✅（本文件）
 └── docs/TEST_MATRIX.md     ✅
 ```

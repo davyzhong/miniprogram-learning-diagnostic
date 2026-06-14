@@ -11,6 +11,9 @@ cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const TYPES = new Set(['verification', 'default-diagnosis']);
+const VERIFICATION_CORE_QUESTION_COUNT = 3;
+const VERIFICATION_EXTENSION_QUESTION_COUNT = 2;
+const VERIFICATION_QUESTIONS_PER_TARGET = VERIFICATION_CORE_QUESTION_COUNT + VERIFICATION_EXTENSION_QUESTION_COUNT;
 
 // 初始化 CloudBase AI SDK
 const app = tcb.init({
@@ -107,7 +110,7 @@ async function generateQuestionsWithAI(student, subject, type, targets, paperKey
   // 获取学生信息（用于个性化）
   const studentName = cleanPromptText(student.name, 30);
   const grade = Number(selectedGrade) || Number(student.grade) || 0;
-  const expectedCount = type === 'verification' ? targets.length * 3 : questionCount;
+  const expectedCount = type === 'verification' ? targets.length * VERIFICATION_QUESTIONS_PER_TARGET : questionCount;
 
   const subjectName = getSubjectName(subject, '数学');
   const typeName = type === 'verification' ? '验证试卷（针对已知卡点）' : '默认诊断试卷（全面诊断）';
@@ -137,10 +140,13 @@ async function generateQuestionsWithAI(student, subject, type, targets, paperKey
 ${targetDesc ? `## 需要验证的卡点\n${targetDesc}` : ''}
 
 ## 要求
-1. 严格生成 ${expectedCount} 道题目（验证试卷每个卡点 3 道，默认诊断试卷按指定数量生成综合题）
+1. 严格生成 ${expectedCount} 道题目（验证试卷每个卡点 5 道，默认诊断试卷按指定数量生成综合题）
 2. 题目难度匹配${grade || '相应'}年级水平
 3. 每道题目包含：题目内容、参考答案、知识点说明
-4. 返回严格 JSON 格式（不要加\`\`\`json\`\`\`包裹）
+4. 验证试卷中，每个卡点需要包含 3 道核心验证题和 2 道迁移延展题
+5. 核心验证题直接验证该卡点；迁移延展题要围绕相邻知识、综合应用或易混场景，用来观察是否存在新的相关学习卡点
+6. 验证试卷题目的 lpCode 仍填写对应目标卡点代码，lpName 写清楚可读的卡点名称
+7. 返回严格 JSON 格式（不要加\`\`\`json\`\`\`包裹）
 
 ## 输出格式
 {

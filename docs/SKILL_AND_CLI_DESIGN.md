@@ -1,6 +1,6 @@
 # Skill 与 CLI 设计文档
 
-> 本文档用于指导学习诊断 MVP 下一阶段的能力抽象与自动化命令建设。目标是把已经跑通的小程序闭环沉淀为可复用、可测试、可批量执行的 Skill 与 CLI 能力。
+> 本文档记录学习诊断 MVP 的能力抽象与自动化命令建设。P0 能力内核已经落地，当前目标是继续把已跑通的小程序闭环沉淀为可复用、可测试、可批量执行的 Skill 与 CLI 能力。
 
 ## 1. 背景
 
@@ -27,7 +27,7 @@
 - 诊断、报告、验证卷、学习卡点追踪需要独立测试和回放。
 - 未来可能需要被小程序、CLI、后台任务、AI Agent 共同调用。
 
-因此，下一阶段要把“页面功能”抽象为“学习诊断能力内核”。
+因此，项目已经先完成 P0“学习诊断能力内核”，后续继续把家庭工作台、导出、批量处理和清理监控能力纳入同一套 Skill / CLI 体系。
 
 ## 2. 基本定义
 
@@ -168,7 +168,7 @@ Skill → cli/adapters/fixture.js / cloudbase.js → 本地 fixture / CloudBase 
 
 ## 5. P0 Skill 设计
 
-P0 是学习诊断闭环的最小完整能力集合，必须优先实现。
+P0 是学习诊断闭环的最小完整能力集合，当前已通过 `services/skills/index.js`、`cli/ldx.js`、`tests/skills-p0.test.js` 和 `tests/cli-p0.test.js` 实现并纳入默认测试。
 
 ### 5.1 `diagnose-from-upload`
 
@@ -318,7 +318,8 @@ ldx bottleneck detail --student <studentId> --subject math --code LP-008
   studentId: 'stu_xxx',
   subject: 'math',
   bottleneckTargets: ['LP-001', 'LP-008'],
-  questionCountPerTarget: 3,
+  questionCountPerTarget: 5,
+  questionMix: '3 core verification + 2 transfer extension',
   paperDate: '2026-06-14'
 }
 ```
@@ -330,7 +331,7 @@ ldx bottleneck detail --student <studentId> --subject math --code LP-008
   paperId: 'paper_xxx',
   paperDisplayCode: '数学-20260614-01',
   pdfFileId: 'cloud://...',
-  questionCount: 6,
+  questionCount: 10,
   studentPages: 1,
   answerPages: 1,
   totalPages: 2,
@@ -811,18 +812,18 @@ npm run verify
 让诊断、报告、学习卡点、验证卷、验证反馈、时间线都可以脱离页面被调用。
 ```
 
-任务：
+完成项：
 
-1. 建立 `services/skills` 基础结构。
-2. 抽象 `diagnose-from-upload`。
-3. 抽象 `generate-diagnostic-report`。
-4. 抽象 `track-bottlenecks`。
-5. 抽象 `generate-verification-paper`。
-6. 抽象 `evaluate-verification-submission`。
-7. 抽象 `build-learning-timeline`。
-8. 建立 CLI 基础入口 `ldx`。
-9. 实现 P0 CLI 命令。
-10. 补齐 P0 skill 与 CLI 测试。
+1. 已建立 `services/skills` 基础结构。
+2. 已抽象 `diagnose-from-upload`。
+3. 已抽象 `generate-diagnostic-report`。
+4. 已抽象 `track-bottlenecks`。
+5. 已抽象 `generate-verification-paper`。
+6. 已抽象 `evaluate-verification-submission`。
+7. 已抽象 `build-learning-timeline`。
+8. 已建立 CLI 基础入口 `ldx`。
+9. 已实现 P0 CLI 命令。
+10. 已补齐 P0 skill 与 CLI 测试。
 
 ### P1：多孩子、多家长、导出能力
 
@@ -860,7 +861,7 @@ npm run verify
 
 ## 13. 成功标准
 
-P0 完成时，应满足：
+P0 已满足：
 
 - 小程序现有功能不回退。
 - CLI 可以启动一次诊断，并查询报告结果。
@@ -900,4 +901,4 @@ P2 完成时，应满足：
 
 这些 Skill 会成为小程序、CLI、自动化测试和未来 AI Agent 的共同基础。
 
-建议下一步从 P0 开始实施，先保证最核心的学习诊断闭环可以被命令行完整跑通。
+下一步建议从 P1 / P2 继续推进：让多孩子家庭工作台、共同家长、导出、批量历史试卷处理、脏数据清理和进度监控逐步复用同一套能力内核。

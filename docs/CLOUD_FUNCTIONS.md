@@ -563,7 +563,10 @@ wx.cloud.callFunction({
   "paperId": "paper_xxx",
   "pdfFileId": "cloud://env.xxx/papers/stu_xxx_math_verification_1718000000000.pdf",
   "title": "数学验证试卷 - 计算错误（加减乘除）",
-  "questionCount": 6
+  "questionCount": 10,
+  "studentPages": 1,
+  "answerPages": 1,
+  "totalPages": 2
 }
 ```
 
@@ -574,7 +577,10 @@ wx.cloud.callFunction({
   "success": true,
   "pdfFileId": "cloud://env.xxx/papers/stu_xxx_math_verification_preview_1718000000000.pdf",
   "title": "数学验证试卷 - 计算错误（加减乘除）",
-  "questionCount": 6
+  "questionCount": 10,
+  "studentPages": 1,
+  "answerPages": 1,
+  "totalPages": 2
 }
 ```
 
@@ -599,7 +605,7 @@ wx.cloud.callFunction({
 | 学生不存在 | students 查无此 doc |
 | 无权执行该操作 | 当前微信不是该孩子档案成员，不能生成试卷 |
 | AI 返回的试卷结构无效 | 解析后缺少 questions 数组 |
-| AI 返回题目数量不正确 | 题目数 ≠ 期望值（验证=targets×3，诊断=questionCount） |
+| AI 返回题目数量不足 | 过滤不完整题后，完整题数量少于期望值（验证=targets×5，诊断=questionCount） |
 | 试卷生成失败，请稍后重试 | 任意未预期异常兜底 |
 
 ### 超时配置建议
@@ -624,9 +630,9 @@ wx.cloud.callFunction({
 
 1. **中文字体**：字体文件随云函数部署，缺失时会直接返回试卷生成失败，避免静默生成乱码 PDF。
 2. **Prompt 防注入**：学生姓名、paperKey 等均经 `cleanPromptText` 清洗（去换行、去尖括号、截断）。
-3. **题目数量强校验**：AI 返回题目数必须严格等于期望值，否则抛错重试。
+3. **题目数量校验**：先过滤缺少题干或答案的不完整题；完整题数量不足期望值时抛错，若 AI 多生成则截取前 N 道。
 4. **预览模式**：`preview=true` 时 PDF 仍会上传云存储，但不写 papers 记录，适合即时预览。
-5. 验证试卷题目数 = `targets.length × 3`，不可自定义。
+5. 验证试卷题目数 = `targets.length × 5`，每个卡点固定为 3 道核心验证题 + 2 道迁移延展题，不由前端自定义。
 6. PDF 分页阈值 y > 700，每题预留答题空白区。
 
 ---
