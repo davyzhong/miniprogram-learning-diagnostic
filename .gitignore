@@ -1,6 +1,5 @@
 # Node modules - cloud functions
 cloudfunctions/**/node_modules/
-cloudfunctions_old_backup/
 
 # WeChat DevTools private config (contains personal settings, not for version control)
 project.private.config.json

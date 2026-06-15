@@ -59,7 +59,6 @@ CloudBase (serverless)
 
 ## Conventions
 
-- `cloudfunctions_old_backup/` is deprecated — do not import from it or use as a reference.
 - Cloud function envelopes follow `{success, data, error}`; throw on `success === false` from the client wrapper.
 - When adding a subject, subject color, or bottleneck code, update **both** the `_shared/` (backend) and `miniprogram/utils/` (frontend) copies of the relevant constants/mapping file.
 - Chinese PDF fonts are bundled inside the cloud function directories — do not configure `FONT_FILE_ID` or external font paths.
