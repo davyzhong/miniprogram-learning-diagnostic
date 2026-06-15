@@ -85,9 +85,30 @@ Page({
   async loadBottlenecks() {
     this.setData({ loading: true })
     try {
-      const dashboard = await cloud.getStudentDashboard(this.data.studentId)
-      const profiles = dashboard.subjectProfiles || dashboard.profiles || []
-      const studentName = this.data.studentName || (dashboard.student && dashboard.student.name) || ''
+      let dashboard = null
+      let dashboardError = null
+      let profiles = []
+      let studentName = this.data.studentName
+
+      if (typeof cloud.getStudentDashboard === 'function') {
+        try {
+          dashboard = await cloud.getStudentDashboard(this.data.studentId)
+          profiles = dashboard.subjectProfiles || dashboard.profiles || []
+          studentName = studentName || (dashboard.student && dashboard.student.name) || ''
+        } catch (error) {
+          dashboardError = error
+          console.warn('学习卡点聚合数据读取失败，尝试读取学科档案', error && error.message ? error.message : error)
+        }
+      }
+
+      if (!profiles.length && typeof cloud.getSubjectProfiles === 'function') {
+        profiles = await cloud.getSubjectProfiles(this.data.studentId)
+      }
+
+      if (!profiles.length && dashboardError) {
+        throw dashboardError
+      }
+
       const allBottlenecks = buildViewsFromProfiles(profiles)
       this.setData({
         studentName,
@@ -97,7 +118,7 @@ Page({
       })
       this.applyFilters()
     } catch (error) {
-      console.error('加载学习卡点失败', error)
+      console.error('加载学习卡点失败', error && error.message ? error.message : error)
       wx.showToast({ title: '学习卡点加载失败', icon: 'none' })
       this.setData({ loading: false, emptyText: '学习卡点加载失败，请稍后重试' })
     }

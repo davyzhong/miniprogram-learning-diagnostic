@@ -141,3 +141,36 @@ test('report view exposes traceable metric and evidence urls', () => {
   assert.match(view.metricActions.sourcesUrl, /upload-history\/upload-history/)
   assert.match(view.evidenceTimeUrl, /upload-history\/upload-history/)
 })
+
+test('report view exposes quality labels and reasons', () => {
+  const view = buildReportView({
+    type: 'diagnosis',
+    quality: {
+      level: 'medium',
+      status: 'needs_review',
+      reasons: ['部分照片分析失败', '样本较少']
+    }
+  })
+
+  assert.equal(view.qualityLabel, '建议复核')
+  assert.equal(view.qualityClass, 'needs-review')
+  assert.deepEqual(view.qualityReasons, ['部分照片分析失败', '样本较少'])
+})
+
+test('verification report exposes readable evidence status summaries', () => {
+  const view = buildReportView({
+    type: 'verification',
+    verificationEvidence: [
+      { lpCode: 'LP-001', evidenceStatus: 'passed', evidenceReason: '5 道验证题均清晰作答且全部正确' },
+      { lpCode: 'LP-002', evidenceStatus: 'unclear', evidenceReason: '有 1 道题图像不清晰' },
+      { lpCode: 'LP-003', evidenceStatus: 'failed', evidenceReason: '有 2 道题仍然出错' }
+    ]
+  })
+
+  assert.deepEqual(view.verificationEvidenceItems.map(item => item.statusText), [
+    '已通过',
+    '图像不清',
+    '未通过'
+  ])
+  assert.equal(view.hasVerificationEvidence, true)
+})

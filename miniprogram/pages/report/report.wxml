@@ -8,6 +8,7 @@
     <text class="report-headline">{{headline}}</text>
     <text class="report-summary" wx:if="{{trendSummaryText}}">{{trendSummaryText}}</text>
     <text class="report-summary">{{report.summary}}</text>
+    <view class="quality-chip quality-chip-{{qualityClass}}" wx:if="{{hasQuality}}">{{qualityLabel}}</view>
   </view>
 
   <view class="status-card" wx:if="{{report.status === 'analyzing'}}">
@@ -26,11 +27,19 @@
     <view class="card conclusion-card">
       <view class="section-heading"><view class="heading-icon">◎</view><text>本次诊断结论</text></view>
       <text class="conclusion-text">{{headline}}</text>
+      <view class="quality-box quality-box-{{qualityClass}}" wx:if="{{hasQuality}}">
+        <view class="quality-title-row">
+          <text class="quality-title">{{qualityLabel}}</text>
+          <text class="quality-sample">{{qualitySampleSummary}}</text>
+        </view>
+        <text class="quality-reason" wx:for="{{qualityReasons}}" wx:key="index">{{item}}</text>
+      </view>
       <view class="report-metrics">
         <view bindtap="onTraceableUrlTap" data-url="{{metricActions.errorsUrl}}"><text>{{report.totalErrors || 0}}</text><text>相关错题</text></view>
         <view bindtap="onTraceableUrlTap" data-url="{{metricActions.bottlenecksUrl}}"><text>{{bottleneckCount}}</text><text>学习卡点</text></view>
         <view bindtap="onTraceableUrlTap" data-url="{{metricActions.sourcesUrl}}"><text>{{sourceImageCount}}</text><text>试卷图片</text></view>
       </view>
+      <view class="feedback-line" bindtap="onOpenFeedback" data-target-type="report" data-target-id="" data-type="unclear_result">这份报告不准确？点这里反馈</view>
     </view>
 
     <view class="card" wx:if="{{hasBottlenecks}}">
@@ -44,7 +53,19 @@
           </view>
           <text class="bottleneck-desc">{{item.rootCause || item.suggestion || '建议结合相关错题进一步观察。'}}</text>
           <text class="bottleneck-meta">{{item.metaText}}</text>
+          <text class="feedback-link" catchtap="onOpenFeedback" data-target-type="bottleneck" data-target-id="{{item.lpCode}}" data-type="wrong_bottleneck">反馈这个卡点</text>
         </view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{hasVerificationEvidence}}">
+      <view class="section-heading"><view class="heading-icon">✓</view><text>验证证据</text></view>
+      <view class="evidence-item" wx:for="{{verificationEvidenceItems}}" wx:key="lpCode">
+        <view class="evidence-title-row">
+          <text class="evidence-code">{{item.lpCode}}</text>
+          <text class="evidence-status evidence-status-{{item.statusClass}}">{{item.statusText}}</text>
+        </view>
+        <text class="evidence-reason">{{item.evidenceReason}}</text>
       </view>
     </view>
 
@@ -67,6 +88,7 @@
           <view class="error-row"><text class="error-label">学生答案</text><text class="error-value wrong">{{item.studentAnswer}}</text></view>
           <view class="error-row"><text class="error-label">正确答案</text><text class="error-value correct">{{item.correctAnswer}}</text></view>
           <view class="error-row" wx:if="{{item.rootCause}}"><text class="error-label">分析</text><text class="error-value">{{item.rootCause}}</text></view>
+          <view class="feedback-link error-feedback" catchtap="onOpenFeedback" data-target-type="errorDetail" data-target-id="{{item.feedbackTargetId}}" data-type="wrong_question">这道题识别错了</view>
         </view>
         <text class="expand-hint">{{item.expanded ? '收起' : '展开详情'}}</text>
       </view>
@@ -76,6 +98,28 @@
     <view class="bottom-actions">
       <button class="btn-secondary action-btn" bindtap="onShare">分享</button>
       <button class="btn-secondary action-btn" bindtap="onDownloadPDF" disabled="{{generatingPdf}}">{{generatingPdf ? '生成中...' : '下载 PDF'}}</button>
+    </view>
+  </view>
+
+  <view class="dialog-mask" wx:if="{{feedbackDialog.visible}}" bindtap="onCloseFeedback">
+    <view class="feedback-dialog" catchtap="noop">
+      <text class="dialog-title">反馈诊断问题</text>
+      <text class="dialog-desc">反馈只会作为复核记录，不会直接修改原报告。</text>
+      <view class="feedback-type-list">
+        <view
+          class="feedback-type {{feedbackDialog.type === item.type ? 'feedback-type-active' : ''}}"
+          wx:for="{{feedbackTypes}}"
+          wx:key="type"
+          bindtap="onFeedbackTypeTap"
+          data-type="{{item.type}}"
+        >{{item.label}}</view>
+      </view>
+      <textarea class="feedback-input" placeholder="请简单说明哪里不准确" value="{{feedbackDialog.reason}}" bindinput="onFeedbackReasonInput" maxlength="120" />
+      <textarea class="feedback-input feedback-note" placeholder="补充说明（可选）" value="{{feedbackDialog.note}}" bindinput="onFeedbackNoteInput" maxlength="500" />
+      <view class="dialog-actions">
+        <button class="dialog-btn dialog-cancel" bindtap="onCloseFeedback">取消</button>
+        <button class="dialog-btn dialog-submit" bindtap="onSubmitFeedback" disabled="{{submittingFeedback}}">{{submittingFeedback ? '提交中...' : '提交反馈'}}</button>
+      </view>
     </view>
   </view>
 </view>

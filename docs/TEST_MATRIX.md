@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序测试矩阵
 
-> 更新日期：2026-06-14
+> 更新日期：2026-06-15
 > 范围：`PRD.md`、`PROJECT_PLAN.md` 中的 MVP P0 功能
-> 自动化结果：`npm test` → 261/261 通过；`npm run check` → 86 个 JS 文件语法正确
+> 自动化结果：`npm test` → 277/277 通过；`npm run check` → 以本机输出为准
 
 ## 1. 自动化验证命令
 
@@ -31,7 +31,9 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | 当前综合诊断三状态和旧数据兼容 | `profile-summary.test.js`、`cloud-functions.test.js` | 已覆盖 |
 | 时间化学习卡点趋势和权重 | `time-aware-bottlenecks.test.js`、`profile-summary.test.js`、`cloud-functions.test.js`、`page-flows.test.js` | 已覆盖；照片证据以上传时间为准，验证卷保留 paperDate |
 | 学科工作台主任务、待处理队列和工具入口 | `subject-home-presenter.test.js`、`page-flows.test.js`、`contracts.test.js` | 已覆盖；学科主页不再重复综合诊断摘要 |
-| 验证报告与改善证据判定 | `comparison.test.js`、`verification-evidence.test.js`、`cloud-functions.test.js` | 已覆盖；只有全部预期题目清晰作答且全对才确认改善 |
+| 验证报告与改善证据判定 | `comparison.test.js`、`verification-evidence.test.js`、`cloud-functions.test.js`、`report-presenter.test.js` | 已覆盖；只有全部预期题目清晰作答且全对才确认改善，空白/模糊/缺失均进入证据不足 |
+| 报告质量复核信号 | `report-quality.test.js`、`report-presenter.test.js` | 已覆盖；样本不足不更新长期卡点，部分失败显示“建议复核” |
+| 家长反馈与纠错入口 | `report-feedback.test.js`、`page-flows.test.js` | 已覆盖；owner/viewer 可提交反馈，非成员不可提交，反馈不直接修改原报告 |
 | 验证试卷出卷配置、生成、PDF 下载、已下载状态、答题上传 | `page-flows.test.js`、`cloud-functions.test.js`、`generate-paper-pdf.test.js` | 已覆盖；支持 targetCode 预选，每个卡点 5 题（3 核心验证 + 2 迁移延展），PDF 包含学生卷和答案页，真实 AI 题目质量和打印效果需人工验收 |
 | 默认诊断试卷选择、年级、缓存复用、答题上传 | `page-flows.test.js`、`cloud-functions.test.js` | 同一学生复用已覆盖；跨学生复用未实现 |
 | 报告 PDF 生成和下载 | `cloud-functions.test.js`、`page-flows.test.js`、`contracts.test.js` | 已覆盖；中文字体已内置，真实 A4 排版需人工验收 |
@@ -39,7 +41,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | 页面注册、四件套文件和 WXML 事件绑定 | `project-integrity.test.js` | 已覆盖 |
 | 数据归属校验、参数白名单、无堆栈返回 | `cloud-functions.test.js`、`contracts.test.js`、`student-access.test.js`、`student-data-access.test.js` | 已覆盖主要云函数入口；学习流程操作走成员权限，家庭成员管理 owner-only |
 | 覆盖缺口补全（边界与回归） | `coverage-gap.test.js` | 已覆盖历史修复的回归场景 |
-| 端到端真实图片链路 | `e2e-real-image.test.js` | 本地校验真实图片文件；CloudBase AI 缺少本地凭据时自动跳过云端步骤 |
+| 端到端真实图片链路 | `e2e-real-image.test.js`、`real-image-config.test.js` | 支持 mock、单图和 manifest 多案例模式；真实图片与运行报告默认保存在本机私有路径 |
 | Skill / CLI P0 | `skills-p0.test.js`、`cli-p0.test.js` | 已覆盖；诊断、报告、卡点、验证卷、验证反馈和时间线能力可通过本地能力内核与 CLI 调用 |
 
 ## 3. 尚未完成的设计能力
@@ -83,18 +85,21 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/generate-paper-pdf.test.js` | 可打印 PDF 中文字体、分页和答案页回归 | 4 |
 | `tests/index-presenter.test.js` | 孩子档案视图模型与家庭工作台卡片 | 9 |
 | `tests/learning-records.test.js` | 学习记录四级分类、试卷编号和卡点名称规则 | 10 |
-| `tests/page-flows.test.js` | 页面主流程、首页分流与错误恢复 | 59 |
+| `tests/page-flows.test.js` | 页面主流程、首页分流与错误恢复 | 60 |
 | `tests/parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
 | `tests/photo-dedup.test.js` | OCR 去重算法 | 3 |
 | `tests/poller.test.js` | 通用轮询器与分析轮询包装 | 6 |
 | `tests/project-integrity.test.js` | 页面文件、事件绑定和品牌资产完整性 | 3 |
-| `tests/report-presenter.test.js` | 报告视图预计算 | 9 |
+| `tests/real-image-config.test.js` | 真实图片 E2E 配置解析 | 5 |
+| `tests/report-feedback.test.js` | 报告反馈云函数 | 3 |
+| `tests/report-presenter.test.js` | 报告视图预计算、质量标签和验证证据状态 | 11 |
+| `tests/report-quality.test.js` | 报告质量模型 | 4 |
 | `tests/skills-p0.test.js` | P0 Skill 能力内核 | 8 |
 | `tests/profile-summary.test.js` | 当前综合诊断状态规则 | 6 |
 | `tests/student-access.test.js` | 家长成员、邀请、加入、移除权限和首次建表兜底 | 8 |
 | `tests/student-data-access.test.js` | 共享家长学习数据访问 | 6 |
 | `tests/subject-home-presenter.test.js` | 学科工作台视图模型 | 3 |
 | `tests/time-aware-bottlenecks.test.js` | 时间化学习卡点趋势和权重 | 5 |
-| `tests/verification-evidence.test.js` | 验证试卷证据完整性 | 2 |
+| `tests/verification-evidence.test.js` | 验证试卷证据完整性 | 3 |
 | `tests/util.test.js` | 工具函数 | 11 |
-| **合计** | | **261 常规用例** |
+| **合计** | | **277 常规用例** |

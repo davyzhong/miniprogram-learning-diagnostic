@@ -40,6 +40,9 @@ test('normalizes verification evidence counts without trusting completion flags'
         lpCode: 'LP-001',
         attemptedQuestionCount: '3',
         incorrectQuestionCount: -1,
+        blankQuestionCount: '1',
+        unclearQuestionCount: 2,
+        missingQuestionCount: -5,
         complete: true,
         allCorrect: true
       }]
@@ -49,6 +52,9 @@ test('normalizes verification evidence counts without trusting completion flags'
   assert.deepEqual(result.pageResults[0].verificationEvidence, [{
     lpCode: 'LP-001',
     attemptedQuestionCount: 3,
-    incorrectQuestionCount: 0
+    incorrectQuestionCount: 0,
+    blankQuestionCount: 1,
+    unclearQuestionCount: 2,
+    missingQuestionCount: 0
   }])
 })

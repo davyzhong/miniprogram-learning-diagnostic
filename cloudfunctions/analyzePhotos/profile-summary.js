@@ -9,7 +9,9 @@ function getVerificationEvidence(report, lpCode) {
 }
 
 function isPassedEvidence(evidence) {
-  return Boolean(evidence && evidence.complete === true && evidence.allCorrect === true)
+  if (!evidence) return false
+  if (evidence.evidenceStatus) return evidence.evidenceStatus === 'passed'
+  return Boolean(evidence.complete === true && evidence.allCorrect === true)
 }
 
 function isEffectiveReport(report = {}) {

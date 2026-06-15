@@ -158,6 +158,13 @@ test('bottleneck center and detail pages are registered and share the bottleneck
   }
 })
 
+test('bottleneck center cards use readable status badges instead of punctuation icons', () => {
+  const centerPage = read('miniprogram/pages/bottleneck-center/bottleneck-center.wxml')
+
+  assert.doesNotMatch(centerPage, /\{\{item\.statusIcon\}\}/)
+  assert.match(centerPage, /\{\{item\.statusBadgeText\}\}/)
+})
+
 test('single bottleneck actions carry target codes into verification paper generation', () => {
   const indexPage = read('miniprogram/pages/index/index.js')
   const centerPage = read('miniprogram/pages/bottleneck-center/bottleneck-center.js')
@@ -346,6 +353,21 @@ test('analysis progress endpoint uses shared resource access checks', () => {
   assert.match(source, /canReadLearning/)
   assert.match(accessSource, /resource\._openid/)
   assert.match(accessSource, /getActiveMember/)
+})
+
+test('studentData cloud function is self contained for single-function deploys', () => {
+  const source = read('cloudfunctions/studentData/index.js')
+  assert.doesNotMatch(source, /require\(['"]\.\.\/_shared\/access['"]\)/)
+  assert.match(source, /function permissionsForRole/)
+  assert.match(source, /function canManageFamily/)
+})
+
+test('reportFeedback cloud function is self contained for single-function deploys', () => {
+  const source = read('cloudfunctions/reportFeedback/index.js')
+  assert.doesNotMatch(source, /require\(['"]\.\.\/_shared\/access['"]\)/)
+  assert.match(source, /function getLearningResourceAccess/)
+  assert.match(source, /function canOperateLearning/)
+  assert.match(source, /function canReadLearning/)
 })
 
 test('analysis is started reliably by the server entrypoint', () => {

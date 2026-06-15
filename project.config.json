@@ -23,7 +23,18 @@
   },
   "cloudfunctionTemplateRoot": "",
   "cloudbaseRoot": "cloud1-d6gneg68m5a7a3876",
-  "condition": {},
+  "condition": {
+    "miniprogram": {
+      "list": [
+        {
+          "name": "首页",
+          "pathName": "pages/index/index",
+          "query": "",
+          "launchMode": "default"
+        }
+      ]
+    }
+  },
   "compileType": "miniprogram",
   "simulatorPluginLibVersion": {},
   "packOptions": {

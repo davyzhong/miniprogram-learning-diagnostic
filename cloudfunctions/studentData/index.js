@@ -1,5 +1,4 @@
 const cloud = require('wx-server-sdk');
-const { permissionsForRole, canManageFamily } = require('../_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -22,6 +21,23 @@ function success(data = {}) {
 
 function failure(error) {
   return { success: false, error };
+}
+
+function canManageFamily(access) {
+  return Boolean(access && access.allowed && access.role === 'owner');
+}
+
+function permissionsForRole(role) {
+  const owner = role === 'owner';
+  return {
+    canView: true,
+    canReadLearning: true,
+    canOperateLearning: true,
+    canManageParents: owner,
+    canUpload: true,
+    canGeneratePaper: true,
+    canRetryAnalysis: true,
+  };
 }
 
 function toTime(value) {

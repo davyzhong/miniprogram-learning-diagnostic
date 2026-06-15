@@ -24,10 +24,26 @@ test('bottleneck view hides LP codes and formats readable state', () => {
 
   assert.equal(views[0].displayName, '计算基础')
   assert.equal(views[0].statusText, '持续出现')
+  assert.equal(views[0].statusBadgeText, '持续观察')
   assert.equal(views[0].priorityText, '高优先级')
   assert.equal(views[0].evidenceText, '3 次证据 · 最近 5 道相关错题')
   assert.equal(views[0].actionText, '生成验证卷')
   assert.doesNotMatch(views[0].displayName, /LP-\d+/)
+})
+
+test('bottleneck view exposes readable status badges instead of symbolic icons', () => {
+  const views = buildBottleneckViews([
+    { lpCode: 'LP-001', status: 'persisting', trend: 'persisting' },
+    { lpCode: 'LP-008', status: 'needs_verification', trend: 'new' },
+    { lpCode: 'LP-002', status: 'persisting', trend: 'recurring' },
+    { lpCode: 'LP-004', status: 'improved', trend: 'declining' }
+  ])
+
+  assert.deepEqual(
+    views.map(item => item.statusBadgeText),
+    ['再次出现', '持续观察', '待验证', '改善中']
+  )
+  assert.ok(views.every(item => !['!', '?', '✓'].includes(item.statusBadgeText)))
 })
 
 test('bottleneck view sorts active and high weight items before improved ones', () => {

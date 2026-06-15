@@ -9,6 +9,7 @@
 - [uploadAndAnalyze](#uploadandanalyze)
 - [studentAccess](#studentaccess)
 - [studentData](#studentdata)
+- [reportFeedback](#reportfeedback)
 - [analyzePhotos](#analyzephotos)
 - [analyzeBatch](#analyzebatch)
 - [generatePaper](#generatepaper)
@@ -179,6 +180,85 @@ wx.cloud.callFunction({
 1. 本函数只做共享读取，不创建、不修改学习数据。
 2. 时间线仍是派生视图，由 `reports`、`papers` 和 `reports.imageFiles` 汇总，不新增独立事件集合。
 3. `studentData` 本身只做读取聚合；共同家长是否能上传、重试或生成试卷由对应写入云函数的成员权限校验决定。
+
+---
+
+## reportFeedback
+
+### 功能描述
+
+收集家长对诊断报告的纠错和复核线索。第一版只记录反馈，不直接修改 AI 原始报告、综合学习卡点或学习记录。
+
+### 调用方式
+
+```javascript
+wx.cloud.callFunction({
+  name: 'reportFeedback',
+  data: {
+    action: 'createFeedback',
+    reportId: 'report_xxx',
+    type: 'wrong_bottleneck',
+    targetType: 'bottleneck',
+    targetId: 'LP-001',
+    reason: '这个卡点不准确',
+    note: '孩子只是抄错了数字'
+  }
+})
+```
+
+### action 列表
+
+| action | 必填参数 | 权限 | 描述 |
+| --- | --- | --- | --- |
+| `createFeedback` | `reportId`, `type`, `targetType`, `reason` | owner/viewer 可提交 | 对报告、卡点、错题或照片提交反馈 |
+| `listFeedbackByReport` | `reportId` | owner/viewer 可查看 | 读取当前报告的反馈记录，用于页面显示“已反馈” |
+
+### 枚举
+
+`type`：
+
+- `wrong_bottleneck`：学习卡点不准确
+- `wrong_question`：错题识别错误
+- `duplicate_photo`：照片重复或不清楚
+- `unclear_result`：报告结果需要复核
+- `other`：其他问题
+
+`targetType`：
+
+- `report`
+- `bottleneck`
+- `errorDetail`
+- `photo`
+
+### 输出示例
+
+```json
+{
+  "success": true,
+  "feedback": {
+    "_id": "feedback_xxx",
+    "reportId": "report_xxx",
+    "studentId": "stu_xxx",
+    "subject": "math",
+    "type": "wrong_bottleneck",
+    "targetType": "bottleneck",
+    "targetId": "LP-001",
+    "reason": "这个卡点不准确",
+    "status": "submitted"
+  }
+}
+```
+
+### 错误码 / 错误消息
+
+| 错误消息 | 触发条件 |
+| --- | --- |
+| 缺少 reportId | 未传入报告 ID |
+| 报告不存在 | reports 查无该记录 |
+| 无权限访问该报告 | 当前微信不是 owner，也不是 active viewer |
+| 反馈类型无效 | type 不在白名单 |
+| 反馈对象无效 | targetType 不在白名单 |
+| 请填写反馈原因 | reason 为空 |
 
 ---
 

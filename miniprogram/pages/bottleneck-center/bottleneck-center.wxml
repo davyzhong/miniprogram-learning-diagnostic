@@ -58,7 +58,9 @@
         data-subject="{{item.subject}}"
         data-lp-code="{{item.lpCode}}"
       >
-        <view class="bottleneck-icon">{{item.statusIcon}}</view>
+        <view class="bottleneck-status-badge status-badge-{{item.statusClass}}">
+          <text>{{item.statusBadgeText}}</text>
+        </view>
         <view class="bottleneck-copy">
           <view class="title-line">
             <text class="bottleneck-name">{{item.displayName}}</text>

@@ -2,9 +2,9 @@ const { bottleneckLabelOf } = require('./learning-records')
 const { SUBJECT_NAMES } = require('./constants')
 
 const STATUS_META = {
-  needs_verification: { text: '待验证', className: 'pending', icon: '?', actionText: '生成验证卷' },
-  persisting: { text: '持续出现', className: 'persisting', icon: '!', actionText: '生成验证卷' },
-  improved: { text: '已改善', className: 'improved', icon: '✓', actionText: '查看证据' }
+  needs_verification: { text: '待验证', className: 'pending', icon: '?', badgeText: '待验证', actionText: '生成验证卷' },
+  persisting: { text: '持续出现', className: 'persisting', icon: '!', badgeText: '持续观察', actionText: '生成验证卷' },
+  improved: { text: '已改善', className: 'improved', icon: '✓', badgeText: '已改善', actionText: '查看证据' }
 }
 
 const TREND_META = {
@@ -99,10 +99,10 @@ function buildTimeText(item = {}) {
 function statusMetaFor(item = {}) {
   const status = normalizeStatus(item)
   if (item.trend === 'recurring') {
-    return { ...STATUS_META.persisting, text: '再次出现', className: 'recurring' }
+    return { ...STATUS_META.persisting, text: '再次出现', className: 'recurring', badgeText: '再次出现' }
   }
   if (item.trend === 'declining') {
-    return { ...STATUS_META.improved, text: '下降中', className: 'declining' }
+    return { ...STATUS_META.improved, text: '下降中', className: 'declining', badgeText: '改善中' }
   }
   return STATUS_META[status] || STATUS_META.needs_verification
 }
@@ -126,6 +126,7 @@ function buildBottleneckView(item = {}, options = {}) {
     statusText: meta.text,
     statusClass: meta.className,
     statusIcon: meta.icon,
+    statusBadgeText: meta.badgeText || meta.text,
     trend: item.trend || (status === 'improved' ? 'improved' : status === 'persisting' ? 'persisting' : 'new'),
     trendText: TREND_META[item.trend] || TREND_META[status] || '',
     weight,

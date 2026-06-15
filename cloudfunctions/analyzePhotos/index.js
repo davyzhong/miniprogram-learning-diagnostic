@@ -4,6 +4,7 @@ const cloud = require('wx-server-sdk');
 const { compareBottlenecks, buildComparisonSummary } = require('./comparison');
 const { markDuplicatePages } = require('./photo-dedup');
 const { buildProfileSummary } = require('./profile-summary');
+const { buildReportQuality } = require('./report-quality');
 const { aggregateVerificationEvidence, buildVerificationPlan } = require('./verification-evidence');
 const {
   splitFileBatches,
@@ -392,7 +393,7 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     previousReport = await getPreviousReport(studentId, subject);
     verificationTargets = verificationPaper.targets;
     const verificationEvidence = aggregateVerificationEvidence(verificationPaper.plan, uniquePages);
-    const passedCodes = verificationEvidence.filter(item => item.complete && item.allCorrect).map(item => item.lpCode);
+    const passedCodes = verificationEvidence.filter(item => item.evidenceStatus === 'passed').map(item => item.lpCode);
     merged.bottlenecks = compareBottlenecks(
       previousReport ? previousReport.bottlenecks : [],
       merged.bottlenecks,
@@ -404,6 +405,15 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     merged.bottlenecks = merged.bottlenecks.map(item => ({ ...item, status: 'found' }));
   }
 
+  const quality = buildReportQuality({
+    report,
+    uniquePages,
+    merged,
+    failedBatches,
+    verificationEvidence: merged.verificationEvidence || [],
+    allPhotosDuplicate: uniquePages.length === 0,
+  });
+
   const profile = await getSubjectProfile(studentId, subject);
   const profileSummary = buildProfileSummary(profile || {}, {
     _id: reportId,
@@ -414,9 +424,14 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     verificationEvidence: merged.verificationEvidence || [],
     allPhotosDuplicate: uniquePages.length === 0,
   }, report.evidenceTime || report.createdAt || new Date());
+  if (quality.status === 'insufficient') {
+    profileSummary.isEffective = false;
+    profileSummary.changeSummary = quality.reasons[0] || '本次样本不足，未更新学习卡点';
+  }
 
   return {
     merged,
+    quality,
     imageFiles,
     previousReport,
     comparisonSummary,
@@ -430,7 +445,7 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
   };
 }
 
-async function writeCompletedAnalysis({ reportId, studentId, subject, merged, imageFiles, previousReport, comparisonSummary, verificationTargets, profile, profileSummary, partialSuccess, analysisWarning, failedBatches, failedImageFiles }) {
+async function writeCompletedAnalysis({ reportId, studentId, subject, merged, quality, imageFiles, previousReport, comparisonSummary, verificationTargets, profile, profileSummary, partialSuccess, analysisWarning, failedBatches, failedImageFiles }) {
   await db.collection('reports').doc(reportId).update({
     data: {
       status: 'completed',
@@ -444,6 +459,7 @@ async function writeCompletedAnalysis({ reportId, studentId, subject, merged, im
       comparisonSummary,
       verificationTargets,
       verificationEvidence: merged.verificationEvidence || [],
+      quality,
       isEffective: profileSummary.isEffective,
       changeSummary: profileSummary.changeSummary,
       partialSuccess,

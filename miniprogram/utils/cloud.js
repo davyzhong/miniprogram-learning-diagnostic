@@ -7,10 +7,22 @@ function getDb() {
   return _db
 }
 
-function normalizeError(error, fallbackMessage) {
+function callContextLabel(context = {}) {
+  if (!context.functionName) return ''
+  return context.action ? `${context.functionName}:${context.action}` : context.functionName
+}
+
+function normalizeError(error, fallbackMessage, context = {}) {
   const message = error && (error.message || error.errMsg) ? (error.message || error.errMsg) : fallbackMessage
-  const normalized = new Error(message || '操作失败，请稍后重试')
+  const label = callContextLabel(context)
+  const normalizedMessage = label && isTimeoutError(message)
+    ? `${label} 请求超时，请稍后重试`
+    : (message || '操作失败，请稍后重试')
+  const normalized = new Error(normalizedMessage)
   normalized.code = error && (error.code || error.errCode)
+  normalized.functionName = context.functionName || ''
+  normalized.action = context.action || ''
+  normalized.originalMessage = message || ''
   return normalized
 }
 
@@ -23,7 +35,10 @@ async function callFunction(name, data, options = {}) {
     }
     return result
   } catch (error) {
-    throw normalizeError(error, '云函数调用失败')
+    throw normalizeError(error, '云函数调用失败', {
+      functionName: name,
+      action: data && data.action
+    })
   }
 }
 
@@ -288,6 +303,15 @@ async function getPaperDetail(paperId) {
   return callFunction('studentData', { action: 'getPaperDetail', paperId })
 }
 
+async function createReportFeedback(payload) {
+  return callFunction('reportFeedback', { action: 'createFeedback', ...payload })
+}
+
+async function getReportFeedback(reportId) {
+  const result = await callFunction('reportFeedback', { action: 'listFeedbackByReport', reportId })
+  return result.items || []
+}
+
 module.exports = {
   normalizeError,
   isTimeoutError,
@@ -326,4 +350,6 @@ module.exports = {
   cleanupStaleLearningRecords,
   getReportDetail,
   getPaperDetail,
+  createReportFeedback,
+  getReportFeedback,
 }
