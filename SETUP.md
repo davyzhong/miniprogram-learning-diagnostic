@@ -55,6 +55,7 @@
    - `getAnalysisProgress`
    - `studentAccess`
    - `studentData`
+   - `reportFeedback`
 
 ### 注意：
 - `uploadAndAnalyze` 会在服务端创建报告并 fire-and-forget 启动 `analyzePhotos`，客户端提交成功后即可返回学科主页
@@ -77,6 +78,7 @@
 | `analysisTasks` | 仅创建者可读写 | 分析任务 |
 | `studentMembers` | 云函数访问 | 孩子档案的家长成员关系 |
 | `studentInvites` | 云函数访问 | 扫码加入邀请 |
+| `reportFeedback` | 云函数访问 | 家长对报告、卡点、错题、照片的纠错反馈 |
 
 ### 数据库安全规则（推荐配置）
 主学习数据集合（`students` / `subjectProfiles` / `reports` / `papers` / `analysisTasks`）建议保持创建者直接读写规则：
@@ -87,7 +89,7 @@
 }
 ```
 
-`studentMembers` 和 `studentInvites` 是授权辅助集合，前端不直接读写，统一通过 `studentAccess` 云函数访问；可配置为客户端不可直接读写，由云函数完成 owner/viewer 关系校验。
+`studentMembers`、`studentInvites` 和 `reportFeedback` 是授权辅助集合，前端不直接读写，统一通过对应云函数访问；可配置为客户端不可直接读写，由云函数完成权限校验。
 
 ### 数据库索引
 
@@ -201,13 +203,14 @@ miniprogram-learning-diagnostic/
 │   ├── generateReportPDF/    ✅
 │   ├── getAnalysisProgress/  ✅
 │   ├── studentAccess/        ✅
-│   └── studentData/          ✅
+│   ├── studentData/          ✅
+│   └── reportFeedback/       ✅
 ├── services/skills/          ✅（P0 Skill 能力内核）
 ├── cli/ldx.js                ✅（本地 CLI 入口）
-├── tests/                    ✅（26 个常规测试文件 + 真实图片 E2E 脚本 + helpers，261 常规用例）
-├── scripts/check-js.js       ✅（86 文件语法检查）
+├── tests/                    ✅（32 个常规测试文件 + 真实图片 E2E 脚本 + helpers，313 常规用例）
+├── scripts/check-js.js       ✅（102 文件语法检查）
 ├── project.config.json        ✅
-├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / check / verify）
+├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / test:devtools-parent-timeline / test:real-data-smoke / check / verify / release:check）
 ├── PROJECT_PLAN.md          ✅
 ├── PRD.md                   ✅（v2.8）
 ├── SETUP.md                ✅（本文件）
