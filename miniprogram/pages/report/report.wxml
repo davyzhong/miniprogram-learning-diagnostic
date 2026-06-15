@@ -78,6 +78,16 @@
         </view>
         <text class="source-arrow">›</text>
       </view>
+      <view class="source-evidence-list" wx:if="{{hasSourceEvidence}}">
+        <view class="source-evidence" wx:for="{{sourceEvidenceItems}}" wx:key="fileID">
+          <view class="source-evidence-head">
+            <text class="source-evidence-title">{{item.sourceText}} · {{item.title}}</text>
+            <text class="source-evidence-status">{{item.duplicateText || item.statusText}}</text>
+          </view>
+          <text class="source-evidence-summary">{{item.summary}}</text>
+          <text class="source-evidence-errors" wx:if="{{item.relatedErrorText}}">关联错题：{{item.relatedErrorText}}</text>
+        </view>
+      </view>
     </view>
 
     <view class="card" wx:if="{{hasErrorDetails}}">
@@ -87,6 +97,7 @@
         <view class="error-expand" wx:if="{{item.expanded}}">
           <view class="error-row"><text class="error-label">学生答案</text><text class="error-value wrong">{{item.studentAnswer}}</text></view>
           <view class="error-row"><text class="error-label">正确答案</text><text class="error-value correct">{{item.correctAnswer}}</text></view>
+          <view class="error-row" wx:if="{{item.sourceText}}"><text class="error-label">来源</text><text class="error-value">{{item.sourceText}}</text></view>
           <view class="error-row" wx:if="{{item.rootCause}}"><text class="error-label">分析</text><text class="error-value">{{item.rootCause}}</text></view>
           <view class="feedback-link error-feedback" catchtap="onOpenFeedback" data-target-type="errorDetail" data-target-id="{{item.feedbackTargetId}}" data-type="wrong_question">这道题识别错了</view>
         </view>

@@ -7,6 +7,7 @@ const {
 const { bottleneckListText } = require('../../utils/learning-records')
 const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-display')
 const { SUBJECT_NAMES } = require('../../utils/constants')
+const { buildTraceableUrl } = require('../../utils/traceable-actions')
 
 const EVIDENCE_PREVIEW_LIMIT = 3
 
@@ -137,6 +138,7 @@ function buildEvidenceChain(reports, papers, subjectName, lpCode = '') {
   const reportRows = reports.map(report => ({
     id: report._id,
     type: 'report',
+    url: buildTraceableUrl({ type: 'report-detail', id: report._id }),
     kind: report.type === 'verification' ? 'verification-report' : 'diagnosis-report',
     icon: report.type === 'verification' ? '验' : '报',
     category: reportTypeName(report),
@@ -159,6 +161,7 @@ function buildEvidenceChain(reports, papers, subjectName, lpCode = '') {
     return {
       id: paper._id,
       type: 'paper',
+      url: buildTraceableUrl({ type: 'paper-workbench', id: paper._id }),
       kind: 'verification-paper',
       icon: '卷',
       category: '验证试卷',
@@ -291,6 +294,11 @@ Page({
   },
 
   onEvidenceTap(e) {
+    const url = e.currentTarget.dataset.url || ''
+    if (url) {
+      wx.navigateTo({ url })
+      return
+    }
     if (e.currentTarget.dataset.type === 'paper') {
       this.onViewPaper(e)
       return

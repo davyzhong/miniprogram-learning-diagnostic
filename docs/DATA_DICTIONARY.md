@@ -187,6 +187,8 @@
 | `contentFingerprint` | String | 归一化后的内容指纹 | `"第3题1213"` |
 | `isDuplicate` | Boolean | 是否与历史或本次其他照片重复 | `false` |
 | `duplicateOf` | String | 首次出现该指纹的 fileID（重复时有值） | `""` |
+| `analysisStatus` | String | 单张照片分析状态：`completed` \| `failed` \| `''` | `"completed"` |
+| `analysisError` | String | 单张照片分析失败原因，仅 failed 时有值 | `"timeout"` |
 
 #### bottlenecks 子结构
 
@@ -210,6 +212,11 @@
 | `lpCode` | String | 关联卡点编码（≤30 字） | `"LP-002"` |
 | `rootCause` | String | 根因（≤300 字） | `"未找到公分母直接相加"` |
 | `suggestion` | String | 改进建议（≤300 字） | `"先求最小公倍数再通分"` |
+| `sourceImageIndex` | Number | 错题来自第几张上传照片，按上传顺序从 1 开始 | `1` |
+| `sourceFileID` | String | 错题来源照片 fileID，用于报告页关联原图/OCR 摘要 | `"cloud://xxx/photo.jpg"` |
+| `sourceOcrSummary` | String | 来源页 OCR 摘要快照，便于旧数据或图片链接失效时仍可解释来源 | `"第一页主要是小数乘除计算"` |
+
+> `sourceImageIndex` / `sourceFileID` 由 `analyzePhotos.mergeBatchResults()` 在合并逐页结果时补充。历史报告可能没有这些字段；前端会按缺省值安全展示，不要求迁移。
 
 #### verificationEvidence 子结构
 
