@@ -66,6 +66,123 @@ function evidenceStatusViewOf(status) {
   return map[status] || map.missing
 }
 
+function evidenceSummaryCounts(items = []) {
+  return items.reduce((acc, item) => {
+    if (item.statusClass === 'passed') acc.passed += 1
+    else if (item.statusClass === 'failed') acc.failed += 1
+    else acc.uncertain += 1
+    return acc
+  }, { passed: 0, failed: 0, uncertain: 0 })
+}
+
+function joinParts(parts = []) {
+  return parts.filter(Boolean).join('、')
+}
+
+function buildQualityUncertainty(qualityView = {}) {
+  if (!qualityView.hasQuality) return ''
+  if (qualityView.qualityClass === 'usable') return ''
+  const reasons = (qualityView.qualityReasons || []).join('；')
+  const suffix = reasons ? `，${reasons}` : ''
+  return `当前为${qualityView.qualityLabel}${suffix}，结论只作为待确认线索。`
+}
+
+function buildDiagnosisExplanation(report, context = {}) {
+  const { headline, sourceImageCount, bottleneckCount, qualityView } = context
+  const evidenceParts = [
+    sourceImageCount ? `${sourceImageCount} 张试卷图片` : '',
+    report.totalErrors ? `${report.totalErrors} 道相关错题` : '',
+    bottleneckCount ? `${bottleneckCount} 个学习卡点` : ''
+  ]
+  const qualityUncertainty = buildQualityUncertainty(qualityView)
+  return {
+    explanationTitle: '给家长的结论',
+    explanationConclusion: headline,
+    explanationEvidence: evidenceParts.some(Boolean)
+      ? `本次依据${joinParts(evidenceParts)}形成判断。`
+      : '本次可用证据较少，建议继续上传清晰试卷后再判断。',
+    explanationUncertainty: qualityUncertainty || (bottleneckCount > 0
+      ? '这些学习卡点还需要通过验证试卷或后续作答继续确认。'
+      : '暂未发现明确学习卡点，建议继续积累样本。'),
+    explanationActionText: bottleneckCount > 0 ? '生成验证试卷' : '继续拍照诊断',
+    explanationActionType: bottleneckCount > 0 ? 'generate-verification' : 'upload-diagnosis',
+    explanationActionUrl: bottleneckCount > 0
+      ? buildTraceableUrl({
+        type: 'generate-verification',
+        studentId: report.studentId,
+        studentName: report.studentName,
+        subject: report.subject
+      })
+      : buildTraceableUrl({
+        type: 'upload',
+        mode: 'diagnosis',
+        studentId: report.studentId,
+        studentName: report.studentName,
+        subject: report.subject
+      })
+  }
+}
+
+function buildVerificationEvidenceSummary(counts) {
+  const parts = [
+    counts.passed ? `已通过 ${counts.passed} 个` : '',
+    counts.failed ? `未通过 ${counts.failed} 个` : '',
+    counts.uncertain ? `证据不足 ${counts.uncertain} 个` : ''
+  ].filter(Boolean)
+  return parts.length > 0 ? `本次验证结果：${parts.join('，')}。` : '本次验证还没有形成可读证据。'
+}
+
+function buildVerificationExplanation(report, context = {}) {
+  const { headline, verificationEvidenceItems, qualityView } = context
+  const counts = evidenceSummaryCounts(verificationEvidenceItems)
+  let conclusion = headline
+  if (counts.failed > 0) {
+    conclusion = `本次验证仍有 ${counts.failed} 个学习卡点未通过。`
+  } else if (counts.uncertain > 0) {
+    conclusion = `本次验证还有 ${counts.uncertain} 个学习卡点证据不足。`
+  } else if (counts.passed > 0) {
+    conclusion = `本次验证显示 ${counts.passed} 个学习卡点已有改善。`
+  }
+
+  const qualityUncertainty = buildQualityUncertainty(qualityView)
+  const needsMoreWork = counts.failed > 0 || counts.uncertain > 0
+  return {
+    explanationTitle: '验证结论',
+    explanationConclusion: conclusion,
+    explanationEvidence: buildVerificationEvidenceSummary(counts),
+    explanationUncertainty: qualityUncertainty || (counts.uncertain > 0
+      ? '图像不清、空白或缺失证据不会计入已改善，建议重新上传或补做。'
+      : (counts.failed > 0
+        ? '未通过项说明相关卡点仍需练习后再验证。'
+        : '本次证据完整，可作为阶段性改善记录。')),
+    explanationActionText: needsMoreWork ? '继续练习或重新上传验证' : '查看学习卡点变化',
+    explanationActionType: needsMoreWork ? 'upload-verification' : 'view-bottlenecks',
+    explanationActionUrl: needsMoreWork
+      ? buildTraceableUrl({
+        type: 'upload',
+        mode: 'verification',
+        studentId: report.studentId,
+        studentName: report.studentName,
+        subject: report.subject,
+        paperId: report.paperId
+      })
+      : buildTraceableUrl({
+        type: 'bottleneck-center',
+        studentId: report.studentId,
+        studentName: report.studentName,
+        subject: report.subject,
+        filter: 'all'
+      })
+  }
+}
+
+function buildReportExplanation(report, context = {}) {
+  if (report.type === 'verification') {
+    return buildVerificationExplanation(report, context)
+  }
+  return buildDiagnosisExplanation(report, context)
+}
+
 function reportImageFiles(report = {}) {
   if (Array.isArray(report.imageFiles) && report.imageFiles.length > 0) {
     return report.imageFiles
@@ -164,12 +281,22 @@ function buildReportView(report) {
   const sourceEvidenceItems = buildSourceEvidenceItems(sourcePhotos, errorDetails)
   const verificationEvidenceItems = (report.verificationEvidence || []).map(item => ({
     ...item,
+    displayName: bottleneckLabelOf(item),
     ...evidenceStatusViewOf(item.evidenceStatus || (item.complete && item.allCorrect ? 'passed' : 'missing'))
   }))
   const qualityView = qualityViewOf(report.quality)
+  const headline = report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断结果'
+  const explanation = buildReportExplanation(report, {
+    headline,
+    sourceImageCount: sourcePhotos.length,
+    bottleneckCount: bottlenecks.length,
+    verificationEvidenceItems,
+    qualityView
+  })
 
   return {
-    headline: report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断结果',
+    headline,
+    ...explanation,
     paperCodeText,
     paperCodeUrl: paperCodeText ? buildTraceableUrl({
       type: 'paper-workbench',
