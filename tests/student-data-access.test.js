@@ -163,6 +163,12 @@ test('owner can archive stale interrupted analysis records from the timeline', a
   })
   const handler = loadStudentData(db, 'owner-1')
 
+  const preview = await handler.main({ action: 'cleanupStaleLearningRecords', studentId: 'student-1', subject: 'math', dryRun: true })
+  assert.equal(preview.success, true)
+  assert.equal(preview.cleanedCount, 1)
+  assert.deepEqual(preview.cleanedReportIds, ['report-stale'])
+  assert.equal(db.dump('reports').find(item => item._id === 'report-stale').isArchived, undefined)
+
   const cleanup = await handler.main({ action: 'cleanupStaleLearningRecords', studentId: 'student-1', subject: 'math' })
 
   assert.equal(cleanup.success, true)

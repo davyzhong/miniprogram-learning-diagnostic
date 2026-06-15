@@ -12,6 +12,13 @@
   </view>
 
   <view class="filter-card">
+    <view class="summary-text">{{summaryText}}</view>
+    <view class="summary-grid" wx:if="{{summaryCards.length > 0}}">
+      <view class="summary-cell" wx:for="{{summaryCards}}" wx:key="key">
+        <text class="summary-value">{{item.value}}</text>
+        <text class="summary-label">{{item.label}}</text>
+      </view>
+    </view>
     <view class="filter-bar">
       <view
         class="filter-pill {{item.active ? 'is-active' : ''}}"
@@ -24,6 +31,14 @@
         <text class="filter-count">{{item.count}}</text>
       </view>
     </view>
+  </view>
+
+  <view class="cleanup-card" wx:if="{{cleanup.hasCandidates}}">
+    <view class="cleanup-copy">
+      <text class="cleanup-title">{{cleanup.title}}</text>
+      <text class="cleanup-desc">{{cleanup.desc}}</text>
+    </view>
+    <button class="cleanup-btn" wx:if="{{cleanup.canCleanup}}" bindtap="onCleanupStaleRecords" disabled="{{cleaningStaleRecords}}">{{cleaningStaleRecords ? '清理中...' : '清理'}}</button>
   </view>
 
   <view class="loading" wx:if="{{loading}}">正在加载学习记录...</view>

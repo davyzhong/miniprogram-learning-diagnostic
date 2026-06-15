@@ -328,6 +328,8 @@ Reports should read like a compact expert explanation: conclusion, evidence, unc
 
 ## Task 13: Learning Record Analytics And Cleanup UX
 
+Status: completed in `feat: improve learning record analytics`.
+
 **Impact**
 
 The learning record is the child’s full evidence timeline. It should summarize days, surface stale tasks, and offer cleanup where safe.
@@ -355,10 +357,10 @@ The learning record is the child’s full evidence timeline. It should summarize
 
 **Execution Steps**
 
-- [ ] Write tests for analytics summary and stale cleanup states.
-- [ ] Implement view model and UI.
-- [ ] Ensure cleanup remains permission-gated.
-- [ ] Verify timeline grouping and filters.
+- [x] Write tests for analytics summary and stale cleanup states.
+- [x] Implement view model and UI.
+- [x] Ensure cleanup remains permission-gated.
+- [x] Verify timeline grouping and filters.
 
 ---
 

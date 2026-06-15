@@ -1662,7 +1662,21 @@ test('learning records show only fresh transient states and hide stale dirty tas
   const now = new Date()
   const freshTime = new Date(now.getTime() - 5 * 60 * 1000).toISOString()
   const staleTime = new Date(now.getTime() - 60 * 60 * 1000).toISOString()
+  let cleaned = false
+  const cleanupCalls = []
   const cloud = {
+    cleanupStaleLearningRecords: async payload => {
+      cleanupCalls.push(payload)
+      if (payload.dryRun) {
+        return {
+          cleanedCount: cleaned ? 0 : 1,
+          cleanedReportIds: cleaned ? [] : ['report-stale'],
+          permissions: { canManageParents: true }
+        }
+      }
+      cleaned = true
+      return { cleanedCount: 1, cleanedReportIds: ['report-stale'] }
+    },
     getReports: async () => [
       {
         _id: 'report-fresh',
@@ -1684,7 +1698,15 @@ test('learning records show only fresh transient states and hide stale dirty tas
     getPapers: async () => [],
     getTempFileURLs: async () => []
   }
+  let wx
+  wx = createWxMock({
+    showModal: options => {
+      wx.calls.push({ name: 'showModal', payload: options })
+      options.success({ confirm: true })
+    }
+  })
   const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    wx,
     modules: {
       '../../utils/cloud': cloud,
       '../../utils/util': util
@@ -1697,6 +1719,13 @@ test('learning records show only fresh transient states and hide stale dirty tas
   const statuses = page.data.days.flatMap(day => day.statusItems)
   assert.deepEqual(JSON.parse(JSON.stringify(statuses.map(item => item.reportId))), ['report-fresh'])
   assert.equal(statuses[0].status, 'analyzing')
+  assert.equal(cleanupCalls[0].dryRun, true)
+  assert.equal(page.data.cleanup.hasCandidates, true)
+
+  await page.onCleanupStaleRecords()
+  assert.equal(cleanupCalls.some(call => call.dryRun === false), true)
+  assert.equal(wx.calls.some(call => call.name === 'showModal' && /清理/.test(call.payload.title)), true)
+  assert.equal(page.data.cleanup.hasCandidates, false)
 })
 
 test('learning records surface stable readable codes for legacy verification papers', async () => {

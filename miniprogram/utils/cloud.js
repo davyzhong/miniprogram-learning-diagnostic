@@ -291,8 +291,8 @@ async function getLearningTimeline({ studentId, subject } = {}) {
   return callFunction('studentData', { action: 'getLearningTimeline', studentId, subject })
 }
 
-async function cleanupStaleLearningRecords({ studentId, subject } = {}) {
-  return callFunction('studentData', { action: 'cleanupStaleLearningRecords', studentId, subject })
+async function cleanupStaleLearningRecords({ studentId, subject, dryRun = false } = {}) {
+  return callFunction('studentData', { action: 'cleanupStaleLearningRecords', studentId, subject, dryRun })
 }
 
 async function getReportDetail(reportId) {
