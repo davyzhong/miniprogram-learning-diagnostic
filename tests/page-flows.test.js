@@ -726,6 +726,54 @@ test('subject home shows learning workflow tools for co-parent access', async ()
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /bottleneck-detail/)
 })
 
+test('subject home falls back to legacy profile and reports when dashboard request times out', async () => {
+  const cloud = {
+    getSubjectDashboard: async () => { throw new Error('studentData:getSubjectDashboard 请求超时，请稍后重试') },
+    getSubjectProfile: async (studentId, subject) => {
+      assert.equal(studentId, 'student-1')
+      assert.equal(subject, 'math')
+      return {
+        totalReports: 1,
+        currentBottlenecks: [
+          { lpCode: 'LP-001', status: 'persisting', trend: 'persisting', weight: 80, evidenceCount: 3 }
+        ]
+      }
+    },
+    getReports: async (studentId, subject) => {
+      assert.equal(studentId, 'student-1')
+      assert.equal(subject, 'math')
+      return [{
+        _id: 'report-1',
+        status: 'completed',
+        isEffective: true,
+        createdAt: '2026-06-14T10:00:00+08:00',
+        changeSummary: '计算基础仍需观察'
+      }]
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/subject-home/subject-home.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatRelativeTime: () => '今天' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {}, isRunning: () => false }) }
+    }
+  })
+  page.onLoad({
+    studentId: 'student-1',
+    subject: 'math',
+    subjectName: encodeURIComponent('数学'),
+    studentName: encodeURIComponent('钟青羽'),
+    grade: '6'
+  })
+
+  await page.loadProfile()
+
+  assert.equal(page.data.subjectTitle, '数学工作台')
+  assert.equal(page.data.primaryTask.actionType, 'verification')
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.taskQueue.map(item => item.displayName))), ['计算基础'])
+  assert.ok(page.data.tools.some(item => item.key === 'latestReport'))
+})
+
 test('subject home task and primary actions open the focused workflow', () => {
   const wx = createWxMock()
   const { page } = loadPage('miniprogram/pages/subject-home/subject-home.js', {
@@ -2263,6 +2311,44 @@ test('upload history degrades gracefully when some temporary URLs are empty', as
   const previewCall = wx.calls.find(call => call.name === 'previewImage')
   assert.deepEqual(previewCall.payload.urls, ['https://temp/ok'])
   assert.equal(previewCall.payload.current, 'https://temp/ok')
+})
+
+test('upload history keeps timeline visible when temporary URL loading fails', async () => {
+  const cloud = {
+    getLearningTimeline: async () => ({
+      reports: [{
+        _id: 'report-1',
+        studentId: 'student-1',
+        subject: 'math',
+        status: 'completed',
+        type: 'diagnosis',
+        createdAt: '2026-06-14T10:00:00+08:00',
+        summary: '发现计算基础卡点',
+        imageFiles: [{ fileID: 'cloud://photo-1', fileName: 'math.jpg' }]
+      }],
+      papers: []
+    }),
+    getReports: async () => [],
+    getPapers: async () => [],
+    getTempFileURLs: async () => { throw new Error('getTempFileURL timeout') }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', subject: 'math' })
+
+  await page.loadHistory()
+
+  assert.equal(page.data.loading, false)
+  assert.equal(page.data.days.length, 1)
+  assert.equal(page.data.days[0].events[0].title, '数学诊断报告')
+  assert.equal(page.data.days[0].events[0].photos[0].tempFileURL, '')
+  assert.equal(wx.calls.some(call => call.name === 'showToast' && /加载失败/.test(call.payload.title)), false)
 })
 
 test('upload history surfaces load errors without leaving the loading flag stuck', async () => {

@@ -176,10 +176,10 @@ Large real datasets can make aggregate cloud reads timeout. We already added a f
 
 **Execution Steps**
 
-- [ ] Write failing timeout fallback tests for the remaining pages.
-- [ ] Implement only the missing fallbacks.
-- [ ] Keep logs concise and context-rich.
-- [ ] Run targeted tests, `npm run verify`, and DevTools preview.
+- [x] Write failing timeout fallback tests for the remaining pages.
+- [x] Implement only the missing fallbacks.
+- [x] Keep logs concise and context-rich.
+- [x] Run targeted tests, `npm run verify`, and DevTools preview.
 
 ---
 

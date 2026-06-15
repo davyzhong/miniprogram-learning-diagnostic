@@ -79,33 +79,46 @@ Page({
     const { studentId, subject } = this.data
     try {
       if (typeof cloud.getSubjectDashboard === 'function') {
-        const dashboard = await cloud.getSubjectDashboard(studentId, subject)
-        const p = dashboard.profile
-        this._profile = p || {}
-        this._reports = dashboard.reports || []
-        const permissions = dashboard.permissions || {}
-        this.setData({
-          permissions,
-          canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
-          analysisStatus: p && p.analysisStatus || '',
-          currentAnalysisId: p && p.currentAnalysisId || '',
-        })
-        this.applyDashboardView()
-        return
+        try {
+          const dashboard = await cloud.getSubjectDashboard(studentId, subject)
+          const p = dashboard.profile
+          this._profile = p || {}
+          this._reports = dashboard.reports || []
+          const permissions = dashboard.permissions || {}
+          this.setData({
+            permissions,
+            canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
+            analysisStatus: p && p.analysisStatus || '',
+            currentAnalysisId: p && p.currentAnalysisId || '',
+          })
+          this.applyDashboardView()
+          return
+        } catch (error) {
+          console.warn('共享学科工作台不可用，回退到旧学科档案读取', error && error.message ? error.message : error)
+        }
       }
 
-      const p = await cloud.getSubjectProfile(studentId, subject)
-      if (p) {
-        this._profile = p
-        this.setData({
-          analysisStatus: p.analysisStatus || '',
-          currentAnalysisId: p.currentAnalysisId || '',
-        })
-        this.applyDashboardView()
-      }
+      await this.loadLegacyProfile()
     } catch (err) {
       console.error('加载学科档案失败', err)
     }
+  },
+
+  async loadLegacyProfile() {
+    const { studentId, subject } = this.data
+    const p = typeof cloud.getSubjectProfile === 'function'
+      ? await cloud.getSubjectProfile(studentId, subject)
+      : null
+    const reports = typeof cloud.getReports === 'function'
+      ? await cloud.getReports(studentId, subject, 20)
+      : []
+    this._profile = p || {}
+    this._reports = reports || []
+    this.setData({
+      analysisStatus: p && p.analysisStatus || '',
+      currentAnalysisId: p && p.currentAnalysisId || '',
+    })
+    this.applyDashboardView()
   },
 
   // ========== 加载历史记录 ==========
