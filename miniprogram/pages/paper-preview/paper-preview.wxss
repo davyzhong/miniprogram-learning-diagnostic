@@ -106,6 +106,16 @@
   color: #9a5b00;
 }
 
+.status-generated {
+  background: #fff7df;
+  color: #9a5b00;
+}
+
+.status-downloaded {
+  background: #edf7f1;
+  color: #2f704d;
+}
+
 .status-analyzing {
   background: #e6f0ff;
   color: #245ea8;
@@ -127,6 +137,66 @@
   font-size: 24rpx;
   line-height: 1.5;
   margin-top: 16rpx;
+}
+
+.lifecycle-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10rpx;
+  margin-top: 20rpx;
+}
+
+.lifecycle-step {
+  align-items: center;
+  background: #f4f7fb;
+  border-radius: 12rpx;
+  display: flex;
+  gap: 8rpx;
+  min-width: 0;
+  padding: 12rpx 10rpx;
+}
+
+.step-dot {
+  background: #a7b4c4;
+  border-radius: 50%;
+  flex-shrink: 0;
+  height: 12rpx;
+  width: 12rpx;
+}
+
+.step-text {
+  color: #53657a;
+  font-size: 21rpx;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.lifecycle-completed {
+  background: #edf7f1;
+}
+
+.lifecycle-completed .step-dot {
+  background: #2f9d63;
+}
+
+.lifecycle-active {
+  background: #eaf2ff;
+}
+
+.lifecycle-active .step-dot {
+  background: #2d6cdf;
+}
+
+.lifecycle-failed {
+  background: #fff0ee;
+}
+
+.lifecycle-failed .step-dot {
+  background: #d84a2b;
+}
+
+.lifecycle-waiting .step-dot {
+  background: #b8c4d2;
 }
 
 .meta-grid {

@@ -54,15 +54,22 @@ function buildQuestionPreview(questions = [], expanded = false, context = {}) {
   }))
 }
 
-function buildWorkbenchStatus(report) {
+function buildWorkbenchStatus(report, options = {}) {
   if (!report) {
+    if (options.pdfDownloaded) {
+      return {
+        status: 'downloaded',
+        text: '已下载，等待作答',
+        desc: '如果已经打印并完成纸面作答，可以上传照片进入验证反馈。'
+      }
+    }
     return {
-      status: 'waiting',
-      text: '等待打印作答',
-      desc: '下载或分享打印后，让孩子在纸面完成作答，再回到这里上传验证。'
+      status: 'generated',
+      text: '试卷已生成',
+      desc: '先下载 PDF 或分享打印，纸面作答后再回到这里上传验证。'
     }
   }
-  if (report.status === 'analyzing') {
+  if (report.status === 'analyzing' || report.status === 'pending' || report.status === 'uploading') {
     return {
       status: 'analyzing',
       text: '反馈分析中',
@@ -80,6 +87,78 @@ function buildWorkbenchStatus(report) {
     status: 'completed',
     text: '已生成验证反馈',
     desc: '可以查看批改结果、评语和学习卡点改善情况。'
+  }
+}
+
+function buildLifecycleSteps(status) {
+  if (status === 'completed') {
+    return [
+      { key: 'download', text: '试卷已准备', status: 'completed' },
+      { key: 'upload', text: '作答已上传', status: 'completed' },
+      { key: 'feedback', text: '反馈已完成', status: 'completed' }
+    ]
+  }
+  if (status === 'failed') {
+    return [
+      { key: 'download', text: '试卷已准备', status: 'completed' },
+      { key: 'upload', text: '作答需重传', status: 'failed' },
+      { key: 'feedback', text: '反馈未完成', status: 'failed' }
+    ]
+  }
+  if (status === 'analyzing') {
+    return [
+      { key: 'download', text: '试卷已准备', status: 'completed' },
+      { key: 'upload', text: '作答已上传', status: 'completed' },
+      { key: 'feedback', text: 'AI 分析中', status: 'active' }
+    ]
+  }
+  if (status === 'downloaded') {
+    return [
+      { key: 'download', text: 'PDF 已下载', status: 'completed' },
+      { key: 'answer', text: '纸面作答', status: 'active' },
+      { key: 'feedback', text: '上传验证', status: 'waiting' }
+    ]
+  }
+  return [
+    { key: 'download', text: '下载试卷', status: 'active' },
+    { key: 'answer', text: '纸面作答', status: 'waiting' },
+    { key: 'feedback', text: '上传验证', status: 'waiting' }
+  ]
+}
+
+function buildPrimaryAction(status, { uploadUrl = '', reportUrl = '' } = {}) {
+  if (status === 'completed') {
+    return {
+      primaryActionType: 'report',
+      primaryActionText: '查看验证反馈',
+      primaryActionUrl: reportUrl
+    }
+  }
+  if (status === 'analyzing') {
+    return {
+      primaryActionType: 'report',
+      primaryActionText: '查看分析进度',
+      primaryActionUrl: reportUrl
+    }
+  }
+  if (status === 'failed') {
+    return {
+      primaryActionType: 'upload',
+      primaryActionText: '重新上传作答',
+      primaryActionUrl: uploadUrl
+    }
+  }
+  if (status === 'downloaded') {
+    return {
+      primaryActionType: 'upload',
+      primaryActionText: '作答完成，上传验证',
+      primaryActionUrl: uploadUrl
+    }
+  }
+  return {
+    primaryActionType: 'download',
+    primaryActionText: '下载 PDF，准备打印',
+    primaryActionUrl: ''
   }
 }
 
@@ -144,7 +223,6 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
   const resolvedSubjectName = subjectName || subjectNameOf(p.subject)
   const resolvedStudentName = (detail.student && detail.student.name) || studentName || ''
   const paperDisplay = buildPaperDisplay(p, resolvedSubjectName)
-  const workbenchStatus = buildWorkbenchStatus(latestReport)
   const context = {
     studentId: p.studentId || '',
     studentName: resolvedStudentName,
@@ -160,6 +238,11 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
     ...context
   })
   const feedback = buildFeedback(latestReport, context)
+  const reportUrl = latestReport && latestReport._id
+    ? buildTraceableUrl({ type: 'report-detail', id: latestReport._id })
+    : ''
+  const workbenchStatus = buildWorkbenchStatus(latestReport, { pdfDownloaded })
+  const primaryAction = buildPrimaryAction(workbenchStatus.status, { uploadUrl, reportUrl })
 
   return {
     paperId: p._id,
@@ -175,9 +258,7 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
     paperCodeText: paperDisplay.paperCode,
     paperDate: p.paperDate || '',
     paperCodeUrl,
-    statusUrl: latestReport && latestReport.status === 'completed' && latestReport._id
-      ? buildTraceableUrl({ type: 'report-detail', id: latestReport._id })
-      : uploadUrl,
+    statusUrl: reportUrl || uploadUrl,
     uploadUrl,
     bottleneckCenterUrl: buildTraceableUrl({
       type: 'bottleneck-center',
@@ -200,10 +281,12 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
     workbenchStatus: workbenchStatus.status,
     workbenchStatusText: workbenchStatus.text,
     workbenchStatusDesc: workbenchStatus.desc,
+    lifecycleSteps: buildLifecycleSteps(workbenchStatus.status),
+    ...primaryAction,
     feedback,
     pdfReady: !!p.pdfFileId,
     pdfDownloaded,
-    uploadBtnText: `作答完成，${isVerification ? '上传验证' : '上传答题'}`
+    uploadBtnText: primaryAction.primaryActionText || `作答完成，${isVerification ? '上传验证' : '上传答题'}`
   }
 }
 
@@ -215,6 +298,8 @@ module.exports = {
   buildPageSummary,
   buildQuestionPreview,
   buildWorkbenchStatus,
+  buildLifecycleSteps,
+  buildPrimaryAction,
   buildFeedback,
   buildPaperPreviewState
 }

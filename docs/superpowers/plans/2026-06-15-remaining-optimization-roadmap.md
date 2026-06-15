@@ -283,10 +283,10 @@ Generated papers should have clear lifecycle states: generated, downloaded, prin
 
 **Execution Steps**
 
-- [ ] Write tests for each paper lifecycle state.
-- [ ] Implement presenter states.
-- [ ] Update UI labels and actions.
-- [ ] Verify download idempotency and feedback links.
+- [x] Write tests for each paper lifecycle state.
+- [x] Implement presenter states.
+- [x] Update UI labels and actions.
+- [x] Verify download idempotency and feedback links.
 
 ---
 

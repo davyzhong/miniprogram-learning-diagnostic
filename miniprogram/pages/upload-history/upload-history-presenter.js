@@ -4,6 +4,7 @@ const {
   buildStatusTitle,
   bottleneckListText,
   classifyReportDisplay,
+  reportTimeOf,
   isVisibleTimelineReport,
   isMainTimelinePaper
 } = require('../../utils/learning-records')
@@ -228,13 +229,25 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
   }
 }
 
+function latestReportOf(reports = []) {
+  return (reports || [])
+    .slice()
+    .sort((a, b) => toDate(reportTimeOf(b)) - toDate(reportTimeOf(a)))[0] || null
+}
+
+function paperFeedbackStatus(report) {
+  if (!report) return '等待打印作答并上传验证'
+  if (report.status === 'completed') return '已生成验证反馈'
+  if (report.status === 'failed' || report.status === 'timeout') return '反馈失败，可重新上传'
+  return '反馈分析中'
+}
+
 function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedReports = [], options = {}) {
   const eventTime = paper.generatedAt || paper.createdAt
   const display = buildPaperDisplay(paper, subjectName, options)
   const paperCode = display.paperCode
   const bottleneckText = display.bottleneckText
-  const completedFeedback = linkedReports.find(report => report.status === 'completed')
-  const hasFeedback = Boolean(completedFeedback)
+  const latestFeedback = latestReportOf(linkedReports)
   const subject = paper.subject || fallbackSubject
   const paperUrl = buildTraceableUrl({ type: 'paper-workbench', id: paper._id })
   const uploadUrl = buildTraceableUrl({
@@ -246,8 +259,8 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     grade: paper.grade,
     paperId: paper._id
   })
-  const feedbackUrl = hasFeedback
-    ? buildTraceableUrl({ type: 'report-detail', id: completedFeedback._id })
+  const feedbackUrl = latestFeedback
+    ? buildTraceableUrl({ type: 'report-detail', id: latestFeedback._id })
     : ''
   const bottleneckUrl = buildTraceableUrl({
     type: 'bottleneck-center',
@@ -279,10 +292,8 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     foldedEvidence: linkedReports.flatMap(report => buildPhotoEvidenceRows(getReportPhotos(report), 'answer-upload')),
     photoCount: 0,
     duplicateCount: 0,
-    statusText: hasFeedback
-      ? '已生成验证反馈'
-      : (linkedReports.length > 0 ? '反馈分析中' : '等待打印作答并上传验证'),
-    statusUrl: hasFeedback ? feedbackUrl : uploadUrl,
+    statusText: paperFeedbackStatus(latestFeedback),
+    statusUrl: latestFeedback ? feedbackUrl : uploadUrl,
     uploadUrl,
     feedbackUrl,
     chips,

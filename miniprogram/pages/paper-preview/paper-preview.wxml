@@ -15,6 +15,12 @@
       <view class="status-pill status-{{workbenchStatus}}" bindtap="onTraceableUrlTap" data-url="{{statusUrl}}">{{workbenchStatusText}}</view>
     </view>
     <text class="status-desc">{{workbenchStatusDesc}}</text>
+    <view class="lifecycle-row" wx:if="{{lifecycleSteps.length > 0}}">
+      <view class="lifecycle-step lifecycle-{{item.status}}" wx:for="{{lifecycleSteps}}" wx:key="key">
+        <text class="step-dot"></text>
+        <text class="step-text">{{item.text}}</text>
+      </view>
+    </view>
     <view class="meta-grid">
       <view class="meta-cell traceable-block" wx:if="{{paperDate}}" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
         <text class="meta-label">试卷日期</text>
@@ -86,8 +92,8 @@
   </view>
 
   <view class="bottom-bar" wx:if="{{mode === 'paper'}}">
-    <button class="btn-primary btn-main" bindtap="onUpload">
-      {{uploadBtnText}}
+    <button class="btn-primary btn-main" bindtap="onPrimaryAction">
+      {{primaryActionText || uploadBtnText}}
     </button>
   </view>
 </view>

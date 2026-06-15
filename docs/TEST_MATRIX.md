@@ -34,7 +34,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | 验证报告与改善证据判定 | `comparison.test.js`、`verification-evidence.test.js`、`cloud-functions.test.js`、`report-presenter.test.js` | 已覆盖；只有全部预期题目清晰作答且全对才确认改善，空白/模糊/缺失均进入证据不足 |
 | 报告质量复核信号 | `report-quality.test.js`、`report-presenter.test.js` | 已覆盖；样本不足不更新长期卡点，部分失败显示“建议复核” |
 | 家长反馈与纠错入口 | `report-feedback.test.js`、`page-flows.test.js` | 已覆盖；owner/viewer 可提交反馈，非成员不可提交，反馈不直接修改原报告 |
-| 验证试卷出卷配置、生成、PDF 下载、已下载状态、答题上传 | `page-flows.test.js`、`cloud-functions.test.js`、`generate-paper-pdf.test.js` | 已覆盖；支持 targetCode 预选，每个卡点 5 题（3 核心验证 + 2 迁移延展），PDF 包含学生卷和答案页，真实 AI 题目质量和打印效果需人工验收 |
+| 验证试卷出卷配置、生成、PDF 下载、生命周期状态、答题上传 | `paper-preview-presenter.test.js`、`page-flows.test.js`、`learning-records.test.js`、`cloud-functions.test.js`、`generate-paper-pdf.test.js` | 已覆盖；支持 targetCode 预选，每个卡点 5 题（3 核心验证 + 2 迁移延展），PDF 包含学生卷和答案页，试卷页区分已生成/已下载/分析中/失败/完成，学习记录按最新反馈连接试卷闭环 |
 | 默认诊断试卷选择、年级、缓存复用、答题上传 | `page-flows.test.js`、`cloud-functions.test.js` | 同一学生复用已覆盖；跨学生复用未实现 |
 | 报告 PDF 生成和下载 | `cloud-functions.test.js`、`page-flows.test.js`、`contracts.test.js` | 已覆盖；中文字体已内置，真实 A4 排版需人工验收 |
 | 分析超时、任务缺失和手动重试 | `poller.test.js`、`page-flows.test.js`、`contracts.test.js` | 客户端恢复路径已覆盖 |
