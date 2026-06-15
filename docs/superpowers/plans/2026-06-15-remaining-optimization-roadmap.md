@@ -366,6 +366,8 @@ The learning record is the child’s full evidence timeline. It should summarize
 
 ## Task 14: Product Metrics And Operational Observability
 
+Status: completed in `chore: add learning metrics`.
+
 **Impact**
 
 The MVP needs simple operational metrics: upload success, analysis completion, report quality, verification pass rate, feedback rate.
@@ -392,10 +394,10 @@ The MVP needs simple operational metrics: upload success, analysis completion, r
 
 **Execution Steps**
 
-- [ ] Define metrics helper input/output shape.
-- [ ] Write unit tests with sample reports/papers/feedback.
-- [ ] Implement local metrics helper.
-- [ ] Document how to run and interpret it.
+- [x] Define metrics helper input/output shape.
+- [x] Write unit tests with sample reports/papers/feedback.
+- [x] Implement local metrics helper.
+- [x] Document how to run and interpret it.
 
 ---
 
