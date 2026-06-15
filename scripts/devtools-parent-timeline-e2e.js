@@ -279,6 +279,9 @@ async function installCloudMocks(miniProgram) {
         if (data.action === 'getLearningTimeline') {
           return { result: { success: true, student, permissions: viewerPermissions, reports, papers } }
         }
+        if (data.action === 'cleanupStaleLearningRecords') {
+          return { result: { success: true, permissions: ownerPermissions, cleanedCount: 0, cleanedReportIds: [], dryRun: data.dryRun === true } }
+        }
         if (data.action === 'getReportDetail') {
           const report = reports.find(item => item._id === data.reportId) || reports[0]
           const linkedPaper = report && report.paperId
