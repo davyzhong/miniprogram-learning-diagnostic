@@ -8,6 +8,8 @@ const {
   buildPageSummary,
   buildQuestionPreview,
   buildWorkbenchStatus,
+  buildLifecycleSteps,
+  buildPrimaryAction,
   buildFeedback,
   buildPaperPreviewState
 } = require('./paper-preview-presenter')
@@ -47,6 +49,10 @@ Page({
     workbenchStatus: 'waiting',
     workbenchStatusText: '等待打印作答',
     workbenchStatusDesc: '下载或分享打印后，让孩子在纸面完成作答，再回到这里上传验证。',
+    lifecycleSteps: [],
+    primaryActionType: 'download',
+    primaryActionText: '下载 PDF，准备打印',
+    primaryActionUrl: '',
     feedback: {
       hasFeedback: false,
       reportId: '',
@@ -200,6 +206,23 @@ Page({
     wx.navigateTo({ url })
   },
 
+  onPrimaryAction() {
+    const { primaryActionType, primaryActionUrl } = this.data
+    if (primaryActionType === 'download') {
+      this.onDownload()
+      return
+    }
+    if (primaryActionType === 'upload') {
+      this.onUpload()
+      return
+    }
+    if (primaryActionType === 'report' && primaryActionUrl) {
+      wx.navigateTo({ url: primaryActionUrl })
+      return
+    }
+    wx.showToast({ title: '暂无下一步操作', icon: 'none' })
+  },
+
   onToggleQuestions() {
     if (!this.data.paperId) return
     const expand = !this.data.allQuestionsExpanded
@@ -299,6 +322,20 @@ Page({
         wx.setStorageSync(this.getDownloadedStorageKey(cloudFileId), true)
       } catch (e) {}
     }
-    this.setData({ pdfDownloaded: true })
+    const nextData = { pdfDownloaded: true }
+    const feedback = this.data.feedback || {}
+    if (!feedback.reportId && this.data.workbenchStatus === 'generated') {
+      const workbenchStatus = buildWorkbenchStatus(null, { pdfDownloaded: true })
+      const primaryAction = buildPrimaryAction(workbenchStatus.status, { uploadUrl: this.data.uploadUrl })
+      Object.assign(nextData, {
+        workbenchStatus: workbenchStatus.status,
+        workbenchStatusText: workbenchStatus.text,
+        workbenchStatusDesc: workbenchStatus.desc,
+        lifecycleSteps: buildLifecycleSteps(workbenchStatus.status),
+        ...primaryAction,
+        uploadBtnText: primaryAction.primaryActionText
+      })
+    }
+    this.setData(nextData)
   }
 })

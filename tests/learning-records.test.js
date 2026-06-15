@@ -177,6 +177,49 @@ test('upload history presenter builds timeline state and paper events without pa
   assert.equal(state.filters.find(item => item.key === 'math').count, 2)
 })
 
+test('verification paper event follows the latest linked feedback report lifecycle', () => {
+  const now = Date.now()
+  const oldCompletedAt = new Date(now - 5 * 60 * 1000).toISOString()
+  const latestFailedAt = new Date(now - 60 * 1000).toISOString()
+  const reports = [
+    {
+      _id: 'report-old-completed',
+      type: 'verification',
+      status: 'completed',
+      subject: 'math',
+      paperId: 'paper-1',
+      createdAt: oldCompletedAt,
+      imageFiles: [{ fileID: 'cloud://answer-old', fileName: '旧作答.jpg', ocrSummary: '旧反馈已完成' }]
+    },
+    {
+      _id: 'report-latest-failed',
+      type: 'verification',
+      status: 'failed',
+      subject: 'math',
+      paperId: 'paper-1',
+      createdAt: latestFailedAt,
+      imageFiles: [{ fileID: 'cloud://answer-new', fileName: '新作答.jpg', ocrSummary: '图片模糊' }]
+    }
+  ]
+  const papers = [{
+    _id: 'paper-1',
+    type: 'verification',
+    subject: 'math',
+    generatedAt: '2026-06-12T09:00:00+08:00',
+    paperDate: '2026-06-12',
+    questions: [{ lpCode: 'LP-001' }],
+    bottleneckSummaries: ['计算基础']
+  }]
+
+  const { events } = buildTimelineEvents(reports, papers, new Map(), 'math', '数学')
+  const paperEvent = events.find(event => event.kind === 'verification-paper')
+
+  assert.equal(paperEvent.statusText, '反馈失败，可重新上传')
+  assert.match(paperEvent.statusUrl, /report-latest-failed/)
+  assert.match(paperEvent.feedbackUrl, /report-latest-failed/)
+  assert.equal(paperEvent.foldedEvidence.length, 2)
+})
+
 test('photo evidence summaries hide unreliable AI-inferred grade labels', () => {
   const reports = [{
     _id: 'report-grade',

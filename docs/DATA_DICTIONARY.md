@@ -321,6 +321,8 @@ MVP 数学卡点当前包含：
 
 > 验证试卷的题量规则：`questions.length = bottleneckTargets.length × 5`。每个学习卡点包含 3 道核心验证题和 2 道迁移延展题；默认诊断试卷仍使用 `questionCount` 参数（6-20，默认 12）。
 
+> 试卷生命周期不新增数据库字段，由前端根据 `papers`、关联的最新 `reports(type='verification')` 和本机 PDF 下载标记派生：`generated`（已生成待下载）、`downloaded`（已下载待作答）、`analyzing`（作答已上传，反馈分析中）、`failed`（反馈失败，可重新上传）、`completed`（验证反馈已完成）。学习记录中同一份试卷优先展示最新一次验证反馈状态。
+
 #### questions 子结构
 
 | 字段名 | 类型 | 描述 | 示例值 |
