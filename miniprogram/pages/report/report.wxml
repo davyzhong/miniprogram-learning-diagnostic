@@ -27,6 +27,22 @@
     <view class="card conclusion-card">
       <view class="section-heading"><view class="heading-icon">◎</view><text>本次诊断结论</text></view>
       <text class="conclusion-text">{{headline}}</text>
+      <view class="explanation-box">
+        <text class="explanation-title">{{explanationTitle}}</text>
+        <view class="explanation-row">
+          <text class="explanation-label">结论</text>
+          <text class="explanation-value">{{explanationConclusion}}</text>
+        </view>
+        <view class="explanation-row">
+          <text class="explanation-label">依据</text>
+          <text class="explanation-value">{{explanationEvidence}}</text>
+        </view>
+        <view class="explanation-row">
+          <text class="explanation-label">注意</text>
+          <text class="explanation-value">{{explanationUncertainty}}</text>
+        </view>
+        <view class="explanation-action" wx:if="{{explanationActionText}}" bindtap="onReportExplanationAction">{{explanationActionText}}</view>
+      </view>
       <view class="quality-box quality-box-{{qualityClass}}" wx:if="{{hasQuality}}">
         <view class="quality-title-row">
           <text class="quality-title">{{qualityLabel}}</text>
@@ -62,7 +78,7 @@
       <view class="section-heading"><view class="heading-icon">✓</view><text>验证证据</text></view>
       <view class="evidence-item" wx:for="{{verificationEvidenceItems}}" wx:key="lpCode">
         <view class="evidence-title-row">
-          <text class="evidence-code">{{item.lpCode}}</text>
+          <text class="evidence-name">{{item.displayName}}</text>
           <text class="evidence-status evidence-status-{{item.statusClass}}">{{item.statusText}}</text>
         </view>
         <text class="evidence-reason">{{item.evidenceReason}}</text>

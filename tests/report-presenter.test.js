@@ -210,9 +210,45 @@ test('report view exposes quality labels and reasons', () => {
   assert.deepEqual(view.qualityReasons, ['部分照片分析失败', '样本较少'])
 })
 
+test('diagnosis report builds parent-facing explanation with evidence uncertainty and next action', () => {
+  const view = buildReportView({
+    _id: 'report-1',
+    studentId: 'student-1',
+    studentName: '钟青羽',
+    subject: 'math',
+    type: 'diagnosis',
+    summary: '计算基础和审题理解需要继续验证',
+    totalErrors: 6,
+    imageFiles: [{ fileID: 'photo-1' }, { fileID: 'photo-2' }],
+    bottlenecks: [
+      { lpCode: 'LP-001', status: 'found', errorCount: 4 },
+      { lpCode: 'LP-008', status: 'found', errorCount: 2 }
+    ],
+    quality: {
+      status: 'insufficient',
+      reasons: ['部分照片较模糊']
+    }
+  })
+
+  assert.equal(view.explanationTitle, '给家长的结论')
+  assert.equal(view.explanationConclusion, '计算基础和审题理解需要继续验证')
+  assert.match(view.explanationEvidence, /2 张试卷图片/)
+  assert.match(view.explanationEvidence, /6 道相关错题/)
+  assert.match(view.explanationEvidence, /2 个学习卡点/)
+  assert.match(view.explanationUncertainty, /样本不足/)
+  assert.match(view.explanationUncertainty, /部分照片较模糊/)
+  assert.equal(view.explanationActionText, '生成验证试卷')
+  assert.equal(view.explanationActionType, 'generate-verification')
+})
+
 test('verification report exposes readable evidence status summaries', () => {
   const view = buildReportView({
+    _id: 'report-verification',
+    studentId: 'student-1',
+    studentName: '钟青羽',
+    subject: 'math',
     type: 'verification',
+    paperId: 'paper-1',
     verificationEvidence: [
       { lpCode: 'LP-001', evidenceStatus: 'passed', evidenceReason: '5 道验证题均清晰作答且全部正确' },
       { lpCode: 'LP-002', evidenceStatus: 'unclear', evidenceReason: '有 1 道题图像不清晰' },
@@ -226,4 +262,16 @@ test('verification report exposes readable evidence status summaries', () => {
     '未通过'
   ])
   assert.equal(view.hasVerificationEvidence, true)
+  assert.deepEqual(view.verificationEvidenceItems.map(item => item.displayName), [
+    '计算基础',
+    '分数运算',
+    '小数百分数'
+  ])
+  assert.equal(view.explanationConclusion, '本次验证仍有 1 个学习卡点未通过。')
+  assert.match(view.explanationEvidence, /已通过 1 个/)
+  assert.match(view.explanationEvidence, /未通过 1 个/)
+  assert.match(view.explanationEvidence, /证据不足 1 个/)
+  assert.match(view.explanationUncertainty, /不会计入已改善/)
+  assert.equal(view.explanationActionText, '继续练习或重新上传验证')
+  assert.equal(view.explanationActionType, 'upload-verification')
 })

@@ -31,7 +31,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | 当前综合诊断三状态和旧数据兼容 | `profile-summary.test.js`、`cloud-functions.test.js` | 已覆盖 |
 | 时间化学习卡点趋势和权重 | `time-aware-bottlenecks.test.js`、`profile-summary.test.js`、`cloud-functions.test.js`、`page-flows.test.js` | 已覆盖；照片证据以上传时间为准，验证卷保留 paperDate |
 | 学科工作台主任务、待处理队列和工具入口 | `subject-home-presenter.test.js`、`page-flows.test.js`、`contracts.test.js` | 已覆盖；学科主页不再重复综合诊断摘要 |
-| 验证报告与改善证据判定 | `comparison.test.js`、`verification-evidence.test.js`、`cloud-functions.test.js`、`report-presenter.test.js` | 已覆盖；只有全部预期题目清晰作答且全对才确认改善，空白/模糊/缺失均进入证据不足 |
+| 验证报告与改善证据判定 | `comparison.test.js`、`verification-evidence.test.js`、`cloud-functions.test.js`、`report-presenter.test.js` | 已覆盖；只有全部预期题目清晰作答且全对才确认改善，空白/模糊/缺失均进入证据不足；报告页用“结论 / 依据 / 注意 / 下一步”解释验证结果 |
 | 报告质量复核信号 | `report-quality.test.js`、`report-presenter.test.js` | 已覆盖；样本不足不更新长期卡点，部分失败显示“建议复核” |
 | 家长反馈与纠错入口 | `report-feedback.test.js`、`page-flows.test.js` | 已覆盖；owner/viewer 可提交反馈，非成员不可提交，反馈不直接修改原报告 |
 | 验证试卷出卷配置、生成、PDF 下载、生命周期状态、答题上传 | `paper-preview-presenter.test.js`、`page-flows.test.js`、`learning-records.test.js`、`cloud-functions.test.js`、`generate-paper-pdf.test.js` | 已覆盖；支持 targetCode 预选，每个卡点 5 题（3 核心验证 + 2 迁移延展），PDF 包含学生卷和答案页，试卷页区分已生成/已下载/分析中/失败/完成，学习记录按最新反馈连接试卷闭环 |

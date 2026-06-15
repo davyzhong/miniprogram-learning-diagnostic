@@ -216,6 +216,19 @@ Page({
     wx.navigateTo({ url })
   },
 
+  onReportExplanationAction() {
+    if (this.data.explanationActionType === 'generate-verification') {
+      this.onGenerateVerification()
+      return
+    }
+    const url = this.data.explanationActionUrl || ''
+    if (!url) {
+      wx.showToast({ title: '暂无下一步操作', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url })
+  },
+
   noop() {},
 
   buildFeedbackMap(items) {

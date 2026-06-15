@@ -319,10 +319,10 @@ Reports should read like a compact expert explanation: conclusion, evidence, unc
 
 **Execution Steps**
 
-- [ ] Write tests for report explanation sections.
-- [ ] Implement presenter copy and state.
-- [ ] Refine UI layout.
-- [ ] Run report page tests and preview.
+- [x] Write tests for report explanation sections.
+- [x] Implement presenter copy and state.
+- [x] Refine UI layout.
+- [x] Run report page tests and preview.
 
 ---
 
