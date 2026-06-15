@@ -28,10 +28,11 @@
 
 | 命令 | 用途 | 备注 |
 |------|------|------|
-| `npm test` | 运行常规自动化测试 | 串行运行 29 个常规测试文件，不包含真实图片 E2E |
+| `npm test` | 运行常规自动化测试 | 串行运行常规测试文件，不包含真实图片 E2E |
 | `npm run test:coverage` | 运行常规测试并收集覆盖率 | 使用 V8 原生覆盖，输出到 stdout |
 | `npm run test:e2e-real-image` | 单独运行真实图片端到端脚本 | 依赖本机图片路径和 CloudBase 环境，发布前人工验收使用 |
 | `npm run test:real-data-smoke` | 使用微信开发者工具打开真实数据页面 | 需设置 `REAL_DATA_STUDENT_ID`，不提交截图产物 |
+| `npm run metrics:student` | 从本地 JSON 导出计算单个孩子的运营指标 | 需设置 `METRICS_INPUT`，详见 `docs/METRICS.md` |
 | `npm run check:deployment` | 检查云函数部署清单和前端封装 | 发布前确认没有漏部署函数 |
 | `npm run check` | 静态语法检查 | 执行 `scripts/check-js.js`，扫描当前全部 JS 文件 |
 | `npm run verify` | 完整本地验证 | `npm test && npm run check`，提交前必跑 |
@@ -65,6 +66,12 @@ REAL_DATA_STUDENT_ID=student-id REAL_DATA_STUDENT_NAME=钟青羽 npm run test:re
 
 # 真实数据烟测：只检查部分页面
 REAL_DATA_STUDENT_ID=student-id REAL_DATA_SMOKE_ROUTES=profile,bottlenecks npm run test:real-data-smoke
+
+# 单个孩子运营指标：文本摘要
+METRICS_INPUT=/path/to/student-export.json METRICS_STUDENT_ID=student-id npm run metrics:student
+
+# 单个孩子运营指标：JSON 输出
+npm run metrics:student -- --input=/path/to/student-export.json --student-id=student-id --json
 ```
 
 注意：`tests/e2e-real-image.test.js` 不进入 `npm test`，避免普通开发验证依赖本机图片路径或云端 AI 凭据。
@@ -86,6 +93,7 @@ REAL_DATA_STUDENT_ID=student-id REAL_DATA_SMOKE_ROUTES=profile,bottlenecks npm r
 | `e2e-real-image.test.js` | 端到端真实图片链路脚本，单独运行 | 1（含云端条件步骤） |
 | `generate-paper-pdf.test.js` | 验证试卷 PDF 中文字体、分页和答案页回归 | 4 |
 | `index-presenter.test.js` | 孩子档案视图模型、家庭工作台卡片、样本覆盖、重点提示、卡点透出和空态 | 9 |
+| `learning-metrics.test.js` | 单个孩子运营指标、周趋势和隐私安全输出 | 3 |
 | `learning-records.test.js` | 学习记录四级分类、验证卷编号、卡点名称、时间线统计和清理提示规则 | 11 |
 | `page-flows.test.js` | 主要页面的主流程、首页 0/1/多孩子分流、孩子档案页、错误恢复、导航跳转和学习记录清理确认 | 61 |
 | `parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
