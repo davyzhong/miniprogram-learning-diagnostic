@@ -83,7 +83,14 @@ Page({
       }
 
       const fileIDs = collectFileIDs(reports)
-      const tempFiles = await cloud.getTempFileURLs(fileIDs)
+      let tempFiles = []
+      if (fileIDs.length) {
+        try {
+          tempFiles = await cloud.getTempFileURLs(fileIDs)
+        } catch (error) {
+          console.warn('学习记录图片临时链接不可用，继续展示文字记录', error && error.message ? error.message : error)
+        }
+      }
       const urlByFileID = new Map(tempFiles.map(item => [item.fileID, item.tempFileURL || '']))
       const { events, statusItems } = buildTimelineEvents(
         reports,

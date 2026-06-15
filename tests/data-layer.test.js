@@ -35,24 +35,34 @@ test('cloud function wrapper exposes backend errors and recognizes timeouts', as
   assert.equal(cloud.isTimeoutError(new Error('permission denied')), false)
 })
 
-test('cloud function wrapper annotates timeout errors with function and action context', async () => {
-  const db = createDatabase()
-  const cloud = loadCloudUtil({
-    cloud: {
-      database: () => db,
-      callFunction: async () => { throw new Error('timeout') }
-    }
-  })
+test('cloud function wrapper annotates aggregate timeout errors with function and action context', async () => {
+  const aggregateReaders = [
+    ['getStudentDashboard', cloud => cloud.getStudentDashboard('student-1')],
+    ['getSubjectDashboard', cloud => cloud.getSubjectDashboard('student-1', 'math')],
+    ['getLearningTimeline', cloud => cloud.getLearningTimeline({ studentId: 'student-1' })],
+    ['getReportDetail', cloud => cloud.getReportDetail('report-1')]
+  ]
 
-  try {
-    await cloud.getStudentDashboard('student-1')
-    assert.fail('expected timeout')
-  } catch (error) {
-    assert.match(error.message, /studentData:getStudentDashboard/)
-    assert.match(error.message, /超时|timeout/i)
-    assert.equal(error.functionName, 'studentData')
-    assert.equal(error.action, 'getStudentDashboard')
-    assert.equal(cloud.isTimeoutError(error), true)
+  for (const [action, invoke] of aggregateReaders) {
+    const db = createDatabase()
+    const cloud = loadCloudUtil({
+      cloud: {
+        database: () => db,
+        callFunction: async () => { throw new Error('timeout') }
+      }
+    })
+
+    await assert.rejects(
+      () => invoke(cloud),
+      error => {
+        assert.match(error.message, new RegExp(`studentData:${action}`))
+        assert.match(error.message, /超时|timeout/i)
+        assert.equal(error.functionName, 'studentData')
+        assert.equal(error.action, action)
+        assert.equal(cloud.isTimeoutError(error), true)
+        return true
+      }
+    )
   }
 })
 
