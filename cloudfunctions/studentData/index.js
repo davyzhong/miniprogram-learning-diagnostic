@@ -294,7 +294,7 @@ async function cleanupProfileAnalysisState(studentId, subject, reportIds) {
   })));
 }
 
-async function cleanupStaleLearningRecords(openId, studentId, subjectValue) {
+async function cleanupStaleLearningRecords(openId, studentId, subjectValue, dryRun = false) {
   if (!studentId) return failure('缺少 studentId');
   const access = await getAccess(studentId, openId);
   if (!access.allowed) return failure('无权访问该学生');
@@ -305,6 +305,20 @@ async function cleanupStaleLearningRecords(openId, studentId, subjectValue) {
   const reports = await getRawReports(studentId, subject, 100);
   const staleReports = reports.filter(report => !isArchivedReport(report) && isStaleStatusReport(report, now));
   const archivedAt = new Date();
+
+  if (dryRun) {
+    return withAccess(access, {
+      cleanedCount: staleReports.length,
+      cleanedReportIds: staleReports.map(report => report._id),
+      staleItems: staleReports.map(report => ({
+        reportId: report._id,
+        subject: report.subject || '',
+        status: report.status || '',
+        updatedAt: reportTimeOf(report),
+      })),
+      dryRun: true,
+    });
+  }
 
   await Promise.all(staleReports.map(report => db.collection('reports').doc(report._id).update({
     data: {
@@ -391,7 +405,7 @@ exports.main = async (event = {}) => {
       return getPaperDetail(openId, event.paperId);
     }
     if (action === 'cleanupStaleLearningRecords') {
-      return cleanupStaleLearningRecords(openId, event.studentId, event.subject);
+      return cleanupStaleLearningRecords(openId, event.studentId, event.subject, event.dryRun === true);
     }
     return failure('操作类型无效');
   } catch (error) {

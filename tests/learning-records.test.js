@@ -177,6 +177,48 @@ test('upload history presenter builds timeline state and paper events without pa
   assert.equal(state.filters.find(item => item.key === 'math').count, 2)
 })
 
+test('upload history presenter builds analytics summary and cleanup prompt state', () => {
+  const reports = [
+    {
+      _id: 'report-1',
+      type: 'diagnosis',
+      status: 'completed',
+      subject: 'math',
+      createdAt: '2026-06-12T09:00:00+08:00',
+      imageFiles: [],
+      bottlenecks: [{ lpCode: 'LP-001' }]
+    },
+    {
+      _id: 'report-2',
+      type: 'verification',
+      status: 'completed',
+      subject: 'math',
+      paperId: 'paper-1',
+      createdAt: '2026-06-13T09:00:00+08:00',
+      imageFiles: []
+    }
+  ]
+  const papers = [{
+    _id: 'paper-1',
+    type: 'verification',
+    subject: 'math',
+    generatedAt: '2026-06-13T08:00:00+08:00',
+    bottleneckSummaries: ['计算基础']
+  }]
+
+  const { events, statusItems } = buildTimelineEvents(reports, papers, new Map(), 'math', '数学')
+  const state = buildHistoryState(events, 'math', statusItems, {
+    cleanupPreview: { cleanedCount: 2, cleanedReportIds: ['stale-1', 'stale-2'] },
+    permissions: { canManageParents: true }
+  })
+
+  assert.deepEqual(state.summaryCards.map(item => item.value), [2, 3, 1, 1])
+  assert.equal(state.summaryText, '共 2 天 · 3 条主记录 · 1 份验证反馈')
+  assert.equal(state.cleanup.hasCandidates, true)
+  assert.equal(state.cleanup.title, '发现 2 条可清理的中断记录')
+  assert.equal(state.cleanup.canCleanup, true)
+})
+
 test('verification paper event follows the latest linked feedback report lifecycle', () => {
   const now = Date.now()
   const oldCompletedAt = new Date(now - 5 * 60 * 1000).toISOString()

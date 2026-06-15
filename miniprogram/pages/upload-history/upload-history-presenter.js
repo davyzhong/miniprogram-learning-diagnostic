@@ -361,11 +361,44 @@ function buildEmptyState(allCount, filteredCount, activeSubject) {
   return GLOBAL_EMPTY_STATE
 }
 
-function buildHistoryState(events, activeSubject, statusItems = []) {
+function buildRecordAnalytics(events = [], statusItems = []) {
+  const dayCount = groupEventsByDay(events, statusItems).length
+  const recordCount = events.length
+  const paperCount = events.filter(event => event.kind === 'verification-paper').length
+  const feedbackCount = events.filter(event => event.kind === 'verification-report').length
+  return {
+    summaryText: `共 ${dayCount} 天 · ${recordCount} 条主记录 · ${feedbackCount} 份验证反馈`,
+    summaryCards: [
+      { key: 'days', label: '学习天数', value: dayCount },
+      { key: 'records', label: '主记录', value: recordCount },
+      { key: 'papers', label: '验证试卷', value: paperCount },
+      { key: 'feedback', label: '验证反馈', value: feedbackCount }
+    ]
+  }
+}
+
+function buildCleanupState(cleanupPreview = {}, permissions = {}) {
+  const count = Number(cleanupPreview.cleanedCount || cleanupPreview.staleCount || cleanupPreview.count || 0)
+  const canCleanup = count > 0 && permissions.canManageParents === true
+  return {
+    hasCandidates: count > 0,
+    canCleanup,
+    count,
+    reportIds: cleanupPreview.cleanedReportIds || cleanupPreview.staleReportIds || cleanupPreview.reportIds || [],
+    title: count > 0 ? `发现 ${count} 条可清理的中断记录` : '',
+    desc: canCleanup
+      ? '这些是长时间停留在分析中或失败的记录，清理后不会删除已完成报告、试卷和照片证据。'
+      : '这些中断记录不会显示在主时间线，也不会影响已完成的学习证据。'
+  }
+}
+
+function buildHistoryState(events, activeSubject, statusItems = [], options = {}) {
   const safeSubject = normalizeSubject(activeSubject)
   const filteredEvents = filterEventsBySubject(events, safeSubject)
   const filteredStatusItems = filterStatusBySubject(statusItems, safeSubject)
   const emptyState = buildEmptyState(events.length, filteredEvents.length, safeSubject)
+  const days = groupEventsByDay(filteredEvents, filteredStatusItems)
+  const analytics = buildRecordAnalytics(filteredEvents, filteredStatusItems)
 
   return {
     activeSubject: safeSubject,
@@ -373,8 +406,10 @@ function buildHistoryState(events, activeSubject, statusItems = []) {
     allEvents: events,
     allStatusItems: statusItems,
     allDays: groupEventsByDay(events, statusItems),
-    days: groupEventsByDay(filteredEvents, filteredStatusItems),
+    days,
     filters: buildFilters(safeSubject, events),
+    ...analytics,
+    cleanup: buildCleanupState(options.cleanupPreview, options.permissions),
     ...emptyState
   }
 }
@@ -497,6 +532,8 @@ module.exports = {
   buildTitleText,
   buildFilters,
   buildHistoryState,
+  buildRecordAnalytics,
+  buildCleanupState,
   collectFileIDs,
   buildTimelineEvents,
   photoFromDataset,

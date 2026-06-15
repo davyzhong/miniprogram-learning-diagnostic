@@ -82,6 +82,43 @@
   padding: 14rpx;
 }
 
+.summary-text {
+  color: #52667d;
+  display: block;
+  font-size: 23rpx;
+  line-height: 1.45;
+  padding: 4rpx 4rpx 14rpx;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 10rpx;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 16rpx;
+}
+
+.summary-cell {
+  background: #f7fafc;
+  border: 1rpx solid #e8eef6;
+  border-radius: 12rpx;
+  padding: 12rpx 6rpx;
+  text-align: center;
+}
+
+.summary-value {
+  color: #1f4f82;
+  display: block;
+  font-size: 30rpx;
+  font-weight: 820;
+}
+
+.summary-label {
+  color: #7a8899;
+  display: block;
+  font-size: 19rpx;
+  margin-top: 2rpx;
+}
+
 .filter-bar {
   display: flex;
   gap: 12rpx;
@@ -126,6 +163,57 @@
 .filter-pill.is-active .filter-count {
   background: #2d6cdf;
   color: #fff;
+}
+
+.cleanup-card {
+  align-items: center;
+  background: #fff8ea;
+  border: 1rpx solid #f0dfbc;
+  border-radius: 14rpx;
+  color: #8b5a00;
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 22rpx;
+  padding: 18rpx 20rpx;
+}
+
+.cleanup-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.cleanup-title,
+.cleanup-desc {
+  display: block;
+}
+
+.cleanup-title {
+  font-size: 24rpx;
+  font-weight: 780;
+}
+
+.cleanup-desc {
+  font-size: 21rpx;
+  line-height: 1.45;
+  margin-top: 5rpx;
+  opacity: 0.88;
+}
+
+.cleanup-btn {
+  background: #fff;
+  border: 1rpx solid #e0b75c;
+  border-radius: 999rpx;
+  color: #8b5a00;
+  flex-shrink: 0;
+  font-size: 22rpx;
+  font-weight: 760;
+  line-height: 1.2;
+  min-width: 92rpx;
+  padding: 13rpx 18rpx;
+}
+
+.cleanup-btn::after {
+  border: 0;
 }
 
 .loading,

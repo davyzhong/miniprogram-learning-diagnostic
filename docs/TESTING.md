@@ -86,8 +86,8 @@ REAL_DATA_STUDENT_ID=student-id REAL_DATA_SMOKE_ROUTES=profile,bottlenecks npm r
 | `e2e-real-image.test.js` | 端到端真实图片链路脚本，单独运行 | 1（含云端条件步骤） |
 | `generate-paper-pdf.test.js` | 验证试卷 PDF 中文字体、分页和答案页回归 | 4 |
 | `index-presenter.test.js` | 孩子档案视图模型、家庭工作台卡片、样本覆盖、重点提示、卡点透出和空态 | 9 |
-| `learning-records.test.js` | 学习记录四级分类、验证卷编号和卡点名称共享规则 | 10 |
-| `page-flows.test.js` | 主要页面的主流程、首页 0/1/多孩子分流、孩子档案页、错误恢复、导航跳转 | 60 |
+| `learning-records.test.js` | 学习记录四级分类、验证卷编号、卡点名称、时间线统计和清理提示规则 | 11 |
+| `page-flows.test.js` | 主要页面的主流程、首页 0/1/多孩子分流、孩子档案页、错误恢复、导航跳转和学习记录清理确认 | 61 |
 | `parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
 | `photo-dedup.test.js` | OCR 摘要去重算法（含完全重复分支） | 3 |
 | `poller.test.js` | 通用轮询器与分析轮询包装 | 6 |
@@ -100,7 +100,7 @@ REAL_DATA_STUDENT_ID=student-id REAL_DATA_SMOKE_ROUTES=profile,bottlenecks npm r
 | `report-quality.test.js` | 报告质量等级、样本不足和复核规则 | 4 |
 | `skills-p0.test.js` | P0 Skill 能力内核，覆盖诊断、报告、卡点、验证卷、验证反馈、时间线 | 8 |
 | `student-access.test.js` | `studentAccess` 家长成员、邀请、加入、移除权限和首次建表兜底 | 8 |
-| `student-data-access.test.js` | `studentData` 共享家长学习数据访问 | 6 |
+| `student-data-access.test.js` | `studentData` 共享家长学习数据访问、学习记录 dry-run 清理权限 | 6 |
 | `subject-home-presenter.test.js` | 学科工作台视图模型 | 3 |
 | `time-aware-bottlenecks.test.js` | 时间化学习卡点趋势和权重 | 5 |
 | `util.test.js` | 时间、卡点短名称等纯工具函数 | 11 |

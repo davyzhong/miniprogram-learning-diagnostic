@@ -12,12 +12,22 @@ const {
   evidenceFromDataset
 } = require('./upload-history-presenter')
 
-async function cleanupStaleRecordsIfPossible(studentId, subject) {
+const EMPTY_CLEANUP = {
+  hasCandidates: false,
+  canCleanup: false,
+  count: 0,
+  reportIds: [],
+  title: '',
+  desc: ''
+}
+
+async function previewStaleRecordsIfPossible(studentId, subject) {
   if (!studentId || typeof cloud.cleanupStaleLearningRecords !== 'function') return
   try {
-    await cloud.cleanupStaleLearningRecords({ studentId, subject })
+    return await cloud.cleanupStaleLearningRecords({ studentId, subject, dryRun: true })
   } catch (error) {
-    console.warn('学习记录脏状态清理不可用，继续加载可见记录', error && error.message ? error.message : error)
+    console.warn('学习记录脏状态预检不可用，继续加载可见记录', error && error.message ? error.message : error)
+    return null
   }
 }
 
@@ -33,6 +43,11 @@ Page({
     allStatusItems: [],
     allDays: [],
     filters: buildFilters('', []),
+    summaryText: '共 0 天 · 0 条主记录 · 0 份验证反馈',
+    summaryCards: [],
+    cleanup: EMPTY_CLEANUP,
+    cleaningStaleRecords: false,
+    permissions: {},
     ...GLOBAL_EMPTY_STATE,
     loading: true,
     days: []
@@ -62,18 +77,22 @@ Page({
       const titleText = buildTitleText(this.data.studentName)
       let reports = []
       let papers = []
-
-      await cleanupStaleRecordsIfPossible(this.data.studentId, activeSubject)
+      let permissions = {}
+      let cleanupPreview = null
 
       try {
         if (typeof cloud.getLearningTimeline === 'function') {
           const timeline = await cloud.getLearningTimeline({ studentId: this.data.studentId })
           reports = timeline.reports || []
           papers = timeline.papers || []
+          permissions = timeline.permissions || {}
         }
       } catch (error) {
         console.warn('共享学习记录不可用，回退到旧记录读取', error && error.message ? error.message : error)
       }
+
+      cleanupPreview = await previewStaleRecordsIfPossible(this.data.studentId, activeSubject)
+      if (cleanupPreview && cleanupPreview.permissions) permissions = cleanupPreview.permissions
 
       if (!reports.length && !papers.length) {
         reports = await cloud.getReports(this.data.studentId, undefined, 50)
@@ -102,7 +121,8 @@ Page({
 
       this.setData({
         titleText,
-        ...buildHistoryState(events, activeSubject, statusItems),
+        permissions,
+        ...buildHistoryState(events, activeSubject, statusItems, { cleanupPreview, permissions }),
         loading: false
       })
     } catch (err) {
@@ -117,7 +137,50 @@ Page({
 
   onFilterTap(e) {
     const activeSubject = normalizeSubject(e.currentTarget.dataset.subject || '')
-    this.setData(buildHistoryState(this.data.allEvents || [], activeSubject, this.data.allStatusItems || []))
+    this.setData(buildHistoryState(this.data.allEvents || [], activeSubject, this.data.allStatusItems || [], {
+      cleanupPreview: this.data.cleanup,
+      permissions: this.data.permissions
+    }))
+  },
+
+  async onCleanupStaleRecords() {
+    const cleanup = this.data.cleanup || EMPTY_CLEANUP
+    if (!cleanup.hasCandidates) return
+    if (!cleanup.canCleanup) {
+      wx.showToast({ title: '只有档案管理者可以清理', icon: 'none' })
+      return
+    }
+    return new Promise(resolve => {
+      wx.showModal({
+        title: '清理中断记录',
+        content: `将清理 ${cleanup.count} 条长时间停留在分析中的记录，不会删除已完成报告和试卷。`,
+        confirmText: '确认清理',
+        success: async res => {
+          if (!res.confirm) {
+            resolve(false)
+            return
+          }
+          this.setData({ cleaningStaleRecords: true })
+          try {
+            await cloud.cleanupStaleLearningRecords({
+              studentId: this.data.studentId,
+              subject: normalizeSubject(this.data.activeSubject || this.data.subject || ''),
+              dryRun: false
+            })
+            wx.showToast({ title: '已清理', icon: 'success' })
+            await this.loadHistory()
+            resolve(true)
+          } catch (error) {
+            console.error('清理学习记录失败', error)
+            wx.showToast({ title: '清理失败', icon: 'none' })
+            resolve(false)
+          } finally {
+            this.setData({ cleaningStaleRecords: false })
+          }
+        },
+        fail: () => resolve(false)
+      })
+    })
   },
 
   onPreviewPhoto(e) {
