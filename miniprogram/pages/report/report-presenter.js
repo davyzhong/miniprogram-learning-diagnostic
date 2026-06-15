@@ -66,12 +66,64 @@ function evidenceStatusViewOf(status) {
   return map[status] || map.missing
 }
 
+function reportImageFiles(report = {}) {
+  if (Array.isArray(report.imageFiles) && report.imageFiles.length > 0) {
+    return report.imageFiles
+  }
+  return (report.imageFileIds || []).map((fileID, index) => ({
+    fileID,
+    fileName: `试卷照片${index + 1}`
+  }))
+}
+
+function sourceIndexOf(error = {}, photos = []) {
+  const explicitIndex = Number(error.sourceImageIndex)
+  if (Number.isInteger(explicitIndex) && explicitIndex > 0) return explicitIndex
+  if (error.sourceFileID) {
+    const photoIndex = photos.findIndex(photo => photo.fileID === error.sourceFileID)
+    if (photoIndex >= 0) return photoIndex + 1
+  }
+  return 0
+}
+
+function sourceTextOf(index) {
+  return index > 0 ? `第${index}张试卷` : ''
+}
+
+function buildSourceEvidenceItems(photos = [], errorDetails = []) {
+  return photos.map((photo, index) => {
+    const sourceIndex = index + 1
+    const relatedErrors = errorDetails.filter(error => {
+      if (!error || typeof error !== 'object') return false
+      if (photo.fileID && error.sourceFileID && photo.fileID === error.sourceFileID) return true
+      return Number(error.sourceImageIndex) === sourceIndex
+    })
+    const relatedWithOcr = relatedErrors.find(item => item.sourceOcrSummary)
+    const relatedErrorTexts = relatedErrors
+      .map(item => item.questionContent || '')
+      .filter(Boolean)
+      .slice(0, 3)
+    return {
+      fileID: photo.fileID || '',
+      title: photo.fileName || `试卷照片${sourceIndex}`,
+      sourceText: sourceTextOf(sourceIndex),
+      summary: photo.ocrSummary || photo.summaryText || (relatedWithOcr && relatedWithOcr.sourceOcrSummary) || '暂无 OCR 摘要',
+      duplicateText: photo.isDuplicate ? '疑似重复照片' : '',
+      statusText: photo.analysisStatus === 'failed' ? '分析失败' : '已纳入分析',
+      relatedErrorCount: relatedErrors.length,
+      relatedErrors: relatedErrorTexts,
+      relatedErrorText: relatedErrorTexts.join('、')
+    }
+  })
+}
+
 function buildReportView(report) {
   const isVerification = report.type === 'verification'
   const paperCodeText = paperCodeOf(report.linkedPaper || report.paper)
   const linkedPaper = report.linkedPaper || report.paper || {}
   const bottlenecks = report.bottlenecks || []
   const errorDetails = report.errorDetails || []
+  const sourcePhotos = reportImageFiles(report)
   const maxErrorCount = bottlenecks.length > 0
     ? Math.max(...bottlenecks.map(item => item.errorCount || 0), 1)
     : 1
@@ -98,12 +150,18 @@ function buildReportView(report) {
       })
     }
   })
-  const errorDetailList = errorDetails.map((item, index) => ({
-    ...item,
-    expanded: false,
-    displayIndex: `${index + 1}.`,
-    feedbackTargetId: item.id || item._id || `${index + 1}`
-  }))
+  const errorDetailList = errorDetails.map((item, index) => {
+    const detail = item && typeof item === 'object' ? item : { questionContent: String(item || '') }
+    const sourceIndex = sourceIndexOf(detail, sourcePhotos)
+    return {
+      ...detail,
+      expanded: false,
+      displayIndex: `${index + 1}.`,
+      sourceText: sourceTextOf(sourceIndex),
+      feedbackTargetId: detail.id || detail._id || `${index + 1}`
+    }
+  })
+  const sourceEvidenceItems = buildSourceEvidenceItems(sourcePhotos, errorDetails)
   const verificationEvidenceItems = (report.verificationEvidence || []).map(item => ({
     ...item,
     ...evidenceStatusViewOf(item.evidenceStatus || (item.complete && item.allCorrect ? 'passed' : 'missing'))
@@ -126,7 +184,9 @@ function buildReportView(report) {
       filter: 'evidence-time'
     }),
     trendSummaryText: buildTrendSummary(bottlenecks),
-    sourceImageCount: (report.imageFiles || report.imageFileIds || []).length,
+    sourceImageCount: sourcePhotos.length,
+    hasSourceEvidence: sourceEvidenceItems.length > 0,
+    sourceEvidenceItems,
     ...qualityView,
     metricActions: {
       errorsUrl: buildTraceableUrl({ type: 'report-detail', id: report._id }),

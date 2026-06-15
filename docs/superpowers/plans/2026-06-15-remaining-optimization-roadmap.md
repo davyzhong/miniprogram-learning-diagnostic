@@ -212,10 +212,10 @@ Parents need to see why the system believes a card exists. Summary pages should 
 
 **Execution Steps**
 
-- [ ] Write presenter tests for source image and question evidence view models.
-- [ ] Write page-flow tests for drill-down taps.
-- [ ] Implement view models first, then WXML/WXSS.
-- [ ] Run targeted tests and visual preview.
+- [x] Write presenter tests for source image and question evidence view models.
+- [x] Write page-flow tests for drill-down taps.
+- [x] Implement view models first, then WXML/WXSS.
+- [x] Run targeted tests and visual preview.
 
 ---
 

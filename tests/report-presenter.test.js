@@ -142,6 +142,59 @@ test('report view exposes traceable metric and evidence urls', () => {
   assert.match(view.evidenceTimeUrl, /upload-history\/upload-history/)
 })
 
+test('report view groups source photos with OCR summaries, duplicate state and related errors', () => {
+  const view = buildReportView({
+    _id: 'report-1',
+    studentId: 'student-1',
+    studentName: '钟青羽',
+    subject: 'math',
+    type: 'diagnosis',
+    imageFiles: [
+      {
+        fileID: 'cloud://photo-1',
+        fileName: '计算页.jpg',
+        ocrSummary: '第一页主要是小数乘除计算，红笔标出两处错误。'
+      },
+      {
+        fileID: 'cloud://photo-2',
+        fileName: '应用题页.jpg',
+        ocrSummary: '第二页是应用题。',
+        isDuplicate: true
+      }
+    ],
+    errorDetails: [
+      { questionContent: '5.87 ÷ 1.9', lpCode: 'LP-001', sourceImageIndex: 1, sourceFileID: 'cloud://photo-1' },
+      { questionContent: '单位换算应用题', lpCode: 'LP-008', sourceImageIndex: 2, sourceFileID: 'cloud://photo-2' }
+    ]
+  })
+
+  assert.equal(view.hasSourceEvidence, true)
+  assert.deepEqual(view.errorDetailList.map(item => item.sourceText), ['第1张试卷', '第2张试卷'])
+  assert.deepEqual(view.sourceEvidenceItems.map(item => ({
+    title: item.title,
+    sourceText: item.sourceText,
+    duplicateText: item.duplicateText,
+    relatedErrorCount: item.relatedErrorCount,
+    firstError: item.relatedErrors[0]
+  })), [
+    {
+      title: '计算页.jpg',
+      sourceText: '第1张试卷',
+      duplicateText: '',
+      relatedErrorCount: 1,
+      firstError: '5.87 ÷ 1.9'
+    },
+    {
+      title: '应用题页.jpg',
+      sourceText: '第2张试卷',
+      duplicateText: '疑似重复照片',
+      relatedErrorCount: 1,
+      firstError: '单位换算应用题'
+    }
+  ])
+  assert.match(view.sourceEvidenceItems[0].summary, /小数乘除计算/)
+})
+
 test('report view exposes quality labels and reasons', () => {
   const view = buildReportView({
     type: 'diagnosis',

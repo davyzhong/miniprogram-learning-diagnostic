@@ -60,6 +60,7 @@
           bindtap="onEvidenceTap"
           data-id="{{item.id}}"
           data-type="{{item.type}}"
+          data-url="{{item.url}}"
         >
           <view class="evidence-icon row-{{item.type}}">{{item.icon}}</view>
           <view class="evidence-copy">

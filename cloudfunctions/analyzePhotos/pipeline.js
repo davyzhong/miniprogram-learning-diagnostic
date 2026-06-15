@@ -84,7 +84,16 @@ function mergeBatchResults(batchResults) {
     }
 
     if (data.errorDetails) {
-      allErrorDetails.push(...data.errorDetails);
+      const sourceFields = {
+        sourceImageIndex: data.imageIndex || 0,
+        sourceFileID: data.fileID || '',
+        sourceOcrSummary: data.ocrSummary || '',
+      };
+      allErrorDetails.push(...data.errorDetails.map(item => (
+        item && typeof item === 'object'
+          ? { ...sourceFields, ...item }
+          : item
+      )));
     }
   }
 

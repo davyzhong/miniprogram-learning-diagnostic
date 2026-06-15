@@ -610,6 +610,8 @@ test('bottleneck detail builds a focused evidence workbench without repetitive r
   assert.equal(page.data.hiddenEvidenceCount, 1)
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.visibleEvidenceChain.map(item => item.category))), ['验证试卷', '验证反馈', '验证试卷'])
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.visibleEvidenceChain.map(item => item.title))), ['数学-20260613-01', '验证反馈', '数学-20260612-01'])
+  assert.match(page.data.visibleEvidenceChain[0].url, /pages\/paper-preview\/paper-preview\?paperId=paper-2/)
+  assert.match(page.data.visibleEvidenceChain[1].url, /pages\/report\/report\?id=report-2/)
   assert.ok(page.data.visibleEvidenceChain[0].metaChips.includes('待上传'))
   assert.ok(page.data.visibleEvidenceChain[1].metaChips.includes('关联 数学-20260612-01'))
   assert.ok(page.data.visibleEvidenceChain[2].metaChips.includes('已反馈'))

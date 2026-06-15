@@ -126,3 +126,50 @@ test('photo analysis pipeline merges page-level bottlenecks by code and severity
   assert.equal(merged.bottlenecks[0].severity, 'high')
   assert.deepEqual(merged.errorDetails, ['a', 'b'])
 })
+
+test('photo analysis pipeline preserves source photo metadata on each error detail', () => {
+  const merged = mergeBatchResults([
+    {
+      success: true,
+      data: {
+        imageIndex: 1,
+        fileID: 'cloud://photo-1',
+        ocrSummary: '第一页口算和竖式计算',
+        totalErrors: 1,
+        bottlenecks: [{ lpCode: 'LP-001', lpName: '计算', severity: 'medium', errorCount: 1 }],
+        errorDetails: [{ questionContent: '38 × 24', lpCode: 'LP-001' }]
+      }
+    },
+    {
+      success: true,
+      data: {
+        imageIndex: 2,
+        fileID: 'cloud://photo-2',
+        ocrSummary: '第二页应用题',
+        totalErrors: 1,
+        bottlenecks: [{ lpCode: 'LP-008', lpName: '审题', severity: 'medium', errorCount: 1 }],
+        errorDetails: [{ questionContent: '应用题漏条件', lpCode: 'LP-008' }]
+      }
+    }
+  ])
+
+  assert.deepEqual(merged.errorDetails.map(item => ({
+    questionContent: item.questionContent,
+    sourceImageIndex: item.sourceImageIndex,
+    sourceFileID: item.sourceFileID,
+    sourceOcrSummary: item.sourceOcrSummary
+  })), [
+    {
+      questionContent: '38 × 24',
+      sourceImageIndex: 1,
+      sourceFileID: 'cloud://photo-1',
+      sourceOcrSummary: '第一页口算和竖式计算'
+    },
+    {
+      questionContent: '应用题漏条件',
+      sourceImageIndex: 2,
+      sourceFileID: 'cloud://photo-2',
+      sourceOcrSummary: '第二页应用题'
+    }
+  ])
+})
