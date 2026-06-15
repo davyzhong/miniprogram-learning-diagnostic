@@ -70,6 +70,7 @@
           <text class="bottleneck-time" wx:if="{{item.timeText}}">{{item.timeText}}</text>
           <view class="chip-row">
             <text class="chip priority-{{item.priorityClass}}">{{item.priorityText}}</text>
+            <text class="chip" wx:if="{{item.category}}">{{item.category}}</text>
             <text class="chip state-{{item.statusClass}}">{{item.statusText}}</text>
             <text class="chip" wx:if="{{item.weightText}}">{{item.weightText}}</text>
           </view>

@@ -1,5 +1,6 @@
 const { bottleneckLabelOf } = require('./learning-records')
 const { SUBJECT_NAMES } = require('./constants')
+const { getBottleneckMeta } = require('./bottleneck-taxonomy')
 
 const STATUS_META = {
   needs_verification: { text: '待验证', className: 'pending', icon: '?', badgeText: '待验证', actionText: '生成验证卷' },
@@ -112,6 +113,7 @@ function buildBottleneckView(item = {}, options = {}) {
   const meta = statusMetaFor(item)
   const weight = numberOf(item.weight)
   const subject = item.subject || options.subject || ''
+  const taxonomy = getBottleneckMeta(item) || {}
   const displayName = bottleneckLabelOf(item)
   const firstSeenText = formatDate(item.firstSeenAt || item.sinceDate)
   const lastSeenText = formatDate(item.lastSeenAt || item.lastVerifiedAt || item.improvedDate)
@@ -122,6 +124,10 @@ function buildBottleneckView(item = {}, options = {}) {
     subject,
     subjectName: item.subjectName || SUBJECT_NAMES[subject] || options.subjectName || '',
     displayName,
+    shortName: taxonomy.shortName || displayName,
+    category: taxonomy.category || '',
+    parentDescription: taxonomy.parentDescription || '',
+    validationStyle: taxonomy.validationStyle || '',
     status,
     statusText: meta.text,
     statusClass: meta.className,

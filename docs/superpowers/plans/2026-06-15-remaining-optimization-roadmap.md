@@ -247,10 +247,10 @@ The app needs stable, parent-readable bottleneck names, aliases, categories, and
 
 **Execution Steps**
 
-- [ ] Audit current bottleneck name helpers.
-- [ ] Write tests for canonical metadata.
-- [ ] Implement shared metadata with backward-compatible exports.
-- [ ] Update displays and docs.
+- [x] Audit current bottleneck name helpers.
+- [x] Write tests for canonical metadata.
+- [x] Implement shared metadata with backward-compatible exports.
+- [x] Update displays and docs.
 
 ---
 

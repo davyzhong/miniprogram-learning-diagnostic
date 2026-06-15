@@ -10,11 +10,13 @@
         <view class="hero-copy">
           <text class="kicker">{{subjectName}}学习卡点</text>
           <text class="title">{{bottleneck.displayName}}</text>
+          <text class="summary" wx:if="{{bottleneck.parentDescription}}">{{bottleneck.parentDescription}}</text>
           <text class="summary">{{bottleneck.evidenceText}}</text>
         </view>
       </view>
       <view class="chip-row">
         <text class="chip priority-{{bottleneck.priorityClass}}">{{bottleneck.priorityText}}</text>
+        <text class="chip" wx:if="{{bottleneck.category}}">{{bottleneck.category}}</text>
         <text class="chip state-{{bottleneck.statusClass}}">{{bottleneck.statusText}}</text>
         <text class="chip" wx:if="{{bottleneck.weightText}}">{{bottleneck.weightText}}</text>
       </view>
