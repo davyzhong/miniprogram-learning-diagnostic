@@ -403,6 +403,8 @@ The MVP needs simple operational metrics: upload success, analysis completion, r
 
 ## Task 15: Release, Rollback, And Documentation Sync Workflow
 
+Status: completed in `docs: add release and rollback checklist`.
+
 **Impact**
 
 The project now has enough moving parts that release discipline matters. Every release should sync code, cloud functions, docs, tests, and deployment notes.
@@ -430,10 +432,10 @@ The project now has enough moving parts that release discipline matters. Every r
 
 **Execution Steps**
 
-- [ ] Write contract test for release docs/scripts.
-- [ ] Add checklist doc.
-- [ ] Add package script if useful.
-- [ ] Run full verification and prepare commit/push.
+- [x] Write contract test for release docs/scripts.
+- [x] Add checklist doc.
+- [x] Add package script if useful.
+- [x] Run full verification and prepare commit/push.
 
 ---
 

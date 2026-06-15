@@ -34,6 +34,7 @@
 | `npm run test:real-data-smoke` | 使用微信开发者工具打开真实数据页面 | 需设置 `REAL_DATA_STUDENT_ID`，不提交截图产物 |
 | `npm run metrics:student` | 从本地 JSON 导出计算单个孩子的运营指标 | 需设置 `METRICS_INPUT`，详见 `docs/METRICS.md` |
 | `npm run check:deployment` | 检查云函数部署清单和前端封装 | 发布前确认没有漏部署函数 |
+| `npm run release:check` | 发布前自动门禁 | 执行 `check:deployment` 和 `verify`；仍需手动跑 `git diff --check` 与 DevTools CLI `preview` |
 | `npm run check` | 静态语法检查 | 执行 `scripts/check-js.js`，扫描当前全部 JS 文件 |
 | `npm run verify` | 完整本地验证 | `npm test && npm run check`，提交前必跑 |
 
@@ -72,6 +73,9 @@ METRICS_INPUT=/path/to/student-export.json METRICS_STUDENT_ID=student-id npm run
 
 # 单个孩子运营指标：JSON 输出
 npm run metrics:student -- --input=/path/to/student-export.json --student-id=student-id --json
+
+# 发布前自动门禁
+npm run release:check
 ```
 
 注意：`tests/e2e-real-image.test.js` 不进入 `npm test`，避免普通开发验证依赖本机图片路径或云端 AI 凭据。
@@ -89,7 +93,7 @@ npm run metrics:student -- --input=/path/to/student-export.json --student-id=stu
 | `contracts.test.js` | 跨模块契约、命名一致性、已修复缺陷回归保护 | 39 |
 | `coverage-gap.test.js` | 历史修复的回归场景、轮询器/数据层边界分支 | 7 |
 | `data-layer.test.js` | `miniprogram/utils/cloud.js` 统一数据访问层 | 8 |
-| `deployment-readiness.test.js` | 云函数部署清单、配置文件和前端云函数封装 | 3 |
+| `deployment-readiness.test.js` | 云函数部署清单、配置文件、前端封装、发布与回滚文档门禁 | 4 |
 | `e2e-real-image.test.js` | 端到端真实图片链路脚本，单独运行 | 1（含云端条件步骤） |
 | `generate-paper-pdf.test.js` | 验证试卷 PDF 中文字体、分页和答案页回归 | 4 |
 | `index-presenter.test.js` | 孩子档案视图模型、家庭工作台卡片、样本覆盖、重点提示、卡点透出和空态 | 9 |

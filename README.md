@@ -458,6 +458,7 @@ npm run test:e2e-real-image
 | [SETUP.md](./SETUP.md) | 部署指南：环境配置、云函数部署、字体配置、数据库索引、真机验收 |
 | [docs/SKILL_AND_CLI_DESIGN.md](./docs/SKILL_AND_CLI_DESIGN.md) | Skill / CLI 设计与 P0 实现说明 |
 | [docs/METRICS.md](./docs/METRICS.md) | 单个孩子运营指标：分析完成率、报告质量、验证通过率、反馈率和周趋势 |
+| [docs/RELEASE_CHECKLIST.md](./docs/RELEASE_CHECKLIST.md) | 发布门禁、云函数部署核对、真实数据烟测和回滚流程 |
 | [docs/TEST_MATRIX.md](./docs/TEST_MATRIX.md) | 测试矩阵与验收清单 |
 
 ---

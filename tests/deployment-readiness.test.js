@@ -74,3 +74,17 @@ test('deployment workflow is documented and exposed as a package script', () => 
   assert.equal(pkg.scripts['check:deployment'], 'node --test tests/deployment-readiness.test.js')
   assert.match(pkg.scripts.test, /tests\/deployment-readiness\.test\.js/)
 })
+
+test('release and rollback workflow is documented and exposed as a package script', () => {
+  const pkg = JSON.parse(read('package.json'))
+
+  assert.ok(exists('docs/RELEASE_CHECKLIST.md'), 'release checklist should exist')
+  const checklist = read('docs/RELEASE_CHECKLIST.md')
+  assert.match(checklist, /npm run verify/)
+  assert.match(checklist, /git diff --check/)
+  assert.match(checklist, /cli preview/)
+  assert.match(checklist, /云函数/)
+  assert.match(checklist, /回滚/)
+  assert.equal(pkg.scripts['release:check'], 'npm run check:deployment && npm run verify')
+  assert.match(read('README.md'), /docs\/RELEASE_CHECKLIST\.md/)
+})
