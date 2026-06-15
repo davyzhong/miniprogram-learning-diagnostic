@@ -29,24 +29,70 @@ Page({
     generatingPdf: false,
     permissions: {},
     canGeneratePaper: true,
-    canRetryAnalysis: true
+    canRetryAnalysis: true,
+    feedbackItems: [],
+    feedbackByTarget: {},
+    feedbackDialog: {
+      visible: false,
+      targetType: 'report',
+      targetId: '',
+      type: 'unclear_result',
+      reason: '',
+      note: ''
+    },
+    feedbackTypes: [
+      { type: 'wrong_bottleneck', label: '卡点不准确' },
+      { type: 'wrong_question', label: '错题识别错了' },
+      { type: 'duplicate_photo', label: '照片重复/不清楚' },
+      { type: 'unclear_result', label: '结果需要复核' },
+      { type: 'other', label: '其他问题' }
+    ],
+    submittingFeedback: false
   },
 
   onLoad(options) {
-    const id = options.id
+    const id = options.id || options.reportId
     if (id) {
       this.setData({ reportId: id })
       this.loadReport(id)
+    } else {
+      wx.showToast({ title: '缺少报告信息', icon: 'none' })
+    }
+  },
+
+  async fetchReportDetail(id) {
+    if (typeof cloud.getReportDetail === 'function') {
+      try {
+        return await cloud.getReportDetail(id)
+      } catch (error) {
+        console.warn('报告详情接口不可用，回退到直接读取报告', error && error.message ? error.message : error)
+      }
+    }
+    return {
+      report: await cloud.getReport(id),
+      permissions: {}
+    }
+  },
+
+  async loadFeedbackItems(id, detail = {}) {
+    if (Array.isArray(detail.feedback)) return detail.feedback
+    if (typeof cloud.getReportFeedback !== 'function') return []
+    try {
+      return await cloud.getReportFeedback(id)
+    } catch (error) {
+      console.warn('报告反馈读取失败，继续展示报告正文', error && error.message ? error.message : error)
+      return []
     }
   },
 
   async loadReport(id) {
+    if (id && this.data.reportId !== id) {
+      this.setData({ reportId: id })
+    }
     wx.showLoading({ title: '加载中...' })
 
     try {
-      const detail = typeof cloud.getReportDetail === 'function'
-        ? await cloud.getReportDetail(id)
-        : { report: await cloud.getReport(id), permissions: {} }
+      const detail = await this.fetchReportDetail(id)
       const report = detail.report
       const permissions = detail.permissions || {}
 
@@ -60,6 +106,8 @@ Page({
         ...report,
         linkedPaper: detail.linkedPaper || detail.paper || report.linkedPaper
       }
+      const feedbackItems = await this.loadFeedbackItems(id, detail)
+      const feedbackByTarget = this.buildFeedbackMap(feedbackItems)
       const dateText = formatChineseDateTime(report.createdAt)
       const view = buildReportView(reportWithContext)
 
@@ -87,6 +135,8 @@ Page({
         permissions,
         canGeneratePaper: permissions.canGeneratePaper !== false,
         canRetryAnalysis: permissions.canRetryAnalysis !== false,
+        feedbackItems,
+        feedbackByTarget,
         ...view
       })
 
@@ -164,6 +214,99 @@ Page({
       return
     }
     wx.navigateTo({ url })
+  },
+
+  noop() {},
+
+  buildFeedbackMap(items) {
+    return (items || []).reduce((acc, item) => {
+      const key = this.feedbackKey(item.targetType || 'report', item.targetId || '')
+      acc[key] = {
+        submitted: true,
+        type: item.type,
+        feedbackId: item._id || item.feedbackId || ''
+      }
+      return acc
+    }, {})
+  },
+
+  feedbackKey(targetType, targetId) {
+    return `${targetType || 'report'}:${targetId || ''}`
+  },
+
+  onOpenFeedback(e) {
+    const dataset = e.currentTarget.dataset || {}
+    this.setData({
+      feedbackDialog: {
+        visible: true,
+        targetType: dataset.targetType || 'report',
+        targetId: dataset.targetId || '',
+        type: dataset.type || 'unclear_result',
+        reason: '',
+        note: ''
+      }
+    })
+  },
+
+  onCloseFeedback() {
+    this.setData({ 'feedbackDialog.visible': false })
+  },
+
+  onFeedbackTypeTap(e) {
+    this.setData({ 'feedbackDialog.type': e.currentTarget.dataset.type || 'other' })
+  },
+
+  onFeedbackReasonInput(e) {
+    this.setData({ 'feedbackDialog.reason': e.detail.value || '' })
+  },
+
+  onFeedbackNoteInput(e) {
+    this.setData({ 'feedbackDialog.note': e.detail.value || '' })
+  },
+
+  async onSubmitFeedback() {
+    if (this.data.submittingFeedback) return
+    const dialog = this.data.feedbackDialog
+    const reason = (dialog.reason || '').trim()
+    if (!reason) {
+      wx.showToast({ title: '请填写反馈原因', icon: 'none' })
+      return
+    }
+
+    const payload = JSON.parse(JSON.stringify({
+      reportId: this.data.reportId,
+      type: dialog.type,
+      targetType: dialog.targetType,
+      targetId: dialog.targetId,
+      reason,
+      note: (dialog.note || '').trim()
+    }))
+    this.setData({ submittingFeedback: true })
+    try {
+      const result = await cloud.createReportFeedback(payload)
+      const key = this.feedbackKey(payload.targetType, payload.targetId)
+      const feedbackByTarget = {
+        ...this.data.feedbackByTarget,
+        [key]: {
+          submitted: true,
+          type: payload.type,
+          feedbackId: result.feedbackId || (result.feedback && result.feedback._id) || ''
+        }
+      }
+      this.setData({
+        feedbackByTarget,
+        feedbackDialog: {
+          ...dialog,
+          visible: false
+        }
+      })
+      wx.showToast({ title: '已记录反馈', icon: 'success' })
+    } catch (err) {
+      console.error('提交反馈失败', err)
+      wx.showToast({ title: '反馈提交失败', icon: 'none' })
+    } finally {
+      this.setData({ submittingFeedback: false })
+    }
   },
 
   // ========== 轮询逻辑 ==========

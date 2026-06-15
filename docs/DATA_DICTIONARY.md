@@ -11,6 +11,7 @@
 | `studentInvites` | 家长扫码加入邀请 | 档案拥有者点击邀请家长 | studentAccess 云函数 |
 | `subjectProfiles` | 学科档案：卡点追踪、分析状态 | 添加学生时自动创建三科；首次进入学科时幂等补建 | cloud.createStudentWithProfiles / ensureSubjectProfile；analyzePhotos 更新 |
 | `reports` | 诊断/验证报告 | 上传照片触发分析时 | uploadAndAnalyze 创建初始记录；analyzePhotos 填充分析结果；generateReportPDF 回写 pdfFileId |
+| `reportFeedback` | 家长对报告、卡点、错题、照片的纠错反馈 | 报告页提交反馈时 | reportFeedback 云函数 |
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
 | `analysisTasks` | 异步分析任务进度追踪 | analyzePhotos 启动时 | analyzePhotos 云函数 |
 
@@ -164,6 +165,7 @@
 | `comparisonSummary` | String | 是 | `''` | 与上次报告的对比总结 | `"2 个学习卡点已改善，1 个仍需继续验证..."` |
 | `verificationTargets` | Array\<String\> | 是 | `[]` | 本次验证试卷的目标卡点编码 | `["LP-001"]` |
 | `verificationEvidence` | Array\<Object\> | 是 | `[]` | 按目标卡点汇总的验证作答证据；只有完整且全对才确认改善 | 见下方子结构 |
+| `quality` | Object | 是 | 规则计算 | 报告证据质量，决定是否可作为强结论更新长期档案 | 见下方子结构 |
 | `isEffective` | Boolean | 是 | `false` | 是否允许参与综合诊断和最近变化 | `true` |
 | `changeSummary` | String | 是 | `''` | 面向家长的一句话变化描述 | `"发现分数运算卡点"` |
 | `profileAppliedAt` | Date | 否 | — | 成功应用到综合诊断的时间 | `ISODate("2026-06-12T...")` |
@@ -217,10 +219,51 @@
 | `expectedQuestionCount` | Number | 验证试卷中该卡点的预期题数；当前验证卷默认每卡点 5 题 | `5` |
 | `attemptedQuestionCount` | Number | OCR 明确识别到已经作答的题数 | `3` |
 | `incorrectQuestionCount` | Number | 已识别作答中的错题数 | `0` |
-| `complete` | Boolean | 是否已识别全部预期作答 | `true` |
-| `allCorrect` | Boolean | 是否在完整识别前提下全部正确 | `true` |
+| `blankQuestionCount` | Number | 清晰可见但没有作答或明显空白的题数 | `0` |
+| `unclearQuestionCount` | Number | 模糊、遮挡或无法确认对错的题数 | `0` |
+| `missingQuestionCount` | Number | 预期题目中未形成有效证据的题数 | `0` |
+| `complete` | Boolean | 是否形成完整且可判定的作答证据；仅 passed/failed 为 true | `true` |
+| `allCorrect` | Boolean | 是否在完整、清晰前提下全部正确；仅 passed 为 true | `true` |
+| `evidenceStatus` | String | 证据状态：`passed` \| `failed` \| `incomplete` \| `unclear` \| `missing` | `"passed"` |
+| `evidenceReason` | String | 面向家长展示的证据说明 | `"5 道验证题均清晰作答且全部正确"` |
+
+> 改善判定规则：只有 `evidenceStatus === 'passed'` 的学习卡点，才允许进入 `improved`。空白、模糊、缺失或 AI 未返回证据，均不能判定为已改善。
+
+#### quality 子结构
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `level` | String | 质量等级：`high` \| `medium` \| `low` | `"medium"` |
+| `status` | String | 使用状态：`usable` \| `needs_review` \| `insufficient` | `"needs_review"` |
+| `score` | Number | 0-100 的规则评分 | `72` |
+| `reasons` | Array\<String\> | 需要复核或样本不足的原因 | `["部分照片分析失败", "样本较少"]` |
+| `sampleSummary` | String | 样本规模摘要 | `"2 张有效照片，3 道相关错题"` |
+
+> `quality.status === 'insufficient'` 的报告会展示给家长，但不会更新 `subjectProfiles.currentBottlenecks`，避免模糊或重复样本污染长期学习档案。
 
 **代码来源**：`uploadAndAnalyze/index.js` 创建初始记录；`analyzePhotos/index.js` 填充分析结果；`generateReportPDF/index.js` 回写 pdfFileId
+
+---
+
+### 2.3.1 reportFeedback 集合
+
+| 字段名 | 类型 | 必填 | 默认值 | 描述 | 示例值 |
+|--------|------|------|--------|------|--------|
+| `_id` | String | 是 | 自动生成 | 文档唯一标识 | `"feedback_xxx"` |
+| `_openid` | String | 是 | 当前 OPENID | 提交反馈的家长 openID | `"oPARENT"` |
+| `studentId` | String | 是 | — | 关联 students._id | `"stu_xxx"` |
+| `reportId` | String | 是 | — | 关联 reports._id | `"report_xxx"` |
+| `subject` | String | 是 | `''` | 学科标识 | `"math"` |
+| `type` | String | 是 | — | 反馈类型：`wrong_bottleneck` \| `wrong_question` \| `duplicate_photo` \| `unclear_result` \| `other` | `"wrong_bottleneck"` |
+| `targetType` | String | 是 | `'report'` | 反馈对象：`report` \| `bottleneck` \| `errorDetail` \| `photo` | `"bottleneck"` |
+| `targetId` | String | 否 | `''` | 具体对象 ID，例如 LP 编号、错题序号或 fileID | `"LP-001"` |
+| `reason` | String | 是 | — | 家长反馈原因（≤120 字） | `"这个卡点不准确"` |
+| `note` | String | 否 | `''` | 补充说明（≤500 字） | `"孩子只是抄错了数字"` |
+| `status` | String | 是 | `'submitted'` | 处理状态：`submitted` \| `reviewed` \| `ignored` | `"submitted"` |
+| `createdAt` | Date | 是 | new Date() | 提交时间 | `ISODate("2026-06-15T...")` |
+| `updatedAt` | Date | 是 | new Date() | 更新时间 | `ISODate("2026-06-15T...")` |
+
+**规则**：反馈只记录复核线索，不直接修改 `reports`、`subjectProfiles` 或学习记录派生结果。权限由 `reportFeedback` 云函数校验，owner 和 active viewer 均可提交。
 
 ---
 

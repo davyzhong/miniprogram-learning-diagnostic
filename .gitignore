@@ -13,6 +13,7 @@ project.private.config.json
 *.log
 npm-debug.log*
 .superpowers/
+tmp/
 
 # Environment / secrets
 .env

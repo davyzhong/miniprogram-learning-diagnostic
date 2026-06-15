@@ -33,6 +33,9 @@ function normalizeVerificationEvidence(items) {
       lpCode: cleanText(item.lpCode, 30),
       attemptedQuestionCount: Math.max(0, Number(item.attemptedQuestionCount) || 0),
       incorrectQuestionCount: Math.max(0, Number(item.incorrectQuestionCount) || 0),
+      blankQuestionCount: Math.max(0, Number(item.blankQuestionCount) || 0),
+      unclearQuestionCount: Math.max(0, Number(item.unclearQuestionCount) || 0),
+      missingQuestionCount: Math.max(0, Number(item.missingQuestionCount) || 0),
     }))
 }
 

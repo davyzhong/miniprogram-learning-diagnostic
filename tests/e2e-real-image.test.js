@@ -6,8 +6,12 @@ const path = require('path');
 const { normalizePageResults } = require('../cloudfunctions/analyzeBatch/result-normalizer');
 const { compareBottlenecks, buildComparisonSummary } = require('../cloudfunctions/analyzePhotos/comparison');
 const { markDuplicatePages } = require('../cloudfunctions/analyzePhotos/photo-dedup');
+const {
+  loadRealImageCases,
+  validateRealImageCase,
+  writeRealImageReport
+} = require('./helpers/real-image-cases');
 
-const IMAGE_PATH = '/Users/qiming/.workbuddy/clipboard-images/clipboard-2026-06-11T13-56-02-458Z-61c3053b.jpg';
 const ENV_ID = 'cloud1-d6gneg68m5a7a3876';
 
 let tcb = null;
@@ -16,6 +20,7 @@ let aiResult = null;
 
 // 是否使用 Mock AI 数据（本地无 CloudBase 认证时使用）
 const USE_MOCK = process.argv.includes('--mock');
+const E2E_CASES = loadRealImageCases({ env: process.env, argv: process.argv.slice(2) })
 
 // 模拟 AI 返回数据（基于真实试卷：数学计算过关练）
 const MOCK_AI_RESPONSE = {
@@ -191,55 +196,79 @@ ${taxonomy.map(t => `- ${t.code}：${t.name}——${t.desc}`).join('\n')}
 }
 
 // ========== Test 1: 图片上传测试 ==========
-async function testUpload() {
-  logStep(1, '图片上传测试');
+async function testUpload(testCase) {
+  logStep(1, `图片上传测试 (${testCase.caseId})`);
   let allOk = true;
+
+  if (testCase.mock) {
+    logSubStep('使用 Mock 图片数据（跳过真实文件读取）');
+    const buffer = Buffer.from('mock-real-image-e2e');
+    const base64 = buffer.toString('base64');
+    logResult(true, 'Mock 图片数据已准备');
+    return {
+      files: [{
+        filePath: 'mock://math-diagnosis.jpg',
+        buffer,
+        base64,
+        mockFileID: `cloud://${ENV_ID}.mock/test/mock-math-diagnosis.jpg`,
+        sizeMB: '0.00'
+      }],
+      buffer,
+      base64,
+      mockFileID: `cloud://${ENV_ID}.mock/test/mock-math-diagnosis.jpg`,
+      sizeMB: '0.00'
+    };
+  }
 
   // 1.1 文件存在性
   logSubStep('检查图片文件是否存在');
-  const exists = fs.existsSync(IMAGE_PATH);
-  logResult(exists, `文件存在: ${IMAGE_PATH}`);
-  if (!exists) throw new Error('图片文件不存在，测试终止');
-  allOk = allOk && exists;
+  const files = testCase.filePaths.map((filePath, index) => {
+    const exists = fs.existsSync(filePath);
+    logResult(exists, `文件存在: ${filePath}`);
+    if (!exists) throw new Error(`图片文件不存在，测试终止: ${filePath}`);
+    allOk = allOk && exists;
 
-  // 1.2 文件大小
-  logSubStep('检查文件大小');
-  const stats = fs.statSync(IMAGE_PATH);
-  const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
-  const sizeOk = stats.size > 0 && stats.size < 20 * 1024 * 1024; // < 20MB
-  logResult(sizeOk, `文件大小: ${stats.size} bytes (${sizeMB} MB)，${sizeOk ? '符合要求' : '过大或为空'}`);
-  allOk = allOk && sizeOk;
+    logSubStep(`检查文件大小: ${path.basename(filePath)}`);
+    const stats = fs.statSync(filePath);
+    const sizeMB = (stats.size / 1024 / 1024).toFixed(2);
+    const sizeOk = stats.size > 0 && stats.size < 20 * 1024 * 1024;
+    logResult(sizeOk, `文件大小: ${stats.size} bytes (${sizeMB} MB)，${sizeOk ? '符合要求' : '过大或为空'}`);
+    allOk = allOk && sizeOk;
 
-  // 1.3 文件格式（读取文件头判断）
-  logSubStep('检查文件格式');
-  const buffer = fs.readFileSync(IMAGE_PATH);
-  const header = buffer.slice(0, 4);
-  const isJpeg = header[0] === 0xFF && header[1] === 0xD8;
-  const isPng = header[0] === 0x89 && header[1] === 0x50;
-  const formatOk = isJpeg || isPng;
-  logResult(formatOk, `文件格式: ${isJpeg ? 'JPEG' : isPng ? 'PNG' : '未知'}，${formatOk ? '有效' : '无效'}`);
-  allOk = allOk && formatOk;
+    logSubStep(`检查文件格式: ${path.basename(filePath)}`);
+    const buffer = fs.readFileSync(filePath);
+    const header = buffer.slice(0, 4);
+    const isJpeg = header[0] === 0xFF && header[1] === 0xD8;
+    const isPng = header[0] === 0x89 && header[1] === 0x50;
+    const formatOk = isJpeg || isPng;
+    logResult(formatOk, `文件格式: ${isJpeg ? 'JPEG' : isPng ? 'PNG' : '未知'}，${formatOk ? '有效' : '无效'}`);
+    allOk = allOk && formatOk;
 
-  // 1.4 模拟 fileID 生成
-  logSubStep('模拟云存储 fileID 生成');
-  const mockFileID = `cloud://${ENV_ID}.636c-${ENV_ID}-1441789686/test/${Date.now()}_${path.basename(IMAGE_PATH)}`;
-  const fileIdOk = mockFileID.startsWith(`cloud://${ENV_ID}`);
-  logResult(fileIdOk, `模拟 fileID: ${mockFileID}`);
-  allOk = allOk && fileIdOk;
+    const mockFileID = `cloud://${ENV_ID}.636c-${ENV_ID}-1441789686/test/${Date.now()}_${index + 1}_${path.basename(filePath)}`;
+    const fileIdOk = mockFileID.startsWith(`cloud://${ENV_ID}`);
+    logResult(fileIdOk, `模拟 fileID: ${mockFileID}`);
+    allOk = allOk && fileIdOk;
 
-  // 1.5 base64 编码（用于本地 AI 调用）
-  logSubStep('验证 Base64 编码');
-  const base64 = buffer.toString('base64');
-  const base64Ok = base64.length > 1000;
-  logResult(base64Ok, `Base64 长度: ${base64.length} chars，${base64Ok ? '有效' : '过短'}`);
-  allOk = allOk && base64Ok;
+    const base64 = buffer.toString('base64');
+    const base64Ok = base64.length > 1000;
+    logResult(base64Ok, `Base64 长度: ${base64.length} chars，${base64Ok ? '有效' : '过短'}`);
+    allOk = allOk && base64Ok;
+
+    return { filePath, buffer, base64, mockFileID, sizeMB };
+  });
 
   console.log(`\n  ${allOk ? '✅' : '❌'} Test 1 总结: ${allOk ? '全部通过' : '存在失败项'}`);
-  return { buffer, base64, mockFileID, sizeMB };
+  return {
+    files,
+    buffer: files[0].buffer,
+    base64: files[0].base64,
+    mockFileID: files[0].mockFileID,
+    sizeMB: files[0].sizeMB
+  };
 }
 
 // ========== Test 2: AI 解析错题测试 ==========
-async function testAIAnalysis(uploadData) {
+async function testAIAnalysis(uploadData, testCase) {
   logStep(2, USE_MOCK ? 'AI 解析错题测试 (Mock 模式)' : 'AI 解析错题测试 (CloudBase AI hy3-preview)');
 
   let parsed = null;
@@ -282,12 +311,14 @@ async function testAIAnalysis(uploadData) {
 
     // 2.3 调用 AI 分析
     logSubStep('调用 hy3-preview 模型分析图片');
-    const prompt = buildPrompt('math');
-    const dataUri = `data:image/jpeg;base64,${uploadData.base64}`;
+    const prompt = buildPrompt(testCase.subject || 'math');
 
     const content = [
       { type: 'text', text: prompt },
-      { type: 'image_url', image_url: { url: dataUri } },
+      ...uploadData.files.map(file => ({
+        type: 'image_url',
+        image_url: { url: `data:image/jpeg;base64,${file.base64}` }
+      })),
     ];
 
     let aiCallOk = false;
@@ -340,7 +371,7 @@ async function testAIAnalysis(uploadData) {
   let normalized = null;
   let normalizeOk = false;
   try {
-    normalized = normalizePageResults(parsed, 1); // 1 张图片
+    normalized = normalizePageResults(parsed, uploadData.files.length);
     normalizeOk = true;
     logResult(true, `标准化成功，共 ${normalized.pageResults.length} 页结果`);
   } catch (err) {
@@ -507,10 +538,13 @@ process.on('unhandledRejection', (err) => {
 });
 
 // ========== 主入口 ==========
-async function main() {
+async function runCase(testCase) {
+  const currentCase = validateRealImageCase(testCase);
   console.log('\n' + '='.repeat(60));
   console.log('  学习诊断系统 — 端到端真实图片测试');
-  console.log('  图片: 数学计算过关练试卷（教师红笔批改）');
+  console.log('  Case: ' + currentCase.caseId);
+  console.log('  学科/模式: ' + currentCase.subject + ' / ' + currentCase.mode);
+  console.log('  图片数量: ' + (currentCase.mock ? 'Mock' : currentCase.filePaths.length));
   console.log('  云环境: ' + ENV_ID);
   console.log('='.repeat(60));
 
@@ -519,14 +553,14 @@ async function main() {
   let reportOk = false;
 
   try {
-    uploadData = await testUpload();
+    uploadData = await testUpload(currentCase);
   } catch (err) {
     console.error('\n  ❌ Test 1 异常终止:', err.message);
-    process.exit(1);
+    return { caseId: currentCase.caseId, status: 'failed', stages: { upload: 'failed' }, error: err.message };
   }
 
   try {
-    aiData = await testAIAnalysis(uploadData);
+    aiData = await testAIAnalysis(uploadData, currentCase);
   } catch (err) {
     console.error('\n  ❌ Test 2 异常:', err.message);
   }
@@ -553,6 +587,29 @@ async function main() {
     console.log('     3. 在云开发控制台查看云函数日志，确认 AI 调用结果');
     console.log('     4. 如需本地调用 CloudBase AI，需配置 SecretId/SecretKey 或使用微信登录态');
   }
+
+  return {
+    caseId: currentCase.caseId,
+    status: uploadData && aiData && reportOk ? 'passed' : (uploadData ? 'skipped' : 'failed'),
+    subject: currentCase.subject,
+    mode: currentCase.mode,
+    fileCount: currentCase.mock ? 0 : currentCase.filePaths.length,
+    stages: {
+      upload: uploadData ? 'passed' : 'failed',
+      ai: aiData ? 'passed' : 'skipped',
+      report: reportOk ? 'passed' : (aiData ? 'failed' : 'skipped')
+    }
+  };
+}
+
+async function main() {
+  const results = [];
+  for (const testCase of E2E_CASES) {
+    results.push(await runCase(testCase));
+  }
+  const report = writeRealImageReport(results);
+  console.log(`\n  结构化测试报告: ${report.outputPath}`);
+  if (results.some(item => item.status === 'failed')) process.exit(1);
 }
 
 main().catch(err => {

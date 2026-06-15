@@ -29,6 +29,43 @@ function buildTrendSummary(bottlenecks = []) {
   return parts.length > 0 ? parts.join('，') : ''
 }
 
+function qualityViewOf(quality = {}) {
+  if (!quality || !quality.status) {
+    return {
+      hasQuality: false,
+      qualityLabel: '',
+      qualityClass: '',
+      qualityReasons: [],
+      qualitySampleSummary: ''
+    }
+  }
+
+  const map = {
+    usable: { label: '证据较充分', className: 'usable' },
+    needs_review: { label: '建议复核', className: 'needs-review' },
+    insufficient: { label: '样本不足', className: 'insufficient' }
+  }
+  const meta = map[quality.status] || map.needs_review
+  return {
+    hasQuality: true,
+    qualityLabel: meta.label,
+    qualityClass: meta.className,
+    qualityReasons: Array.isArray(quality.reasons) ? quality.reasons.slice(0, 2) : [],
+    qualitySampleSummary: quality.sampleSummary || ''
+  }
+}
+
+function evidenceStatusViewOf(status) {
+  const map = {
+    passed: { statusText: '已通过', statusClass: 'passed' },
+    failed: { statusText: '未通过', statusClass: 'failed' },
+    incomplete: { statusText: '证据不足', statusClass: 'incomplete' },
+    unclear: { statusText: '图像不清', statusClass: 'unclear' },
+    missing: { statusText: '证据缺失', statusClass: 'missing' }
+  }
+  return map[status] || map.missing
+}
+
 function buildReportView(report) {
   const isVerification = report.type === 'verification'
   const paperCodeText = paperCodeOf(report.linkedPaper || report.paper)
@@ -64,8 +101,14 @@ function buildReportView(report) {
   const errorDetailList = errorDetails.map((item, index) => ({
     ...item,
     expanded: false,
-    displayIndex: `${index + 1}.`
+    displayIndex: `${index + 1}.`,
+    feedbackTargetId: item.id || item._id || `${index + 1}`
   }))
+  const verificationEvidenceItems = (report.verificationEvidence || []).map(item => ({
+    ...item,
+    ...evidenceStatusViewOf(item.evidenceStatus || (item.complete && item.allCorrect ? 'passed' : 'missing'))
+  }))
+  const qualityView = qualityViewOf(report.quality)
 
   return {
     headline: report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断结果',
@@ -84,6 +127,7 @@ function buildReportView(report) {
     }),
     trendSummaryText: buildTrendSummary(bottlenecks),
     sourceImageCount: (report.imageFiles || report.imageFileIds || []).length,
+    ...qualityView,
     metricActions: {
       errorsUrl: buildTraceableUrl({ type: 'report-detail', id: report._id }),
       bottlenecksUrl: buildTraceableUrl({
@@ -107,6 +151,8 @@ function buildReportView(report) {
     bottleneckList,
     hasErrorDetails: errorDetails.length > 0,
     errorDetailList,
+    hasVerificationEvidence: verificationEvidenceItems.length > 0,
+    verificationEvidenceItems,
     improvedCount: isVerification
       ? bottlenecks.filter(item => item.status === 'improved').length
       : 0,

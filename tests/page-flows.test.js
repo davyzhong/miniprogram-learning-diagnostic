@@ -488,6 +488,35 @@ test('bottleneck center loads dashboard bottlenecks and filters by status', asyn
   assert.match(urls[1], /targetCode=LP-001/)
 })
 
+test('bottleneck center falls back to subject profiles when dashboard request times out', async () => {
+  const cloud = {
+    getStudentDashboard: async () => { throw new Error('studentData:getStudentDashboard 请求超时，请稍后重试') },
+    getSubjectProfiles: async studentId => {
+      assert.equal(studentId, 'student-1')
+      return [{
+        subject: 'math',
+        subjectName: '数学',
+        currentBottlenecks: [
+          { lpCode: 'LP-001', status: 'persisting', trend: 'persisting', weight: 80, evidenceCount: 3 }
+        ]
+      }]
+    }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/bottleneck-center/bottleneck-center.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({ studentId: 'student-1', studentName: encodeURIComponent('钟青羽') })
+
+  assert.equal(page.data.loading, false)
+  assert.equal(page.data.stats.totalCount, 1)
+  assert.equal(page.data.filteredBottlenecks[0].displayName, '计算基础')
+  assert.equal(page.data.filteredBottlenecks[0].statusBadgeText, '持续观察')
+  assert.equal(wx.calls.some(call => call.name === 'showToast' && call.payload.title === '学习卡点加载失败'), false)
+})
+
 test('bottleneck detail builds a focused evidence workbench without repetitive report and paper lists', async () => {
   const cloud = {
     getSubjectDashboard: async (studentId, subject) => {
@@ -1910,6 +1939,158 @@ test('report loads diagnosis data and toggles error details', async () => {
   assert.equal(page.data.pendingCount, 1)
   page.onToggleError({ currentTarget: { dataset: { index: 0 } } })
   assert.equal(page.data.errorDetailList[0].expanded, true)
+})
+
+test('report falls back to direct report read when detail cloud function fails', async () => {
+  let directReportRead = false
+  const cloud = {
+    getReportDetail: async () => {
+      throw new Error('detail unavailable')
+    },
+    getReport: async reportId => {
+      directReportRead = true
+      return {
+        _id: reportId,
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        summary: '发现计算基础卡点',
+        totalErrors: 18,
+        createdAt: '2026-06-14T14:53:53.804Z',
+        imageFiles: Array.from({ length: 9 }, (_, index) => ({ fileID: `cloud://photo-${index + 1}` })),
+        bottlenecks: [
+          { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', errorCount: 14 },
+          { lpCode: 'LP-008', lpName: '审题理解', errorCount: 3 },
+          { lpCode: 'LP-010', lpName: '应用建模', errorCount: 1 }
+        ],
+        errorDetails: [{ questionContent: '38 × 24' }]
+      }
+    },
+    getSubjectProfile: async () => ({ pendingBottlenecks: [{ lpCode: 'LP-001' }] })
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '2026年6月14日 22:53' },
+      './report-presenter': require('../miniprogram/pages/report/report-presenter')
+    }
+  })
+
+  await page.loadReport('report-real')
+
+  assert.equal(directReportRead, true)
+  assert.equal(page.data.report._id, 'report-real')
+  assert.equal(page.data.report.totalErrors, 18)
+  assert.equal(page.data.bottleneckCount, 3)
+  assert.equal(page.data.sourceImageCount, 9)
+  assert.equal(page.data.hasErrorDetails, true)
+  assert.equal(wx.calls.some(call => call.name === 'showToast' && call.payload.title === '加载失败'), false)
+})
+
+test('report still renders when feedback loading fails', async () => {
+  const cloud = {
+    getReportDetail: async () => ({
+      permissions: { canView: true },
+      report: {
+        _id: 'report-1',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        summary: '发现审题理解卡点',
+        totalErrors: 3,
+        createdAt: '2026-06-14T14:53:53.804Z',
+        imageFiles: [{ fileID: 'cloud://photo-1' }],
+        bottlenecks: [{ lpCode: 'LP-008', lpName: '审题理解', errorCount: 3 }],
+        errorDetails: [{ questionContent: '应用题漏看条件' }]
+      }
+    }),
+    getReportFeedback: async () => {
+      throw new Error('feedback unavailable')
+    },
+    getSubjectDashboard: async () => ({ profile: { pendingBottlenecks: [{ lpCode: 'LP-008' }] } })
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '2026年6月14日 22:53' },
+      './report-presenter': require('../miniprogram/pages/report/report-presenter')
+    }
+  })
+
+  await page.loadReport('report-1')
+
+  assert.equal(page.data.report.totalErrors, 3)
+  assert.equal(page.data.bottleneckCount, 1)
+  assert.equal(page.data.sourceImageCount, 1)
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.feedbackItems)), [])
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.feedbackByTarget)), {})
+  assert.equal(wx.calls.some(call => call.name === 'showToast' && call.payload.title === '加载失败'), false)
+})
+
+test('report page submits parent feedback and marks the target as submitted', async () => {
+  let feedbackPayload = null
+  const cloud = {
+    getReportDetail: async () => ({
+      permissions: { canView: true },
+      feedback: [],
+      report: {
+        _id: 'report-1',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        createdAt: '2026-06-11T10:00:00Z',
+        bottlenecks: [{ lpCode: 'LP-001', errorCount: 1 }],
+        errorDetails: [{ questionContent: '1+1' }]
+      }
+    }),
+    getSubjectDashboard: async () => ({ profile: { pendingBottlenecks: [] } }),
+    createReportFeedback: async payload => {
+      feedbackPayload = payload
+      return { feedbackId: 'feedback-1' }
+    },
+    getReportFeedback: async () => [{
+      _id: 'feedback-1',
+      targetType: 'bottleneck',
+      targetId: 'LP-001',
+      type: 'wrong_bottleneck'
+    }]
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '2026年6月11日 10:00' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {} }) },
+      './report-presenter': require('../miniprogram/pages/report/report-presenter')
+    }
+  })
+
+  await page.loadReport('report-1')
+  page.onOpenFeedback({ currentTarget: { dataset: { targetType: 'bottleneck', targetId: 'LP-001' } } })
+  page.onFeedbackTypeTap({ currentTarget: { dataset: { type: 'wrong_bottleneck' } } })
+  page.onFeedbackReasonInput({ detail: { value: '这个卡点不准确' } })
+  page.onFeedbackNoteInput({ detail: { value: '孩子只是抄错了数字' } })
+  await page.onSubmitFeedback()
+
+  assert.deepEqual(JSON.parse(JSON.stringify(feedbackPayload)), {
+    reportId: 'report-1',
+    type: 'wrong_bottleneck',
+    targetType: 'bottleneck',
+    targetId: 'LP-001',
+    reason: '这个卡点不准确',
+    note: '孩子只是抄错了数字'
+  })
+  assert.equal(page.data.feedbackDialog.visible, false)
+  assert.equal(page.data.feedbackByTarget['bottleneck:LP-001'].submitted, true)
+  assert.ok(wx.calls.some(call => call.name === 'showToast' && /已记录/.test(call.payload.title)))
 })
 
 test('report co-parent can generate paper and retry analysis', async () => {

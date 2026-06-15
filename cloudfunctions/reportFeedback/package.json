@@ -1,0 +1,9 @@
+{
+  "name": "reportFeedback",
+  "version": "1.0.0",
+  "description": "收集家长对诊断报告、学习卡点、错题和照片的纠错反馈",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

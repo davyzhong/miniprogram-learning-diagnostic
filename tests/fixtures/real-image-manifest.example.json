@@ -1,0 +1,31 @@
+{
+  "cases": [
+    {
+      "caseId": "math-single-clear-page",
+      "subject": "math",
+      "mode": "diagnosis",
+      "filePaths": ["/absolute/private/path/math-clear-page.jpg"],
+      "expectedMinPages": 1,
+      "expectedKeywords": ["计算", "错题"]
+    },
+    {
+      "caseId": "math-multi-page-diagnosis",
+      "subject": "math",
+      "mode": "diagnosis",
+      "filePaths": [
+        "/absolute/private/path/math-page-1.jpg",
+        "/absolute/private/path/math-page-2.jpg"
+      ],
+      "expectedMinPages": 2,
+      "expectedKeywords": ["数学"]
+    },
+    {
+      "caseId": "math-verification-feedback",
+      "subject": "math",
+      "mode": "verification",
+      "filePaths": ["/absolute/private/path/math-verification-answer.jpg"],
+      "expectedMinPages": 1,
+      "expectedKeywords": ["验证"]
+    }
+  ]
+}

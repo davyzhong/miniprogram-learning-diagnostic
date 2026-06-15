@@ -1,0 +1,76 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const root = path.resolve(__dirname, '..')
+
+function read(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), 'utf8')
+}
+
+function exists(relativePath) {
+  return fs.existsSync(path.join(root, relativePath))
+}
+
+const REQUIRED_CLOUD_FUNCTIONS = [
+  'uploadAndAnalyze',
+  'analyzePhotos',
+  'analyzeBatch',
+  'generatePaper',
+  'generateReportPDF',
+  'getAnalysisProgress',
+  'studentData',
+  'studentAccess',
+  'reportFeedback'
+]
+
+test('deployable cloud functions have required manifests and timeout configs', () => {
+  for (const name of REQUIRED_CLOUD_FUNCTIONS) {
+    assert.ok(exists(`cloudfunctions/${name}`), `${name} folder should exist`)
+    assert.ok(exists(`cloudfunctions/${name}/package.json`), `${name} should declare package.json`)
+    assert.ok(exists(`cloudfunctions/${name}/config.json`), `${name} should declare config.json`)
+
+    const pkg = JSON.parse(read(`cloudfunctions/${name}/package.json`))
+    const config = JSON.parse(read(`cloudfunctions/${name}/config.json`))
+
+    assert.equal(pkg.name, name, `${name} package name should match folder`)
+    assert.equal(typeof config.timeout, 'number', `${name} timeout should be numeric`)
+    assert.ok(config.timeout > 0 && config.timeout <= 60, `${name} timeout should be within CloudBase limit`)
+  }
+})
+
+test('frontend cloud data layer exposes wrappers for deployable learning functions', () => {
+  const source = read('miniprogram/utils/cloud.js')
+  const expectedWrappers = [
+    'callUploadAndAnalyze',
+    'callAnalyzePhotos',
+    'callGeneratePaper',
+    'callGenerateReportPDF',
+    'getAnalysisProgress',
+    'getAccessibleStudents',
+    'getStudentDashboard',
+    'getSubjectDashboard',
+    'getLearningTimeline',
+    'cleanupStaleLearningRecords',
+    'getReportDetail',
+    'getPaperDetail',
+    'createReportFeedback',
+    'getReportFeedback'
+  ]
+
+  for (const wrapper of expectedWrappers) {
+    assert.match(source, new RegExp(`async function ${wrapper}\\b`), `${wrapper} should be implemented`)
+    assert.match(source, new RegExp(`\\b${wrapper},`), `${wrapper} should be exported`)
+  }
+})
+
+test('deployment workflow is documented and exposed as a package script', () => {
+  const pkg = JSON.parse(read('package.json'))
+
+  assert.ok(exists('docs/DEPLOYMENT.md'), 'deployment guide should exist')
+  assert.match(read('docs/DEPLOYMENT.md'), /微信开发者工具 CLI/)
+  assert.match(read('docs/DEPLOYMENT.md'), /uploadAndAnalyze/)
+  assert.equal(pkg.scripts['check:deployment'], 'node --test tests/deployment-readiness.test.js')
+  assert.match(pkg.scripts.test, /tests\/deployment-readiness\.test\.js/)
+})

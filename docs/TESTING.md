@@ -1,6 +1,6 @@
 # 测试指南（TESTING）
 
-> 更新日期：2026-06-14
+> 更新日期：2026-06-15
 > 适用对象：本项目的开发者与贡献者
 > 配套文档：`docs/TEST_MATRIX.md`、`SETUP.md`、`docs/TROUBLESHOOTING.md`
 
@@ -28,9 +28,11 @@
 
 | 命令 | 用途 | 备注 |
 |------|------|------|
-| `npm test` | 运行常规自动化测试 | 显式运行 26 个常规测试文件，不包含真实图片 E2E |
+| `npm test` | 运行常规自动化测试 | 串行运行 29 个常规测试文件，不包含真实图片 E2E |
 | `npm run test:coverage` | 运行常规测试并收集覆盖率 | 使用 V8 原生覆盖，输出到 stdout |
 | `npm run test:e2e-real-image` | 单独运行真实图片端到端脚本 | 依赖本机图片路径和 CloudBase 环境，发布前人工验收使用 |
+| `npm run test:real-data-smoke` | 使用微信开发者工具打开真实数据页面 | 需设置 `REAL_DATA_STUDENT_ID`，不提交截图产物 |
+| `npm run check:deployment` | 检查云函数部署清单和前端封装 | 发布前确认没有漏部署函数 |
 | `npm run check` | 静态语法检查 | 执行 `scripts/check-js.js`，扫描当前全部 JS 文件 |
 | `npm run verify` | 完整本地验证 | `npm test && npm run check`，提交前必跑 |
 
@@ -48,6 +50,21 @@ node --inspect-brk --test tests/page-flows.test.js
 
 # 查看覆盖率详情（HTML 报告需额外工具，可结合 c8）
 npm run test:coverage
+
+# 真实图片 E2E：离线 mock 模式
+npm run test:e2e-real-image -- --mock
+
+# 真实图片 E2E：单张私有图片
+REAL_IMAGE_PATH=/path/to/photo.jpg npm run test:e2e-real-image
+
+# 真实图片 E2E：多案例 manifest
+REAL_IMAGE_MANIFEST=/path/to/private-manifest.json npm run test:e2e-real-image
+
+# 真实数据烟测：打开指定学生的核心页面并保存截图/结果
+REAL_DATA_STUDENT_ID=student-id REAL_DATA_STUDENT_NAME=钟青羽 npm run test:real-data-smoke
+
+# 真实数据烟测：只检查部分页面
+REAL_DATA_STUDENT_ID=student-id REAL_DATA_SMOKE_ROUTES=profile,bottlenecks npm run test:real-data-smoke
 ```
 
 注意：`tests/e2e-real-image.test.js` 不进入 `npm test`，避免普通开发验证依赖本机图片路径或云端 AI 凭据。
@@ -65,27 +82,89 @@ npm run test:coverage
 | `contracts.test.js` | 跨模块契约、命名一致性、已修复缺陷回归保护 | 39 |
 | `coverage-gap.test.js` | 历史修复的回归场景、轮询器/数据层边界分支 | 7 |
 | `data-layer.test.js` | `miniprogram/utils/cloud.js` 统一数据访问层 | 8 |
+| `deployment-readiness.test.js` | 云函数部署清单、配置文件和前端云函数封装 | 3 |
 | `e2e-real-image.test.js` | 端到端真实图片链路脚本，单独运行 | 1（含云端条件步骤） |
 | `generate-paper-pdf.test.js` | 验证试卷 PDF 中文字体、分页和答案页回归 | 4 |
 | `index-presenter.test.js` | 孩子档案视图模型、家庭工作台卡片、样本覆盖、重点提示、卡点透出和空态 | 9 |
 | `learning-records.test.js` | 学习记录四级分类、验证卷编号和卡点名称共享规则 | 10 |
-| `page-flows.test.js` | 主要页面的主流程、首页 0/1/多孩子分流、孩子档案页、错误恢复、导航跳转 | 59 |
+| `page-flows.test.js` | 主要页面的主流程、首页 0/1/多孩子分流、孩子档案页、错误恢复、导航跳转 | 60 |
 | `parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
 | `photo-dedup.test.js` | OCR 摘要去重算法（含完全重复分支） | 3 |
 | `poller.test.js` | 通用轮询器与分析轮询包装 | 6 |
 | `project-integrity.test.js` | 页面四件套完整性、WXML 事件绑定匹配、品牌资产完整性 | 3 |
 | `profile-summary.test.js` | 当前综合诊断状态规则 | 6 |
-| `report-presenter.test.js` | 报告视图预计算与展示文本 | 9 |
+| `real-data-smoke-config.test.js` | 真实数据烟测配置、页面路由和输出目录解析 | 5 |
+| `real-image-config.test.js` | 真实图片 E2E 参数、manifest 和临时报告输出 | 5 |
+| `report-feedback.test.js` | 家长反馈云函数权限、参数白名单和列表读取 | 3 |
+| `report-presenter.test.js` | 报告视图预计算、质量标签和验证证据状态 | 11 |
+| `report-quality.test.js` | 报告质量等级、样本不足和复核规则 | 4 |
 | `skills-p0.test.js` | P0 Skill 能力内核，覆盖诊断、报告、卡点、验证卷、验证反馈、时间线 | 8 |
 | `student-access.test.js` | `studentAccess` 家长成员、邀请、加入、移除权限和首次建表兜底 | 8 |
 | `student-data-access.test.js` | `studentData` 共享家长学习数据访问 | 6 |
 | `subject-home-presenter.test.js` | 学科工作台视图模型 | 3 |
 | `time-aware-bottlenecks.test.js` | 时间化学习卡点趋势和权重 | 5 |
 | `util.test.js` | 时间、卡点短名称等纯工具函数 | 11 |
-| `verification-evidence.test.js` | 验证试卷证据完整性 | 2 |
-| **合计** | | **261 常规用例 + 1 个真实图片 E2E 脚本** |
+| `verification-evidence.test.js` | 验证试卷证据完整性和证据状态规则 | 3 |
+| **合计** | | **以 `npm test` 输出为准；另有真实图片 E2E 与真实数据烟测脚本** |
 
 > 注：常规测试以 `npm test` 输出为准；真实图片 E2E 由于依赖本机文件和云端环境，始终单独运行。
+
+### 3.1 真实图片 E2E 常态化
+
+真实学生试卷图片属于私有样本，**不提交仓库**。脚本支持三种入口：
+
+1. `--mock`：本地离线回归，不依赖图片和 CloudBase 凭据。
+2. `REAL_IMAGE_PATH`：单图快速验证。
+3. `REAL_IMAGE_MANIFEST`：多案例回归，适合每次调整 Prompt、去重、证据判定后复测。
+
+manifest 示例见 `tests/fixtures/real-image-manifest.example.json`：
+
+```json
+{
+  "cases": [
+    {
+      "caseId": "math-single-clear-page",
+      "subject": "math",
+      "mode": "diagnosis",
+      "filePaths": ["/absolute/private/path/math-page-1.jpg"],
+      "expectedMinPages": 1,
+      "expectedKeywords": ["计算", "分数"]
+    }
+  ]
+}
+```
+
+运行后会生成本地临时报告 `tmp/e2e-real-image-report.json`，该目录已加入 `.gitignore`。路径错误、manifest 为空、非绝对路径都会显式报错，不会静默通过。
+
+### 3.2 真实数据烟测
+
+真实数据烟测用于跳过真机确认时的开发者工具验证。它不会上传图片，也不会提交任何真实学生数据，只会打开核心页面、保存截图并生成本地 JSON 结果。
+
+必填环境变量：
+
+- `REAL_DATA_STUDENT_ID`：要烟测的学生 `_id`。
+
+可选环境变量：
+
+- `REAL_DATA_STUDENT_NAME`：用于页面路由里的显示名。
+- `REAL_DATA_SMOKE_ROUTES`：逗号分隔页面 key。默认 `home,profile,subjectMath,bottlenecks,records,verification`。
+- `REAL_DATA_SMOKE_OUTPUT_DIR`：截图和 `results.json` 输出目录，默认 `tmp/real-data-smoke`。
+- `WECHAT_DEVTOOLS_CLI`：微信开发者工具 CLI 路径，默认 `/Applications/wechatwebdevtools.app/Contents/MacOS/cli`。
+
+示例：
+
+```bash
+REAL_DATA_STUDENT_ID=your-student-id \
+REAL_DATA_STUDENT_NAME=钟青羽 \
+npm run test:real-data-smoke
+```
+
+输出：
+
+- `tmp/real-data-smoke/results.json`
+- `tmp/real-data-smoke/*.png`
+
+这些产物只用于本机验收，`tmp/` 已加入 `.gitignore`。
 
 ## 4. 测试 Harness 使用指南
 

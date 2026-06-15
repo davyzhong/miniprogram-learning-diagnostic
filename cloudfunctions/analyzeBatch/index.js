@@ -48,7 +48,7 @@ function buildPrompt(subject, verificationPlan = []) {
   const taxonomy = bugTaxonomy[subject] || bugTaxonomy.math;
 
   const verificationInstruction = verificationPlan.length > 0
-    ? `\n## 验证试卷判定\n这是验证试卷。请按卡点统计清晰可见且已经作答的题目数量和其中的错题数量：\n${verificationPlan.map(item => `- ${item.lpCode}：整份试卷预期 ${item.expectedQuestionCount} 道`).join('\n')}\n未作答、被遮挡或无法确认的题目不得计入 attemptedQuestionCount。`
+    ? `\n## 验证试卷判定\n这是验证试卷。请按卡点统计证据质量，不要把不确定情况当成已改善：\n${verificationPlan.map(item => `- ${item.lpCode}：整份试卷预期 ${item.expectedQuestionCount} 道`).join('\n')}\n- attemptedQuestionCount：清晰可见、已经作答、能够判断对错的题目数量\n- incorrectQuestionCount：attemptedQuestionCount 中明确答错的题目数量\n- blankQuestionCount：清晰可见但没有作答或明显空白的题目数量\n- unclearQuestionCount：被遮挡、模糊、拍摄不完整、无法判断答案是否正确的题目数量\n- missingQuestionCount：预期题目中未在图片中找到或无法归入以上类别的数量\n未作答、被遮挡、模糊或无法确认的题目不得计入 attemptedQuestionCount。`
     : '';
 
   return `你是一位资深${subjectName}教师，专门分析小学生的错题根因。
@@ -89,7 +89,10 @@ ${verificationInstruction}
       "verificationEvidence": [{
         "lpCode": "LP-001",
         "attemptedQuestionCount": 3,
-        "incorrectQuestionCount": 0
+        "incorrectQuestionCount": 0,
+        "blankQuestionCount": 0,
+        "unclearQuestionCount": 0,
+        "missingQuestionCount": 0
       }]
     }
   ]
@@ -106,7 +109,8 @@ ${taxonomy.map(t => `- ${t.code}：${t.name}——${t.desc}`).join('\n')}
 5. ocrSummary 应包含足够区分本页内容的信息，但不要逐字抄录整页
 6. ocrSummary 不要推断年级、学段或教材版本，只描述题目内容、学生作答和批改信息
 7. 非验证试卷的 verificationEvidence 返回空数组
-8. 返回纯JSON，不要有任何其他文字`;
+8. 验证试卷中，只有清晰作答且能够判断对错的题目才计入 attemptedQuestionCount；空白、模糊、缺失要分别计入 blankQuestionCount / unclearQuestionCount / missingQuestionCount
+9. 返回纯JSON，不要有任何其他文字`;
 }
 
 // ========== 调用 CloudBase AI（多模态） ==========

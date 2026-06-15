@@ -35,6 +35,27 @@ test('cloud function wrapper exposes backend errors and recognizes timeouts', as
   assert.equal(cloud.isTimeoutError(new Error('permission denied')), false)
 })
 
+test('cloud function wrapper annotates timeout errors with function and action context', async () => {
+  const db = createDatabase()
+  const cloud = loadCloudUtil({
+    cloud: {
+      database: () => db,
+      callFunction: async () => { throw new Error('timeout') }
+    }
+  })
+
+  try {
+    await cloud.getStudentDashboard('student-1')
+    assert.fail('expected timeout')
+  } catch (error) {
+    assert.match(error.message, /studentData:getStudentDashboard/)
+    assert.match(error.message, /超时|timeout/i)
+    assert.equal(error.functionName, 'studentData')
+    assert.equal(error.action, 'getStudentDashboard')
+    assert.equal(cloud.isTimeoutError(error), true)
+  }
+})
+
 test('temporary cloud URLs are deduplicated and fetched in platform-sized batches', async () => {
   const db = createDatabase()
   const batches = []
