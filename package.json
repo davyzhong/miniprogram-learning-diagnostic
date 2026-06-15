@@ -13,6 +13,7 @@
     "metrics:student": "node scripts/learning-metrics.js",
     "check": "node scripts/check-js.js",
     "check:deployment": "node --test tests/deployment-readiness.test.js",
+    "release:check": "npm run check:deployment && npm run verify",
     "verify": "npm test && npm run check"
   }
 }
