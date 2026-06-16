@@ -735,6 +735,9 @@ test('English subject home loads vocabulary summary and opens English practice',
   assert.equal(page.data.primaryTask.actionType, 'englishPractice')
   assert.equal(page.data.englishVocabularyStats.totalWords, 320)
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/english-practice\/english-practice/)
+
+  page.onToolTap({ currentTarget: { dataset: { key: 'englishDictation' } } })
+  assert.match(wx.calls.filter(call => call.name === 'navigateTo').at(-1).payload.url, /pages\/english-dictation\/english-dictation/)
 })
 
 test('English subject home imports Zhong Qingyu personal vocabulary seed when empty', async () => {
@@ -1016,6 +1019,64 @@ test('English practice page submits AI recognition attempts and requeues wrong w
   assert.equal(page.data.queue.length, 2)
   assert.equal(page.data.currentIndex, 1)
   assert.equal(page.data.currentItem.retryCount, 1)
+})
+
+test('English dictation page creates a paper session and uploads answer photos', async () => {
+  const uploaded = []
+  const submitted = []
+  const cloud = {
+    generateEnglishPaperDictationSession: async payload => ({
+      sessionId: 'paper-session-1',
+      functionType: 'spelling',
+      wordItems: Array.from({ length: 20 }, (_, index) => ({
+        queueKey: `word-${index + 1}:0`,
+        wordId: `word-${index + 1}`,
+        word: `word${index + 1}`,
+        meanings: [`词义${index + 1}`],
+        promptType: index % 2 === 0 ? 'chinese' : 'english'
+      })),
+      request: payload
+    }),
+    uploadPhoto: async (filePath, studentId, batchId) => {
+      uploaded.push({ filePath, studentId, batchId })
+      return `cloud://${filePath.split('/').pop()}`
+    },
+    submitEnglishDictationPhoto: async payload => {
+      submitted.push(payload)
+      return { success: true, analysisStatus: 'pending_analysis', photoFileIds: payload.photoFileIds }
+    }
+  }
+  const wx = createWxMock({
+    chooseMedia: options => options.success({
+      tempFiles: [
+        { tempFilePath: '/tmp/dictation-1.jpg', size: 100 },
+        { tempFilePath: '/tmp/dictation-2.jpg', size: 120 }
+      ]
+    })
+  })
+  const { page } = loadPage('miniprogram/pages/english-dictation/english-dictation.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({
+    studentId: 'student-1',
+    studentName: encodeURIComponent('钟青羽'),
+    grade: '6'
+  })
+  page.onNextTap()
+  await page.onChoosePhotoTap()
+
+  assert.equal(page.data.sessionId, 'paper-session-1')
+  assert.equal(page.data.queue.length, 20)
+  assert.equal(page.data.currentIndex, 1)
+  assert.equal(page.data.currentItem.word, 'word2')
+  assert.equal(uploaded.length, 2)
+  assert.equal(uploaded[0].studentId, 'student-1')
+  assert.equal(submitted[0].sessionId, 'paper-session-1')
+  assert.deepEqual(JSON.parse(JSON.stringify(submitted[0].photoFileIds)), ['cloud://dictation-1.jpg', 'cloud://dictation-2.jpg'])
+  assert.equal(page.data.analysisStatus, 'pending_analysis')
+  assert.equal(page.data.uploadedPhotoCount, 2)
 })
 
 test('upload selection warns about duplicate filenames but keeps the images', () => {

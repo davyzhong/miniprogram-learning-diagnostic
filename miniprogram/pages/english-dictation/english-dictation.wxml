@@ -1,0 +1,49 @@
+<view class="page">
+  <view class="hero">
+    <view class="back" bindtap="onBack">‹</view>
+    <view class="hero-copy">
+      <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
+      <text class="title">纸面听写</text>
+      <text class="subtitle">AI 逐个读词，孩子写在纸上，完成后拍照上传。</text>
+    </view>
+  </view>
+
+  <view class="state-card" wx:if="{{loading}}">
+    <text class="state-title">正在准备听写词</text>
+    <text class="state-desc">优先抽取拼写薄弱、待复测和未听写的单词。</text>
+  </view>
+
+  <view class="state-card error" wx:elif="{{error}}">
+    <text class="state-title">暂时无法继续</text>
+    <text class="state-desc">{{error}}</text>
+  </view>
+
+  <view wx:else class="dictation-wrap">
+    <view class="progress-card">
+      <text class="progress-label">当前词</text>
+      <text class="progress-value">{{currentIndex + 1}} / {{queue.length}}</text>
+    </view>
+
+    <view class="prompt-card">
+      <view class="prompt-top">
+        <text class="prompt-pill">{{currentItem.promptTypeText}}</text>
+      </view>
+      <text class="prompt-title">{{currentItem.promptText}}</text>
+      <text class="prompt-desc">请在纸上完整写出英文单词，保留修改痕迹和拼写过程。</text>
+      <button class="play-btn" bindtap="onPlayPromptTap">播放提示</button>
+      <text class="voice-hint" wx:if="{{voiceUnavailableText}}">{{voiceUnavailableText}}</text>
+    </view>
+
+    <view class="nav-row">
+      <button class="secondary-btn" bindtap="onPreviousTap" disabled="{{currentIndex === 0}}">上一个</button>
+      <button class="secondary-btn" bindtap="onNextTap" disabled="{{currentIndex + 1 >= queue.length}}">下一个</button>
+    </view>
+
+    <view class="upload-card">
+      <text class="upload-title">完成后上传听写纸</text>
+      <text class="upload-desc">上传后会先保存为本次听写证据，下一阶段会接入 OCR 判定拼写结果。</text>
+      <button class="primary-btn" loading="{{uploading}}" bindtap="onChoosePhotoTap">拍照上传</button>
+      <text class="upload-status" wx:if="{{uploadedPhotoCount > 0}}">已上传 {{uploadedPhotoCount}} 张 · {{analysisStatus}}</text>
+    </view>
+  </view>
+</view>

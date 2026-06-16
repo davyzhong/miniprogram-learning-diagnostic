@@ -100,6 +100,7 @@ test('English workbench uses vocabulary summary as the primary learning asset', 
   assert.equal(view.englishVocabularyStats.overallMasteredCount, 70)
   assert.deepEqual(view.englishQuickStats.map(item => item.label), ['今日待练', '已熟悉', '拼写薄弱', '真正掌握'])
   assert.ok(view.tools.some(item => item.key === 'englishPractice'))
+  assert.ok(view.tools.some(item => item.key === 'englishDictation'))
   assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
 })
 

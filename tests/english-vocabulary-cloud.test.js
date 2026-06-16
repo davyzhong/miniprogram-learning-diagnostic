@@ -385,3 +385,75 @@ test('submitting English recognition attempts updates only familiarity progress'
   })
   assert.equal(db.dump('englishPracticeSessions')[0].attempts.length, 1)
 })
+
+test('English paper dictation sessions generate spelling words without updating progress', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: Array.from({ length: 24 }, (_, index) => ({
+      _id: `word-${index + 1}`,
+      studentId: 'student-1',
+      word: `word${String(index + 1).padStart(2, '0')}`,
+      meanings: [`词义${index + 1}`],
+      familiarity: { status: index < 3 ? 'mastered' : 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '', lastDirection: '' },
+      spelling: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '' },
+      overallMastery: index < 3 ? 'partial' : 'untested'
+    })),
+    englishPracticeSessions: []
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'generatePaperDictationSession',
+    studentId: 'student-1',
+    today: '2026-06-16'
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.wordItems.length, 20)
+  assert.equal(result.wordItems.filter(item => item.promptType === 'chinese').length, 10)
+  assert.equal(result.wordItems.filter(item => item.promptType === 'english').length, 10)
+  const session = db.dump('englishPracticeSessions')[0]
+  assert.equal(session.functionType, 'spelling')
+  assert.equal(session.type, 'word-dictation-paper')
+  assert.equal(session.analysisStatus, 'waiting_upload')
+  assert.deepEqual(session.photoFileIds, [])
+  assert.equal(db.dump('studentEnglishWords')[0].spelling.status, 'untested')
+})
+
+test('submitting English dictation photos stores evidence without judging spelling yet', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [{
+      _id: 'word-1',
+      studentId: 'student-1',
+      word: 'science',
+      spelling: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '' }
+    }],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      functionType: 'spelling',
+      type: 'word-dictation-paper',
+      status: 'in_progress',
+      analysisStatus: 'waiting_upload',
+      photoFileIds: [],
+      wordItems: [{ queueKey: 'word-1:0:0', wordId: 'word-1', word: 'science' }]
+    }]
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'submitDictationPhoto',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    photoFileIds: ['cloud://photo-1', 'not-cloud', 'cloud://photo-2']
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.analysisStatus, 'pending_analysis')
+  const session = db.dump('englishPracticeSessions')[0]
+  assert.equal(session.status, 'submitted')
+  assert.equal(session.analysisStatus, 'pending_analysis')
+  assert.deepEqual(session.photoFileIds, ['cloud://photo-1', 'cloud://photo-2'])
+  assert.equal(db.dump('studentEnglishWords')[0].spelling.status, 'untested')
+})

@@ -587,6 +587,25 @@ function buildRecognitionItems(words = [], options = {}) {
   })
 }
 
+function buildPaperDictationItems(words = [], options = {}) {
+  const limit = Math.min(30, Math.max(1, Number(options.limit) || 20))
+  return selectWordsForDimension(words, {
+    ...options,
+    dimension: 'spelling',
+    limit
+  }).map((item, index) => ({
+    queueKey: `${item._id || item.word}:${index}:0`,
+    wordId: item._id || '',
+    word: item.word || '',
+    meanings: item.meanings || [],
+    unit: item.unit || '',
+    familiarityStatus: item.familiarity && item.familiarity.status || 'untested',
+    spellingStatus: item.spelling && item.spelling.status || 'untested',
+    promptType: index % 2 === 0 ? 'chinese' : 'english',
+    retryCount: 0
+  }))
+}
+
 function applyWordDictationAttempt(word = {}, attempt = {}) {
   const status = attempt.status || (attempt.judgment && attempt.judgment.status)
   if (status === 'unclear') return { ...word }
@@ -613,6 +632,7 @@ module.exports = {
   selectPracticeItems,
   buildDictationItems,
   buildRecognitionItems,
+  buildPaperDictationItems,
   judgeSpokenWord,
   judgeMeaningAnswer,
   judgeRecognitionAnswer,

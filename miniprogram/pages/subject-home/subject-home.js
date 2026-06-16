@@ -28,6 +28,9 @@ Page({
     nextAction: '',
     currentBottlenecks: [],
     recentChanges: [],
+    englishVocabularyStats: null,
+    englishQuickStats: [],
+    hasEnglishVocabulary: false,
     hasDiagnosis: false,
     isFirstUse: true,
     permissions: {},
@@ -84,6 +87,7 @@ Page({
           const p = dashboard.profile
           this._profile = p || {}
           this._reports = dashboard.reports || []
+          await this.loadEnglishVocabulary()
           const permissions = dashboard.permissions || {}
           this.setData({
             permissions,
@@ -114,11 +118,23 @@ Page({
       : []
     this._profile = p || {}
     this._reports = reports || []
+    await this.loadEnglishVocabulary()
     this.setData({
       analysisStatus: p && p.analysisStatus || '',
       currentAnalysisId: p && p.currentAnalysisId || '',
     })
     this.applyDashboardView()
+  },
+
+  async loadEnglishVocabulary() {
+    this._englishVocabulary = null
+    const { studentId, subject } = this.data
+    if (subject !== 'english' || typeof cloud.getEnglishVocabularySummary !== 'function') return
+    try {
+      this._englishVocabulary = await cloud.getEnglishVocabularySummary(studentId)
+    } catch (error) {
+      console.warn('英语词库摘要读取失败，继续展示学科工作台', error && error.message ? error.message : error)
+    }
   },
 
   // ========== 加载历史记录 ==========
@@ -137,6 +153,8 @@ Page({
   applyDashboardView() {
     const view = buildSubjectHomeView(this._profile || {}, this._reports || [], formatRelativeTime, {
       subjectName: this.data.subjectName,
+      subject: this.data.subject,
+      englishVocabulary: this._englishVocabulary,
       permissions: this.data.permissions || {}
     })
     this.setData({ ...view, records: view.recentChanges })
@@ -300,9 +318,63 @@ Page({
       this.onUploadHistoryTap()
       return
     }
+    if (actionType === 'englishPractice') {
+      this.navigateToEnglishPractice()
+      return
+    }
+    if (actionType === 'englishDictation') {
+      this.navigateToEnglishDictation()
+      return
+    }
+    if (actionType === 'importVocabulary') {
+      this.importEnglishVocabulary()
+      return
+    }
     if (actionType === 'latestReport' && payload.reportId) {
       wx.navigateTo({ url: `/pages/report/report?id=${payload.reportId}` })
     }
+  },
+
+  async importEnglishVocabulary() {
+    if (!this.data.canWriteActions || this._importingEnglishVocabulary) return
+    if (typeof cloud.seedEnglishPersonalVocabulary !== 'function') {
+      wx.showToast({ title: '词库导入暂不可用', icon: 'none' })
+      return
+    }
+    this._importingEnglishVocabulary = true
+    wx.showLoading({ title: '正在导入词库' })
+    try {
+      const result = await cloud.seedEnglishPersonalVocabulary(this.data.studentId)
+      await this.loadProfile()
+      const imported = Number(result.importedWordCount) || 0
+      wx.hideLoading()
+      wx.showToast({
+        title: imported > 0 ? `已导入${imported}词` : '词库已是最新',
+        icon: 'success'
+      })
+    } catch (error) {
+      console.error('导入英语个人词库失败', error)
+      wx.hideLoading()
+      wx.showToast({ title: '导入失败，请重试', icon: 'none' })
+    } finally {
+      this._importingEnglishVocabulary = false
+    }
+  },
+
+  navigateToEnglishPractice() {
+    if (!this.data.canWriteActions) return
+    const { studentId, studentName, grade } = this.data
+    wx.navigateTo({
+      url: `/pages/english-practice/english-practice?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&grade=${grade || ''}`
+    })
+  },
+
+  navigateToEnglishDictation() {
+    if (!this.data.canWriteActions) return
+    const { studentId, studentName, grade } = this.data
+    wx.navigateTo({
+      url: `/pages/english-dictation/english-dictation?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&grade=${grade || ''}`
+    })
   },
 
   onAnalysisCardTap() {

@@ -12,6 +12,7 @@ const {
   selectPracticeItems,
   buildDictationItems,
   buildRecognitionItems,
+  buildPaperDictationItems,
   judgeSpokenWord,
   judgeRecognitionAnswer,
   dateOnly
@@ -33,6 +34,8 @@ const ACTIONS = new Set([
   'listWords',
   'generateRecognitionSession',
   'submitRecognitionAttempt',
+  'generatePaperDictationSession',
+  'submitDictationPhoto',
   'generatePracticeSession',
   'submitDictationAttempt',
   'submitPracticeResult'
@@ -453,6 +456,58 @@ async function generateRecognitionSession(event, openId) {
   return ok({ sessionId: res._id, wordItems, patternItems: [] })
 }
 
+async function generatePaperDictationSession(event, openId) {
+  const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
+  const wordItems = buildPaperDictationItems(words, {
+    today: event.today,
+    limit: Math.min(40, Math.max(1, Number(event.wordLimit) || 20))
+  })
+
+  const res = await addDocument('englishPracticeSessions', {
+    _openid: openId,
+    studentId: event.studentId,
+    subject: 'english',
+    functionType: 'spelling',
+    type: 'word-dictation-paper',
+    wordLimit: wordItems.length,
+    status: 'in_progress',
+    analysisStatus: 'waiting_upload',
+    wordItems,
+    patternItems: [],
+    attempts: [],
+    photoFileIds: [],
+    createdAt: nowDate(),
+    updatedAt: nowDate()
+  })
+  return ok({ sessionId: res._id, functionType: 'spelling', wordItems, patternItems: [] })
+}
+
+async function submitDictationPhoto(event) {
+  const session = await getDocument('englishPracticeSessions', event.sessionId)
+  if (!session || session.studentId !== event.studentId) return fail('纸面听写记录不存在')
+  if (session.functionType !== 'spelling') return fail('听写记录类型不匹配')
+  const incoming = Array.isArray(event.photoFileIds) ? event.photoFileIds : []
+  const photoFileIds = incoming
+    .map(item => cleanText(item, 240))
+    .filter(item => /^cloud:\/\//.test(item))
+    .slice(0, 20)
+  if (photoFileIds.length === 0) return fail('缺少听写纸照片')
+
+  await updateDocument('englishPracticeSessions', event.sessionId, {
+    status: 'submitted',
+    analysisStatus: 'pending_analysis',
+    photoFileIds,
+    submittedAt: nowDate(),
+    updatedAt: nowDate()
+  })
+
+  return ok({
+    sessionId: event.sessionId,
+    analysisStatus: 'pending_analysis',
+    photoFileIds
+  })
+}
+
 function findSessionItem(session, event) {
   const items = session.wordItems || []
   return items.find(item => (
@@ -632,6 +687,8 @@ exports.main = async (event = {}) => {
     if (action === 'listWords') return listWords(event)
     if (action === 'generateRecognitionSession') return generateRecognitionSession(event, auth.openId)
     if (action === 'submitRecognitionAttempt') return submitRecognitionAttempt(event)
+    if (action === 'generatePaperDictationSession') return generatePaperDictationSession(event, auth.openId)
+    if (action === 'submitDictationPhoto') return submitDictationPhoto(event)
     if (action === 'generatePracticeSession') return generatePracticeSession(event, auth.openId)
     if (action === 'submitDictationAttempt') return submitDictationAttempt(event)
     if (action === 'submitPracticeResult') return submitPracticeResult(event)

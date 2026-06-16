@@ -204,6 +204,13 @@ function buildTools(latestReport, permissions = {}, options = {}) {
         icon: 'Aa',
         actionType: 'englishPractice'
       } : null,
+      canWrite ? {
+        key: 'englishDictation',
+        title: '纸面听写',
+        desc: hasEnglishVocabulary(options) ? 'AI 读词，孩子写在纸上' : '词库导入后即可开始',
+        icon: '✎',
+        actionType: 'englishDictation'
+      } : null,
       {
         key: 'history',
         title: '学习记录',
