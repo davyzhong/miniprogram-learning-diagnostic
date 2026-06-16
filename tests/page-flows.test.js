@@ -2569,6 +2569,66 @@ test('report generates, downloads and opens its printable PDF', async () => {
   assert.equal(wx.calls.find(call => call.name === 'openDocument').payload.filePath, '/tmp/report.pdf')
 })
 
+test('report keeps PDF generation locked until download finishes', async () => {
+  let resolveDownload
+  const cloud = {
+    callGenerateReportPDF: async () => ({ pdfFileId: 'cloud://report.pdf' })
+  }
+  const wx = createWxMock({
+    cloud: {
+      downloadFile: () => new Promise(resolve => {
+        resolveDownload = () => resolve({ tempFilePath: '/tmp/report.pdf' })
+      })
+    }
+  })
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {} }) },
+      './report-presenter': { buildReportView: () => ({}) }
+    }
+  })
+  page.setData({ reportId: 'report-1' })
+
+  const download = page.onDownloadPDF()
+  for (let i = 0; i < 5 && !resolveDownload; i += 1) {
+    await Promise.resolve()
+  }
+
+  assert.equal(page.data.generatingPdf, true)
+  resolveDownload()
+  await download
+  assert.equal(page.data.generatingPdf, false)
+})
+
+test('paper preview does not share temporary preview file ids', () => {
+  const { page } = loadPage('miniprogram/pages/paper-preview/paper-preview.js', {
+    modules: {
+      '../../utils/cloud': {},
+      '../../utils/paper-display': {},
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {} }) },
+      './paper-preview-presenter': {
+        buildPaperPreviewView: () => ({}),
+        getPaperName: () => '',
+        getPaperCodeText: () => ''
+      }
+    }
+  })
+  page.setData({
+    mode: 'preview',
+    fileId: 'cloud://temp-preview.pdf',
+    typeText: '验证试卷',
+    paperCodeText: 'MATH-01',
+    paperName: '临时预览'
+  })
+
+  const share = page.onShareAppMessage()
+
+  assert.doesNotMatch(share.path || '', /fileId=/)
+})
+
 test('subject home resets analysis state and reloads data when polling completes or fails', async () => {
   let pollOptions = null
   let profileLoads = 0

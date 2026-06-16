@@ -355,19 +355,21 @@ test('analysis progress endpoint uses shared resource access checks', () => {
   assert.match(accessSource, /getActiveMember/)
 })
 
-test('studentData cloud function is self contained for single-function deploys', () => {
+test('studentData cloud function reuses shared access helpers', () => {
   const source = read('cloudfunctions/studentData/index.js')
-  assert.doesNotMatch(source, /require\(['"]\.\.\/_shared\/access['"]\)/)
-  assert.match(source, /function permissionsForRole/)
-  assert.match(source, /function canManageFamily/)
+  assert.match(source, /require\(['"]\.\.\/_shared\/access['"]\)/)
+  assert.doesNotMatch(source, /function permissionsForRole/)
+  assert.doesNotMatch(source, /function canManageFamily/)
+  assert.match(source, /getStudentAccess\(db, studentId, openId\)/)
 })
 
-test('reportFeedback cloud function is self contained for single-function deploys', () => {
+test('reportFeedback cloud function reuses shared access helpers', () => {
   const source = read('cloudfunctions/reportFeedback/index.js')
-  assert.doesNotMatch(source, /require\(['"]\.\.\/_shared\/access['"]\)/)
-  assert.match(source, /function getLearningResourceAccess/)
-  assert.match(source, /function canOperateLearning/)
-  assert.match(source, /function canReadLearning/)
+  assert.match(source, /require\(['"]\.\.\/_shared\/access['"]\)/)
+  assert.doesNotMatch(source, /function getLearningResourceAccess/)
+  assert.doesNotMatch(source, /function canOperateLearning/)
+  assert.doesNotMatch(source, /function canReadLearning/)
+  assert.match(source, /getLearningResourceAccess\(db, report, openId\)/)
 })
 
 test('analysis is started reliably by the server entrypoint', () => {
@@ -439,6 +441,15 @@ test('photo analysis stores per-image OCR summaries and duplicate state', () => 
   assert.match(analyzer, /imageFiles/)
   assert.match(upload, /imageFiles/)
   assert.match(upload, /imageMetas/)
+})
+
+test('analyzeBatch prompt uses shared bottleneck names instead of drifted inline labels', () => {
+  const batch = read('cloudfunctions/analyzeBatch/index.js')
+
+  assert.match(batch, /BOTTLENECK_CODE_NAMES/)
+  assert.doesNotMatch(batch, /识字量不足/)
+  assert.doesNotMatch(batch, /作文结构混乱/)
+  assert.doesNotMatch(batch, /拼音\/笔顺错误/)
 })
 
 test('duplicate photos are retained but excluded from diagnostic aggregation', () => {

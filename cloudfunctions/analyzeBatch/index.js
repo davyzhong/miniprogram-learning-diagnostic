@@ -4,8 +4,10 @@ const tcb = require('@cloudbase/node-sdk');
 const cloud = require('wx-server-sdk');
 const { normalizePageResults } = require('./result-normalizer');
 const { getSubjectName } = require('../_shared/constants');
+const { BOTTLENECK_CODE_NAMES } = require('../_shared/bottleneck-name');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
+const db = cloud.database();
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 
 // 初始化 CloudBase AI SDK
@@ -18,34 +20,36 @@ const app = tcb.init({
 function buildPrompt(subject, verificationPlan = []) {
   const subjectName = getSubjectName(subject, '数学');
 
-  const bugTaxonomy = {
-    math: [
-      { code: 'LP-001', name: '计算错误（加减乘除）', desc: '基础运算错误，如进位、借位、乘除法则错误' },
-      { code: 'LP-002', name: '分数运算错误', desc: '通分、约分、分数加减乘除错误' },
-      { code: 'LP-003', name: '百分数/小数转换错误', desc: '百分数与小数互化、百分数应用题错误' },
-      { code: 'LP-004', name: '单位换算错误', desc: '长度、面积、体积、时间、货币单位换算错误' },
-      { code: 'LP-005', name: '应用题建模失败', desc: '无法将文字题转化为算式，或转化错误' },
-      { code: 'LP-006', name: '几何概念混淆', desc: '周长/面积/体积公式混淆，角度计算错误' },
-      { code: 'LP-007', name: '符号错误', desc: '正负号、等号、不等号使用错误' },
-      { code: 'LP-008', name: '审题错误', desc: '漏看条件、看错数字、理解错题意' },
-      { code: 'LP-009', name: '书写不规范', desc: '数字/字母书写潦草导致误认' },
-      { code: 'LP-010', name: '草稿纸计算错误', desc: '草稿纸计算正确但抄写答案时出错' },
-    ],
-    chinese: [
-      { code: 'LP-101', name: '识字量不足', desc: '生字词不认识，影响阅读理解' },
-      { code: 'LP-102', name: '阅读理解偏差', desc: '未能准确理解文章主旨或细节' },
-      { code: 'LP-103', name: '作文结构混乱', desc: '段落安排不合理，缺乏逻辑' },
-      { code: 'LP-104', name: '拼音/笔顺错误', desc: '拼音标注或汉字书写笔顺错误' },
-    ],
-    english: [
-      { code: 'LP-201', name: '词汇量不足', desc: '单词不认识，影响句子理解' },
-      { code: 'LP-202', name: '语法错误', desc: '时态、单复数、介词使用错误' },
-      { code: 'LP-203', name: '阅读理解偏差', desc: '未能准确理解英文文章' },
-      { code: 'LP-204', name: '写作表达不流畅', desc: '句子结构错误，表达不地道' },
-    ],
+  const descriptions = {
+    'LP-001': '基础运算错误，如进位、借位、乘除法则错误',
+    'LP-002': '通分、约分、分数加减乘除错误',
+    'LP-003': '百分数与小数互化、百分数应用题错误',
+    'LP-004': '长度、面积、体积、时间、货币单位换算错误',
+    'LP-005': '无法将文字题转化为算式，或转化错误',
+    'LP-006': '周长/面积/体积公式混淆，角度计算错误',
+    'LP-007': '正负号、等号、不等号使用错误',
+    'LP-008': '漏看条件、看错数字、理解错题意',
+    'LP-009': '数字/字母书写潦草导致误认',
+    'LP-010': '抄数字、抄符号或最后检查环节不稳定',
+    'LP-101': '字词积累和基础运用需要观察',
+    'LP-102': '阅读信息提取和理解表达需要观察',
+    'LP-103': '作文结构和表达组织需要观察',
+    'LP-104': '拼音、笔顺和基础书写需要观察',
+    'LP-201': '单词识记和词义使用需要观察',
+    'LP-202': '句法结构和语法规则需要观察',
+    'LP-203': '英文阅读理解和信息提取需要观察',
+    'LP-204': '英文句子表达和组织需要观察',
   };
-
-  const taxonomy = bugTaxonomy[subject] || bugTaxonomy.math;
+  const subjectCodes = {
+    math: ['LP-001', 'LP-002', 'LP-003', 'LP-004', 'LP-005', 'LP-006', 'LP-007', 'LP-008', 'LP-009', 'LP-010'],
+    chinese: ['LP-101', 'LP-102', 'LP-103', 'LP-104'],
+    english: ['LP-201', 'LP-202', 'LP-203', 'LP-204'],
+  };
+  const taxonomy = (subjectCodes[subject] || subjectCodes.math).map(code => ({
+    code,
+    name: BOTTLENECK_CODE_NAMES[code],
+    desc: descriptions[code],
+  }));
 
   const verificationInstruction = verificationPlan.length > 0
     ? `\n## 验证试卷判定\n这是验证试卷。请按卡点统计证据质量，不要把不确定情况当成已改善：\n${verificationPlan.map(item => `- ${item.lpCode}：整份试卷预期 ${item.expectedQuestionCount} 道`).join('\n')}\n- attemptedQuestionCount：清晰可见、已经作答、能够判断对错的题目数量\n- incorrectQuestionCount：attemptedQuestionCount 中明确答错的题目数量\n- blankQuestionCount：清晰可见但没有作答或明显空白的题目数量\n- unclearQuestionCount：被遮挡、模糊、拍摄不完整、无法判断答案是否正确的题目数量\n- missingQuestionCount：预期题目中未在图片中找到或无法归入以上类别的数量\n未作答、被遮挡、模糊或无法确认的题目不得计入 attemptedQuestionCount。`
@@ -113,6 +117,30 @@ ${taxonomy.map(t => `- ${t.code}：${t.name}——${t.desc}`).join('\n')}
 9. 返回纯JSON，不要有任何其他文字`;
 }
 
+async function authorizeBatch({ reportId, taskId, fileIDs }) {
+  if (!reportId || !taskId) {
+    return { allowed: false, error: '无权执行批次分析' };
+  }
+
+  const [reportRes, taskRes] = await Promise.all([
+    db.collection('reports').doc(reportId).get(),
+    db.collection('analysisTasks').doc(taskId).get(),
+  ]);
+  const report = reportRes.data;
+  const task = taskRes.data;
+  if (!report || !task || task.reportId !== reportId || task.status !== 'processing') {
+    return { allowed: false, error: '无权执行批次分析' };
+  }
+  if (report._openid && task._openid !== report._openid) {
+    return { allowed: false, error: '无权执行批次分析' };
+  }
+  const allowedFiles = new Set(Array.isArray(task.fileIDs) ? task.fileIDs : []);
+  if (fileIDs.some(fileID => !allowedFiles.has(fileID))) {
+    return { allowed: false, error: '图片不属于当前分析任务' };
+  }
+  return { allowed: true };
+}
+
 // ========== 调用 CloudBase AI（多模态） ==========
 async function callAI(imageUrls, subject, verificationPlan) {
   const prompt = buildPrompt(subject, verificationPlan);
@@ -152,7 +180,7 @@ function parseResult(aiText, expectedPageCount) {
 
 // ========== 主函数 ==========
 exports.main = async (event) => {
-  const { fileIDs, subject = 'math', batchIndex = 0, reportId = '', verificationPlan = [] } = event;
+  const { fileIDs, subject = 'math', batchIndex = 0, reportId = '', taskId = '', verificationPlan = [] } = event;
 
   if (!fileIDs || !Array.isArray(fileIDs) || fileIDs.length === 0) {
     return { success: false, error: 'fileIDs 不能为空' };
@@ -180,6 +208,11 @@ exports.main = async (event) => {
   }
 
   try {
+    const access = await authorizeBatch({ reportId, taskId, fileIDs });
+    if (!access.allowed) {
+      return { success: false, error: access.error };
+    }
+
     // 1. 将 fileID 转成临时 URL
     console.log('获取图片临时链接...');
     const tempRes = await cloud.getTempFileURL({ fileList: fileIDs });

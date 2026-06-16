@@ -327,7 +327,7 @@ flowchart LR
 - ✅ 报告 PDF 生成与下载
 - ✅ Skill / CLI P0：封装诊断、报告、卡点、验证卷、反馈和时间线能力，提供 `ldx` 本地 CLI 合同测试
 - ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 自动化测试：261 个常规用例通过，JS 语法检查 86 文件通过
+- ✅ 自动化测试：334 个常规用例通过，JS 语法检查 107 文件通过
 
 ### 待完善
 
@@ -346,7 +346,7 @@ flowchart LR
 | 后端 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI（图像） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI（文本） | CloudBase AI `deepseek-v4-flash` | 用于生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 7 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 11 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions |
 | PDF 生成 | pdfkit | 云函数内生成 A4 试卷/报告 PDF |
 | 测试 | Node.js 内置 test runner | `node --test`，无外部测试框架依赖 |
 
@@ -357,25 +357,27 @@ flowchart LR
 ```
 miniprogram-learning-diagnostic/
 ├── miniprogram/                 # 小程序前端
-│   ├── app.js / app.json        # 全局入口与配置（15 个页面路由）
+│   ├── app.js / app.json        # 全局入口与配置（16 个页面路由）
 │   ├── utils/                   # cloud.js（数据访问层）、poller.js（轮询器）、util.js
-│   └── pages/                   # 15 个页面（index / student-profile / add-student /
+│   └── pages/                   # 16 个页面（index / student-profile / add-student /
 │                                #   subject-select / subject-home / upload / upload-history /
 │                                #   parent-management / join-student / report /
-│                                #   bottleneck-center / bottleneck-detail /
+│                                #   bottleneck-center / bottleneck-detail / english-practice /
 │                                #   generate-verification / default-paper / paper-preview）
-├── cloudfunctions/              # 云函数后端（8 个）
+├── cloudfunctions/              # 云函数后端（10 个）
 │   ├── uploadAndAnalyze/        #   入口：校验 → 创建报告 → 触发分析
 │   ├── analyzePhotos/           #   主控：分批 → 串行分析 → 去重 → 合并 → 对比
 │   ├── analyzeBatch/            #   单批次 AI 分析 + 结果标准化
 │   ├── getAnalysisProgress/     #   轻量进度查询
 │   ├── studentAccess/           #   家长成员、邀请和加入管理
 │   ├── studentData/             #   访问感知的学习资料聚合读取
+│   ├── reportFeedback/          #   家长反馈和复核线索
+│   ├── englishVocabulary/       #   英语个人词库和 20 词听写
 │   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF
 │   └── generateReportPDF/       #   生成报告 PDF
 ├── services/skills/             # P0 Skill 能力内核
 ├── cli/ldx.js                   # 本地 CLI 入口
-├── tests/                       # 自动化测试（261 个常规用例 + 真实图片 E2E 脚本）
+├── tests/                       # 自动化测试（334 个常规用例 + 真实图片 E2E 脚本）
 ├── scripts/                     # check-js.js（语法检查）
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
@@ -429,7 +431,7 @@ cd miniprogram-learning-diagnostic
 ## 测试
 
 ```bash
-# 运行常规自动化测试（261 用例，不含真实图片 E2E）
+# 运行常规自动化测试（334 用例，不含真实图片 E2E）
 npm test
 
 # 带覆盖率报告
@@ -453,7 +455,7 @@ npm run test:e2e-real-image
 
 | 文档 | 说明 |
 |------|------|
-| [PRD.md](./PRD.md) | 产品设计文档 v2.8：多孩子工作台、学习档案、卡点透出体系、页面职责边界、异步架构、学习记录、实现状态总览 |
+| [PRD.md](./PRD.md) | 产品设计文档 v2.9：多孩子工作台、学习档案、卡点透出体系、英语个人词库听写、页面职责边界、异步架构、学习记录、实现状态总览 |
 | [PROJECT_PLAN.md](./PROJECT_PLAN.md) | 技术架构、目录结构、AI 分析流程、部署步骤、版本规划 |
 | [SETUP.md](./SETUP.md) | 部署指南：环境配置、云函数部署、字体配置、数据库索引、真机验收 |
 | [docs/SKILL_AND_CLI_DESIGN.md](./docs/SKILL_AND_CLI_DESIGN.md) | Skill / CLI 设计与 P0 实现说明 |

@@ -641,6 +641,52 @@ test('analyzePhotos runs one image at a time and schedules the next image asynch
   assert.equal(maxActive, 1)
 })
 
+test('analyzePhotos rejects empty-openid continuation when task owner does not match report owner', async () => {
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'analyzing',
+      createdAt: '2026-06-11T10:00:00Z',
+      imageFileIds: ['cloud://photo-1'],
+      imageFiles: [{ fileID: 'cloud://photo-1' }]
+    }],
+    analysisTasks: [{
+      _id: 'task-1',
+      reportId: 'report-1',
+      status: 'processing',
+      _openid: 'attacker-1',
+      fileIDs: ['cloud://photo-1'],
+      nextBatchIndex: 0,
+      batchResults: [],
+      createdAt: '2026-06-11T10:00:00Z'
+    }]
+  })
+  const cloud = createCloudMock({
+    db,
+    callFunction: async () => {
+      throw new Error('analyzeBatch should not be called')
+    }
+  })
+  cloud.getWXContext = () => ({ OPENID: '' })
+  const handler = loadModule('cloudfunctions/analyzePhotos/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({
+    reportId: 'report-1',
+    taskId: 'task-1',
+    continuation: true
+  })
+
+  assert.equal(result.success, false)
+  assert.equal(db.dump('analysisTasks')[0].status, 'processing')
+  assert.equal(cloud.calls.filter(call => call.payload.name === 'analyzeBatch').length, 0)
+})
+
 test('analyzePhotos retries a transient single-image batch failure before completing', async () => {
   const db = createDatabase({
     reports: [{
@@ -1127,9 +1173,75 @@ test('analyzeBatch rejects invalid image and subject parameters before AI calls'
   assert.equal((await handler.main({ fileIDs: ['cloud://photo'], subject: 'science' })).success, false)
 })
 
+test('analyzeBatch requires a matching processing analysis task before AI calls', async () => {
+  let aiCalls = 0
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      imageFileIds: ['cloud://photo-1']
+    }],
+    analysisTasks: [{
+      _id: 'task-1',
+      reportId: 'report-1',
+      status: 'processing',
+      _openid: 'owner-1',
+      fileIDs: ['cloud://photo-1']
+    }]
+  })
+  const cloud = createCloudMock({ db })
+  const handler = loadModule('cloudfunctions/analyzeBatch/index.js', {
+    'wx-server-sdk': cloud,
+    '@cloudbase/node-sdk': {
+      SYMBOL_CURRENT_ENV: 'test',
+      init: () => ({
+        ai: () => ({
+          createModel: () => ({
+            generateText: async () => {
+              aiCalls += 1
+              return { text: '{}' }
+            }
+          })
+        })
+      })
+    }
+  })
+
+  const missingTask = await handler.main({
+    reportId: 'report-1',
+    fileIDs: ['cloud://photo-1'],
+    subject: 'math'
+  })
+  const wrongFile = await handler.main({
+    reportId: 'report-1',
+    taskId: 'task-1',
+    fileIDs: ['cloud://photo-2'],
+    subject: 'math'
+  })
+
+  assert.equal(missingTask.success, false)
+  assert.equal(wrongFile.success, false)
+  assert.equal(aiCalls, 0)
+})
+
 test('analyzeBatch fails the whole batch when any uploaded image URL is unavailable', async () => {
   let aiCalls = 0
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-1',
+      _openid: 'owner-1',
+      imageFileIds: ['cloud://photo-1', 'cloud://photo-2']
+    }],
+    analysisTasks: [{
+      _id: 'task-1',
+      reportId: 'report-1',
+      status: 'processing',
+      _openid: 'owner-1',
+      fileIDs: ['cloud://photo-1', 'cloud://photo-2']
+    }]
+  })
   const cloud = createCloudMock({
+    db,
     getTempFileURL: async () => ({
       fileList: [
         { fileID: 'cloud://photo-1', tempFileURL: 'https://temp/photo-1' },
@@ -1155,6 +1267,8 @@ test('analyzeBatch fails the whole batch when any uploaded image URL is unavaila
   })
 
   const result = await handler.main({
+    reportId: 'report-1',
+    taskId: 'task-1',
     fileIDs: ['cloud://photo-1', 'cloud://photo-2'],
     subject: 'math'
   })

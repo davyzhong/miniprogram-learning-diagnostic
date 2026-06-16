@@ -31,13 +31,14 @@ git diff --check
 `release:check` 当前等价于：
 
 ```bash
-npm run check:deployment && npm run verify
+npm run check:deployment && npm run verify && npm run test:coverage
 ```
 
 通过标准：
 
 - 自动化测试全部通过。
 - JS 静态检查通过。
+- 覆盖率门禁通过。
 - 云函数部署清单检查通过。
 - `git diff --check` 无空白错误。
 - 微信开发者工具 CLI `preview` 成功。
@@ -51,6 +52,7 @@ npm run check:deployment && npm run verify
 | `studentAccess` | 家长成员、邀请、权限逻辑变化 |
 | `studentData` | 首页、学科、报告、试卷、学习记录聚合逻辑变化 |
 | `reportFeedback` | 家长反馈数据结构或权限逻辑变化 |
+| `englishVocabulary` | 英语词库、20 词听写、AI 判定或掌握度规则变化 |
 | `uploadAndAnalyze` | 上传、报告创建、验证卷作答入口变化 |
 | `analyzePhotos` | 诊断合并、验证证据、报告质量、学习卡点更新变化 |
 | `analyzeBatch` | AI prompt、图片识别、字段归一要求变化 |
@@ -74,7 +76,8 @@ REAL_DATA_STUDENT_ID=student-id REAL_DATA_STUDENT_NAME=钟青羽 npm run test:re
 4. 学习卡点中心能展示可读名称和状态。
 5. 验证试卷能生成、下载、上传作答反馈。
 6. 学习记录能看到诊断报告、验证试卷、验证反馈和照片证据。
-7. 如果本次改动涉及指标脚本，使用脱敏 JSON 跑一次 `npm run metrics:student`。
+7. 英语工作台无词库时能导入钟青羽 PEP 个人词库；导入后能进入“开始 20 词听写”，并能看到个人词库统计和高频错词。
+8. 如果本次改动涉及指标脚本，使用脱敏 JSON 跑一次 `npm run metrics:student`。
 
 ## 5. 回滚流程
 

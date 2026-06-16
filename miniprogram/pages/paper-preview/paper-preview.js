@@ -182,9 +182,10 @@ Page({
     const shareTitle = [typeText, paperCodeText || this.data.paperName].filter(Boolean).join(' · ')
     if (mode === 'preview' && fileId) {
       // preview 模式下 fileId 是临时文件，分享后无法访问；禁用分享并提示
+      wx.showToast({ title: '临时预览不可分享，请先保存试卷', icon: 'none' })
       return {
         title: shareTitle,
-        path: `/pages/paper-preview/paper-preview?fileId=${encodeURIComponent(fileId)}`,
+        path: '/pages/index/index',
       }
     }
     return {

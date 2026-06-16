@@ -204,6 +204,77 @@
 .pending-color { color: #c48619; }
 .improved-color { color: #25845f; }
 
+.english-vocab-card {
+  margin: 0 28rpx 24rpx;
+  padding: 24rpx;
+  border-radius: 16rpx;
+  background: #fff7ed;
+  border: 1rpx solid #fed7aa;
+  box-shadow: 0 2rpx 10rpx rgba(154, 83, 28, .06);
+}
+
+.english-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12rpx;
+}
+
+.english-stat {
+  min-height: 92rpx;
+  border-radius: 14rpx;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.english-stat-value {
+  color: #9c4f24;
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.english-stat-label {
+  color: #7c5f4a;
+  font-size: 19rpx;
+  margin-top: 3rpx;
+}
+
+.english-vocab-desc {
+  display: block;
+  color: #7c5f4a;
+  font-size: 22rpx;
+  line-height: 1.45;
+  margin-top: 16rpx;
+}
+
+.weak-word-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 16rpx;
+}
+
+.weak-word-label,
+.weak-word-item {
+  padding: 7rpx 12rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.weak-word-label {
+  color: #9c4f24;
+  background: #fed7aa;
+}
+
+.weak-word-item {
+  color: #7c2d12;
+  background: #ffffff;
+}
+
 .section {
   margin: 0 28rpx 24rpx;
 }

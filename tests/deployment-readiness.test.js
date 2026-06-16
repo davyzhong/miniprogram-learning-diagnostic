@@ -22,7 +22,8 @@ const REQUIRED_CLOUD_FUNCTIONS = [
   'getAnalysisProgress',
   'studentData',
   'studentAccess',
-  'reportFeedback'
+  'reportFeedback',
+  'englishVocabulary'
 ]
 
 test('deployable cloud functions have required manifests and timeout configs', () => {
@@ -56,7 +57,15 @@ test('frontend cloud data layer exposes wrappers for deployable learning functio
     'getReportDetail',
     'getPaperDetail',
     'createReportFeedback',
-    'getReportFeedback'
+    'getReportFeedback',
+    'getEnglishVocabularySummary',
+    'createEnglishImportBatch',
+    'confirmEnglishImportBatch',
+    'seedEnglishPersonalVocabulary',
+    'generateEnglishRecognitionSession',
+    'submitEnglishRecognitionAttempt',
+    'generateEnglishPracticeSession',
+    'submitEnglishPracticeResult'
   ]
 
   for (const wrapper of expectedWrappers) {
@@ -81,10 +90,11 @@ test('release and rollback workflow is documented and exposed as a package scrip
   assert.ok(exists('docs/RELEASE_CHECKLIST.md'), 'release checklist should exist')
   const checklist = read('docs/RELEASE_CHECKLIST.md')
   assert.match(checklist, /npm run verify/)
+  assert.match(checklist, /npm run test:coverage/)
   assert.match(checklist, /git diff --check/)
   assert.match(checklist, /cli preview/)
   assert.match(checklist, /云函数/)
   assert.match(checklist, /回滚/)
-  assert.equal(pkg.scripts['release:check'], 'npm run check:deployment && npm run verify')
+  assert.equal(pkg.scripts['release:check'], 'npm run check:deployment && npm run verify && npm run test:coverage')
   assert.match(read('README.md'), /docs\/RELEASE_CHECKLIST\.md/)
 })

@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序 — 项目开发计划
 
 **创建日期**: 2026-06-09
-**最后更新**: 2026-06-14
-**项目状态**: MVP 编码完成，常规自动化测试通过（261/261），JS 语法检查 86 文件通过，待真机验收
+**最后更新**: 2026-06-15
+**项目状态**: MVP 编码完成，常规自动化测试通过（334/334），JS 语法检查 107 文件通过，待真机验收
 **负责人**: qiming
 
 ---
@@ -62,12 +62,12 @@ miniprogram-learning-diagnostic/
 ├── project.config.json              # 微信开发者工具项目配置（cloudbaseRoot: cloud1-d6gneg68m5a7a3876）
 ├── package.json                     # npm scripts: test / test:coverage / check / verify
 ├── PROJECT_PLAN.md                  # 本文件
-├── PRD.md                           # 产品设计文档（v2.8）
+├── PRD.md                           # 产品设计文档（v2.9）
 ├── SETUP.md                         # 部署指南
 │
 ├── miniprogram/                     # 小程序前端代码
 │   ├── app.js                       # 全局入口，初始化云开发（env: cloud1-d6gneg68m5a7a3876）
-│   ├── app.json                     # 全局配置（15 个页面路由）
+│   ├── app.json                     # 全局配置（16 个页面路由）
 │   ├── app.wxss                     # 全局样式
 │   ├── sitemap.json                 # 站点地图配置
 │   │
@@ -79,7 +79,7 @@ miniprogram-learning-diagnostic/
 │   ├── components/                  # 自定义组件目录（当前为空占位）
 │   ├── images/                      # 静态图片资源目录（当前为空占位）
 │   │
-│   └── pages/                       # 15 个注册页面
+│   └── pages/                       # 16 个注册页面
 │       ├── index/                   # Page 1：首页（空态/家庭工作台/单孩子分流）
 │       ├── student-profile/         # Page 1A：单孩子学习档案
 │       ├── add-student/             # 添加学生页（创建学生+三条学科档案）
@@ -92,11 +92,12 @@ miniprogram-learning-diagnostic/
 │       ├── report/                  # Page 6：诊断/验证报告（含 presenter）
 │       ├── bottleneck-center/       # Page 6A：学习卡点中心
 │       ├── bottleneck-detail/       # Page 6B：单卡点详情与证据链
+│       ├── english-practice/        # Page 6C：英语 20 词语音听写
 │       ├── generate-verification/   # Page 7：验证试卷出卷配置器
 │       ├── default-paper/           # Page 8：默认诊断试卷选择
 │       └── paper-preview/           # Page 9：试卷预览/打印
 │
-├── cloudfunctions/                  # 云函数（后端，8 个）
+├── cloudfunctions/                  # 云函数（后端，10 个）
 │   ├── uploadAndAnalyze/            # 入口：校验参数、创建 reports、后台触发 analyzePhotos
 │   ├── analyzePhotos/               # 主控：拆分批次、串行分析、去重、合并、对比、落库
 │   │   ├── index.js                 #   主流程
@@ -109,7 +110,9 @@ miniprogram-learning-diagnostic/
 │   ├── studentAccess/               # 家长成员、邀请和加入管理
 │   ├── studentData/                 # 访问感知的学习资料聚合读取
 │   ├── generatePaper/               # 生成验证/默认试卷 + A4 PDF（支持 preview）
-│   └── generateReportPDF/           # 生成报告 PDF，回写 reports.pdfFileId
+│   ├── generateReportPDF/           # 生成报告 PDF，回写 reports.pdfFileId
+│   ├── reportFeedback/              # 家长反馈入口，记录报告/卡点/错题/照片纠错
+│   └── englishVocabulary/           # 英语个人词库、20 词听写、AI 判定和掌握度更新
 │
 ├── cloud1-d6gneg68m5a7a3876/        # cloudbaseRoot 本地映射（微信开发者工具使用）
 ├── services/skills/                 # P0 Skill 能力内核
@@ -127,6 +130,8 @@ miniprogram-learning-diagnostic/
 │   ├── data-layer.test.js           # 统一数据访问层
 │   ├── e2e-real-image.test.js       # 端到端真实图片测试脚本（独立运行，不计入 npm test）
 │   ├── page-flows.test.js           # 页面主流程与错误恢复
+│   ├── english-vocabulary.test.js   # 英语词库抽题、AI 判定和间隔复测规则
+│   ├── english-vocabulary-cloud.test.js # 英语词库云函数流程
 │   ├── photo-dedup.test.js          # OCR 去重算法
 │   ├── poller.test.js               # 通用轮询器
 │   ├── project-integrity.test.js    # 页面四件套与 WXML 事件绑定
@@ -141,7 +146,7 @@ miniprogram-learning-diagnostic/
     └── superpowers/plans/           # 规划辅助材料
 ```
 
-**文件总数**: 86 个 JavaScript 文件（`npm run check` 校验），261 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
+**文件总数**: 107 个 JavaScript 文件（`npm run check` 校验），334 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
 
 ### 2.2 相关文件索引
 
@@ -165,7 +170,7 @@ miniprogram-learning-diagnostic/
 | 后端服务 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI 模型（图像） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI 模型（文本） | CloudBase AI `deepseek-v4-flash` | 用于 generatePaper 生成题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 7 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 11 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions |
 | 图片存储 | 云开发云存储 | 试卷照片上传至云存储，生成临时 URL 供 AI 分析 |
 | PDF 生成 | pdfkit（云函数内） | 生成 A4 试卷/报告 PDF，上传云存储；云函数内置 Noto CJK 中文字体 |
 | 本地测试 | Node.js 内置 test runner | `npm test` 显式运行常规测试文件，真实图片 E2E 单独运行，无需 Jest/Mocha |
@@ -384,6 +389,8 @@ miniprogram-learning-diagnostic/
 | `getAnalysisProgress` | 按 reportId 查询最新 analysisTasks，返回 status/completedBatches/totalBatches |
 | `generatePaper` | 调 deepseek-v4-flash 生成题目 → pdfkit 渲染 A4 PDF → 上传云存储；支持 preview=true 不落库 |
 | `generateReportPDF` | 读 reports → pdfkit 渲染报告 PDF → 上传云存储 → 回写 reports.pdfFileId |
+| `reportFeedback` | 接收报告、卡点、错题和照片维度的家长反馈，记录纠错线索但不覆盖原始报告 |
+| `englishVocabulary` | 管理钟青羽个人英语词库，生成 20 词听写队列，接收语音识别结果并更新掌握度和复测节奏 |
 
 ### 4.3 AI Prompt 设计
 
@@ -421,14 +428,14 @@ System Prompt 包含：
 
 ---
 
-## 六、当前进度（2026-06-13 更新）
+## 六、当前进度（2026-06-15 更新）
 
 ### 6.1 已完成（代码 + 自动化测试）
 
 | 类别 | 状态 | 说明 |
 |------|------|------|
-| **前端页面（15个）** | ✅ | `index` / `student-profile` / `add-student` / `subject-select` / `subject-home` / `upload` / `upload-history` / `parent-management` / `join-student` / `report` / `bottleneck-center` / `bottleneck-detail` / `generate-verification` / `default-paper` / `paper-preview`，全部四件套完整且 WXML 事件绑定正确 |
-| **云函数（8个）** | ✅ | `uploadAndAnalyze` / `analyzePhotos`（含 comparison.js、photo-dedup.js）/ `analyzeBatch`（含 result-normalizer.js）/ `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `generateReportPDF` |
+| **前端页面（16个）** | ✅ | `index` / `student-profile` / `add-student` / `subject-select` / `subject-home` / `upload` / `upload-history` / `parent-management` / `join-student` / `report` / `bottleneck-center` / `bottleneck-detail` / `english-practice` / `generate-verification` / `default-paper` / `paper-preview`，全部四件套完整且 WXML 事件绑定正确 |
+| **云函数（10个）** | ✅ | `uploadAndAnalyze` / `analyzePhotos`（含 comparison.js、photo-dedup.js）/ `analyzeBatch`（含 result-normalizer.js）/ `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `generateReportPDF` / `reportFeedback` / `englishVocabulary` |
 | **数据访问层** | ✅ | `utils/cloud.js` 封装学生/学科档案/报告/试卷/分析进度/云函数调用；无过时 photos 集合引用 |
 | **通用轮询器** | ✅ | `utils/poller.js` 支持 stop/onTimeout/异步 request，被 subject-home 与 report 使用 |
 | **卡点短名称展示** | ✅ | `utils/util.js` 提供 `formatBottleneckDisplayName/List`，页面不再向家长展示裸 LP 编号 |
@@ -437,19 +444,20 @@ System Prompt 包含：
 | **验证对比** | ✅ | `analyzePhotos/comparison.js` 输出 improved/worsened/new/persisting + 摘要文案 |
 | **上传分析解耦** | ✅ | `uploadAndAnalyze` 创建报告后 fire-and-forget 启动 `analyzePhotos`；`report.onRetryAnalysis()` 支持手动重启 |
 | **参数校验与归属校验** | ✅ | 各云函数入口检查 fileIDs/studentId/subject/mode/paperId/openID |
-| **PRD.md** | ✅ | v2.8，含多孩子工作台、页面职责边界、卡点透出体系和实现状态总览 |
+| **PRD.md** | ✅ | v2.9，含多孩子工作台、页面职责边界、卡点透出体系、英语个人词库听写和实现状态总览 |
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 索引 + 字体 + 云函数部署） |
 | **学习卡点透出体系** | ✅ | 首页高优先级卡点、卡点中心、单卡点工作台和验证卷 `targetCode` 闭环已接通 |
 | **Skill / CLI P0** | ✅ | `services/skills` 和 `cli/ldx.js` 覆盖诊断、报告、卡点、验证卷、反馈和时间线能力 |
-| **自动化测试** | ✅ | 261 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、工具函数、Skill/CLI 和覆盖缺口补全 |
+| **自动化测试** | ✅ | 334 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、英语词库听写、工具函数、Skill/CLI 和覆盖缺口补全 |
 | **端到端真实图片脚本** | ✅ | `tests/e2e-real-image.test.js` 单独运行，串通上传 → AI 分析 → 报告生成链路 |
-| **JS 语法检查** | ✅ | `npm run check` 校验 86 个文件 |
+| **JS 语法检查** | ✅ | `npm run check` 校验 107 个文件 |
 | **学科隔离** | ✅ | 数/语/英三科独立档案，首页提供学科入口，单学科工作台承接具体操作 |
 | **20张照片支持** | ✅ | `upload` 页面限制 20 张，`analyzePhotos` 自动分批（5张/批） |
 | **学习记录** | ✅ | `upload-history` 按天展示诊断报告、验证试卷、验证批复和原始照片 |
 | **试卷下载状态** | ✅ | `paper-preview` 对已下载 PDF 显示「已下载」，防止重复下载 |
 | **PDF 中文字体内置** | ✅ | `generatePaper` 与 `generateReportPDF` 使用函数目录内的 Noto CJK 字体，缺失时直接返回明确错误 |
 | **AI 模型通过 CloudBase AI 调用** | ✅ | `analyzeBatch` 与 `generatePaper` 使用 `@cloudbase/node-sdk`，不再读取 SECRET_ID/SECRET_KEY/AI_API_KEY |
+| **英语单词听写** | ✅ | 英语工作台改为个人词库掌握首页，`english-practice` 默认 20 词语音听写，AI 自动判定 correct/incorrect/unclear 并更新复测节奏 |
 
 ### 6.2 待完成（部署 + 配置 + 真机验收）
 
@@ -459,6 +467,7 @@ System Prompt 包含：
 | 开通 CloudBase AI 模型 | ⬜ | 在当前云开发环境开通 `hy3-preview` 与 `deepseek-v4-flash` |
 | 确认内置中文字体 | ⬜ | 确认 `generatePaper` 与 `generateReportPDF` 目录内的 `NotoSansCJKsc-Regular.otf` 随云函数上传 |
 | 部署云函数 | ⬜ | 微信开发者工具 → 右键每个云函数目录 → "上传并部署：云端安装依赖"；所有云函数超时保持在 60 秒以内 |
+| 添加微信同声传译插件 | ⬜ | 英语听写依赖 WechatSI 语音识别与 TTS；插件不可用时页面会展示可恢复降级提示 |
 | 创建数据库集合与安全规则 | ⬜ | 主学习数据集合使用创建者规则；`studentMembers` / `studentInvites` 通过云函数访问 |
 | 创建数据库复合索引 | ⬜ | 见 SETUP.md 第五章"数据库索引"表 |
 | 真机端到端验收 | ⬜ | 添加学生 → 上传 1/20 张试卷 → AI 分析 → 查看报告 → 生成验证卷 → 下载 PDF → 打印 |
@@ -483,7 +492,7 @@ System Prompt 包含：
 1. 左侧文件树找到 `cloudfunctions/<函数名>`
 2. **右键** → "上传并部署：云端安装依赖（不上传 node_modules）"
 3. 等待控制台显示"上传成功"
-4. 对 `cloudfunctions/` 下全部八个云函数重复：`uploadAndAnalyze` / `analyzePhotos` / `analyzeBatch` / `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `generateReportPDF`
+4. 对 `cloudfunctions/` 下全部十个云函数重复：`uploadAndAnalyze` / `analyzePhotos` / `analyzeBatch` / `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `generateReportPDF` / `reportFeedback` / `englishVocabulary`
 5. 在云开发控制台确认各云函数执行超时均不超过 **60 秒**
 
 ### Step 3: 确认云函数配置

@@ -1,4 +1,9 @@
 const cloud = require('wx-server-sdk');
+const {
+  getStudentAccess,
+  canManageFamily,
+  permissionsForRole,
+} = require('../_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -21,23 +26,6 @@ function success(data = {}) {
 
 function failure(error) {
   return { success: false, error };
-}
-
-function canManageFamily(access) {
-  return Boolean(access && access.allowed && access.role === 'owner');
-}
-
-function permissionsForRole(role) {
-  const owner = role === 'owner';
-  return {
-    canView: true,
-    canReadLearning: true,
-    canOperateLearning: true,
-    canManageParents: owner,
-    canUpload: true,
-    canGeneratePaper: true,
-    canRetryAnalysis: true,
-  };
 }
 
 function toTime(value) {
@@ -68,32 +56,8 @@ function normalizeSubject(subject) {
   return ['math', 'chinese', 'english'].includes(subject) ? subject : 'math';
 }
 
-function isActive(member) {
-  return member && member.status === 'active';
-}
-
-async function getStudent(studentId) {
-  if (!studentId) return null;
-  const res = await db.collection('students').doc(studentId).get();
-  return res.data || null;
-}
-
-async function getMember(studentId, memberOpenId) {
-  const res = await db.collection('studentMembers').where({ studentId, memberOpenId }).get();
-  return (res.data || []).find(isActive) || null;
-}
-
 async function getAccess(studentId, openId) {
-  const student = await getStudent(studentId);
-  if (!student) return { allowed: false, role: '', student: null };
-  if (student._openid && student._openid === openId) {
-    return { allowed: true, role: 'owner', student };
-  }
-  const member = await getMember(studentId, openId);
-  if (member) {
-    return { allowed: true, role: member.role || 'viewer', student, member };
-  }
-  return { allowed: false, role: '', student };
+  return getStudentAccess(db, studentId, openId);
 }
 
 function withAccess(access, data = {}) {
