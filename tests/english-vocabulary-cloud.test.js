@@ -298,3 +298,90 @@ test('submitting English dictation attempts uses AI judgment and updates word st
   assert.equal(words.find(item => item._id === 'word-3').masteryStatus, 'untested')
   assert.equal(db.dump('englishPracticeSessions')[0].attempts.length, 3)
 })
+
+test('English recognition sessions generate twenty familiarity words without updating progress', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: Array.from({ length: 24 }, (_, index) => ({
+      _id: `word-${index + 1}`,
+      studentId: 'student-1',
+      word: `word${String(index + 1).padStart(2, '0')}`,
+      meanings: [`词义${index + 1}`],
+      familiarity: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '', lastDirection: '' },
+      spelling: { status: index < 3 ? 'mastered' : 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '' },
+      overallMastery: index < 3 ? 'partial' : 'untested'
+    })),
+    englishPracticeSessions: []
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'generateRecognitionSession',
+    studentId: 'student-1',
+    today: '2026-06-16'
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.wordItems.length, 20)
+  assert.equal(result.wordItems.filter(item => item.direction === 'cn2en').length, 10)
+  assert.equal(result.wordItems.filter(item => item.direction === 'en2cn').length, 10)
+  const session = db.dump('englishPracticeSessions')[0]
+  assert.equal(session.functionType, 'familiarity')
+  assert.equal(session.type, 'word-familiarity')
+  assert.equal(db.dump('studentEnglishWords')[0].familiarity.status, 'untested')
+})
+
+test('submitting English recognition attempts updates only familiarity progress', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [
+      {
+        _id: 'word-1',
+        studentId: 'student-1',
+        word: 'science',
+        meanings: ['科学'],
+        cnSynonyms: ['科学课'],
+        familiarity: { status: 'needs_practice', correctCount: 0, wrongCount: 1, lastTestedAt: '2026-06-15', nextReviewAt: '2026-06-16', lastDirection: 'cn2en' },
+        spelling: { status: 'needs_practice', correctCount: 0, wrongCount: 3, lastTestedAt: '2026-06-15', nextReviewAt: '2026-06-16' },
+        overallMastery: 'partial'
+      }
+    ],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      functionType: 'familiarity',
+      type: 'word-familiarity',
+      status: 'in_progress',
+      attempts: [],
+      wordItems: [{ queueKey: 'word-1:0:0', wordId: 'word-1', word: 'science', direction: 'en2cn' }]
+    }]
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'submitRecognitionAttempt',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    queueKey: 'word-1:0:0',
+    wordId: 'word-1',
+    direction: 'en2cn',
+    recognizedText: '科学课',
+    reviewedAt: '2026-06-16T08:00:00+08:00'
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.judgment.status, 'correct')
+  assert.equal(result.shouldRepeat, false)
+  const word = db.dump('studentEnglishWords')[0]
+  assert.equal(word.familiarity.status, 'reviewing')
+  assert.equal(word.familiarity.correctCount, 1)
+  assert.equal(word.familiarity.lastDirection, 'en2cn')
+  assert.deepEqual(word.spelling, {
+    status: 'needs_practice',
+    correctCount: 0,
+    wrongCount: 3,
+    lastTestedAt: '2026-06-15',
+    nextReviewAt: '2026-06-16'
+  })
+  assert.equal(db.dump('englishPracticeSessions')[0].attempts.length, 1)
+})

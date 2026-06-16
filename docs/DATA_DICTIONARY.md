@@ -346,7 +346,8 @@ MVP 数学卡点当前包含：
 |--------|------|------|--------|
 | `studentId` | String | 关联 students._id | `"stu_xxx"` |
 | `subject` | String | 固定为 `english` | `"english"` |
-| `type` | String | 固定为 `word-dictation` | `"word-dictation"` |
+| `functionType` | String | v2 功能维度：`familiarity` \| `spelling`；旧记录可能为空 | `"familiarity"` |
+| `type` | String | 会话类型：`word-familiarity` \| `word-dictation` | `"word-familiarity"` |
 | `status` | String | `in_progress` \| `completed` | `"in_progress"` |
 | `wordItems` | Array\<Object\> | 本轮听写队列，默认 20 个词，中文/英文提示约各半 | `[{ "word": "science" }]` |
 | `attempts` | Array\<Object\> | 逐题识别和 AI 判定记录 | 见下方 |

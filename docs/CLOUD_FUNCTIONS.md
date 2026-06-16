@@ -389,6 +389,8 @@ wx.cloud.callFunction({
 | `seedPersonalVocabulary` | `studentId` | owner/viewer 可操作 | 将项目内置的钟青羽 PEP 3上-6上个人词库写入 `studentEnglishWords`，重复导入只合并来源不新增重复词 |
 | `getVocabularySummary` | `studentId` | owner/viewer 可查看 | 返回总词数、熟悉度维度、拼写维度、整体掌握和高频错词 |
 | `listWords` | `studentId` | owner/viewer 可查看 | 按状态或单元读取个人词库 |
+| `generateRecognitionSession` | `studentId` | owner/viewer 可操作 | 默认生成 20 个单词的熟悉度口头练习会话，方向为中英混合 |
+| `submitRecognitionAttempt` | `studentId`, `sessionId`, `wordId`, `recognizedText` | owner/viewer 可操作 | 逐题提交熟悉度语音识别结果，只更新 `familiarity` 维度 |
 | `generatePracticeSession` | `studentId` | owner/viewer 可操作 | 默认生成 20 个单词的 `word-dictation` 听写会话 |
 | `submitDictationAttempt` | `studentId`, `sessionId`, `wordId`, `recognizedText` | owner/viewer 可操作 | 逐题提交语音识别结果，云函数自动判定并更新掌握度 |
 | `submitPracticeResult` | `studentId`, `sessionId` | owner/viewer 可操作 | 标记会话完成，兼容旧练习提交 |
@@ -469,6 +471,39 @@ wx.cloud.callFunction({
 ```
 
 `summary.needsPracticeCount`、`summary.reviewingCount`、`summary.masteredCount`、`summary.dueReviewCount` 仍作为兼容字段保留，当前按 `familiarity` 维度派生。
+
+**generateRecognitionSession**
+
+```json
+{
+  "success": true,
+  "sessionId": "englishPracticeSessions-1",
+  "wordItems": [
+    {
+      "queueKey": "word-1:0:0",
+      "wordId": "word-1",
+      "word": "science",
+      "meanings": ["科学"],
+      "promptType": "chinese",
+      "direction": "cn2en",
+      "retryCount": 0
+    }
+  ]
+}
+```
+
+**submitRecognitionAttempt**
+
+```json
+{
+  "success": true,
+  "judgment": {
+    "status": "correct",
+    "reason": "识别文本与目标释义一致"
+  },
+  "shouldRepeat": false
+}
+```
 
 **submitDictationAttempt**
 

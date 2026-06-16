@@ -2,6 +2,8 @@
 const { SUBJECT_NAMES } = require('./constants')
 
 let _db = null
+const pendingSubjectProfileCreates = new Map()
+
 function getDb() {
   if (!_db) _db = wx.cloud.database()
   return _db
@@ -119,29 +121,43 @@ async function getSubjectProfile(studentId, subject) {
 }
 
 async function ensureSubjectProfile(studentId, subject, subjectName = '') {
-  const existing = await getSubjectProfile(studentId, subject)
-  if (existing) return existing
+  const key = `${studentId}:${subject}`
+  if (pendingSubjectProfileCreates.has(key)) {
+    return pendingSubjectProfileCreates.get(key)
+  }
 
-  const now = getDb().serverDate()
-  const res = await getDb().collection('subjectProfiles').add({
-    data: {
-      studentId,
-      subject,
-      subjectName,
-      totalReports: 0,
-      currentSummary: '',
-      currentBottlenecks: [],
-      nextAction: '拍照诊断',
-      latestEffectiveReportId: '',
-      pendingBottlenecks: [],
-      improvedBottlenecks: [],
-      currentAnalysisId: '',
-      analysisStatus: '',
-      createdAt: now,
-      updatedAt: now
-    }
-  })
-  return { _id: res._id, studentId, subject, subjectName }
+  const createProfile = (async () => {
+    const existing = await getSubjectProfile(studentId, subject)
+    if (existing) return existing
+
+    const now = getDb().serverDate()
+    const res = await getDb().collection('subjectProfiles').add({
+      data: {
+        studentId,
+        subject,
+        subjectName,
+        totalReports: 0,
+        currentSummary: '',
+        currentBottlenecks: [],
+        nextAction: '拍照诊断',
+        latestEffectiveReportId: '',
+        pendingBottlenecks: [],
+        improvedBottlenecks: [],
+        currentAnalysisId: '',
+        analysisStatus: '',
+        createdAt: now,
+        updatedAt: now
+      }
+    })
+    return { _id: res._id, studentId, subject, subjectName }
+  })()
+
+  pendingSubjectProfileCreates.set(key, createProfile)
+  try {
+    return await createProfile
+  } finally {
+    pendingSubjectProfileCreates.delete(key)
+  }
 }
 
 /**
@@ -312,6 +328,42 @@ async function getReportFeedback(reportId) {
   return result.items || []
 }
 
+async function getEnglishVocabularySummary(studentId, today = '') {
+  return callFunction('englishVocabulary', { action: 'getVocabularySummary', studentId, today })
+}
+
+async function createEnglishImportBatch(payload = {}) {
+  return callFunction('englishVocabulary', { action: 'createImportBatch', ...payload })
+}
+
+async function confirmEnglishImportBatch(studentId, batchId) {
+  return callFunction('englishVocabulary', { action: 'confirmImportBatch', studentId, batchId })
+}
+
+async function seedEnglishPersonalVocabulary(studentId) {
+  return callFunction('englishVocabulary', { action: 'seedPersonalVocabulary', studentId })
+}
+
+async function generateEnglishRecognitionSession(payload = {}) {
+  return callFunction('englishVocabulary', { action: 'generateRecognitionSession', ...payload })
+}
+
+async function submitEnglishRecognitionAttempt(payload = {}) {
+  return callFunction('englishVocabulary', { action: 'submitRecognitionAttempt', ...payload })
+}
+
+async function generateEnglishPracticeSession(payload = {}) {
+  return callFunction('englishVocabulary', { action: 'generatePracticeSession', ...payload })
+}
+
+async function submitEnglishDictationAttempt(payload = {}) {
+  return callFunction('englishVocabulary', { action: 'submitDictationAttempt', ...payload })
+}
+
+async function submitEnglishPracticeResult(payload = {}) {
+  return callFunction('englishVocabulary', { action: 'submitPracticeResult', ...payload })
+}
+
 module.exports = {
   normalizeError,
   isTimeoutError,
@@ -352,4 +404,13 @@ module.exports = {
   getPaperDetail,
   createReportFeedback,
   getReportFeedback,
+  getEnglishVocabularySummary,
+  createEnglishImportBatch,
+  confirmEnglishImportBatch,
+  seedEnglishPersonalVocabulary,
+  generateEnglishRecognitionSession,
+  submitEnglishRecognitionAttempt,
+  generateEnglishPracticeSession,
+  submitEnglishDictationAttempt,
+  submitEnglishPracticeResult,
 }
