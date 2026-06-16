@@ -202,6 +202,8 @@ Page({
     subject: 'math',
     subjectName: '数学',
     lpCode: '',
+    bottleneckId: '',
+    viewId: '',
     bottleneck: null,
     relatedReports: [],
     relatedPapers: [],
@@ -216,15 +218,19 @@ Page({
     const subject = options.subject || 'math'
     const studentId = options.studentId || ''
     const lpCode = options.lpCode ? decodeURIComponent(options.lpCode) : ''
+    const bottleneckId = options.bottleneckId ? decodeURIComponent(options.bottleneckId) : ''
+    const viewId = options.viewId ? decodeURIComponent(options.viewId) : ''
     const studentName = options.studentName ? decodeURIComponent(options.studentName) : ''
     this.setData({
       studentId,
       studentName,
       subject,
       subjectName: options.subjectName ? decodeURIComponent(options.subjectName) : (SUBJECT_NAMES[subject] || '数学'),
-      lpCode
+      lpCode,
+      bottleneckId,
+      viewId
     })
-    if (studentId && lpCode) {
+    if (studentId && (lpCode || bottleneckId || viewId)) {
       return this.loadDetail()
     }
     this.setData({ loading: false, emptyText: '缺少学习卡点信息' })
@@ -234,7 +240,10 @@ Page({
   async loadDetail() {
     this.setData({ loading: true })
     try {
-      const dashboard = await cloud.getSubjectDashboard(this.data.studentId, this.data.subject)
+      const dashboard = await cloud.getSubjectDashboard(this.data.studentId, this.data.subject, {
+        reportLimit: 10,
+        paperLimit: 10
+      })
       const profile = dashboard.profile || {}
       const reports = dashboard.reports || []
       const papers = dashboard.papers || []
@@ -245,20 +254,27 @@ Page({
         ...item,
         subject: this.data.subject,
         subjectName: this.data.subjectName
-      })))
-      const bottleneck = findBottleneckView(views, this.data.lpCode) || buildBottleneckViews([{
+      })), {
+        subject: this.data.subject,
+        subjectName: this.data.subjectName,
+        expandCandidates: this.data.subject === 'math'
+      })
+      const targetIdentifier = this.data.bottleneckId || this.data.viewId || this.data.lpCode
+      const bottleneck = findBottleneckView(views, targetIdentifier) || buildBottleneckViews([{
         lpCode: this.data.lpCode,
+        bottleneckId: this.data.bottleneckId,
         subject: this.data.subject,
         subjectName: this.data.subjectName,
         status: 'needs_verification'
       }])[0]
+      const relatedLpCode = bottleneck && bottleneck.lpCode ? bottleneck.lpCode : this.data.lpCode
       const relatedReports = reports
-        .filter(report => reportMatches(report, this.data.lpCode))
+        .filter(report => reportMatches(report, relatedLpCode))
         .sort((a, b) => timeOf(b.createdAt) - timeOf(a.createdAt))
       const relatedPapers = papers
-        .filter(paper => paperMatches(paper, this.data.lpCode))
+        .filter(paper => paperMatches(paper, relatedLpCode))
         .sort((a, b) => timeOf(b.createdAt || b.paperDate) - timeOf(a.createdAt || a.paperDate))
-      const evidenceChain = buildEvidenceChain(relatedReports, relatedPapers, this.data.subjectName, this.data.lpCode)
+      const evidenceChain = buildEvidenceChain(relatedReports, relatedPapers, this.data.subjectName, relatedLpCode)
       this.setData({
         bottleneck,
         relatedReports,

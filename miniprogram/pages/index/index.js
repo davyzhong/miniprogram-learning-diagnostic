@@ -4,13 +4,28 @@ const { formatRelativeTime } = require('../../utils/util')
 const { buildLearningProfileHomeView } = require('./index-presenter')
 const { buildChildWorkbenchCards } = require('../../utils/child-workbench')
 const { getSubjectName } = require('../../utils/constants')
+const { sharedNavigation, OWNER_PERMISSIONS } = require('../../utils/shared-navigation')
 
-const OWNER_PERMISSIONS = {
-  canView: true,
-  canManageParents: true,
-  canUpload: true,
-  canGeneratePaper: true,
-  canRetryAnalysis: true
+const HOME_CACHE_TTL_MS = 30 * 1000
+
+function applyProfileStats(viewModel, profiles) {
+  let totalReports = 0
+  let lastReportAt = null
+
+  ;(profiles || []).forEach(p => {
+    totalReports += (p.totalReports || 0)
+    if (p.updatedAt) {
+      const t = new Date(p.updatedAt)
+      if (!lastReportAt || t > lastReportAt) {
+        lastReportAt = t
+      }
+    }
+  })
+
+  viewModel.totalReports = totalReports
+  viewModel.lastReportAt = lastReportAt
+    ? formatRelativeTime(lastReportAt)
+    : ''
 }
 
 Page({
@@ -26,16 +41,29 @@ Page({
     childCards: []
   },
 
+  ...sharedNavigation,
+
   onShow() {
-    this.loadStudents()
+    return this.loadStudents()
   },
 
-  async loadStudents() {
+  hasFreshHomeSnapshot() {
+    const loadedAt = this._lastHomeLoadedAt || 0
+    if (!loadedAt || Date.now() - loadedAt > HOME_CACHE_TTL_MS) {
+      return false
+    }
+    return this.data.loading === false && (this.data.hasStudents || this.data.homeMode === 'empty')
+  },
+
+  async loadStudents(options = {}) {
+    if (!options.force && this.hasFreshHomeSnapshot()) {
+      return
+    }
+
     this.setData({ loading: true })
     wx.showLoading({ title: '加载中...' })
 
     try {
-      // 1. 加载所有可访问学生。新版共享家长走云函数，旧实现保留为兜底。
       let students = []
       let usedSharedAccess = false
       try {
@@ -64,53 +92,23 @@ Page({
           childCards: [],
           loading: false
         })
+        this._lastHomeLoadedAt = Date.now()
         return
       }
 
-      // 2. 为每个学生加载学科档案统计
       const profileLists = {}
-      const viewModels = await Promise.all(students.map(async s => {
-        // 年级文字
+      const viewModels = students.map(s => {
         const viewModel = {
           ...s,
           gradeText: s.grade ? `${s.grade}年级` : ''
         }
-
-        // 查询该学生的所有学科档案
-        try {
-          const profiles = await cloud.getSubjectProfiles(s._id)
-          profileLists[s._id] = profiles
-
-          let totalReports = 0
-          let lastReportAt = null
-
-          profiles.forEach(p => {
-            totalReports += (p.totalReports || 0)
-            if (p.updatedAt) {
-              const t = new Date(p.updatedAt)
-              if (!lastReportAt || t > lastReportAt) {
-                lastReportAt = t
-              }
-            }
-          })
-
-          viewModel.totalReports = totalReports
-          viewModel.lastReportAt = lastReportAt
-            ? formatRelativeTime(lastReportAt)
-            : ''
-        } catch (e) {
-          viewModel.totalReports = 0
-          viewModel.lastReportAt = ''
-        }
-
-        // 默认头像颜色和首字
         if (!viewModel.avatarColor) {
           const colors = ['#4299e1', '#48bb78', '#ed8936', '#9f7aea', '#ed64a6', '#38b2ac']
           viewModel.avatarColor = colors[Math.abs(this.hashCode(s.name)) % colors.length]
         }
         viewModel.avatarText = s.name ? s.name.charAt(0) : ''
         return viewModel
-      }))
+      })
 
       const reportsByStudentId = {}
       const papersByStudentId = {}
@@ -121,6 +119,7 @@ Page({
           try {
             const dashboard = await cloud.getStudentDashboard(student._id)
             profileLists[student._id] = dashboard.subjectProfiles || profileLists[student._id] || []
+            applyProfileStats(student, profileLists[student._id])
             reportsByStudentId[student._id] = dashboard.recentReports || []
             papersByStudentId[student._id] = dashboard.recentPapers || []
             permissionsByStudentId[student._id] = dashboard.permissions || student.permissions || OWNER_PERMISSIONS
@@ -131,6 +130,19 @@ Page({
       }
 
       await Promise.all(viewModels.map(async student => {
+        if (!profileLists[student._id] && typeof cloud.getSubjectProfiles === 'function') {
+          try {
+            profileLists[student._id] = await cloud.getSubjectProfiles(student._id)
+            applyProfileStats(student, profileLists[student._id])
+          } catch (e) {
+            profileLists[student._id] = []
+            applyProfileStats(student, [])
+          }
+        } else if (!profileLists[student._id]) {
+          profileLists[student._id] = []
+          applyProfileStats(student, [])
+        }
+
         if (!reportsByStudentId[student._id] && typeof cloud.getReports === 'function') {
           reportsByStudentId[student._id] = await cloud.getReports(student._id)
         }
@@ -176,10 +188,11 @@ Page({
         permissions,
         hasStudents: true,
         homeMode: hasMultipleChildren ? 'family-workbench' : 'single-profile',
-        home,
-        childCards,
-        loading: false
+          home,
+          childCards,
+          loading: false
       })
+      this._lastHomeLoadedAt = Date.now()
     } catch (err) {
       console.error('加载学生列表失败', err)
       wx.showToast({ title: '加载失败', icon: 'none' })
@@ -189,41 +202,10 @@ Page({
     }
   },
 
-  // 点击学生卡片 → 进入该孩子的学习档案
   onStudentTap(e) {
     const { id, name, grade } = e.currentTarget.dataset
     wx.navigateTo({
       url: `/pages/student-profile/student-profile?studentId=${id}&name=${encodeURIComponent(name || '')}&grade=${grade || ''}`
-    })
-  },
-
-  onManageStudents() {
-    this.onAddStudent()
-  },
-
-  onParentManagement() {
-    const student = this.data.activeStudent || {}
-    const studentId = student._id || this.data.activeStudentId
-    if (!studentId) {
-      wx.showToast({ title: '缺少孩子档案信息', icon: 'none' })
-      return
-    }
-    const url = `/pages/parent-management/parent-management?studentId=${studentId}`
-    wx.navigateTo({
-      url,
-      fail: error => {
-        console.error('打开家长管理失败', error)
-        wx.redirectTo({
-          url,
-          fail: redirectError => {
-            console.error('重定向家长管理失败', redirectError)
-            const message = redirectError && redirectError.errMsg
-              ? redirectError.errMsg.replace(/^redirectTo:fail\s*/i, '').slice(0, 18)
-              : '请重新编译后再试'
-            wx.showToast({ title: message || '家长管理暂时打不开', icon: 'none' })
-          }
-        })
-      }
     })
   },
 
@@ -236,134 +218,12 @@ Page({
     wx.navigateTo({ url })
   },
 
-  navigateToSubject(subject) {
-    const student = this.data.activeStudent || {}
-    const subjectName = getSubjectName(subject, '数学')
-    wx.navigateTo({
-      url: `/pages/subject-home/subject-home?studentId=${student._id || this.data.activeStudentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}&grade=${student.grade || ''}`
-    })
-  },
-
-  onObservationTap(e) {
-    this.navigateToSubject(e.currentTarget.dataset.subject || 'math')
-  },
-
-  onHighlightTap(e) {
-    this.navigateToSubject(e.currentTarget.dataset.subject || 'math')
-  },
-
-  onSubjectTap(e) {
-    this.navigateToSubject(e.currentTarget.dataset.subject || e.currentTarget.dataset.key || 'math')
-  },
-
-  onViewAllRecords() {
-    const student = this.data.activeStudent || {}
-    wx.navigateTo({
-      url: `/pages/upload-history/upload-history?studentId=${student._id || this.data.activeStudentId}&studentName=${encodeURIComponent(student.name || '')}`
-    })
-  },
-
-  findHomeBottleneck(subject, lpCode) {
-    const home = this.data.home || {}
-    return (home.priorityBottlenecks || []).find(item =>
-      item.subject === subject && item.lpCode === lpCode
-    ) || null
-  },
-
-  onViewAllBottlenecks() {
-    const student = this.data.activeStudent || {}
-    wx.navigateTo({
-      url: `/pages/bottleneck-center/bottleneck-center?studentId=${student._id || this.data.activeStudentId}&studentName=${encodeURIComponent(student.name || '')}`
-    })
-  },
-
-  onBottleneckTap(e) {
-    const { subject = 'math', lpCode = '' } = e.currentTarget.dataset
-    const student = this.data.activeStudent || {}
-    if (!lpCode) return
-    wx.navigateTo({
-      url: `/pages/bottleneck-detail/bottleneck-detail?studentId=${student._id || this.data.activeStudentId}&subject=${subject}&lpCode=${encodeURIComponent(lpCode)}&studentName=${encodeURIComponent(student.name || '')}`
-    })
-  },
-
-  onBottleneckAction(e) {
-    const { subject = 'math', lpCode = '' } = e.currentTarget.dataset
-    if (!lpCode) return
-    const bottleneck = this.findHomeBottleneck(subject, lpCode)
-    if (bottleneck && bottleneck.active === false) {
-      this.onBottleneckTap(e)
-      return
-    }
-    const student = this.data.activeStudent || {}
-    const subjectName = getSubjectName(subject, '数学')
-    wx.navigateTo({
-      url: `/pages/generate-verification/generate-verification?studentId=${student._id || this.data.activeStudentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}&targetCode=${encodeURIComponent(lpCode)}`
-    })
-  },
-
-  onRecordTap(e) {
-    const index = e.currentTarget.dataset.index
-    const record = this.data.home && this.data.home.recentRecords[index]
-    if (!record) return
-    if (record.paperId) {
-      wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${record.paperId}` })
-      return
-    }
-    if (record.reportId) {
-      wx.navigateTo({ url: `/pages/report/report?id=${record.reportId}` })
-    }
-  },
-
-  onPrimaryReportTap() {
-    const report = this.data.home && this.data.home.primaryReport
-    if (report && report.reportId) {
-      wx.navigateTo({ url: `/pages/report/report?id=${report.reportId}` })
-    }
-  },
-
-  onPrimaryAction() {
-    const home = this.data.home || {}
-    const student = this.data.activeStudent || {}
-    const subject = home.nextAction && home.nextAction.subject ? home.nextAction.subject : 'math'
-    const subjectName = getSubjectName(subject, '数学')
-    if (home.nextAction && home.nextAction.primaryText === '查看学习记录') {
-      this.onViewAllRecords()
-      return
-    }
-    if (home.nextAction && home.nextAction.primaryText === '生成验证试卷') {
-      wx.navigateTo({
-        url: `/pages/generate-verification/generate-verification?studentId=${student._id || this.data.activeStudentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}`
-      })
-      return
-    }
-    wx.navigateTo({
-      url: `/pages/upload/upload?mode=diagnosis&studentId=${student._id || this.data.activeStudentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}&grade=${student.grade || ''}`
-    })
-  },
-
-  onSecondaryAction() {
-    const home = this.data.home || {}
-    const student = this.data.activeStudent || {}
-    const subject = home.nextAction && home.nextAction.subject ? home.nextAction.subject : 'math'
-    const subjectName = getSubjectName(subject, '数学')
-    if (!home.nextAction || !home.nextAction.secondaryText) return
-    if (home.nextAction && home.nextAction.secondaryText === '查看学习记录') {
-      this.onViewAllRecords()
-      return
-    }
-    wx.navigateTo({
-      url: `/pages/upload/upload?mode=diagnosis&studentId=${student._id || this.data.activeStudentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}&grade=${student.grade || ''}`
-    })
-  },
-
-  // 添加学生
   onAddStudent() {
     wx.navigateTo({
       url: '/pages/add-student/add-student'
     })
   },
 
-  // 工具函数：简单 hash
   hashCode(str) {
     if (!str) return 0
     let hash = 0

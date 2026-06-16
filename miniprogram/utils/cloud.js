@@ -295,16 +295,16 @@ async function revokeStudentMember(studentId, memberOpenId) {
   return callFunction('studentAccess', { action: 'revokeMember', studentId, memberOpenId })
 }
 
-async function getStudentDashboard(studentId) {
-  return callFunction('studentData', { action: 'getStudentDashboard', studentId })
+async function getStudentDashboard(studentId, options = {}) {
+  return callFunction('studentData', { action: 'getStudentDashboard', studentId, ...options })
 }
 
-async function getSubjectDashboard(studentId, subject) {
-  return callFunction('studentData', { action: 'getSubjectDashboard', studentId, subject })
+async function getSubjectDashboard(studentId, subject, options = {}) {
+  return callFunction('studentData', { action: 'getSubjectDashboard', studentId, subject, ...options })
 }
 
-async function getLearningTimeline({ studentId, subject } = {}) {
-  return callFunction('studentData', { action: 'getLearningTimeline', studentId, subject })
+async function getLearningTimeline({ studentId, subject, limit } = {}) {
+  return callFunction('studentData', { action: 'getLearningTimeline', studentId, subject, limit })
 }
 
 async function cleanupStaleLearningRecords({ studentId, subject, dryRun = false } = {}) {

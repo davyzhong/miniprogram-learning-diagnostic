@@ -66,7 +66,32 @@ function numberOf(value) {
   return Math.max(0, Number(value) || 0)
 }
 
+function evidenceStrengthText(value = '') {
+  if (value === 'high') return '高置信证据'
+  if (value === 'medium') return '中置信证据'
+  if (value === 'low') return '低置信证据'
+  return ''
+}
+
+function buildFineEvidenceText(item = {}) {
+  const resourceCount = item.fineResourceCount !== undefined
+    ? numberOf(item.fineResourceCount)
+    : (item.recommendedResourceIds || []).length
+  const parentName = item.parentDisplayName || bottleneckLabelOf({
+    lpCode: item.parentLpCode || item.lpCode,
+    lpName: item.parentLpName || item.lpName
+  })
+  return [
+    evidenceStrengthText(item.evidenceStrength),
+    parentName ? `归属${parentName}` : '',
+    resourceCount > 0 ? `推荐资源 ${resourceCount} 个` : '',
+    item.microValidationRequired ? '需微验证' : ''
+  ].filter(Boolean).join(' · ') || '细分学习卡点'
+}
+
 function buildEvidenceText(item = {}) {
+  if (item.fineBottleneck) return buildFineEvidenceText(item)
+
   const evidenceCount = numberOf(item.evidenceCount)
   const recentErrorCount = numberOf(item.recentErrorCount || item.errorCount || item.relatedErrorCount)
   const parts = [
@@ -86,6 +111,71 @@ function buildEvidenceText(item = {}) {
   }
 
   return '等待补充证据'
+}
+
+function candidateKey(parent = {}, candidate = {}, index = 0) {
+  return candidate.bottleneckId
+    || candidate.title
+    || `${parent.lpCode || 'LP'}-${index}`
+}
+
+function shouldExpandFineBottlenecks(item = {}, options = {}) {
+  const subject = item.subject || options.subject || ''
+  return options.expandCandidates === true
+    && subject === 'math'
+    && Array.isArray(item.candidateBottlenecks)
+    && item.candidateBottlenecks.length > 0
+}
+
+function expandFineBottleneckItems(rawItems = [], options = {}) {
+  const result = []
+  const seen = new Set()
+
+  ;(Array.isArray(rawItems) ? rawItems : []).forEach(item => {
+    if (!shouldExpandFineBottlenecks(item, options)) {
+      result.push(item)
+      return
+    }
+
+    const parentDisplayName = bottleneckLabelOf(item)
+    item.candidateBottlenecks.forEach((candidate = {}, index) => {
+      const title = candidate.title || item.lpName || item.lpCode || ''
+      const key = candidateKey(item, candidate, index)
+      const dedupeKey = `${item.lpCode || ''}:${title || key}`
+      if (seen.has(dedupeKey)) return
+      seen.add(dedupeKey)
+
+      const viewId = `${item.lpCode || 'LP'}:${key}`
+      result.push({
+        ...item,
+        id: viewId,
+        viewId,
+        fineBottleneck: true,
+        parentLpCode: item.lpCode || '',
+        parentLpName: item.lpName || '',
+        parentDisplayName,
+        bottleneckId: candidate.bottleneckId || '',
+        lpName: title,
+        title,
+        name: title,
+        label: title,
+        displayName: title,
+        candidateBottlenecks: [candidate],
+        evidenceStrength: candidate.evidenceStrength || item.evidenceStrength || '',
+        microValidationRequired: Boolean(candidate.microValidationRequired),
+        suggestedMicroValidation: candidate.suggestedMicroValidation || [],
+        fineResourceCount: (candidate.recommendedResourceIds || []).length,
+        recommendedResourceIds: [
+          ...new Set([
+            ...(candidate.recommendedResourceIds || []),
+            ...(item.recommendedResourceIds || [])
+          ].filter(Boolean))
+        ]
+      })
+    })
+  })
+
+  return result
 }
 
 function buildTimeText(item = {}) {
@@ -121,6 +211,7 @@ function buildBottleneckView(item = {}, options = {}) {
   return {
     ...item,
     lpCode: item.lpCode || item.id || '',
+    viewId: item.viewId || item.id || item.lpCode || '',
     subject,
     subjectName: item.subjectName || SUBJECT_NAMES[subject] || options.subjectName || '',
     displayName,
@@ -175,7 +266,7 @@ function sortBottleneckViews(views = []) {
 }
 
 function buildBottleneckViews(rawItems = [], options = {}) {
-  const source = Array.isArray(rawItems) ? rawItems : []
+  const source = expandFineBottleneckItems(rawItems, options)
   return sortBottleneckViews(source.map(item => buildBottleneckView(item, options)))
 }
 
@@ -191,14 +282,22 @@ function buildBottleneckStats(views = []) {
   }
 }
 
-function findBottleneckView(views = [], lpCode = '') {
-  return (views || []).find(item => item.lpCode === lpCode) || null
+function findBottleneckView(views = [], identifier = '') {
+  const target = String(identifier || '')
+  if (!target) return null
+  return (views || []).find(item => (
+    item.lpCode === target
+    || item.viewId === target
+    || item.id === target
+    || item.bottleneckId === target
+  )) || null
 }
 
 module.exports = {
   STATUS_META,
   TREND_META,
   profileBottlenecks,
+  expandFineBottleneckItems,
   buildBottleneckView,
   buildBottleneckViews,
   sortBottleneckViews,

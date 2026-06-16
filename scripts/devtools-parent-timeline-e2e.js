@@ -459,7 +459,7 @@ async function main() {
     page = await miniProgram.currentPage()
     assert.equal(page.path, 'pages/subject-home/subject-home')
     text = await pageText(page)
-    requireText(text, ['数学工作台', '生成验证试卷', '待处理队列', '工具', '拍照诊断', '默认试卷', '学习记录', '完整报告'])
+    requireText(text, ['下一步建议', '生成验证试卷', '待处理队列', '工具', '拍照诊断', '默认试卷', '学习记录', '完整报告'])
     await miniProgram.screenshot({ path: screenshots.subject })
   })
 

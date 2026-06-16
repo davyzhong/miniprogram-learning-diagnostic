@@ -7,7 +7,7 @@
     <text class="paper-code-chip" wx:if="{{paperCodeText}}" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">验证卷 {{paperCodeText}}</text>
     <text class="report-headline">{{headline}}</text>
     <text class="report-summary" wx:if="{{trendSummaryText}}">{{trendSummaryText}}</text>
-    <text class="report-summary">{{report.summary}}</text>
+    <text class="report-summary" wx:if="{{reportSummaryText}}">{{reportSummaryText}}</text>
     <view class="quality-chip quality-chip-{{qualityClass}}" wx:if="{{hasQuality}}">{{qualityLabel}}</view>
   </view>
 
@@ -58,9 +58,25 @@
       <view class="feedback-line" bindtap="onOpenFeedback" data-target-type="report" data-target-id="" data-type="unclear_result">这份报告不准确？点这里反馈</view>
     </view>
 
+    <view class="card chinese-error-card" wx:if="{{hasChineseErrorItems}}">
+      <view class="section-heading"><view class="heading-icon">字</view><text>语文具体错项</text></view>
+      <view class="chinese-error-item" wx:for="{{chineseErrorItems}}" wx:key="viewId">
+        <view class="chinese-error-head">
+          <text class="chinese-error-index">{{item.displayIndex}}</text>
+          <text class="chinese-error-title">{{item.displayName}}</text>
+          <text class="chinese-error-type">{{item.typeText}}</text>
+        </view>
+        <text class="chinese-error-line" wx:if="{{item.answerText}}">{{item.answerText}}</text>
+        <text class="chinese-error-line wrong" wx:if="{{item.studentText}}">{{item.studentText}}</text>
+        <text class="chinese-error-line" wx:if="{{item.sourceText}}">{{item.sourceText}}</text>
+        <text class="chinese-error-line" wx:if="{{item.mistakeText}}">{{item.mistakeText}}</text>
+        <text class="chinese-error-method">{{item.methodText}}</text>
+      </view>
+    </view>
+
     <view class="card" wx:if="{{hasBottlenecks}}">
       <view class="section-heading"><view class="heading-icon">⌁</view><text>发现的学习卡点</text></view>
-      <view class="bottleneck-item" wx:for="{{bottleneckList}}" wx:key="lpCode" bindtap="onTraceableUrlTap" data-url="{{item.detailUrl}}">
+      <view class="bottleneck-item" wx:for="{{bottleneckList}}" wx:key="viewId" bindtap="onTraceableUrlTap" data-url="{{item.detailUrl}}">
         <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
         <view class="bottleneck-copy">
           <view class="bottleneck-title-row">
@@ -69,7 +85,7 @@
           </view>
           <text class="bottleneck-desc">{{item.rootCause || item.suggestion || '建议结合相关错题进一步观察。'}}</text>
           <text class="bottleneck-meta">{{item.metaText}}</text>
-          <text class="feedback-link" catchtap="onOpenFeedback" data-target-type="bottleneck" data-target-id="{{item.lpCode}}" data-type="wrong_bottleneck">反馈这个卡点</text>
+          <text class="feedback-link" catchtap="onOpenFeedback" data-target-type="bottleneck" data-target-id="{{item.bottleneckId || item.lpCode}}" data-type="wrong_bottleneck">反馈这个卡点</text>
         </view>
       </view>
     </view>
@@ -78,13 +94,32 @@
       <view class="section-heading"><view class="heading-icon">⌘</view><text>知识地图下一步</text></view>
       <view class="learning-map-item" wx:for="{{learningMapItems}}" wx:key="lpCode">
         <text class="learning-node">{{item.nodeText}}</text>
+        <text class="learning-node-detail" wx:if="{{item.nodeDetailText}}">{{item.nodeDetailText}}</text>
         <text class="learning-bottleneck" wx:if="{{item.bottleneckText}}">细卡点：{{item.bottleneckText}}</text>
         <text class="learning-action">{{item.nextActionText}}</text>
         <text class="learning-resource-summary" wx:if="{{item.resourceSummary}}">{{item.resourceSummary}}</text>
         <view class="learning-resource-list" wx:if="{{item.hasResources}}">
-          <view class="learning-resource" wx:for="{{item.resources}}" wx:for-item="resource" wx:key="resourceId">
-            <text class="learning-resource-role">{{resource.role}}</text>
-            <text class="learning-resource-title">{{resource.platform}} · {{resource.title}}</text>
+          <view
+            class="learning-resource {{resource.hasUrl ? 'learning-resource-clickable' : ''}}"
+            wx:for="{{item.resources}}"
+            wx:for-item="resource"
+            wx:key="resourceId"
+            bindtap="onLearningResourceTap"
+            data-url="{{resource.url}}"
+            data-title="{{resource.displayTitle}}"
+            data-platform="{{resource.platform}}"
+          >
+            <view class="learning-resource-head">
+              <text class="learning-resource-role">{{resource.role}}</text>
+              <text class="learning-resource-type">{{resource.typeLabel}}</text>
+            </view>
+            <text class="learning-resource-title">{{resource.platform}} · {{resource.displayTitle}}</text>
+            <text class="learning-resource-summary-line" wx:if="{{resource.summary}}">{{resource.summary}}</text>
+            <view class="learning-resource-action" wx:if="{{resource.hasUrl}}">
+              <text>{{resource.actionText}}</text>
+              <text class="resource-arrow">›</text>
+            </view>
+            <text class="learning-resource-usage">{{resource.usageText}}</text>
           </view>
         </view>
       </view>

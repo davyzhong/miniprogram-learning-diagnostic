@@ -3,8 +3,8 @@
 const tcb = require('@cloudbase/node-sdk');
 const cloud = require('wx-server-sdk');
 const { normalizePageResults } = require('./result-normalizer');
-const { getSubjectName } = require('../_shared/constants');
-const { BOTTLENECK_CODE_NAMES } = require('../_shared/bottleneck-name');
+const { getSubjectName } = require('./constants');
+const { BOTTLENECK_CODE_NAMES } = require('./bottleneck-name');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -51,8 +51,9 @@ function buildPrompt(subject, verificationPlan = []) {
     desc: descriptions[code],
   }));
 
+  const chineseReviewPlanItems = verificationPlan.flatMap(item => item.chineseReviewTargets || []);
   const verificationInstruction = verificationPlan.length > 0
-    ? `\n## 验证试卷判定\n这是验证试卷。请按卡点统计证据质量，不要把不确定情况当成已改善：\n${verificationPlan.map(item => `- ${item.lpCode}：整份试卷预期 ${item.expectedQuestionCount} 道`).join('\n')}\n- attemptedQuestionCount：清晰可见、已经作答、能够判断对错的题目数量\n- incorrectQuestionCount：attemptedQuestionCount 中明确答错的题目数量\n- blankQuestionCount：清晰可见但没有作答或明显空白的题目数量\n- unclearQuestionCount：被遮挡、模糊、拍摄不完整、无法判断答案是否正确的题目数量\n- missingQuestionCount：预期题目中未在图片中找到或无法归入以上类别的数量\n未作答、被遮挡、模糊或无法确认的题目不得计入 attemptedQuestionCount。`
+    ? `\n## 验证试卷判定\n这是验证试卷。请按卡点统计证据质量，不要把不确定情况当成已改善：\n${verificationPlan.map(item => `- ${item.lpCode}：整份试卷预期 ${item.expectedQuestionCount} 道`).join('\n')}${chineseReviewPlanItems.length > 0 ? `\n\n语文错项还需要按 reviewItemId 单独统计 chineseReviewEvidence：\n${chineseReviewPlanItems.map(item => `- ${item.itemId}：targetText=${item.targetText}，预期 ${item.expectedQuestionCount} 道`).join('\n')}` : ''}\n- attemptedQuestionCount：清晰可见、已经作答、能够判断对错的题目数量\n- incorrectQuestionCount：attemptedQuestionCount 中明确答错的题目数量\n- blankQuestionCount：清晰可见但没有作答或明显空白的题目数量\n- unclearQuestionCount：被遮挡、模糊、拍摄不完整、无法判断答案是否正确的题目数量\n- missingQuestionCount：预期题目中未在图片中找到或无法归入以上类别的数量\n未作答、被遮挡、模糊或无法确认的题目不得计入 attemptedQuestionCount。`
     : '';
   const mathLearningMapInstruction = subject === 'math'
     ? `\n## 数学诊断升级字段\n数学卡点除了旧的 lpCode/lpName 外，还要尽量补充知识地图字段，无法判断时用空数组或空字符串，不要编造：\n- nodeIds：对应知识节点 ID，例如 MATH-NUM-DEC-MUL-POINT、MATH-NUM-FRACTION-DIV-RECIPROCAL、MATH-MOD-PERCENT-BASE、MATH-GEO-CYLINDER-VOLUME\n- candidateBottlenecks：细颗粒度候选卡点数组，每项包含 bottleneckId、title、evidenceStrength，可选 microValidationRequired、suggestedMicroValidation、recommendedResourceIds\n- recommendedResourceIds：推荐资源 ID。优先给“高质量锚点 + 国内补充”的组合，例如 RES-YT-FRACTION-DIV-001 + RES-BILI-FRACTION-DIV-001\n- nextActionType：resourceReview / microValidation / verificationPaper 三选一。发现漏洞时优先 resourceReview 或 microValidation，不要一上来就 verificationPaper\n- nextActionText：一句给家长看的下一步建议`
@@ -73,12 +74,45 @@ function buildPrompt(subject, verificationPlan = []) {
         "nextActionText": "先用资源重学小数点定位，再做微验证。",
         "recommendedResourceIds": ["RES-BILI-DEC-MUL-001", "RES-KHAN-DEC-MUL-001"]`
     : '';
+  const chineseErrorInstruction = subject === 'chinese'
+    ? `\n## 语文错项抽取规则\n语文诊断必须区分“记忆型错项”和“能力型卡点”。记忆型错项要进入 chineseErrorItems，不能只停留在 LP-101/LP-104 这类粗卡点。\n记忆型错项包括：不会写的汉字、写错的词语、拼音声调错误、古诗文漏字错字、成语或日积月累错项。\n每个 chineseErrorItems 项必须尽量填写 targetText、expectedAnswer、studentAnswer、sourceContext、mistakeType、verificationMethods、relatedLpCode。\n能力型问题如阅读理解、作文结构、句式表达，可以继续放在 bottlenecks；如果有明确训练对象，也可以补充 chineseErrorItems，itemType 用 reading_skill 或 writing_skill。`
+    : '';
+  const chineseErrorJsonFields = subject === 'chinese'
+    ? `,
+      "chineseErrorItems": [{
+        "itemId": "CHI-WORD-BIANLUN",
+        "itemType": "word",
+        "targetText": "辩论",
+        "expectedAnswer": "辩论",
+        "studentAnswer": "辨论",
+        "sourceContext": "看拼音写词语：biàn lùn",
+        "mistakeType": "形近字混淆",
+        "sourceQuestion": "看拼音写词语",
+        "evidenceStrength": "high",
+        "verificationMethods": ["pinyin_to_word", "dictation", "context_fill"],
+        "relatedLpCode": "LP-101",
+        "suggestion": "区分“辩/辨/辫/瓣”的部件和语义，再做复测。"
+      }]`
+    : '';
+  const chineseReviewEvidenceJsonFields = subject === 'chinese'
+    ? `,
+      "chineseReviewEvidence": [{
+        "itemId": "CHI-WORD-BIANLUN",
+        "targetText": "辩论",
+        "attemptedQuestionCount": 1,
+        "incorrectQuestionCount": 0,
+        "blankQuestionCount": 0,
+        "unclearQuestionCount": 0,
+        "missingQuestionCount": 0
+      }]`
+    : '';
 
   return `你是一位资深${subjectName}教师，专门分析小学生的错题根因。
 
 ## 任务
 分析上传的${subjectName}试卷/作业照片，识别所有错题，对每个错题给出根因分析。
 ${verificationInstruction}
+${chineseErrorInstruction}
 
 ## 颜色规则（非常重要）
 - 黑色字迹：学生原始作答
@@ -108,7 +142,7 @@ ${verificationInstruction}
         "lpCode": "LP-001",
         "rootCause": "具体根因（一句话）",
         "suggestion": "改进建议（一句话）"
-      }],
+      }]${chineseErrorJsonFields},
       "verificationEvidence": [{
         "lpCode": "LP-001",
         "attemptedQuestionCount": 3,
@@ -116,7 +150,7 @@ ${verificationInstruction}
         "blankQuestionCount": 0,
         "unclearQuestionCount": 0,
         "missingQuestionCount": 0
-      }]
+      }]${chineseReviewEvidenceJsonFields}
     }
   ]
 }
@@ -134,7 +168,8 @@ ${mathLearningMapInstruction}
 6. ocrSummary 不要推断年级、学段或教材版本，只描述题目内容、学生作答和批改信息
 7. 非验证试卷的 verificationEvidence 返回空数组
 8. 验证试卷中，只有清晰作答且能够判断对错的题目才计入 attemptedQuestionCount；空白、模糊、缺失要分别计入 blankQuestionCount / unclearQuestionCount / missingQuestionCount
-9. 返回纯JSON，不要有任何其他文字`;
+9. ${subject === 'chinese' ? '语文的记忆型错项必须输出到 chineseErrorItems；如果没有具体错项，返回空数组' : '返回纯JSON，不要有任何其他文字'}
+10. 返回纯JSON，不要有任何其他文字`;
 }
 
 async function authorizeBatch({ reportId, taskId, fileIDs }) {

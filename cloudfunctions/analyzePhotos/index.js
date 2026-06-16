@@ -5,7 +5,7 @@ const { compareBottlenecks, buildComparisonSummary } = require('./comparison');
 const { markDuplicatePages } = require('./photo-dedup');
 const { buildProfileSummary } = require('./profile-summary');
 const { buildReportQuality } = require('./report-quality');
-const { aggregateVerificationEvidence, buildVerificationPlan } = require('./verification-evidence');
+const { aggregateVerificationEvidence, aggregateChineseReviewEvidence, buildVerificationPlan } = require('./verification-evidence');
 const {
   splitFileBatches,
   assertUsableBatchResults,
@@ -24,7 +24,10 @@ const ANALYSIS_BATCH_SIZE = 1;
 const MAX_CONCURRENT_BATCHES = 1;
 const MAX_BATCHES_PER_INVOCATION = 1;
 const MAX_BATCH_ATTEMPTS = 2;
-const BATCH_RETRY_DELAY_MS = 600;
+const BATCH_RETRY_DELAY_MS = (process.env.BATCH_RETRY_DELAY_MS != null && process.env.BATCH_RETRY_DELAY_MS !== '')
+  ? Number(process.env.BATCH_RETRY_DELAY_MS)
+  : 600;
+const REANALYSIS_TOKEN = process.env.MATH_REANALYSIS_TOKEN || '';
 
 function analysisErrorMessage(err) {
   const message = err && err.message ? err.message : String(err || '');
@@ -41,6 +44,37 @@ function failedBatchDebugMessage(failedBatches = []) {
     .map(item => `第${item.batchIndex + 1}批${item.error ? `：${item.error}` : ''}`)
     .join('；');
   return detail ? `存在未完成的图片分析批次（${detail}）` : '';
+}
+
+function learningMapProfileFields(item = {}) {
+  return {
+    nodeIds: item.nodeIds || [],
+    candidateBottlenecks: item.candidateBottlenecks || [],
+    recommendedResourceIds: item.recommendedResourceIds || [],
+    resourcePlan: item.resourcePlan || [],
+    evidenceStrength: item.evidenceStrength || '',
+    nextActionType: item.nextActionType || '',
+    nextActionText: item.nextActionText || '',
+  };
+}
+
+function isTrustedReanalysisRequest(event = {}) {
+  return Boolean(REANALYSIS_TOKEN && event.reanalysisToken === REANALYSIS_TOKEN);
+}
+
+function reanalysisSourceReportId(report = {}) {
+  return report.originalReportId
+    || (report.reanalysis && report.reanalysis.sourceReportId)
+    || (report.mathReanalysis && report.mathReanalysis.sourceReportId)
+    || '';
+}
+
+function reanalysisSourceReportIds(report = {}) {
+  return Array.from(new Set([
+    reanalysisSourceReportId(report),
+    ...((report.reanalysis && report.reanalysis.sourceReportIds) || []),
+    ...((report.mathReanalysis && report.mathReanalysis.sourceReportIds) || []),
+  ].filter(Boolean)));
 }
 
 // ========== 更新 subjectProfiles ==========
@@ -64,6 +98,7 @@ async function updateSubjectProfile(profile, profileSummary, reportId) {
       lpName: item.lpName,
       severity: item.severity || 'medium',
       sinceDate: item.firstSeenAt || new Date(),
+      ...learningMapProfileFields(item),
     }));
   const improvedBottlenecks = profileSummary.currentBottlenecks
     .filter(item => item.status === 'improved')
@@ -71,12 +106,14 @@ async function updateSubjectProfile(profile, profileSummary, reportId) {
       lpCode: item.lpCode,
       lpName: item.lpName,
       improvedDate: item.lastSeenAt || new Date(),
+      ...learningMapProfileFields(item),
     }));
 
   await db.collection('subjectProfiles').doc(profile._id).update({
     data: {
       currentSummary: profileSummary.currentSummary,
       currentBottlenecks: profileSummary.currentBottlenecks,
+      chineseReviewItems: profileSummary.chineseReviewItems || profile.chineseReviewItems || [],
       nextAction: profileSummary.nextAction,
       latestEffectiveReportId: reportId,
       diagnosisUpdatedAt: new Date(),
@@ -107,7 +144,8 @@ async function clearSubjectProfileAnalysis(studentId, subject) {
   });
 }
 
-async function getPreviousReport(studentId, subject) {
+async function getPreviousReport(studentId, subject, options = {}) {
+  const excludeReportIds = new Set((options.excludeReportIds || []).filter(Boolean));
   const res = await db.collection('reports')
     .where({
       studentId,
@@ -118,10 +156,14 @@ async function getPreviousReport(studentId, subject) {
     .limit(20)
     .get();
 
-  return res.data.find(item => Array.isArray(item.bottlenecks) && item.bottlenecks.length > 0) || null;
+  return res.data
+    .filter(item => !excludeReportIds.has(item._id))
+    .filter(item => !item.isArchived && !item.archivedAt)
+    .find(item => Array.isArray(item.bottlenecks) && item.bottlenecks.length > 0) || null;
 }
 
-async function getHistoricalPhotos(studentId, subject) {
+async function getHistoricalPhotos(studentId, subject, options = {}) {
+  const excludeReportIds = new Set((options.excludeReportIds || []).filter(Boolean));
   const res = await db.collection('reports')
     .where({
       studentId,
@@ -132,7 +174,10 @@ async function getHistoricalPhotos(studentId, subject) {
     .limit(20)
     .get();
 
-  return res.data.flatMap(item => Array.isArray(item.imageFiles) ? item.imageFiles : []);
+  return res.data
+    .filter(item => !excludeReportIds.has(item._id))
+    .filter(item => !item.isArchived && !item.archivedAt)
+    .flatMap(item => Array.isArray(item.imageFiles) ? item.imageFiles : []);
 }
 
 async function getVerificationPaper(report) {
@@ -172,15 +217,18 @@ function taskMatchesReportOwner(task, report, reportId) {
     && (!report._openid || task._openid === report._openid));
 }
 
-async function loadReportContext(reportId, continuationTaskId = '') {
+async function loadReportContext(reportId, continuationTaskId = '', options = {}) {
   const reportRes = await db.collection('reports').doc(reportId).get();
   const report = reportRes.data;
   const currentOpenId = cloud.getWXContext().OPENID;
+  const trustedReanalysis = Boolean(options.trustedReanalysis);
 
   if (!report) {
     return { earlyResult: { success: false, error: '报告不存在' } };
   }
-  if (report._openid && currentOpenId) {
+  if (trustedReanalysis) {
+    // Authorized maintenance reanalysis is triggered by an admin script with MATH_REANALYSIS_TOKEN.
+  } else if (report._openid && currentOpenId) {
     if (report._openid !== currentOpenId) {
       return { earlyResult: { success: false, error: '无权访问该报告' } };
     }
@@ -390,7 +438,9 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     batchIndex: item.batchIndex,
     error: item.error,
   })));
-  const historicalPhotos = await getHistoricalPhotos(studentId, subject);
+  const historicalPhotos = await getHistoricalPhotos(studentId, subject, {
+    excludeReportIds: [reportId, ...reanalysisSourceReportIds(report)],
+  });
   const markedPages = markDuplicatePages(pageResults, historicalPhotos);
   const uniquePages = markedPages.filter(page => !page.isDuplicate);
   const merged = mergeBatchResults(
@@ -415,7 +465,9 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     merged.summary = '本次照片均疑似重复，未更新学习卡点';
     comparisonSummary = '本次照片均疑似重复，未更新学习卡点。';
   } else if (mode === 'verification') {
-    previousReport = await getPreviousReport(studentId, subject);
+    previousReport = await getPreviousReport(studentId, subject, {
+      excludeReportIds: [reportId, ...reanalysisSourceReportIds(report)],
+    });
     verificationTargets = verificationPaper.targets;
     const verificationEvidence = aggregateVerificationEvidence(verificationPaper.plan, uniquePages);
     const passedCodes = verificationEvidence.filter(item => item.evidenceStatus === 'passed').map(item => item.lpCode);
@@ -426,6 +478,7 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     );
     comparisonSummary = buildComparisonSummary(merged.bottlenecks);
     merged.verificationEvidence = verificationEvidence;
+    merged.chineseReviewEvidence = aggregateChineseReviewEvidence(verificationPaper.plan, uniquePages);
   } else {
     merged.bottlenecks = merged.bottlenecks.map(item => ({ ...item, status: 'found' }));
   }
@@ -445,8 +498,10 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     type: mode,
     totalErrors: merged.totalErrors,
     bottlenecks: merged.bottlenecks,
+    chineseErrorItems: merged.chineseErrorItems || [],
     verificationTargets,
     verificationEvidence: merged.verificationEvidence || [],
+    chineseReviewEvidence: merged.chineseReviewEvidence || [],
     allPhotosDuplicate: uniquePages.length === 0,
   }, report.evidenceTime || report.createdAt || new Date());
   if (quality.status === 'insufficient') {
@@ -479,11 +534,13 @@ async function writeCompletedAnalysis({ reportId, studentId, subject, merged, qu
       totalErrors: merged.totalErrors,
       bottlenecks: merged.bottlenecks,
       errorDetails: merged.errorDetails,
+      chineseErrorItems: merged.chineseErrorItems || [],
       imageFiles,
       previousReportId: previousReport ? previousReport._id : '',
       comparisonSummary,
       verificationTargets,
       verificationEvidence: merged.verificationEvidence || [],
+      chineseReviewEvidence: merged.chineseReviewEvidence || [],
       quality,
       isEffective: profileSummary.isEffective,
       changeSummary: profileSummary.changeSummary,
@@ -529,7 +586,9 @@ exports.main = async (event) => {
   }
 
   try {
-    const context = await loadReportContext(reportId, continuationTaskId);
+    const context = await loadReportContext(reportId, continuationTaskId, {
+      trustedReanalysis: isTrustedReanalysisRequest(event),
+    });
     if (context.earlyResult) return context.earlyResult;
 
     ({ report } = context);
