@@ -94,7 +94,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/project-integrity.test.js` | 页面文件、事件绑定和品牌资产完整性 | 3 |
 | `tests/real-image-config.test.js` | 真实图片 E2E 配置解析 | 5 |
 | `tests/report-feedback.test.js` | 报告反馈云函数 | 3 |
-| `tests/report-presenter.test.js` | 报告视图预计算、质量标签和验证证据状态 | 11 |
+| `tests/report-presenter.test.js` | 报告视图预计算、质量标签和验证证据状态 | 18 |
 | `tests/report-quality.test.js` | 报告质量模型 | 4 |
 | `tests/skills-p0.test.js` | P0 Skill 能力内核 | 8 |
 | `tests/profile-summary.test.js` | 当前综合诊断状态规则 | 6 |

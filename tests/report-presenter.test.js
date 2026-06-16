@@ -225,6 +225,40 @@ test('report view groups source photos with OCR summaries, duplicate state and r
   assert.match(view.sourceEvidenceItems[0].summary, /小数乘除计算/)
 })
 
+test('report view limits source evidence on first paint and exposes hidden count', () => {
+  const view = buildReportView({
+    _id: 'report-large',
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'diagnosis',
+    imageFiles: Array.from({ length: 12 }, (_, index) => ({
+      fileID: `cloud://photo-${index + 1}`,
+      fileName: `第${index + 1}页.jpg`,
+      ocrSummary: `第 ${index + 1} 页 OCR 摘要`
+    }))
+  })
+
+  assert.equal(view.sourceImageCount, 12)
+  assert.equal(view.sourceEvidenceItems.length, 3)
+  assert.equal(view.hasMoreSourceEvidence, true)
+  assert.equal(view.hiddenSourceEvidenceCount, 9)
+
+  const expanded = buildReportView({
+    _id: 'report-large',
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'diagnosis',
+    imageFiles: Array.from({ length: 12 }, (_, index) => ({
+      fileID: `cloud://photo-${index + 1}`,
+      fileName: `第${index + 1}页.jpg`
+    }))
+  }, { sourceEvidenceLimit: Infinity })
+
+  assert.equal(expanded.sourceEvidenceItems.length, 12)
+  assert.equal(expanded.hasMoreSourceEvidence, false)
+  assert.equal(expanded.hiddenSourceEvidenceCount, 0)
+})
+
 test('report view exposes quality labels and reasons', () => {
   const view = buildReportView({
     type: 'diagnosis',
