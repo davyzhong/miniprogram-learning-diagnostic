@@ -352,6 +352,14 @@ async function submitEnglishRecognitionAttempt(payload = {}) {
   return callFunction('englishVocabulary', { action: 'submitRecognitionAttempt', ...payload })
 }
 
+async function generateEnglishPaperDictationSession(payload = {}) {
+  return callFunction('englishVocabulary', { action: 'generatePaperDictationSession', ...payload })
+}
+
+async function submitEnglishDictationPhoto(payload = {}) {
+  return callFunction('englishVocabulary', { action: 'submitDictationPhoto', ...payload })
+}
+
 async function generateEnglishPracticeSession(payload = {}) {
   return callFunction('englishVocabulary', { action: 'generatePracticeSession', ...payload })
 }
@@ -410,6 +418,8 @@ module.exports = {
   seedEnglishPersonalVocabulary,
   generateEnglishRecognitionSession,
   submitEnglishRecognitionAttempt,
+  generateEnglishPaperDictationSession,
+  submitEnglishDictationPhoto,
   generateEnglishPracticeSession,
   submitEnglishDictationAttempt,
   submitEnglishPracticeResult,

@@ -1,0 +1,169 @@
+.page {
+  min-height: 100vh;
+  background: #f7fafc;
+  padding-bottom: 48rpx;
+}
+
+.hero {
+  background: #9c4f24;
+  color: #fff;
+  padding: 42rpx 28rpx 34rpx;
+  display: flex;
+  gap: 12rpx;
+  align-items: flex-start;
+}
+
+.back {
+  width: 62rpx;
+  font-size: 48rpx;
+  line-height: 1;
+}
+
+.hero-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.eyebrow,
+.subtitle {
+  display: block;
+  opacity: .86;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.title {
+  display: block;
+  font-size: 42rpx;
+  font-weight: 800;
+  margin: 8rpx 0;
+}
+
+.state-card,
+.dictation-wrap {
+  margin: 24rpx 28rpx 0;
+}
+
+.state-card,
+.progress-card,
+.prompt-card,
+.upload-card {
+  border-radius: 18rpx;
+  background: #fff;
+  box-shadow: 0 4rpx 18rpx rgba(15, 23, 42, .06);
+}
+
+.state-card {
+  padding: 28rpx;
+  background: #fff7ed;
+  border: 1rpx solid #fed7aa;
+}
+
+.state-card.error {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.state-title,
+.upload-title {
+  display: block;
+  color: #25364a;
+  font-size: 30rpx;
+  font-weight: 750;
+}
+
+.state-desc,
+.prompt-desc,
+.upload-desc,
+.voice-hint,
+.upload-status {
+  display: block;
+  color: #64748b;
+  font-size: 24rpx;
+  line-height: 1.5;
+  margin-top: 8rpx;
+}
+
+.dictation-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 22rpx;
+}
+
+.progress-card {
+  padding: 22rpx 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progress-label {
+  color: #64748b;
+  font-size: 24rpx;
+}
+
+.progress-value {
+  color: #9c4f24;
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.prompt-card,
+.upload-card {
+  padding: 30rpx;
+}
+
+.prompt-top {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.prompt-pill {
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+  background: #fff7ed;
+  color: #9c4f24;
+}
+
+.prompt-title {
+  display: block;
+  color: #1f2937;
+  font-size: 34rpx;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.play-btn {
+  margin-top: 24rpx;
+  border: 2rpx solid #9c4f24;
+  background: #fff;
+  color: #9c4f24;
+  border-radius: 14rpx;
+}
+
+.nav-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18rpx;
+}
+
+.secondary-btn {
+  border-radius: 16rpx;
+  border: 2rpx solid #cbd5e1;
+  color: #25364a;
+  background: #fff;
+  font-weight: 700;
+}
+
+.primary-btn {
+  margin-top: 22rpx;
+  background: #2b6cb0;
+  color: #fff;
+  border-radius: 18rpx;
+  font-size: 30rpx;
+  font-weight: 750;
+}

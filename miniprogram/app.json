@@ -13,6 +13,7 @@
     "pages/bottleneck-center/bottleneck-center",
     "pages/bottleneck-detail/bottleneck-detail",
     "pages/english-practice/english-practice",
+    "pages/english-dictation/english-dictation",
     "pages/generate-verification/generate-verification",
     "pages/default-paper/default-paper",
     "pages/paper-preview/paper-preview"
