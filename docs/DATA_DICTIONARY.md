@@ -12,6 +12,9 @@
 | `subjectProfiles` | 学科档案：卡点追踪、分析状态 | 添加学生时自动创建三科；首次进入学科时幂等补建 | cloud.createStudentWithProfiles / ensureSubjectProfile；analyzePhotos 更新 |
 | `reports` | 诊断/验证报告 | 上传照片触发分析时 | uploadAndAnalyze 创建初始记录；analyzePhotos 填充分析结果；generateReportPDF 回写 pdfFileId |
 | `reportFeedback` | 家长对报告、卡点、错题、照片的纠错反馈 | 报告页提交反馈时 | reportFeedback 云函数 |
+| `englishImportBatches` | 英语词库候选导入批次 | 导入 PEP 单词表图片或结构化候选时 | englishVocabulary 云函数 |
+| `studentEnglishWords` | 单个孩子的个人英语单词库 | 家长确认英语导入批次后 | englishVocabulary 云函数 |
+| `englishPracticeSessions` | 英语 20 词听写会话和逐题记录 | 开始英语听写时 | englishVocabulary 云函数 |
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
 | `analysisTasks` | 异步分析任务进度追踪 | analyzePhotos 启动时 | analyzePhotos 云函数 |
 
@@ -297,6 +300,61 @@ MVP 数学卡点当前包含：
 
 ---
 
+### 2.3.2 英语个人词库集合
+
+#### englishImportBatches
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `studentId` | String | 关联 students._id | `"stu_xxx"` |
+| `subject` | String | 固定为 `english` | `"english"` |
+| `sourceFile` | String | 来源文件名或资料说明 | `"PEP六年级上册 英语单词句型表.pdf"` |
+| `sourceType` | String | 来源类型；内置个人词库为 `pep-vocabulary-seed` | `"pep-vocabulary-seed"` |
+| `status` | String | `pending_review` \| `confirmed` | `"pending_review"` |
+| `candidateWords` | Array\<Object\> | AI/OCR 提取后的候选单词，确认前不进入正式词库 | 见 `studentEnglishWords` 字段 |
+| `wordCandidateCount` | Number | 候选单词数量 | `96` |
+| `sourceSummary` | Array\<Object\> | 内置词库导入时记录各册来源、URL 和词数 | `[{ "grade": 6, "volume": "上册", "wordCount": 88 }]` |
+| `createdAt` / `updatedAt` | Date | 创建和更新时间 | `ISODate("2026-06-15T...")` |
+
+#### studentEnglishWords
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `studentId` | String | 关联 students._id | `"stu_xxx"` |
+| `word` | String | 英文单词，统一小写去重 | `"science"` |
+| `meanings` | Array\<String\> | 中文释义，可合并多个来源 | `["科学", "科学课"]` |
+| `grade` / `volume` / `unit` | Number/String/String | 来源年级、册别、单元 | `6`, `"上册"`, `"Unit 1"` |
+| `familiarity` | Object | 熟悉度维度进度，由口头熟悉度功能更新 | `{ "status": "untested", "correctCount": 0, "wrongCount": 0, "lastTestedAt": "", "nextReviewAt": "", "lastDirection": "" }` |
+| `spelling` | Object | 拼写维度进度，由纸面听写功能更新 | `{ "status": "untested", "correctCount": 0, "wrongCount": 0, "lastTestedAt": "", "nextReviewAt": "" }` |
+| `overallMastery` | String | 双维派生掌握状态：`untested` \| `partial` \| `mastered` | `"untested"` |
+| `masteryStatus` | String | `untested` \| `needs_practice` \| `reviewing` \| `mastered` | `"needs_practice"` |
+| `correctCount` | Number | 连续复测正确次数，错误后清零 | `2` |
+| `wrongCount` | Number | 累计错误次数，用于高频错词排序 | `3` |
+| `lastReviewedAt` | String | 最近听写日期，`YYYY-MM-DD` | `"2026-06-15"` |
+| `nextReviewAt` | String | 下次复测日期；已掌握为空 | `"2026-06-18"` |
+| `sources` | Array\<Object\> | 来源批次、文件、页面和来源链接；重复导入时按来源去重合并 | `[{ "batchId": "batch_xxx", "sourceFile": "PEP六年级上册 英语单词句型表.pdf" }]` |
+
+**内置个人词库**：`data/english/zhong-qingyu-pep-vocabulary.seed.json` 是钟青羽当前英语学习使用的 PEP 个人词库归档，覆盖 3上、3下、4上、4下、5上、5下、6上，共 505 条单词/教材词组。云函数部署包内的副本位于 `cloudfunctions/englishVocabulary/zhong-qingyu-pep-vocabulary.json`。
+
+**双维进度兼容规则**：2026-06-16 起，新导入和种子导入的单词会写入 `familiarity`、`spelling` 和 `overallMastery`。旧字段 `masteryStatus`、`correctCount`、`wrongCount`、`lastReviewedAt`、`nextReviewAt` 暂时保留作为兼容字段；缺少双维字段的旧词在读取时会被归一化为 `familiarity = legacy masteryStatus`、`spelling = untested`，避免历史词库不可用。
+
+#### englishPracticeSessions
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `studentId` | String | 关联 students._id | `"stu_xxx"` |
+| `subject` | String | 固定为 `english` | `"english"` |
+| `type` | String | 固定为 `word-dictation` | `"word-dictation"` |
+| `status` | String | `in_progress` \| `completed` | `"in_progress"` |
+| `wordItems` | Array\<Object\> | 本轮听写队列，默认 20 个词，中文/英文提示约各半 | `[{ "word": "science" }]` |
+| `attempts` | Array\<Object\> | 逐题识别和 AI 判定记录 | 见下方 |
+
+`attempts` 子结构：`wordId`、`targetWord`、`promptType`、`recognizedText`、`audioFileID`、`judgment.status`（`correct/incorrect/unclear`）、`retryCount`、`reviewedAt`。`unclear` 只安排本轮重听，不更新正误计数。
+
+**听写规则**：默认每轮 20 词；错词本轮稍后重现并将 `masteryStatus` 置为 `needs_practice`；正确词按 1 天、3 天、7 天进入复测，完成连续复测后进入 `mastered`。
+
+---
+
 ### 2.4 papers 集合
 
 | 字段名 | 类型 | 必填 | 默认值 | 描述 | 示例值 |
@@ -444,6 +502,9 @@ MVP 数学卡点当前包含：
 | `reports` | `studentId`, `subject`, `createdAt`, `_openid` | 升序, 升序, 降序, 升序 | subject-home/upload-history 按学生+学科获取报告列表 |
 | `reports` | `studentId`, `subject`, `status`, `createdAt`, `_openid` | 升序, 升序, 升序, 降序, 升序 | analyzePhotos 查找最近一份 completed 报告做对比 |
 | `papers` | `studentId`, `subject`, `type`, `grade`, `paperKey`, `_openid` | 全部升序 | default-paper 页面查询已有试卷 |
+| `englishImportBatches` | `studentId`, `status`, `createdAt` | 升序, 升序, 降序 | 英语候选词库导入和确认 |
+| `studentEnglishWords` | `studentId`, `masteryStatus`, `nextReviewAt` | 升序, 升序, 升序 | 英语听写抽取待练、错词和待复测词 |
+| `englishPracticeSessions` | `studentId`, `createdAt` | 升序, 降序 | 英语听写历史记录 |
 
 ### 索引设计要点
 
@@ -484,6 +545,7 @@ MVP 数学卡点当前包含：
 | `getAnalysisProgress` | 通过共享 access helper 校验当前 OPENID 是否可读取对应报告进度 |
 | `generatePaper` | 通过共享 access helper 校验当前 OPENID 是否可为对应学生生成试卷 |
 | `generateReportPDF` | 通过共享 access helper 校验当前 OPENID 是否可读取并生成对应报告 PDF |
+| `englishVocabulary` | 通过共享 access helper 校验 owner/viewer 是否可读取词库或写入听写记录 |
 
 ### 参数校验
 
@@ -500,3 +562,6 @@ MVP 数学卡点当前包含：
 | grade 范围 | generatePaper | default-diagnosis 模式要求 1-6 |
 | questionCount 范围 | generatePaper | 6-20，默认 12 |
 | paperId 关联校验 | uploadAndAnalyze | paper.studentId === studentId，type 与 mode 匹配 |
+| wordLimit 范围 | englishVocabulary.generatePracticeSession | 1-40，默认 20 |
+| 内置词库导入 | englishVocabulary.seedPersonalVocabulary | 仅接收 `studentId`；固定使用项目内置钟青羽 PEP 个人词库 |
+| dictation judgment 枚举 | englishVocabulary.submitDictationAttempt | 仅返回 `correct/incorrect/unclear`，由云函数根据识别文本判定 |

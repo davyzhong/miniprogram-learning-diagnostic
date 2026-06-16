@@ -1,0 +1,295 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const {
+  createCloudMock,
+  createDatabase,
+  loadModule
+} = require('./helpers/cloud-function-harness')
+
+function createTcbMock(text) {
+  return {
+    SYMBOL_CURRENT_ENV: 'test',
+    init: () => ({
+      ai: () => ({
+        createModel: () => ({
+          generateText: async () => ({ text })
+        })
+      })
+    })
+  }
+}
+
+function loadEnglishVocabulary(db, openId = 'owner-1', extraMocks = {}) {
+  return loadModule('cloudfunctions/englishVocabulary/index.js', {
+    'wx-server-sdk': createCloudMock({ db, openId, ...extraMocks.cloudOptions }),
+    '@cloudbase/node-sdk': extraMocks.tcb || createTcbMock(JSON.stringify({ words: [], patterns: [] }))
+  })
+}
+
+test('English import batch stores candidates without writing the formal word library', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    englishImportBatches: [],
+    studentEnglishWords: [],
+    studentEnglishPatterns: []
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'createImportBatch',
+    studentId: 'student-1',
+    sourceFile: 'PEP六年级上册 英语单词句型表.pdf',
+    defaultGrade: 6,
+    defaultVolume: '上册',
+    words: [
+      { word: 'science', meaning: '科学', unit: 'Unit 1' },
+      { word: 'Science', meaning: '科学课', unit: 'Unit 1' }
+    ],
+    patterns: [{ pattern: 'Where is the museum shop?', meaning: '博物馆商店在哪里？', unit: 'Unit 1' }]
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.wordCandidateCount, 1)
+  assert.equal(result.patternCandidateCount, 1)
+  assert.equal(db.dump('studentEnglishWords').length, 0)
+  assert.equal(db.dump('studentEnglishPatterns').length, 0)
+  assert.equal(db.dump('englishImportBatches')[0].status, 'pending_review')
+})
+
+test('English import batch can extract candidates from vocabulary page images', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    englishImportBatches: [],
+    studentEnglishWords: [],
+    studentEnglishPatterns: []
+  })
+  const handler = loadEnglishVocabulary(db, 'owner-1', {
+    cloudOptions: {
+      getTempFileURL: async ({ fileList }) => ({
+        fileList: fileList.map(fileID => ({ fileID, tempFileURL: `https://temp/${fileID}.png` }))
+      })
+    },
+    tcb: createTcbMock(JSON.stringify({
+      words: [{ word: 'museum', meaning: '博物馆', unit: 'Unit 1' }],
+      patterns: [{ pattern: 'Where is the museum?', grammarPoint: 'where question', unit: 'Unit 1' }]
+    }))
+  })
+
+  const result = await handler.main({
+    action: 'createImportBatch',
+    studentId: 'student-1',
+    sourceFile: 'PEP六年级上册 英语单词句型表.pdf',
+    defaultGrade: 6,
+    defaultVolume: '上册',
+    pageFileIDs: ['cloud://page-1']
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.wordCandidateCount, 1)
+  assert.equal(result.patternCandidateCount, 0)
+  assert.equal(db.dump('englishImportBatches')[0].candidateWords[0].word, 'museum')
+})
+
+test('confirming an English import batch writes words and patterns into the personal library', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    englishImportBatches: [{
+      _id: 'batch-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      status: 'pending_review',
+      candidateWords: [{
+        studentId: 'student-1',
+        batchId: 'batch-1',
+        word: 'science',
+        meanings: ['科学'],
+        grade: 6,
+        volume: '上册',
+        unit: 'Unit 1',
+        masteryStatus: 'untested',
+        status: 'candidate',
+        sources: [{ batchId: 'batch-1', sourceFile: 'source.pdf' }]
+      }],
+      candidatePatterns: [{
+        studentId: 'student-1',
+        batchId: 'batch-1',
+        pattern: 'Where is the museum shop?',
+        meaning: '博物馆商店在哪里？',
+        grammarPoint: 'where question',
+        grade: 6,
+        volume: '上册',
+        unit: 'Unit 1',
+        status: 'candidate'
+      }]
+    }],
+    studentEnglishWords: [],
+    studentEnglishPatterns: []
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'confirmImportBatch',
+    studentId: 'student-1',
+    batchId: 'batch-1'
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.importedWordCount, 1)
+  assert.equal(result.importedPatternCount, 1)
+  assert.equal(db.dump('studentEnglishWords')[0].status, 'active')
+  assert.equal(db.dump('studentEnglishWords')[0].masteryStatus, 'untested')
+  assert.equal(db.dump('studentEnglishPatterns')[0].status, 'active')
+  assert.equal(db.dump('englishImportBatches')[0].status, 'confirmed')
+})
+
+test('seeding Zhong Qingyu PEP vocabulary writes the personal word library once', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    englishImportBatches: [],
+    studentEnglishWords: [],
+    studentEnglishPatterns: []
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const first = await handler.main({
+    action: 'seedPersonalVocabulary',
+    studentId: 'student-1'
+  })
+  const second = await handler.main({
+    action: 'seedPersonalVocabulary',
+    studentId: 'student-1'
+  })
+
+  assert.equal(first.success, true)
+  assert.equal(first.totalSeedWords, 505)
+  assert.equal(first.importedWordCount, 505)
+  assert.equal(second.success, true)
+  assert.equal(second.importedWordCount, 0)
+  assert.equal(db.dump('studentEnglishWords').length, 505)
+  const science = db.dump('studentEnglishWords').find(item => item.word === 'science')
+  assert.equal(science.meanings[0], '科学')
+  assert.deepEqual(science.familiarity, {
+    status: 'untested',
+    correctCount: 0,
+    wrongCount: 0,
+    lastTestedAt: '',
+    nextReviewAt: '',
+    lastDirection: ''
+  })
+  assert.deepEqual(science.spelling, {
+    status: 'untested',
+    correctCount: 0,
+    wrongCount: 0,
+    lastTestedAt: '',
+    nextReviewAt: ''
+  })
+  assert.equal(science.overallMastery, 'untested')
+  assert.equal(db.dump('englishImportBatches')[0].sourceType, 'pep-vocabulary-seed')
+})
+
+test('English vocabulary summary and dictation session use confirmed personal word library', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [
+      { _id: 'word-1', studentId: 'student-1', word: 'due', meanings: ['到期'], masteryStatus: 'reviewing', nextReviewAt: '2026-06-11', wrongCount: 0 },
+      { _id: 'word-2', studentId: 'student-1', word: 'weak', meanings: ['薄弱'], masteryStatus: 'needs_practice', wrongCount: 3 },
+      { _id: 'word-3', studentId: 'student-1', word: 'new', meanings: ['新的'], masteryStatus: 'untested', wrongCount: 0 },
+      { _id: 'word-4', studentId: 'student-1', word: 'done', meanings: ['完成'], masteryStatus: 'mastered', wrongCount: 0 },
+      ...Array.from({ length: 24 }, (_, index) => ({
+        _id: `word-extra-${index + 1}`,
+        studentId: 'student-1',
+        word: `extra${index + 1}`,
+        meanings: [`额外${index + 1}`],
+        masteryStatus: 'untested',
+        wrongCount: 0
+      }))
+    ],
+    studentEnglishPatterns: [
+      { _id: 'pattern-1', studentId: 'student-1', pattern: 'He goes to school.', grammarPoint: '一般现在时', status: 'active' }
+    ],
+    englishPracticeSessions: []
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const summary = await handler.main({ action: 'getVocabularySummary', studentId: 'student-1', today: '2026-06-11' })
+  assert.equal(summary.success, true)
+  assert.equal(summary.summary.totalWords, 28)
+  assert.equal(summary.summary.dueReviewCount, 1)
+  assert.equal(summary.patternCount, 1)
+
+  const session = await handler.main({
+    action: 'generatePracticeSession',
+    studentId: 'student-1',
+    today: '2026-06-11'
+  })
+
+  assert.equal(session.success, true)
+  assert.equal(session.wordItems.length, 20)
+  assert.deepEqual(session.wordItems.slice(0, 2).map(item => item.word), ['due', 'weak'])
+  assert.ok(session.wordItems.slice(2).some(item => item.masteryStatus === 'untested'))
+  assert.equal(session.wordItems.filter(item => item.promptType === 'chinese').length, 10)
+  assert.equal(session.wordItems.filter(item => item.promptType === 'english').length, 10)
+  assert.equal(session.patternItems.length, 0)
+  assert.equal(db.dump('englishPracticeSessions').length, 1)
+  assert.equal(db.dump('englishPracticeSessions')[0].type, 'word-dictation')
+})
+
+test('submitting English dictation attempts uses AI judgment and updates word states', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [
+      { _id: 'word-1', studentId: 'student-1', word: 'science', masteryStatus: 'needs_practice', correctCount: 0, wrongCount: 1 },
+      { _id: 'word-2', studentId: 'student-1', word: 'museum', masteryStatus: 'reviewing', correctCount: 2, wrongCount: 0 },
+      { _id: 'word-3', studentId: 'student-1', word: 'library', masteryStatus: 'untested', correctCount: 0, wrongCount: 0 }
+    ],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      status: 'in_progress',
+      attempts: []
+    }]
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const correct = await handler.main({
+    action: 'submitDictationAttempt',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    wordId: 'word-1',
+    targetWord: 'science',
+    recognizedText: 'S C I E N C E',
+    reviewedAt: '2026-06-15T08:00:00+08:00'
+  })
+  const wrong = await handler.main({
+    action: 'submitDictationAttempt',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    wordId: 'word-2',
+    targetWord: 'museum',
+    recognizedText: 'music',
+    reviewedAt: '2026-06-15T08:01:00+08:00'
+  })
+  const unclear = await handler.main({
+    action: 'submitDictationAttempt',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    wordId: 'word-3',
+    targetWord: 'library',
+    recognizedText: '',
+    reviewedAt: '2026-06-15T08:02:00+08:00'
+  })
+
+  assert.equal(correct.judgment.status, 'correct')
+  assert.equal(correct.shouldRepeat, false)
+  assert.equal(wrong.judgment.status, 'incorrect')
+  assert.equal(wrong.shouldRepeat, true)
+  assert.equal(unclear.judgment.status, 'unclear')
+  assert.equal(unclear.shouldRepeat, true)
+  const words = db.dump('studentEnglishWords')
+  assert.equal(words.find(item => item._id === 'word-1').masteryStatus, 'reviewing')
+  assert.equal(words.find(item => item._id === 'word-1').nextReviewAt, '2026-06-16')
+  assert.equal(words.find(item => item._id === 'word-2').masteryStatus, 'needs_practice')
+  assert.equal(words.find(item => item._id === 'word-2').wrongCount, 1)
+  assert.equal(words.find(item => item._id === 'word-3').masteryStatus, 'untested')
+  assert.equal(db.dump('englishPracticeSessions')[0].attempts.length, 3)
+})
