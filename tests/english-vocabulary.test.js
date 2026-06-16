@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const {
   normalizeImportCandidates,
   normalizeWordProgress,
+  applyDimensionAttempt,
   applyWordDimensionAttempt,
   selectWordsForDimension,
   buildDualVocabularySummary,
@@ -11,6 +12,7 @@ const {
   buildVocabularySummary,
   selectPracticeItems,
   judgeSpokenWord,
+  judgeWrittenWord,
   buildDictationItems
 } = require('../cloudfunctions/_shared/english-vocabulary')
 
@@ -148,6 +150,41 @@ test('unclear English dimension attempts leave state unchanged', () => {
   assert.deepEqual(updated.spelling, word.spelling)
 })
 
+test('English dimension state machine handles all statuses and verdicts', () => {
+  const cases = [
+    ['untested', 'correct', 'reviewing', 1, 2, '2026-06-17'],
+    ['untested', 'incorrect', 'needs_practice', 0, 3, '2026-06-17'],
+    ['untested', 'unclear', 'untested', 0, 2, '2026-06-20'],
+    ['needs_practice', 'correct', 'reviewing', 1, 2, '2026-06-17'],
+    ['needs_practice', 'incorrect', 'needs_practice', 0, 3, '2026-06-17'],
+    ['needs_practice', 'unclear', 'needs_practice', 0, 2, '2026-06-20'],
+    ['reviewing', 'correct', 'mastered', 4, 2, ''],
+    ['reviewing', 'incorrect', 'needs_practice', 0, 3, '2026-06-17'],
+    ['reviewing', 'unclear', 'reviewing', 3, 2, '2026-06-20'],
+    ['mastered', 'correct', 'mastered', 4, 2, ''],
+    ['mastered', 'incorrect', 'needs_practice', 0, 3, '2026-06-17'],
+    ['mastered', 'unclear', 'mastered', 4, 2, '']
+  ]
+
+  for (const [fromStatus, verdict, expectedStatus, expectedCorrect, expectedWrong, expectedNext] of cases) {
+    const progress = {
+      status: fromStatus,
+      correctCount: fromStatus === 'reviewing' || fromStatus === 'mastered' ? 3 + Number(fromStatus === 'mastered') : 0,
+      wrongCount: 2,
+      lastTestedAt: '2026-06-15',
+      nextReviewAt: fromStatus === 'mastered' ? '' : '2026-06-20'
+    }
+    const updated = applyDimensionAttempt(progress, {
+      judgment: { status: verdict },
+      reviewedAt: '2026-06-16T08:00:00+08:00'
+    })
+    assert.equal(updated.status, expectedStatus, `${fromStatus} + ${verdict}`)
+    assert.equal(updated.correctCount, expectedCorrect, `${fromStatus} + ${verdict} correctCount`)
+    assert.equal(updated.wrongCount, expectedWrong, `${fromStatus} + ${verdict} wrongCount`)
+    assert.equal(updated.nextReviewAt, expectedNext, `${fromStatus} + ${verdict} nextReviewAt`)
+  }
+})
+
 test('dimension word selection prioritizes weak words due reviews and cross-dimension blind spots', () => {
   const selected = selectWordsForDimension([
     {
@@ -206,6 +243,88 @@ test('dimension word selection prioritizes weak words due reviews and cross-dime
     'new',
     'future'
   ])
+})
+
+test('dimension word selection handles P2/P3 conflicts and reverse blind spots', () => {
+  const selected = selectWordsForDimension([
+    {
+      _id: 'spelling-due',
+      word: 'spelling-due',
+      familiarity: { status: 'mastered' },
+      spelling: { status: 'reviewing', nextReviewAt: '2026-06-16' }
+    },
+    {
+      _id: 'spelling-blind-mastered',
+      word: 'spelling-blind-mastered',
+      familiarity: { status: 'mastered' },
+      spelling: { status: 'untested' }
+    },
+    {
+      _id: 'spelling-blind-reviewing',
+      word: 'spelling-blind-reviewing',
+      familiarity: { status: 'reviewing' },
+      spelling: { status: 'untested' }
+    },
+    {
+      _id: 'brand-new',
+      word: 'brand-new',
+      familiarity: { status: 'untested' },
+      spelling: { status: 'untested' }
+    }
+  ], {
+    dimension: 'spelling',
+    today: '2026-06-16',
+    limit: 10
+  })
+
+  assert.deepEqual(selected.map(item => item.word), [
+    'spelling-due',
+    'spelling-blind-mastered',
+    'brand-new',
+    'spelling-blind-reviewing'
+  ])
+
+  const reverse = selectWordsForDimension([
+    {
+      _id: 'familiarity-blind',
+      word: 'familiarity-blind',
+      familiarity: { status: 'untested' },
+      spelling: { status: 'mastered' }
+    },
+    {
+      _id: 'familiarity-new',
+      word: 'familiarity-new',
+      familiarity: { status: 'untested' },
+      spelling: { status: 'untested' }
+    }
+  ], {
+    dimension: 'familiarity',
+    today: '2026-06-16',
+    limit: 10
+  })
+
+  assert.deepEqual(reverse.map(item => item.word), ['familiarity-blind', 'familiarity-new'])
+})
+
+test('written word judgment uses deterministic spelling comparison and edit distance', () => {
+  assert.deepEqual(judgeWrittenWord({
+    targetWord: 'science',
+    recognizedText: 'Science'
+  }).status, 'correct')
+
+  const incorrect = judgeWrittenWord({
+    targetWord: 'museum',
+    recognizedText: 'musem'
+  })
+  assert.equal(incorrect.status, 'incorrect')
+  assert.equal(incorrect.editDistance, 1)
+  assert.ok(incorrect.confidence > 0.7)
+
+  const unclear = judgeWrittenWord({
+    targetWord: 'library',
+    recognizedText: ''
+  })
+  assert.equal(unclear.status, 'unclear')
 })
 
 test('dual vocabulary summary counts familiarity spelling and overall mastery separately', () => {

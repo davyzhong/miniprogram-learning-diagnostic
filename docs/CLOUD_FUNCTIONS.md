@@ -390,10 +390,10 @@ wx.cloud.callFunction({
 | `getVocabularySummary` | `studentId` | owner/viewer 可查看 | 返回总词数、熟悉度维度、拼写维度、整体掌握和高频错词 |
 | `listWords` | `studentId` | owner/viewer 可查看 | 按状态或单元读取个人词库 |
 | `generateRecognitionSession` | `studentId` | owner/viewer 可操作 | 默认生成 20 个单词的熟悉度口头练习会话，方向为中英混合 |
-| `submitRecognitionAttempt` | `studentId`, `sessionId`, `wordId`, `recognizedText` | owner/viewer 可操作 | 逐题提交熟悉度语音识别结果，只更新 `familiarity` 维度 |
+| `submitRecognitionAttempt` | `studentId`, `sessionId`, `wordId`, `recognizedText`, `durationMs` | owner/viewer 可操作 | 逐题提交熟悉度语音识别结果，只更新 `familiarity` 维度，并记录本题耗时 |
 | `generatePaperDictationSession` | `studentId` | owner/viewer 可操作 | 默认生成 20 个单词的纸面听写会话，只创建 `spelling` 维度任务，不更新掌握状态 |
-| `submitDictationPhoto` | `studentId`, `sessionId`, `photoFileIds` | owner/viewer 可操作 | 保存纸面听写照片证据，状态置为 `pending_analysis` |
-| `analyzeDictationPhoto` | `studentId`, `sessionId` | owner/viewer 可操作 | 对本次听写纸做候选词约束 OCR，写入逐词判定并只更新 `spelling` 维度 |
+| `submitDictationPhoto` | `studentId`, `sessionId`, `photoFileIds`, `durationMs` | owner/viewer 可操作 | 保存纸面听写照片证据，状态置为 `pending_analysis`，并记录整场听写耗时 |
+| `analyzeDictationPhoto` | `studentId`, `sessionId` | owner/viewer 可操作 | 对本次听写纸做候选词约束 OCR，并用本地拼写距离复核逐词判定，只更新 `spelling` 维度 |
 | `generatePracticeSession` | `studentId` | owner/viewer 可操作 | 默认生成 20 个单词的 `word-dictation` 听写会话 |
 | `submitDictationAttempt` | `studentId`, `sessionId`, `wordId`, `recognizedText` | owner/viewer 可操作 | 逐题提交语音识别结果，云函数自动判定并更新掌握度 |
 | `submitPracticeResult` | `studentId`, `sessionId` | owner/viewer 可操作 | 标记会话完成，兼容旧练习提交 |

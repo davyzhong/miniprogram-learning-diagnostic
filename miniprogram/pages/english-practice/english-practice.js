@@ -116,6 +116,8 @@ Page({
         patternItems: [],
         finished: queue.length === 0
       })
+      this._sessionStartedAt = Date.now()
+      this._answerStartedAt = Date.now()
     } catch (error) {
       this.setData({
         loading: false,
@@ -146,6 +148,7 @@ Page({
       this.setData({ lastResult: { status: 'unclear', reason: '语音识别暂不可用，请在真机中重试。' } })
       return
     }
+    this._answerStartedAt = Date.now()
     this.setData({ recording: true, lastResult: null })
     this._voiceManager.start({ lang: this.getRecognitionLang(this.data.currentItem) })
   },
@@ -162,6 +165,7 @@ Page({
   async onRecognitionResult(result = {}) {
     const current = this.data.currentItem
     if (!current || this.data.submitting) return
+    const durationMs = Math.max(1, Date.now() - (this._answerStartedAt || this._sessionStartedAt || Date.now()))
     this.setData({ submitting: true })
     try {
       const response = await cloud.submitEnglishRecognitionAttempt({
@@ -175,7 +179,8 @@ Page({
         direction: current.direction || (current.promptType === 'english' ? 'en2cn' : 'cn2en'),
         retryCount: current.retryCount || 0,
         recognizedText: result.recognizedText || '',
-        audioFileID: result.audioFileID || ''
+        audioFileID: result.audioFileID || '',
+        durationMs
       })
       let queue = this.data.queue
       if (response.shouldRepeat) {
@@ -196,6 +201,7 @@ Page({
         currentItem: queue[nextIndex] || null,
         finished: nextIndex >= queue.length
       })
+      this._answerStartedAt = Date.now()
     } catch (error) {
       this.setData({
         submitting: false,
@@ -223,6 +229,7 @@ Page({
       wx.showToast({ title: '请按提示读出答案', icon: 'none' })
       return
     }
+    this.stopPromptAudio()
     const content = current.promptType === 'english' ? current.word : current.meaningText
     this._voicePlugin.textToSpeech({
       lang: current.promptType === 'english' ? 'en_US' : 'zh_CN',
@@ -232,9 +239,34 @@ Page({
         if (!res || !res.filename) return
         const audio = wx.createInnerAudioContext()
         audio.src = res.filename
+        this._promptAudio = audio
         audio.play()
       },
       fail: () => wx.showToast({ title: '播放失败，请直接看提示', icon: 'none' })
     })
+  },
+
+  stopPromptAudio() {
+    const audio = this._promptAudio
+    if (!audio) return
+    if (typeof audio.stop === 'function') audio.stop()
+    if (typeof audio.destroy === 'function') audio.destroy()
+    this._promptAudio = null
+  },
+
+  cleanupVoice() {
+    if (this.data.recording && this._voiceManager && typeof this._voiceManager.stop === 'function') {
+      this._voiceManager.stop()
+    }
+    this.stopPromptAudio()
+    if (this.data.recording) this.setData({ recording: false })
+  },
+
+  onHide() {
+    this.cleanupVoice()
+  },
+
+  onUnload() {
+    this.cleanupVoice()
   }
 })

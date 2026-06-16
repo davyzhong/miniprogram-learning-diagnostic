@@ -354,10 +354,11 @@ MVP 数学卡点当前包含：
 | `attempts` | Array\<Object\> | 逐题识别和 AI 判定记录 | 见下方 |
 | `photoFileIds` | Array\<String\> | 纸面听写上传的答案照片 fileID | `["cloud://xxx"]` |
 | `dictationResults` | Array\<Object\> | 候选词约束 OCR 后的逐词批改结果，只服务纸面听写 | `[{ "targetWord": "science", "verdict": "correct" }]` |
+| `durationMs` | Number | 熟悉度逐题答题耗时或纸面听写整场耗时，静默记录用于后续区分不会/不熟/粗心 | `4200` |
 
-`attempts` 子结构：`wordId`、`targetWord`、`promptType`、`recognizedText`、`audioFileID`、`judgment.status`（`correct/incorrect/unclear`）、`retryCount`、`reviewedAt`。`unclear` 只安排本轮重听，不更新正误计数。
+`attempts` 子结构：`wordId`、`targetWord`、`promptType`、`recognizedText`、`audioFileID`、`durationMs`、`judgment.status`（`correct/incorrect/unclear`）、`retryCount`、`reviewedAt`。`unclear` 只安排本轮重听，不更新正误计数。
 
-`dictationResults` 子结构：`queueKey`、`wordId`、`targetWord`、`recognizedText`、`verdict`（`correct/incorrect/unclear`）、`reason`、`confidence`。缺失、空白、模糊或无法对应候选词的项统一落到 `unclear`。
+`dictationResults` 子结构：`queueKey`、`wordId`、`targetWord`、`recognizedText`、`verdict`（`correct/incorrect/unclear`）、`reason`、`confidence`、`editDistance`。缺失、空白、模糊或无法对应候选词的项统一落到 `unclear`；AI/OCR 返回后会用目标词和识别文本做确定性拼写复核，不直接信任 AI verdict。
 
 **熟悉度规则**：默认每轮 20 词；错词本轮稍后重现并更新 `familiarity`；正确词按 1 天、3 天、7 天进入复测，完成连续复测后进入 `mastered`。
 

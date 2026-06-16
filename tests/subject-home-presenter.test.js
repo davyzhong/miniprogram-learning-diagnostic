@@ -104,7 +104,7 @@ test('English workbench uses vocabulary summary as the primary learning asset', 
   assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
 })
 
-test('English workbench keeps familiarity entry visible before vocabulary is imported', () => {
+test('English workbench keeps learning actions primary while empty vocabulary is prepared automatically', () => {
   const view = buildSubjectHomeView({}, [], relative, {
     subject: 'english',
     subjectName: '英语',
@@ -120,10 +120,10 @@ test('English workbench keeps familiarity entry visible before vocabulary is imp
   })
 
   assert.equal(view.subjectTitle, '英语工作台')
-  assert.equal(view.primaryTask.actionType, 'importVocabulary')
-  assert.equal(view.primaryTask.actionText, '导入个人词库')
-  assert.match(view.primaryTask.summary, /个人词库还没有单词/)
-  assert.ok(view.tools.some(item => item.key === 'importVocabulary'))
+  assert.notEqual(view.primaryTask.actionType, 'importVocabulary')
+  assert.equal(view.primaryTask.actionText, '查看学习记录')
+  assert.match(view.primaryTask.summary, /系统会自动导入/)
+  assert.equal(view.tools.at(-1).key, 'importVocabulary')
   assert.ok(view.tools.some(item => item.key === 'englishPractice'))
   assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
 })

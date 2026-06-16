@@ -14,6 +14,7 @@ const {
   buildRecognitionItems,
   buildPaperDictationItems,
   judgeSpokenWord,
+  judgeWrittenWord,
   judgeRecognitionAnswer,
   dateOnly
 } = require('./english-vocabulary')
@@ -358,7 +359,6 @@ async function seedPersonalVocabulary(event, openId) {
   }))
   const importedWordCount = await upsertWords(event.studentId, openId, candidateWords)
   await updateDocument('englishImportBatches', batchId, {
-    candidateWords,
     importedWordCount,
     importedPatternCount: 0,
     updatedAt: nowDate()
@@ -498,6 +498,7 @@ async function submitDictationPhoto(event) {
     status: 'submitted',
     analysisStatus: 'pending_analysis',
     photoFileIds,
+    durationMs: Math.max(0, Number(event.durationMs) || 0),
     submittedAt: nowDate(),
     updatedAt: nowDate()
   })
@@ -525,15 +526,20 @@ function normalizeDictationOcrResults(rawResults = [], wordItems = []) {
   }
   return (wordItems || []).map(item => {
     const source = byWordId.get(item.wordId) || byWord.get(cleanText(item.word, 80).toLowerCase()) || {}
-    const verdict = normalizeDictationVerdict(source.verdict || source.status)
+    const deterministic = judgeWrittenWord({
+      targetWord: item.word,
+      recognizedText: source.recognizedText || source.answer || ''
+    })
+    const verdict = normalizeDictationVerdict(deterministic.status)
     return {
       queueKey: cleanText(item.queueKey, 120),
       wordId: cleanText(item.wordId, 80),
       targetWord: cleanText(item.word, 80),
       recognizedText: cleanText(source.recognizedText || source.answer || '', 120),
       verdict,
-      reason: cleanText(source.reason, 200) || (verdict === 'unclear' ? 'AI 未返回可判断结果' : ''),
-      confidence: Math.max(0, Math.min(1, Number(source.confidence) || 0))
+      reason: deterministic.reason || cleanText(source.reason, 200) || (verdict === 'unclear' ? 'AI 未返回可判断结果' : ''),
+      confidence: Math.max(0, Math.min(1, Number(deterministic.confidence) || 0)),
+      editDistance: Number(deterministic.editDistance) || 0
     }
   })
 }

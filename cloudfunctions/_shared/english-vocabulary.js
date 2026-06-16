@@ -244,6 +244,42 @@ function judgeSpokenWord({ targetWord = '', recognizedText = '' } = {}) {
   }
 }
 
+function judgeWrittenWord({ targetWord = '', recognizedText = '' } = {}) {
+  const normalizedTarget = normalizeSpokenText(targetWord)
+  const normalizedText = normalizeSpokenText(recognizedText)
+  if (!normalizedTarget || !normalizedText) {
+    return {
+      status: 'unclear',
+      normalizedTarget,
+      normalizedText,
+      editDistance: 0,
+      confidence: 0,
+      reason: '没有识别到可判断的书写内容'
+    }
+  }
+  const distance = levenshteinDistance(normalizedTarget, normalizedText)
+  const maxLength = Math.max(normalizedTarget.length, normalizedText.length)
+  const confidence = Math.max(0, Number((1 - distance / maxLength).toFixed(2)))
+  if (distance === 0) {
+    return {
+      status: 'correct',
+      normalizedTarget,
+      normalizedText,
+      editDistance: distance,
+      confidence: 1,
+      reason: '书写内容与目标单词一致'
+    }
+  }
+  return {
+    status: 'incorrect',
+    normalizedTarget,
+    normalizedText,
+    editDistance: distance,
+    confidence,
+    reason: `书写内容与目标单词不同，编辑距离 ${distance}`
+  }
+}
+
 function judgeMeaningAnswer({ meanings = [], cnSynonyms = [], recognizedText = '' } = {}) {
   const normalizedText = normalizeChineseAnswer(recognizedText)
   const accepted = uniqueList([...(meanings || []), ...(cnSynonyms || [])])
@@ -501,7 +537,7 @@ function dimensionSelectionPriority(word = {}, dimension = 'familiarity', today 
   if (target.status === 'needs_practice' && other.status === 'needs_practice') return 0
   if (target.status === 'needs_practice') return 1
   if (dimensionDue(target, today)) return 2
-  if (target.status === 'untested' && (other.status === 'reviewing' || other.status === 'mastered')) return 3
+  if (target.status === 'untested' && other.status === 'mastered') return 3
   if (target.status === 'untested') return 4
   if (target.status === 'reviewing') return 5
   return 6
@@ -634,6 +670,7 @@ module.exports = {
   buildRecognitionItems,
   buildPaperDictationItems,
   judgeSpokenWord,
+  judgeWrittenWord,
   judgeMeaningAnswer,
   judgeRecognitionAnswer,
   dateOnly,

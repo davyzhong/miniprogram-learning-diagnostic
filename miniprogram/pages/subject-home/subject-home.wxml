@@ -1,13 +1,5 @@
 <!--pages/subject-home/subject-home.wxml-->
 <view class="page page-{{subject}}">
-  <view class="top-bar">
-    <view class="back" bindtap="onBack">‹</view>
-    <view class="top-info">
-      <text class="subject-label">{{subjectTitle}}</text>
-      <text class="student-name">{{studentName}}<text wx:if="{{grade}}"> · {{grade}}年级</text></text>
-    </view>
-  </view>
-
   <view class="workbench-card">
     <view class="workbench-header">
       <view class="subject-mark">{{subjectInitial}}</view>

@@ -411,6 +411,23 @@ test('analyzing UI only renders a progress bar for real task progress', () => {
   assert.match(report, /bindtap="onRetryAnalysis"/)
 })
 
+test('subject home relies on native navigation instead of rendering a second top bar', () => {
+  const subjectHome = read('miniprogram/pages/subject-home/subject-home.wxml')
+  const subjectHomeStyle = read('miniprogram/pages/subject-home/subject-home.wxss')
+
+  assert.doesNotMatch(subjectHome, /class="top-bar"/)
+  assert.doesNotMatch(subjectHome, /bindtap="onBack"/)
+  assert.doesNotMatch(subjectHomeStyle, /\.top-bar/)
+})
+
+test('English dictation copy matches the active OCR workflow and exposes voice next affordance', () => {
+  const dictation = read('miniprogram/pages/english-dictation/english-dictation.wxml')
+
+  assert.doesNotMatch(dictation, /下一阶段会接入 OCR/)
+  assert.match(dictation, /AI 批改/)
+  assert.match(dictation, /onVoiceNextTap/)
+})
+
 test('removed pages and style overrides stay removed', () => {
   assert.equal(fs.existsSync(path.join(root, 'miniprogram/pages/capture/capture.js')), false)
   assert.equal(fs.existsSync(path.join(root, 'miniprogram/pages/student/student.js')), false)
