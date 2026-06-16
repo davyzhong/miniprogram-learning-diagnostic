@@ -338,6 +338,8 @@ MVP 数学卡点当前包含：
 
 **双维进度兼容规则**：2026-06-16 起，新导入和种子导入的单词会写入 `familiarity`、`spelling` 和 `overallMastery`。旧字段 `masteryStatus`、`correctCount`、`wrongCount`、`lastReviewedAt`、`nextReviewAt` 暂时保留作为兼容字段；缺少双维字段的旧词在读取时会被归一化为 `familiarity = legacy masteryStatus`、`spelling = untested`，避免历史词库不可用。
 
+**双维状态机规则**：`familiarity` 和 `spelling` 独立运行 `untested → needs_practice → reviewing → mastered` 状态机。`correct` 推进 1 天、3 天、7 天复测；`incorrect` 回到 `needs_practice`；`unclear` 不更新状态。抽词按双维薄弱、当前维薄弱、到期复测、另一维已掌握但当前维未测、新词、未到期 reviewing 的顺序选择。
+
 #### englishPracticeSessions
 
 | 字段名 | 类型 | 描述 | 示例值 |

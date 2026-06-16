@@ -4,6 +4,8 @@ const assert = require('node:assert/strict')
 const {
   normalizeImportCandidates,
   normalizeWordProgress,
+  applyWordDimensionAttempt,
+  selectWordsForDimension,
   applyWordReviewResult,
   buildVocabularySummary,
   selectPracticeItems,
@@ -85,6 +87,124 @@ test('normalizes legacy English word progress into dual familiarity and spelling
   })
   assert.equal(normalized.overallMastery, 'partial')
   assert.equal(normalized.masteryStatus, 'reviewing')
+})
+
+test('word dimension attempts update only the requested English progress dimension', () => {
+  const word = normalizeWordProgress({
+    _id: 'word-1',
+    word: 'science',
+    familiarity: {
+      status: 'needs_practice',
+      correctCount: 0,
+      wrongCount: 2,
+      lastTestedAt: '2026-06-14',
+      nextReviewAt: '2026-06-15',
+      lastDirection: 'cn2en'
+    },
+    spelling: {
+      status: 'untested',
+      correctCount: 0,
+      wrongCount: 0,
+      lastTestedAt: '',
+      nextReviewAt: ''
+    }
+  })
+
+  const updated = applyWordDimensionAttempt(word, 'familiarity', {
+    judgment: { status: 'correct' },
+    reviewedAt: '2026-06-16T08:00:00+08:00',
+    direction: 'en2cn'
+  })
+
+  assert.equal(updated.familiarity.status, 'reviewing')
+  assert.equal(updated.familiarity.correctCount, 1)
+  assert.equal(updated.familiarity.wrongCount, 2)
+  assert.equal(updated.familiarity.lastTestedAt, '2026-06-16')
+  assert.equal(updated.familiarity.nextReviewAt, '2026-06-17')
+  assert.equal(updated.familiarity.lastDirection, 'en2cn')
+  assert.deepEqual(updated.spelling, word.spelling)
+  assert.equal(updated.overallMastery, 'partial')
+})
+
+test('unclear English dimension attempts leave state unchanged', () => {
+  const word = normalizeWordProgress({
+    _id: 'word-1',
+    word: 'museum',
+    spelling: {
+      status: 'reviewing',
+      correctCount: 2,
+      wrongCount: 1,
+      lastTestedAt: '2026-06-15',
+      nextReviewAt: '2026-06-19'
+    }
+  })
+
+  const updated = applyWordDimensionAttempt(word, 'spelling', {
+    judgment: { status: 'unclear' },
+    reviewedAt: '2026-06-16T08:00:00+08:00'
+  })
+
+  assert.deepEqual(updated.spelling, word.spelling)
+})
+
+test('dimension word selection prioritizes weak words due reviews and cross-dimension blind spots', () => {
+  const selected = selectWordsForDimension([
+    {
+      _id: 'mastered',
+      word: 'mastered',
+      familiarity: { status: 'mastered' },
+      spelling: { status: 'mastered' }
+    },
+    {
+      _id: 'future',
+      word: 'future',
+      familiarity: { status: 'untested' },
+      spelling: { status: 'reviewing', wrongCount: 9, nextReviewAt: '2026-06-20' }
+    },
+    {
+      _id: 'new',
+      word: 'new',
+      familiarity: { status: 'untested' },
+      spelling: { status: 'untested' }
+    },
+    {
+      _id: 'blind',
+      word: 'blind',
+      familiarity: { status: 'mastered' },
+      spelling: { status: 'untested' }
+    },
+    {
+      _id: 'due',
+      word: 'due',
+      familiarity: { status: 'untested' },
+      spelling: { status: 'reviewing', nextReviewAt: '2026-06-16' }
+    },
+    {
+      _id: 'weak-current',
+      word: 'weak-current',
+      familiarity: { status: 'mastered' },
+      spelling: { status: 'needs_practice', wrongCount: 1 }
+    },
+    {
+      _id: 'double-weak',
+      word: 'double-weak',
+      familiarity: { status: 'needs_practice', wrongCount: 2 },
+      spelling: { status: 'needs_practice', wrongCount: 2 }
+    }
+  ], {
+    dimension: 'spelling',
+    today: '2026-06-16',
+    limit: 10
+  })
+
+  assert.deepEqual(selected.map(item => item.word), [
+    'double-weak',
+    'weak-current',
+    'due',
+    'blind',
+    'new',
+    'future'
+  ])
 })
 
 test('spaced mastery follows one day three day and seven day reviews before mastered', () => {
