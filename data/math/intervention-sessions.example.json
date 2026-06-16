@@ -1,0 +1,99 @@
+{
+  "version": "2026-06-16",
+  "studentId": "student-zhong-qingyu",
+  "subject": "math",
+  "sessions": [
+    {
+      "sessionId": "SESSION-20260616-001",
+      "date": "2026-06-16",
+      "nodeId": "MATH-NUM-DEC-MUL-POINT",
+      "bottleneckIds": [
+        "BN-DEC-MUL-POINT-COUNT",
+        "BN-DEC-MUL-POINT-ESTIMATE"
+      ],
+      "entryEvidence": [
+        "ERR-20260616-DEC-MUL-001"
+      ],
+      "goal": "让孩子能解释小数乘法小数点定位，并用估算发现明显不合理答案。",
+      "resourcesUsed": [
+        {
+          "resourceId": "RES-BILI-DEC-MUL-001",
+          "usage": "先看讲解前 8 分钟，家长暂停提问小数位数为什么相加。"
+        },
+        {
+          "resourceId": "RES-KHAN-DEC-MUL-001",
+          "usage": "如果中文讲法仍然卡住，用英文动画补充数量级直觉。"
+        }
+      ],
+      "childRetell": {
+        "prompt": "你不用背公式，直接讲给我听：8.5×3.16 的答案为什么不可能是 2686？",
+        "result": "能说出 8.5×3.16 大概是 27 左右，但对两位小数和一位小数合起来三位小数仍需提醒。",
+        "score": 3
+      },
+      "variantPractice": [
+        {
+          "question": "0.85×3.16",
+          "expected": "先按 85×316 算，再定位 4 位小数，并用 0.85×3≈2.55 估算。"
+        },
+        {
+          "question": "8.5×0.316",
+          "expected": "先估算约 2.7，再定位 4 位小数。"
+        }
+      ],
+      "outcome": "partiallyRepaired",
+      "masteryUpdate": {
+        "before": "weak",
+        "after": "partial",
+        "confidenceDelta": 0.12
+      },
+      "nextReviewAt": "2026-06-19",
+      "notes": "这类卡点不急着刷整套卷，先用短题反复建立数量级检查习惯。"
+    },
+    {
+      "sessionId": "SESSION-20260617-001",
+      "date": "2026-06-17",
+      "nodeId": "MATH-NUM-FRACTION-DIV-RECIPROCAL",
+      "bottleneckIds": [
+        "BN-FRACTION-DIV-RECIPROCAL-MISSING",
+        "BN-FRACTION-DIV-CONCEPT-JUMPS"
+      ],
+      "entryEvidence": [
+        "ERR-20260616-FRACTION-DIV-001"
+      ],
+      "goal": "把分数除法从机械“颠倒相乘”推进到能解释含义。",
+      "resourcesUsed": [
+        {
+          "resourceId": "RES-BILI-FRACTION-DIV-001",
+          "usage": "看中文讲法，重点暂停在为什么除以分数等于乘倒数。"
+        },
+        {
+          "resourceId": "RES-KHAN-FRACTION-DIV-001",
+          "usage": "用可视化解释补足“6 里面有几个 7/8”。"
+        }
+      ],
+      "childRetell": {
+        "prompt": "6÷7/8 到底在问什么？如果每段长 7/8 米，6 米能分几段？",
+        "result": "能用生活场景复述，但从图转到算式时会漏写倒数。",
+        "score": 3
+      },
+      "variantPractice": [
+        {
+          "question": "3÷2/5",
+          "expected": "解释为 3 里面有几个 2/5，再写 3×5/2。"
+        },
+        {
+          "question": "4/7÷2",
+          "expected": "区分除以整数和除以分数，不能把所有题都机械颠倒。"
+        }
+      ],
+      "outcome": "needsSecondSession",
+      "masteryUpdate": {
+        "before": "weak",
+        "after": "weak",
+        "confidenceDelta": 0.05
+      },
+      "nextReviewAt": "2026-06-18",
+      "notes": "下一次先不做复杂混合运算，只做“题意复述 + 图示 + 算式对应”。"
+    }
+  ]
+}

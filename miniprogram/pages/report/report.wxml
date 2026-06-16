@@ -74,6 +74,22 @@
       </view>
     </view>
 
+    <view class="card learning-map-card" wx:if="{{hasLearningMap}}">
+      <view class="section-heading"><view class="heading-icon">⌘</view><text>知识地图下一步</text></view>
+      <view class="learning-map-item" wx:for="{{learningMapItems}}" wx:key="lpCode">
+        <text class="learning-node">{{item.nodeText}}</text>
+        <text class="learning-bottleneck" wx:if="{{item.bottleneckText}}">细卡点：{{item.bottleneckText}}</text>
+        <text class="learning-action">{{item.nextActionText}}</text>
+        <text class="learning-resource-summary" wx:if="{{item.resourceSummary}}">{{item.resourceSummary}}</text>
+        <view class="learning-resource-list" wx:if="{{item.hasResources}}">
+          <view class="learning-resource" wx:for="{{item.resources}}" wx:for-item="resource" wx:key="resourceId">
+            <text class="learning-resource-role">{{resource.role}}</text>
+            <text class="learning-resource-title">{{resource.platform}} · {{resource.title}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <view class="card" wx:if="{{hasVerificationEvidence}}">
       <view class="section-heading"><view class="heading-icon">✓</view><text>验证证据</text></view>
       <view class="evidence-item" wx:for="{{verificationEvidenceItems}}" wx:key="lpCode">

@@ -1,0 +1,140 @@
+{
+  "version": "2026-06-16",
+  "studentId": "student-zhong-qingyu",
+  "studentName": "钟青羽",
+  "subject": "math",
+  "grade": 6,
+  "updatedAt": "2026-06-16T20:30:00+08:00",
+  "statusScale": {
+    "mastered": "稳定掌握，能在新题型中迁移",
+    "mostlyMastered": "基本掌握，偶发疏漏或需要慢一点",
+    "partial": "部分掌握，遇到变式容易断链",
+    "weak": "明显薄弱，需要重学和微验证",
+    "unknown": "证据不足，等待错题或微验证"
+  },
+  "masteryRecords": [
+    {
+      "nodeId": "MATH-NUM-DEC-MUL-POINT",
+      "status": "partial",
+      "confidence": 0.72,
+      "evidence": [
+        {
+          "type": "historicalError",
+          "sourceId": "ERR-20260616-DEC-MUL-001",
+          "summary": "8.5×3.16 小数点定位错误，估算检查缺失"
+        },
+        {
+          "type": "microValidation",
+          "sourceId": "MV-20260616-001",
+          "summary": "能说出小数位数相加规则，但解释 0.85×3.16 时不够稳定"
+        }
+      ],
+      "activeBottlenecks": [
+        "BN-DEC-MUL-POINT-COUNT",
+        "BN-DEC-MUL-POINT-ESTIMATE"
+      ],
+      "nextAction": "先看小数乘法小数点定位资源，再做 6 题微验证",
+      "nextReviewAt": "2026-06-19"
+    },
+    {
+      "nodeId": "MATH-NUM-FRACTION-DIV-RECIPROCAL",
+      "status": "weak",
+      "confidence": 0.81,
+      "evidence": [
+        {
+          "type": "historicalError",
+          "sourceId": "ERR-20260616-FRACTION-DIV-001",
+          "summary": "6÷7/8 直接把除号后的分子分母混用，倒数规则和语义都不稳"
+        }
+      ],
+      "activeBottlenecks": [
+        "BN-FRACTION-DIV-RECIPROCAL-MISSING",
+        "BN-FRACTION-DIV-CONCEPT-JUMPS"
+      ],
+      "nextAction": "先用图示讲清“每份 7/8，6 里有几个 7/8”，再练倒数形式",
+      "nextReviewAt": "2026-06-18"
+    },
+    {
+      "nodeId": "MATH-MOD-RATIO-PART-WHOLE",
+      "status": "partial",
+      "confidence": 0.68,
+      "evidence": [
+        {
+          "type": "historicalError",
+          "sourceId": "ERR-20260616-RATIO-001",
+          "summary": "运货比例题中把部分比和总量关系混在一起"
+        }
+      ],
+      "activeBottlenecks": [
+        "BN-RATIO-PART-WHOLE-REFERENCE"
+      ],
+      "nextAction": "用线段图复述“谁是整体、谁是部分、比例对应谁”",
+      "nextReviewAt": "2026-06-21"
+    },
+    {
+      "nodeId": "MATH-GEO-CIRCLE-AREA",
+      "status": "mostlyMastered",
+      "confidence": 0.74,
+      "evidence": [
+        {
+          "type": "historicalError",
+          "sourceId": "ERR-20260616-CIRCLE-001",
+          "summary": "喷水面积题能找到半径，但面积公式偶尔多乘一次半径"
+        }
+      ],
+      "activeBottlenecks": [
+        "BN-CIRCLE-AREA-EXTRA-R"
+      ],
+      "nextAction": "补一个公式来源动画，之后做扇形/圆环变式",
+      "nextReviewAt": "2026-06-24"
+    },
+    {
+      "nodeId": "MATH-MEASURE-UNIT-LENGTH",
+      "status": "weak",
+      "confidence": 0.77,
+      "evidence": [
+        {
+          "type": "historicalError",
+          "sourceId": "ERR-20260616-UNIT-001",
+          "summary": "厘米、分米、米换算时只记住数字移动，没有绑定实际长度感"
+        }
+      ],
+      "activeBottlenecks": [
+        "BN-UNIT-LENGTH-CM-DM-M"
+      ],
+      "nextAction": "用尺子和家中物体建立 1cm/1dm/1m 的直观锚点",
+      "nextReviewAt": "2026-06-20"
+    },
+    {
+      "nodeId": "MATH-META-ESTIMATION-CHECK",
+      "status": "partial",
+      "confidence": 0.65,
+      "evidence": [
+        {
+          "type": "pattern",
+          "sourceId": "ERR-20260616-META-001",
+          "summary": "计算题完成后较少主动估算数量级或反向验算"
+        }
+      ],
+      "activeBottlenecks": [
+        "BN-META-ESTIMATION-MISSING",
+        "BN-META-INVERSE-CHECK-MISSING"
+      ],
+      "nextAction": "每次错题订正固定加一句“答案大概应该是多少”",
+      "nextReviewAt": "2026-06-23"
+    }
+  ],
+  "dashboardSummary": {
+    "mastered": 0,
+    "mostlyMastered": 1,
+    "partial": 3,
+    "weak": 2,
+    "unknown": 25,
+    "priorityNodes": [
+      "MATH-NUM-FRACTION-DIV-RECIPROCAL",
+      "MATH-MEASURE-UNIT-LENGTH",
+      "MATH-NUM-DEC-MUL-POINT",
+      "MATH-MOD-RATIO-PART-WHOLE"
+    ]
+  }
+}

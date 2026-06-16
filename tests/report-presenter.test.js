@@ -275,3 +275,43 @@ test('verification report exposes readable evidence status summaries', () => {
   assert.equal(view.explanationActionText, '继续练习或重新上传验证')
   assert.equal(view.explanationActionType, 'upload-verification')
 })
+
+test('diagnosis report exposes math learning map nodes, fine bottlenecks and resource plan', () => {
+  const view = buildReportView({
+    _id: 'report-math-v2',
+    studentId: 'student-1',
+    studentName: '钟青羽',
+    subject: 'math',
+    type: 'diagnosis',
+    bottlenecks: [
+      {
+        lpCode: 'LP-FD',
+        lpName: '分数除法',
+        errorCount: 2,
+        status: 'found',
+        nodeIds: ['MATH-NUM-FRACTION-DIV-RECIPROCAL'],
+        candidateBottlenecks: [
+          {
+            bottleneckId: 'BN-FRACTION-DIV-RECIPROCAL-MISSING',
+            title: '分数除法没有稳定转化为乘倒数'
+          }
+        ],
+        recommendedResourceIds: [
+          'RES-YT-FRACTION-DIV-001',
+          'RES-BILI-FRACTION-DIV-001'
+        ],
+        nextActionText: '先看高质量锚点校准概念，再用国内资源复述。'
+      }
+    ]
+  })
+
+  assert.equal(view.hasLearningMap, true)
+  assert.equal(view.learningMapItems.length, 1)
+  assert.equal(view.learningMapItems[0].nodeText, '分数除法与倒数')
+  assert.match(view.learningMapItems[0].bottleneckText, /除以分数未稳定转换为乘倒数/)
+  assert.equal(view.learningMapItems[0].nextActionText, '先看高质量锚点校准概念，再用国内资源复述。')
+  assert.ok(view.learningMapItems[0].resources.some(item => item.role === '高质量锚点'))
+  assert.ok(view.learningMapItems[0].resources.some(item => item.role === '国内补充'))
+  assert.match(view.learningMapItems[0].resourceSummary, /高质量锚点：YouTube/)
+  assert.match(view.learningMapItems[0].resourceSummary, /国内补充：B站/)
+})

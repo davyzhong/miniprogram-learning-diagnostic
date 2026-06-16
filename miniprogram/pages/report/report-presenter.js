@@ -1,4 +1,5 @@
 const { bottleneckLabelOf } = require('../../utils/learning-records')
+const { buildLearningMapReportItems } = require('../../utils/math-learning-map')
 const { paperCodeOf } = require('../../utils/paper-display')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 
@@ -267,6 +268,7 @@ function buildReportView(report) {
       })
     }
   })
+  const learningMapItems = buildLearningMapReportItems(bottlenecks)
   const errorDetailList = errorDetails.map((item, index) => {
     const detail = item && typeof item === 'object' ? item : { questionContent: String(item || '') }
     const sourceIndex = sourceIndexOf(detail, sourcePhotos)
@@ -336,6 +338,8 @@ function buildReportView(report) {
     bottleneckCount: bottlenecks.length,
     hasBottlenecks: bottlenecks.length > 0,
     bottleneckList,
+    hasLearningMap: learningMapItems.length > 0,
+    learningMapItems,
     hasErrorDetails: errorDetails.length > 0,
     errorDetailList,
     hasVerificationEvidence: verificationEvidenceItems.length > 0,
