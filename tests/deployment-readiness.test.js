@@ -74,6 +74,16 @@ test('frontend cloud data layer exposes wrappers for deployable learning functio
   }
 })
 
+test('English vocabulary cloud function package is self-contained for deployment', () => {
+  const source = read('cloudfunctions/englishVocabulary/index.js')
+
+  assert.ok(exists('cloudfunctions/englishVocabulary/zhong-qingyu-pep-vocabulary.json'))
+  assert.ok(exists('cloudfunctions/englishVocabulary/access.js'))
+  assert.ok(exists('cloudfunctions/englishVocabulary/english-vocabulary.js'))
+  assert.match(source, /require\(['"]\.\/access['"]\)/)
+  assert.match(source, /require\(['"]\.\/english-vocabulary['"]\)/)
+})
+
 test('deployment workflow is documented and exposed as a package script', () => {
   const pkg = JSON.parse(read('package.json'))
 

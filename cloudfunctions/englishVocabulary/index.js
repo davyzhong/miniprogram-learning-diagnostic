@@ -1,6 +1,6 @@
 const cloud = require('wx-server-sdk')
 const tcb = require('@cloudbase/node-sdk')
-const { getStudentAccess, canReadLearning, canOperateLearning } = require('../_shared/access')
+const { getStudentAccess, canReadLearning, canOperateLearning } = require('./access')
 const {
   cleanText,
   normalizeImportCandidates,
@@ -16,7 +16,7 @@ const {
   judgeSpokenWord,
   judgeRecognitionAnswer,
   dateOnly
-} = require('../_shared/english-vocabulary')
+} = require('./english-vocabulary')
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
