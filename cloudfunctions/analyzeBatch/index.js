@@ -9,6 +9,7 @@ const { BOTTLENECK_CODE_NAMES } = require('./bottleneck-name');
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
+const VERIFICATION_PLAN_LIMIT = 60;
 
 // 初始化 CloudBase AI SDK
 const app = tcb.init({
@@ -52,8 +53,14 @@ function buildPrompt(subject, verificationPlan = []) {
   }));
 
   const chineseReviewPlanItems = verificationPlan.flatMap(item => item.chineseReviewTargets || []);
+  const verificationPlanLines = verificationPlan.map(item => {
+    const label = item.displayName || item.lpName || item.lpCode;
+    const pageCode = item.pageCode ? `pageCode=${item.pageCode}，` : '';
+    const targetId = item.targetId ? `targetId=${item.targetId}，` : '';
+    return `- ${pageCode}${targetId}${item.lpCode}：${label}，预期 ${item.expectedQuestionCount} 道`;
+  });
   const verificationInstruction = verificationPlan.length > 0
-    ? `\n## 验证试卷判定\n这是验证试卷。请按卡点统计证据质量，不要把不确定情况当成已改善：\n${verificationPlan.map(item => `- ${item.lpCode}：整份试卷预期 ${item.expectedQuestionCount} 道`).join('\n')}${chineseReviewPlanItems.length > 0 ? `\n\n语文错项还需要按 reviewItemId 单独统计 chineseReviewEvidence：\n${chineseReviewPlanItems.map(item => `- ${item.itemId}：targetText=${item.targetText}，预期 ${item.expectedQuestionCount} 道`).join('\n')}` : ''}\n- attemptedQuestionCount：清晰可见、已经作答、能够判断对错的题目数量\n- incorrectQuestionCount：attemptedQuestionCount 中明确答错的题目数量\n- blankQuestionCount：清晰可见但没有作答或明显空白的题目数量\n- unclearQuestionCount：被遮挡、模糊、拍摄不完整、无法判断答案是否正确的题目数量\n- missingQuestionCount：预期题目中未在图片中找到或无法归入以上类别的数量\n未作答、被遮挡、模糊或无法确认的题目不得计入 attemptedQuestionCount。`
+    ? `\n## 验证试卷判定\n这是验证试卷。请先识别纸面印出的“页面编号”，并在 pageResults.pageCode 中返回；如果本页没有清楚看到页面编号，pageCode 返回空字符串。请按 pageCode + targetId/lpCode 统计证据质量，不要把不确定情况当成已改善：\n${verificationPlanLines.join('\n')}${chineseReviewPlanItems.length > 0 ? `\n\n语文错项还需要按 reviewItemId 单独统计 chineseReviewEvidence：\n${chineseReviewPlanItems.map(item => `- ${item.itemId}：targetText=${item.targetText}，预期 ${item.expectedQuestionCount} 道`).join('\n')}` : ''}\n- attemptedQuestionCount：清晰可见、已经作答、能够判断对错的题目数量\n- incorrectQuestionCount：attemptedQuestionCount 中明确答错的题目数量\n- blankQuestionCount：清晰可见但没有作答或明显空白的题目数量\n- unclearQuestionCount：被遮挡、模糊、拍摄不完整、无法判断答案是否正确的题目数量\n- missingQuestionCount：预期题目中未在图片中找到或无法归入以上类别的数量\n未作答、被遮挡、模糊或无法确认的题目不得计入 attemptedQuestionCount。`
     : '';
   const mathLearningMapInstruction = subject === 'math'
     ? `\n## 数学诊断升级字段\n数学卡点除了旧的 lpCode/lpName 外，还要尽量补充知识地图字段，无法判断时用空数组或空字符串，不要编造：\n- nodeIds：对应知识节点 ID，例如 MATH-NUM-DEC-MUL-POINT、MATH-NUM-FRACTION-DIV-RECIPROCAL、MATH-MOD-PERCENT-BASE、MATH-GEO-CYLINDER-VOLUME\n- candidateBottlenecks：细颗粒度候选卡点数组，每项包含 bottleneckId、title、evidenceStrength，可选 microValidationRequired、suggestedMicroValidation、recommendedResourceIds\n- recommendedResourceIds：推荐资源 ID。优先给“高质量锚点 + 国内补充”的组合，例如 RES-YT-FRACTION-DIV-001 + RES-BILI-FRACTION-DIV-001\n- nextActionType：resourceReview / microValidation / verificationPaper 三选一。发现漏洞时优先 resourceReview 或 microValidation，不要一上来就 verificationPaper\n- nextActionText：一句给家长看的下一步建议`
@@ -122,9 +129,10 @@ ${chineseErrorInstruction}
 ## 输出格式（严格JSON，不要加\`\`\`json\`\`\`包裹）
 按图片分别返回结果。图片顺序与上传顺序一致，imageIndex 从 1 开始。返回一个JSON对象，格式如下：
 {
-  "pageResults": [
+      "pageResults": [
     {
       "imageIndex": 1,
+      "pageCode": "验证试卷页面编号，如 MATH-V-20260616-01-P02；非验证试卷或看不清则为空",
       "ocrSummary": "本页可用于判断是否重复的题目、学生答案和批改信息摘要（300字内）",
       "summary": "本页诊断总结（50字内）",
       "bottlenecks": [{
@@ -145,6 +153,8 @@ ${chineseErrorInstruction}
       }]${chineseErrorJsonFields},
       "verificationEvidence": [{
         "lpCode": "LP-001",
+        "targetId": "细卡点或具体错项 ID；没有则为空",
+        "pageCode": "本条证据所属页面编号；没有则为空",
         "attemptedQuestionCount": 3,
         "incorrectQuestionCount": 0,
         "blankQuestionCount": 0,
@@ -251,13 +261,13 @@ exports.main = async (event) => {
     return { success: false, error: '学科参数无效' };
   }
   if (!Array.isArray(verificationPlan)
-    || verificationPlan.length > 5
+    || verificationPlan.length > VERIFICATION_PLAN_LIMIT
     || verificationPlan.some(item =>
       !item
-      || !/^LP-[A-Z0-9-]{1,24}$/.test(item.lpCode)
+      || !/^(LP|BN|CHI|MATH)-[A-Za-z0-9_-]{1,100}$/.test(String(item.lpCode || item.targetId || ''))
       || !Number.isInteger(item.expectedQuestionCount)
       || item.expectedQuestionCount < 1
-      || item.expectedQuestionCount > 20
+      || item.expectedQuestionCount > 50
     )) {
     return { success: false, error: '验证计划参数无效' };
   }

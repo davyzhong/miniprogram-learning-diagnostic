@@ -2,7 +2,9 @@
 const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
 const { buildBottleneckViews, profileBottlenecks } = require('../../utils/bottleneck-view')
-const MAX_SELECTED_BOTTLENECKS = 5
+const MAX_SELECTED_BOTTLENECKS = 60
+const MATH_TARGETS_PER_TASK_PAGE = 3
+const CHINESE_TARGETS_PER_TASK_PAGE = 8
 const CORE_QUESTIONS_PER_BOTTLENECK = 3
 const EXTENSION_QUESTIONS_PER_BOTTLENECK = 2
 const QUESTIONS_PER_BOTTLENECK = CORE_QUESTIONS_PER_BOTTLENECK + EXTENSION_QUESTIONS_PER_BOTTLENECK
@@ -215,10 +217,9 @@ Page({
     const { bottlenecks } = this.data
     const b = bottlenecks[idx]
 
-    // 最多选 5 个
     const selectedCount = bottlenecks.filter(x => x.selected).length
     if (!b.selected && selectedCount >= MAX_SELECTED_BOTTLENECKS) {
-      wx.showToast({ title: '最多选 5 个卡点', icon: 'none' })
+      wx.showToast({ title: `最多选 ${MAX_SELECTED_BOTTLENECKS} 个目标`, icon: 'none' })
       return
     }
 
@@ -335,24 +336,49 @@ Page({
   },
 
   setSelectionState(bottlenecks) {
-    const selectedCount = bottlenecks.filter(b => b.selected).length
+    const selectedItems = bottlenecks.filter(b => b.selected)
+    const selectedCount = selectedItems.length
     const selectedSummary = this.buildSelectedSummary(bottlenecks)
     this.setData({
       bottlenecks,
       selectedCount,
       selectedSummary,
-      paperConfig: this.buildPaperConfig(selectedCount, selectedSummary)
+      paperConfig: this.buildPaperConfig(selectedItems, selectedSummary)
     })
   },
 
-  buildPaperConfig(selectedCount, selectedSummary) {
+  buildTaskPages(selectedItems = []) {
+    const isChinese = this.data.subject === 'chinese'
+    const targetsPerPage = isChinese ? CHINESE_TARGETS_PER_TASK_PAGE : MATH_TARGETS_PER_TASK_PAGE
+    const pages = []
+    for (let start = 0; start < selectedItems.length; start += targetsPerPage) {
+      const targets = selectedItems.slice(start, start + targetsPerPage)
+      pages.push({
+        pageIndex: pages.length + 1,
+        title: `任务页 ${pages.length + 1}`,
+        targetCount: targets.length,
+        questionCount: this.questionCountForSelection(targets.length),
+        targetNames: targets.map(item => item.displayName || item.lpName || item.bottleneckId || item.lpCode).filter(Boolean),
+        scopeText: targets.map(item => item.displayName || item.lpName || item.bottleneckId || item.lpCode).filter(Boolean).join('、')
+      })
+    }
+    return pages
+  },
+
+  buildPaperConfig(selectedItemsOrCount, selectedSummary) {
+    const selectedItems = Array.isArray(selectedItemsOrCount) ? selectedItemsOrCount : []
+    const selectedCount = Array.isArray(selectedItemsOrCount) ? selectedItems.length : Number(selectedItemsOrCount) || 0
     const questionCount = this.questionCountForSelection(selectedCount)
     const isChinese = this.data.subject === 'chinese'
+    const taskPages = this.buildTaskPages(selectedItems)
     return {
       scopeText: selectedSummary || '未选择学习卡点',
       questionCount,
       estimatedMinutes: Math.max(0, selectedCount * 8),
       pages: Math.max(1, Math.ceil(questionCount / 10)),
+      taskPageCount: taskPages.length,
+      taskPages,
+      maxTargets: MAX_SELECTED_BOTTLENECKS,
       paperSize: 'A4',
       targetUnitLabel: isChinese ? '错项数' : '卡点数',
       strategyText: isChinese

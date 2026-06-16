@@ -224,7 +224,18 @@ function drawQuestion(doc, question, y) {
   return bottom + 9;
 }
 
-function drawPageNumber(doc, pageNumber, answerPage = false) {
+function drawPageNumber(doc, pageNumber, answerPage = false, pageCode = '') {
+  if (!answerPage && pageCode) {
+    doc.fillColor(COLORS.blue).fontSize(8.5)
+      .text(`页面编号：${pageCode}`,
+        PAGE.left, PAGE.height - 63, {
+          width: PAGE.contentWidth,
+          height: 12,
+          align: 'center',
+          lineBreak: false,
+        });
+  }
+
   doc.fillColor(COLORS.muted).fontSize(8.5)
     .text(answerPage ? `答案页 · 第 ${pageNumber} 页` : `第 ${pageNumber} 页`,
       PAGE.left, PAGE.height - 48, {
@@ -233,6 +244,17 @@ function drawPageNumber(doc, pageNumber, answerPage = false) {
         align: 'center',
         lineBreak: false,
       });
+}
+
+function pageCodeFromPack(verificationPack, pageNumber) {
+  const page = verificationPack && Array.isArray(verificationPack.pages)
+    ? verificationPack.pages[pageNumber - 1]
+    : null;
+  return page && page.pageCode ? page.pageCode : '';
+}
+
+function questionPageCode(question, verificationPack, pageNumber) {
+  return question.pageCode || pageCodeFromPack(verificationPack, pageNumber);
 }
 
 function drawAnswerHeader(doc, subject, type, paperDate = '', paperDisplayCode = '') {
@@ -296,33 +318,91 @@ async function generatePDF(questionsData, subject, type, options = {}) {
   useFont(doc, fontPath);
   const paperDate = options.paperDate || '';
   const paperDisplayCode = options.paperDisplayCode || options.paperCode || '';
+  const verificationPack = options.verificationPack || questionsData.verificationPack || null;
+  const studentPageMetadata = [];
+  let currentStudentPageCode = pageCodeFromPack(verificationPack, 1);
+  let currentStudentQuestionIds = [];
+
+  function rememberQuestionOnStudentPage(question) {
+    const pageCode = questionPageCode(question, verificationPack, pageNumber);
+    if (!currentStudentPageCode) currentStudentPageCode = pageCode;
+    if (question.questionId) currentStudentQuestionIds.push(question.questionId);
+  }
+
+  function finishStudentPage() {
+    const pageCode = currentStudentPageCode || pageCodeFromPack(verificationPack, pageNumber);
+    drawPageNumber(doc, pageNumber, false, pageCode);
+    studentPageMetadata.push({
+      pageNumber,
+      pageCode,
+      questionIds: currentStudentQuestionIds.slice(),
+    });
+    currentStudentQuestionIds = [];
+  }
+
+  function startStudentPage(nextQuestion = null) {
+    currentStudentPageCode = nextQuestion
+      ? questionPageCode(nextQuestion, verificationPack, pageNumber)
+      : pageCodeFromPack(verificationPack, pageNumber);
+    return drawStudentHeader(doc, subject, type, true, paperDate, paperDisplayCode);
+  }
 
   const groups = groupQuestions(questionsData.questions || []);
   let pageNumber = 1;
   let y = drawStudentHeader(doc, subject, type, false, paperDate, paperDisplayCode);
 
   groups.forEach((group, groupIndex) => {
-    if (y + 145 > PAGE.contentBottom) {
-      drawPageNumber(doc, pageNumber);
+    const firstQuestionPageCode = group.questions[0]
+      ? questionPageCode(group.questions[0], verificationPack, pageNumber)
+      : '';
+    if (
+      type === 'verification'
+      && currentStudentQuestionIds.length > 0
+      && currentStudentPageCode
+      && firstQuestionPageCode
+      && firstQuestionPageCode !== currentStudentPageCode
+    ) {
+      finishStudentPage();
       doc.addPage();
       pageNumber += 1;
-      y = drawStudentHeader(doc, subject, type, true, paperDate, paperDisplayCode);
+      y = startStudentPage(group.questions[0]);
+    }
+    if (y + 145 > PAGE.contentBottom) {
+      finishStudentPage();
+      doc.addPage();
+      pageNumber += 1;
+      y = startStudentPage(group.questions[0]);
     }
     y = drawGroupBar(doc, group, groupIndex, y, type);
 
     group.questions.forEach(question => {
       const requiredHeight = questionHeight(doc, question);
-      if (y + requiredHeight > PAGE.contentBottom) {
-        drawPageNumber(doc, pageNumber);
+      const nextPageCode = questionPageCode(question, verificationPack, pageNumber);
+      if (
+        type === 'verification'
+        && currentStudentQuestionIds.length > 0
+        && currentStudentPageCode
+        && nextPageCode
+        && nextPageCode !== currentStudentPageCode
+      ) {
+        finishStudentPage();
         doc.addPage();
         pageNumber += 1;
-        y = drawStudentHeader(doc, subject, type, true, paperDate, paperDisplayCode);
+        y = startStudentPage(question);
         y = drawGroupBar(doc, group, groupIndex, y, type);
       }
+      if (y + requiredHeight > PAGE.contentBottom) {
+        finishStudentPage();
+        doc.addPage();
+        pageNumber += 1;
+        y = startStudentPage(question);
+        y = drawGroupBar(doc, group, groupIndex, y, type);
+      }
+      rememberQuestionOnStudentPage(question);
       y = drawQuestion(doc, question, y);
     });
   });
-  drawPageNumber(doc, pageNumber);
+  finishStudentPage();
 
   doc.addPage();
   let answerPageNumber = 1;
@@ -360,6 +440,8 @@ async function generatePDF(questionsData, subject, type, options = {}) {
     studentPages: pageNumber,
     answerPages: answerPageNumber,
     totalPages: pageNumber + answerPageNumber,
+    studentPageCodes: studentPageMetadata.map(page => page.pageCode).filter(Boolean),
+    studentPageMetadata,
   };
 }
 

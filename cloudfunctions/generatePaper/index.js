@@ -5,6 +5,11 @@ const tcb = require('@cloudbase/node-sdk');
 const { generatePDF } = require('./pdf-renderer');
 const { summarizeBottleneckName, uniqueBottleneckSummaries } = require('./bottleneck-display');
 const { selectChineseReviewTargets, buildChineseReviewPromptBlock } = require('./chinese-review-targets');
+const {
+  buildVerificationPack,
+  decorateQuestionsWithPack,
+  inferTargetType,
+} = require('./verification-pack');
 const { getStudentAccess, canOperateLearning } = require('./access');
 const { getSubjectName, getSubjectCode } = require('./constants');
 
@@ -15,6 +20,7 @@ const TYPES = new Set(['verification', 'default-diagnosis']);
 const VERIFICATION_CORE_QUESTION_COUNT = 3;
 const VERIFICATION_EXTENSION_QUESTION_COUNT = 2;
 const VERIFICATION_QUESTIONS_PER_TARGET = VERIFICATION_CORE_QUESTION_COUNT + VERIFICATION_EXTENSION_QUESTION_COUNT;
+const VERIFICATION_TASK_PACK_TARGET_LIMIT = 60;
 
 // 初始化 CloudBase AI SDK
 const app = tcb.init({
@@ -171,6 +177,64 @@ function buildTargetNameMap(profile = {}) {
   return targetMap;
 }
 
+function findParentLpCode(profile = {}, targetId) {
+  const bottlenecks = [
+    ...(profile.pendingBottlenecks || []),
+    ...(profile.currentBottlenecks || []),
+  ];
+
+  for (const item of bottlenecks) {
+    const directCode = cleanPromptText(item.lpCode, 100);
+    if (directCode === targetId) return directCode;
+    for (const candidate of item.candidateBottlenecks || []) {
+      const candidateId = cleanPromptText(candidate.bottleneckId || candidate.id, 100);
+      if (candidateId === targetId) return directCode;
+    }
+  }
+
+  return targetId.startsWith('LP-') ? targetId : '';
+}
+
+function findTargetWeight(profile = {}, targetId) {
+  const bottlenecks = [
+    ...(profile.pendingBottlenecks || []),
+    ...(profile.currentBottlenecks || []),
+  ];
+
+  for (const item of bottlenecks) {
+    if (cleanPromptText(item.lpCode, 100) === targetId) {
+      return Number(item.weight || item.errorCount || 0) || 0;
+    }
+    for (const candidate of item.candidateBottlenecks || []) {
+      const candidateId = cleanPromptText(candidate.bottleneckId || candidate.id, 100);
+      if (candidateId === targetId) {
+        return Number(candidate.weight || candidate.evidenceStrength || candidate.errorCount || item.weight || 0) || 0;
+      }
+    }
+  }
+
+  for (const item of profile.chineseReviewItems || []) {
+    const itemId = cleanPromptText(item.itemId || item.id, 100);
+    if (itemId === targetId) {
+      return Number(item.weight || item.errorCount || 0) || 0;
+    }
+  }
+
+  return 0;
+}
+
+function buildVerificationTargetsForPack(profile = {}, targetCodes = []) {
+  const targetNameMap = buildTargetNameMap(profile);
+  return targetCodes.map(code => ({
+    targetId: code,
+    targetType: inferTargetType(code),
+    displayName: targetNameMap[code] || code,
+    legacyLpCode: findParentLpCode(profile, code),
+    lpCode: findParentLpCode(profile, code),
+    weight: findTargetWeight(profile, code),
+  }));
+}
+
 async function generateQuestionsWithAI(student, subject, type, targets, paperKey, questionCount, selectedGrade) {
   // 获取学生信息（用于个性化）
   const studentName = cleanPromptText(student.name, 30);
@@ -274,8 +338,9 @@ exports.main = async (event) => {
     return { success: false, error: '学科或试卷类型无效' };
   }
   const targetCodes = Array.isArray(targets) ? normalizeTargetCodes(targets) : [];
+  const verificationTargetLimit = type === 'verification' ? VERIFICATION_TASK_PACK_TARGET_LIMIT : 5;
   const hasInvalidTargets = !Array.isArray(targets)
-    || targetCodes.length > 5
+    || targetCodes.length > verificationTargetLimit
     || targetCodes.some(code => !isValidTargetCode(code));
   if (hasInvalidTargets) {
     return { success: false, error: '学习卡点参数无效' };
@@ -300,6 +365,23 @@ exports.main = async (event) => {
       return { success: false, error: '无权执行该操作' };
     }
 
+    const profileRes = await db.collection('subjectProfiles')
+      .where({ studentId })
+      .get();
+    const subjectProfile = (profileRes.data || []).find(item => item.subject === subject) || {};
+    const paperCodes = await createPaperCodes(studentId, subject, normalizedPaperDate);
+    const verificationTargets = type === 'verification'
+      ? buildVerificationTargetsForPack(subjectProfile, targetCodes)
+      : [];
+    const initialVerificationPack = type === 'verification'
+      ? buildVerificationPack({
+        subject,
+        paperCode: paperCodes.paperCode,
+        paperDate: normalizedPaperDate,
+        targets: verificationTargets,
+      })
+      : null;
+
     // 1. 调用混元生成题目
     console.log('开始生成题目，type：', type);
     const questionsData = await generateQuestionsWithAI(
@@ -311,14 +393,25 @@ exports.main = async (event) => {
       normalizedQuestionCount,
       type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0
     );
+    if (initialVerificationPack) {
+      const decorated = decorateQuestionsWithPack(questionsData.questions || [], initialVerificationPack);
+      questionsData.questions = decorated.questions;
+      questionsData.verificationPack = {
+        ...decorated.pack,
+        mode: 'task_pack',
+        scheduleStrategy: 'weight_desc_paginated',
+        totalQuestions: decorated.questions.length,
+        completedStudentPages: 0,
+      };
+    }
     const bottleneckSummaries = buildBottleneckSummaries(questionsData.questions, targetCodes);
-    const paperCodes = await createPaperCodes(studentId, subject, normalizedPaperDate);
 
     // 2. 生成 PDF
     console.log('开始生成 PDF');
     const pdfResult = await generatePDF(questionsData, subject, type, {
       paperDate: normalizedPaperDate,
       ...paperCodes,
+      verificationPack: questionsData.verificationPack || null,
     });
     const pdfBuffer = Buffer.isBuffer(pdfResult) ? pdfResult : pdfResult.buffer;
     if (!Buffer.isBuffer(pdfBuffer)) {
@@ -328,6 +421,8 @@ exports.main = async (event) => {
       studentPages: Number(pdfResult.studentPages) || Math.max(1, Math.ceil(questionsData.questions.length / 6)),
       answerPages: Number(pdfResult.answerPages) || 1,
       totalPages: Number(pdfResult.totalPages) || 0,
+      studentPageCodes: Array.isArray(pdfResult.studentPageCodes) ? pdfResult.studentPageCodes : [],
+      studentPageMetadata: Array.isArray(pdfResult.studentPageMetadata) ? pdfResult.studentPageMetadata : [],
     };
     if (!pageInfo.totalPages) {
       pageInfo.totalPages = pageInfo.studentPages + pageInfo.answerPages;
@@ -349,6 +444,7 @@ exports.main = async (event) => {
         title: questionsData.title,
         questionCount: questionsData.questions.length,
         chineseReviewTargets: questionsData.chineseReviewTargets || [],
+        verificationPack: questionsData.verificationPack || null,
         paperDate: normalizedPaperDate,
         ...paperCodes,
         ...pageInfo,
@@ -368,6 +464,7 @@ exports.main = async (event) => {
         bottleneckTargets: targetCodes,
         bottleneckSummaries,
         chineseReviewTargets: questionsData.chineseReviewTargets || [],
+        verificationPack: questionsData.verificationPack || null,
         questions: questionsData.questions || [],
         pdfFileId,
         paperDate: normalizedPaperDate,
@@ -384,6 +481,7 @@ exports.main = async (event) => {
       pdfFileId,
       title: questionsData.title,
       questionCount: (questionsData.questions || []).length,
+      verificationPack: questionsData.verificationPack || null,
       paperDate: normalizedPaperDate,
       ...paperCodes,
       ...pageInfo,

@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序测试矩阵
 
-> 更新日期：2026-06-15
+> 更新日期：2026-06-16
 > 范围：`PRD.md`、`PROJECT_PLAN.md` 中的 MVP P0 功能
-> 自动化结果：`npm test` → 353/353 通过；`npm run check` → 以本机输出为准
+> 自动化结果：`npm test` → 389/389 通过；`npm run check` → 133 个 JS 文件通过；`npm run check:deployment` → 10/10 通过；微信开发者工具 CLI `preview` → 690.3 KB
 
 ## 1. 自动化验证命令
 
@@ -34,7 +34,8 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | 验证报告与改善证据判定 | `comparison.test.js`、`verification-evidence.test.js`、`cloud-functions.test.js`、`report-presenter.test.js` | 已覆盖；只有全部预期题目清晰作答且全对才确认改善，空白/模糊/缺失均进入证据不足；报告页用“结论 / 依据 / 注意 / 下一步”解释验证结果 |
 | 报告质量复核信号 | `report-quality.test.js`、`report-presenter.test.js` | 已覆盖；样本不足不更新长期卡点，部分失败显示“建议复核” |
 | 家长反馈与纠错入口 | `report-feedback.test.js`、`page-flows.test.js` | 已覆盖；owner/viewer 可提交反馈，非成员不可提交，反馈不直接修改原报告 |
-| 验证试卷出卷配置、生成、PDF 下载、生命周期状态、答题上传 | `paper-preview-presenter.test.js`、`page-flows.test.js`、`learning-records.test.js`、`cloud-functions.test.js`、`generate-paper-pdf.test.js` | 已覆盖；支持 targetCode 预选，每个卡点 5 题（3 核心验证 + 2 迁移延展），PDF 包含学生卷和答案页，试卷页区分已生成/已下载/分析中/失败/完成，学习记录按最新反馈连接试卷闭环 |
+| 验证任务包出卷配置、生成、PDF 下载、生命周期状态、答题上传 | `verification-pack.test.js`、`paper-preview-presenter.test.js`、`page-flows.test.js`、`learning-records.test.js`、`cloud-functions.test.js`、`generate-paper-pdf.test.js` | 已覆盖；支持 LP/BN/CHI 目标，任务包最多 60 个目标，每目标 5 题（3 核心验证 + 2 迁移延展），数学默认每页 3 个目标，语文具体错项默认每页 8 个目标；PDF 学生页打印 pageCode，试卷页和学习记录可展示分页进度 |
+| 验证任务包分页证据回传 | `verification-evidence.test.js`、`analyze-batch-result.test.js`、`cloud-functions.test.js`、`paper-preview-presenter.test.js` | 已覆盖；AI 分析提示识别页面编号，报告保存 `verificationPageCodes` / `verificationPageEvidence`，只对已上传页面形成证据，未上传页面保持待回传而不是自动判失败 |
 | 默认诊断试卷选择、年级、缓存复用、答题上传 | `page-flows.test.js`、`cloud-functions.test.js` | 同一学生复用已覆盖；跨学生复用未实现 |
 | 报告 PDF 生成和下载 | `cloud-functions.test.js`、`page-flows.test.js`、`contracts.test.js` | 已覆盖；中文字体已内置，真实 A4 排版需人工验收 |
 | 分析超时、任务缺失和手动重试 | `poller.test.js`、`page-flows.test.js`、`contracts.test.js` | 客户端恢复路径已覆盖 |
@@ -61,8 +62,8 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 3. 让分析运行超过 20 秒，确认小程序已返回主页且云端仍能最终完成。
 4. 分析中主动关闭小程序，再次进入后确认当前报告和进度可恢复。
 5. 上传同名不同内容、不同名相同内容、全部重复内容三组照片。
-6. 生成验证卷和默认诊断卷，检查中文字体、A4 分页、答题空间及打印效果。
-7. 上传验证卷答案，核对只有本次目标卡点会被判定为已改善。
+6. 生成验证任务包和默认诊断卷，检查中文字体、A4 分页、页面编号、答题空间及打印效果。
+7. 分页上传验证卷答案，核对只有已上传页面中的目标卡点会更新证据，未上传页面仍显示待回传。
 8. 用第二个微信账号验证数据库安全规则和云函数归属校验。
 9. 配置订阅消息后验证授权、发送、点击跳转和拒绝授权路径。
 
@@ -72,20 +73,21 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 |---|---|---|
 | `tests/helpers/page-harness.js` | 执行真实小程序页面控制器 | — |
 | `tests/helpers/cloud-function-harness.js` | 执行真实云函数并模拟数据库、存储和函数调用 | — |
-| `tests/analyze-batch-result.test.js` | analyzeBatch 结果标准化 | 3 |
-| `tests/analyze-photos-pipeline.test.js` | analyzePhotos 管线辅助函数 | 7 |
+| `tests/analyze-batch-result.test.js` | analyzeBatch 结果标准化 | 7 |
+| `tests/analyze-photos-pipeline.test.js` | analyzePhotos 管线辅助函数 | 16 |
 | `tests/bottleneck-view.test.js` | 共享学习卡点视图模型、排序和统计规则 | 3 |
 | `tests/cli-p0.test.js` | P0 CLI 命令合同，使用 fixture adapter 离线验证 | 4 |
-| `tests/cloud-functions.test.js` | 云函数集成流程、权限和边界 | 28 |
+| `tests/cloud-functions.test.js` | 云函数集成流程、权限和边界 | 37 |
 | `tests/comparison.test.js` | 验证报告对比算法 | 4 |
 | `tests/contracts.test.js` | 跨模块契约和已修复缺陷回归保护 | 38 |
 | `tests/coverage-gap.test.js` | 覆盖缺口补全 | 7 |
-| `tests/data-layer.test.js` | 统一数据访问层 | 8 |
+| `tests/data-layer.test.js` | 统一数据访问层 | 11 |
 | `tests/e2e-real-image.test.js` | 端到端真实图片测试脚本 | 1（含云端条件步骤） |
-| `tests/generate-paper-pdf.test.js` | 可打印 PDF 中文字体、分页和答案页回归 | 4 |
+| `tests/generate-paper-pdf.test.js` | 可打印 PDF 中文字体、分页和答案页回归 | 5 |
 | `tests/index-presenter.test.js` | 孩子档案视图模型与家庭工作台卡片 | 9 |
-| `tests/learning-records.test.js` | 学习记录四级分类、试卷编号、卡点名称和英语 session 展示规则 | 11 |
-| `tests/page-flows.test.js` | 页面主流程、首页分流与错误恢复 | 60 |
+| `tests/learning-records.test.js` | 学习记录四级分类、试卷编号、卡点名称和英语 session 展示规则 | 18 |
+| `tests/page-flows.test.js` | 页面主流程、首页分流与错误恢复 | 74 |
+| `tests/paper-preview-presenter.test.js` | 试卷预览、任务包页进度和下载状态视图模型 | 7 |
 | `tests/parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
 | `tests/photo-dedup.test.js` | OCR 去重算法 | 3 |
 | `tests/poller.test.js` | 通用轮询器与分析轮询包装 | 6 |
@@ -97,9 +99,10 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/skills-p0.test.js` | P0 Skill 能力内核 | 8 |
 | `tests/profile-summary.test.js` | 当前综合诊断状态规则 | 6 |
 | `tests/student-access.test.js` | 家长成员、邀请、加入、移除权限和首次建表兜底 | 8 |
-| `tests/student-data-access.test.js` | 共享家长学习数据访问 | 6 |
+| `tests/student-data-access.test.js` | 共享家长学习数据访问 | 10 |
 | `tests/subject-home-presenter.test.js` | 学科工作台视图模型 | 3 |
 | `tests/time-aware-bottlenecks.test.js` | 时间化学习卡点趋势和权重 | 5 |
-| `tests/verification-evidence.test.js` | 验证试卷证据完整性 | 3 |
+| `tests/verification-evidence.test.js` | 验证试卷证据完整性 | 5 |
+| `tests/verification-pack.test.js` | 验证任务包分页、页面编号和题目归属规划 | 4 |
 | `tests/util.test.js` | 工具函数 | 11 |
-| **合计** | | **353 常规用例** |
+| **合计** | | **389 常规用例** |

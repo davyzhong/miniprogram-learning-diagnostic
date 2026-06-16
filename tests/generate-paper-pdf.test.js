@@ -148,3 +148,59 @@ test('verification PDF returns student and answer page metadata with the buffer'
   assert.ok(result.answerPages >= 1)
   assert.equal(result.totalPages, result.studentPages + result.answerPages)
 })
+
+test('verification PDF prints traceable page codes on student pages', async () => {
+  const { PdfMock, operations } = createRecordingPdfKit()
+  const { generatePDF } = require('../cloudfunctions/generatePaper/pdf-renderer')
+  const result = await generatePDF({
+    questions: [
+      {
+        index: 1,
+        questionId: 'MATH-V-20260616-01-P01-Q01',
+        pageCode: 'MATH-V-20260616-01-P01',
+        content: '第 1 页任务题',
+        answer: '答案一',
+        lpCode: 'BN-FINE-1',
+        lpName: '小数点定位不稳'
+      },
+      {
+        index: 2,
+        questionId: 'MATH-V-20260616-01-P02-Q01',
+        pageCode: 'MATH-V-20260616-01-P02',
+        content: '第 2 页任务题',
+        answer: '答案二',
+        lpCode: 'BN-FINE-4',
+        lpName: '分数通分不稳'
+      }
+    ]
+  }, 'math', 'verification', {
+    pdfkit: PdfMock,
+    fontPath: path.resolve(__dirname, '../cloudfunctions/generatePaper/NotoSansCJKsc-Regular.otf'),
+    verificationPack: {
+      pages: [
+        { pageCode: 'MATH-V-20260616-01-P01' },
+        { pageCode: 'MATH-V-20260616-01-P02' }
+      ]
+    }
+  })
+
+  const texts = operations.filter(item => item[0] === 'text').map(item => item[1])
+  assert.ok(texts.includes('页面编号：MATH-V-20260616-01-P01'))
+  assert.ok(texts.includes('页面编号：MATH-V-20260616-01-P02'))
+  assert.deepEqual(result.studentPageCodes, [
+    'MATH-V-20260616-01-P01',
+    'MATH-V-20260616-01-P02'
+  ])
+  assert.deepEqual(result.studentPageMetadata, [
+    {
+      pageNumber: 1,
+      pageCode: 'MATH-V-20260616-01-P01',
+      questionIds: ['MATH-V-20260616-01-P01-Q01']
+    },
+    {
+      pageNumber: 2,
+      pageCode: 'MATH-V-20260616-01-P02',
+      questionIds: ['MATH-V-20260616-01-P02-Q01']
+    }
+  ])
+})

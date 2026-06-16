@@ -111,15 +111,22 @@ function normalizeErrorDetails(items) {
 
 function normalizeVerificationEvidence(items) {
   return items
-    .filter(item => item && typeof item.lpCode === 'string')
-    .map(item => ({
-      lpCode: cleanText(item.lpCode, 30),
-      attemptedQuestionCount: Math.max(0, Number(item.attemptedQuestionCount) || 0),
-      incorrectQuestionCount: Math.max(0, Number(item.incorrectQuestionCount) || 0),
-      blankQuestionCount: Math.max(0, Number(item.blankQuestionCount) || 0),
-      unclearQuestionCount: Math.max(0, Number(item.unclearQuestionCount) || 0),
-      missingQuestionCount: Math.max(0, Number(item.missingQuestionCount) || 0),
-    }))
+    .filter(item => item && (typeof item.lpCode === 'string' || typeof item.targetId === 'string'))
+    .map(item => {
+      const evidence = {
+        lpCode: cleanText(item.lpCode || item.targetId, 100),
+        attemptedQuestionCount: Math.max(0, Number(item.attemptedQuestionCount) || 0),
+        incorrectQuestionCount: Math.max(0, Number(item.incorrectQuestionCount) || 0),
+        blankQuestionCount: Math.max(0, Number(item.blankQuestionCount) || 0),
+        unclearQuestionCount: Math.max(0, Number(item.unclearQuestionCount) || 0),
+        missingQuestionCount: Math.max(0, Number(item.missingQuestionCount) || 0),
+      };
+      const targetId = cleanText(item.targetId, 100);
+      const pageCode = cleanText(item.pageCode, 80);
+      if (targetId) evidence.targetId = targetId;
+      if (pageCode) evidence.pageCode = pageCode;
+      return evidence;
+    })
 }
 
 function normalizeChineseReviewEvidence(items) {
@@ -160,6 +167,7 @@ function normalizePageResults(result, expectedPageCount) {
     const chineseReviewEvidence = normalizeChineseReviewEvidence(page.chineseReviewEvidence);
     return {
       imageIndex,
+      pageCode: cleanText(page.pageCode, 80),
       ocrSummary: cleanText(page.ocrSummary, 1000),
       summary: cleanText(page.summary, 200),
       bottlenecks,

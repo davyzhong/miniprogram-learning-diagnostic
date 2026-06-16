@@ -1,5 +1,6 @@
 // utils/cloud.js - 云函数调用封装
 const { SUBJECT_NAMES } = require('./constants')
+const perf = require('./perf')
 
 let _db = null
 const pendingSubjectProfileCreates = new Map()
@@ -29,14 +30,25 @@ function normalizeError(error, fallbackMessage, context = {}) {
 }
 
 async function callFunction(name, data, options = {}) {
+  const startedAt = perf.now()
+  const dimensions = {
+    functionName: name,
+    action: data && data.action ? data.action : '',
+    success: false
+  }
+  perf.recordMetric('cloud.callFunction.payloadBytes', perf.estimateBytes(data), dimensions)
   try {
     const res = await wx.cloud.callFunction({ name, data, ...options })
     const result = res.result || {}
     if (result.success === false) {
       throw new Error(result.error || '云函数执行失败')
     }
+    dimensions.success = true
+    perf.recordMetric('cloud.callFunction.resultBytes', perf.estimateBytes(result), dimensions)
+    perf.recordMetric('cloud.callFunction.duration', perf.now() - startedAt, dimensions)
     return result
   } catch (error) {
+    perf.recordMetric('cloud.callFunction.duration', perf.now() - startedAt, dimensions)
     throw normalizeError(error, '云函数调用失败', {
       functionName: name,
       action: data && data.action
@@ -303,8 +315,8 @@ async function getSubjectDashboard(studentId, subject, options = {}) {
   return callFunction('studentData', { action: 'getSubjectDashboard', studentId, subject, ...options })
 }
 
-async function getLearningTimeline({ studentId, subject, limit } = {}) {
-  return callFunction('studentData', { action: 'getLearningTimeline', studentId, subject, limit })
+async function getLearningTimeline({ studentId, subject, limit, cursor } = {}) {
+  return callFunction('studentData', { action: 'getLearningTimeline', studentId, subject, limit, cursor })
 }
 
 async function cleanupStaleLearningRecords({ studentId, subject, dryRun = false } = {}) {
@@ -377,6 +389,8 @@ async function submitEnglishPracticeResult(payload = {}) {
 }
 
 module.exports = {
+  getPerformanceMetrics: perf.getMetrics,
+  clearPerformanceMetrics: perf.clearMetrics,
   normalizeError,
   isTimeoutError,
   callFunction,

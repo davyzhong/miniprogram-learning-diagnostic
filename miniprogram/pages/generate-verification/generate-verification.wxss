@@ -71,6 +71,62 @@
   line-height: 1.4;
 }
 
+.task-pack {
+  margin-top: 16rpx;
+  padding: 16rpx;
+  border-radius: 16rpx;
+  background: #f7fbff;
+  border: 2rpx solid #d9ebfb;
+}
+
+.task-pack-head {
+  margin-bottom: 10rpx;
+}
+
+.task-pack-title {
+  display: block;
+  font-size: 25rpx;
+  font-weight: 800;
+  color: #1f4f82;
+  margin-bottom: 4rpx;
+}
+
+.task-pack-meta {
+  display: block;
+  color: #607089;
+  font-size: 21rpx;
+  line-height: 1.45;
+}
+
+.task-page {
+  padding: 14rpx 0;
+  border-top: 1rpx solid #dbe8f5;
+}
+
+.task-page-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 12rpx;
+  color: #25364a;
+  font-size: 23rpx;
+  font-weight: 750;
+}
+
+.task-page-count {
+  flex-shrink: 0;
+  color: #2f78b7;
+  font-size: 21rpx;
+  font-weight: 700;
+}
+
+.task-page-scope {
+  display: block;
+  margin-top: 6rpx;
+  color: #6b7b90;
+  font-size: 21rpx;
+  line-height: 1.45;
+}
+
 .preview-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

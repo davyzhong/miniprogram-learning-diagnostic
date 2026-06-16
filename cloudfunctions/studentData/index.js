@@ -61,6 +61,15 @@ function normalizeLimit(value, fallback = 20, max = 100) {
   return Math.min(max, Math.max(1, limit));
 }
 
+function normalizeCursor(value) {
+  const text = String(value || '').trim();
+  return text && !Number.isNaN(new Date(text).getTime()) ? text : '';
+}
+
+function cursorFilter(cursor) {
+  return cursor ? { createdAt: db.command.lt(cursor) } : {};
+}
+
 async function getAccess(studentId, openId) {
   return getStudentAccess(db, studentId, openId);
 }
@@ -78,8 +87,10 @@ async function getSubjectProfiles(studentId) {
   return (res.data || []).sort((a, b) => toTime(b.updatedAt) - toTime(a.updatedAt));
 }
 
-async function getReports(studentId, subject, limit = 20) {
-  const filter = subject ? { studentId, subject } : { studentId };
+async function getReports(studentId, subject, limit = 20, cursor = '') {
+  const filter = subject
+    ? { studentId, subject, ...cursorFilter(cursor) }
+    : { studentId, ...cursorFilter(cursor) };
   const res = await db.collection('reports')
     .where(filter)
     .orderBy('createdAt', 'desc')
@@ -88,8 +99,10 @@ async function getReports(studentId, subject, limit = 20) {
   return visibleReports(res.data || []);
 }
 
-async function getPapers(studentId, subject, limit = 20) {
-  const filter = subject ? { studentId, subject } : { studentId };
+async function getPapers(studentId, subject, limit = 20, cursor = '') {
+  const filter = subject
+    ? { studentId, subject, ...cursorFilter(cursor) }
+    : { studentId, ...cursorFilter(cursor) };
   const res = await db.collection('papers')
     .where(filter)
     .orderBy('createdAt', 'desc')
@@ -98,10 +111,11 @@ async function getPapers(studentId, subject, limit = 20) {
   return res.data || [];
 }
 
-async function getEnglishSessions(studentId, subject, limit = 50) {
+async function getEnglishSessions(studentId, subject, limit = 50, cursor = '') {
   if (subject && subject !== 'english') return [];
+  const filter = { studentId, ...cursorFilter(cursor) };
   const res = await db.collection('englishPracticeSessions')
-    .where({ studentId })
+    .where(filter)
     .orderBy('createdAt', 'desc')
     .limit(limit)
     .get();
@@ -132,6 +146,94 @@ function paperDisplayCodeOf(paper) {
 
 function reportBottleneckSummary(report) {
   return bottleneckSummaryFrom(report && report.bottlenecks);
+}
+
+function reportBottleneckSummaries(report) {
+  if (Array.isArray(report && report.bottleneckSummaries) && report.bottleneckSummaries.length > 0) {
+    return report.bottleneckSummaries.filter(Boolean).slice(0, 3);
+  }
+  const summary = reportBottleneckSummary(report);
+  return summary ? summary.split('、').filter(Boolean).slice(0, 3) : [];
+}
+
+function summarizeReportForTimeline(report = {}) {
+  const imageFiles = Array.isArray(report.imageFiles) ? report.imageFiles : [];
+  const imageFileIds = Array.isArray(report.imageFileIds) ? report.imageFileIds : [];
+  return {
+    _id: report._id,
+    studentId: report.studentId,
+    subject: report.subject,
+    type: report.type,
+    status: report.status,
+    summary: report.summary || '',
+    comparisonSummary: report.comparisonSummary || '',
+    paperId: report.paperId || '',
+    totalErrors: Number(report.totalErrors) || 0,
+    bottleneckSummaries: reportBottleneckSummaries(report),
+    imageFileCount: imageFiles.length || imageFileIds.length || 0,
+    verificationEvidence: Array.isArray(report.verificationEvidence) ? report.verificationEvidence : [],
+    verificationPageCodes: Array.isArray(report.verificationPageCodes) ? report.verificationPageCodes : [],
+    verificationPageEvidence: Array.isArray(report.verificationPageEvidence) ? report.verificationPageEvidence : [],
+    evidenceTime: report.evidenceTime || '',
+    createdAt: report.createdAt,
+    updatedAt: report.updatedAt,
+  };
+}
+
+function summarizePaperForTimeline(paper = {}) {
+  return {
+    _id: paper._id,
+    studentId: paper.studentId,
+    subject: paper.subject,
+    type: paper.type,
+    paperCode: paper.paperCode || '',
+    paperDisplayCode: paperDisplayCodeOf(paper),
+    bottleneckTargets: Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : [],
+    bottleneckSummaries: Array.isArray(paper.bottleneckSummaries) ? paper.bottleneckSummaries : [],
+    questionCount: Number(paper.questionCount) || (Array.isArray(paper.questions) ? paper.questions.length : 0),
+    pdfFileId: paper.pdfFileId || '',
+    paperDate: paper.paperDate || '',
+    grade: paper.grade,
+    verificationPack: paper.verificationPack || null,
+    generatedAt: paper.generatedAt || '',
+    createdAt: paper.createdAt,
+    updatedAt: paper.updatedAt,
+  };
+}
+
+function summarizeEnglishSessionForTimeline(session = {}) {
+  const wordItems = Array.isArray(session.wordItems) ? session.wordItems : [];
+  return {
+    _id: session._id,
+    studentId: session.studentId || '',
+    subject: 'english',
+    functionType: session.functionType || '',
+    type: session.type || '',
+    status: session.status || '',
+    analysisStatus: session.analysisStatus || '',
+    wordCount: Number(session.wordCount) || wordItems.length,
+    wordItems: wordItems.slice(0, 20).map(item => ({
+      wordId: item.wordId || '',
+      word: item.word || item.targetWord || '',
+    })),
+    attempts: (session.attempts || []).map(item => ({
+      wordId: item.wordId || '',
+      targetWord: item.targetWord || item.word || '',
+      judgment: item.judgment || null,
+      status: item.status || '',
+    })),
+    dictationResults: (session.dictationResults || []).map(item => ({
+      wordId: item.wordId || '',
+      targetWord: item.targetWord || '',
+      verdict: item.verdict || '',
+    })),
+    photoFileIds: session.photoFileIds || [],
+    createdAt: session.createdAt || '',
+    completedAt: session.completedAt || '',
+    submittedAt: session.submittedAt || '',
+    analyzedAt: session.analyzedAt || '',
+    updatedAt: session.updatedAt || '',
+  };
 }
 
 function sessionTimeOf(session = {}) {
@@ -277,20 +379,56 @@ async function getLearningTimeline(openId, studentId, subjectValue, options = {}
 
   const subject = subjectValue ? normalizeSubject(subjectValue) : '';
   const limit = normalizeLimit(options.limit, 20, 100);
+  const cursor = normalizeCursor(options.cursor);
+  const fetchLimit = normalizeLimit(limit + 1, limit + 1, 101);
   const [reports, papers, englishSessions] = await Promise.all([
-    getReports(studentId, subject, limit),
-    getPapers(studentId, subject, limit),
-    getEnglishSessions(studentId, subject, limit),
+    getReports(studentId, subject, fetchLimit, cursor),
+    getPapers(studentId, subject, fetchLimit, cursor),
+    getEnglishSessions(studentId, subject, fetchLimit, cursor),
   ]);
+  const candidates = [
+    ...reports.map(report => ({
+      kind: 'report',
+      id: report._id,
+      cursor: report.createdAt || report.evidenceTime || report.updatedAt || '',
+      occurredAt: report.evidenceTime || report.createdAt || report.updatedAt || '',
+    })),
+    ...papers.map(paper => ({
+      kind: 'paper',
+      id: paper._id,
+      cursor: paper.createdAt || paper.generatedAt || '',
+      occurredAt: paper.generatedAt || paper.createdAt || paper.paperDate || '',
+    })),
+    ...englishSessions.map(session => ({
+      kind: 'englishSession',
+      id: session._id,
+      cursor: session.createdAt || sessionTimeOf(session),
+      occurredAt: sessionTimeOf(session),
+    })),
+  ].sort((a, b) => toTime(b.occurredAt || b.cursor) - toTime(a.occurredAt || a.cursor));
+  const pageRecords = candidates.slice(0, limit);
+  const hasMore = candidates.length > limit;
+  const reportIds = new Set(pageRecords.filter(item => item.kind === 'report').map(item => item.id));
+  const paperIds = new Set(pageRecords.filter(item => item.kind === 'paper').map(item => item.id));
+  const sessionIds = new Set(pageRecords.filter(item => item.kind === 'englishSession').map(item => item.id));
+  const pageReports = reports.filter(report => reportIds.has(report._id)).map(summarizeReportForTimeline);
+  const pagePapers = papers.filter(paper => paperIds.has(paper._id)).map(summarizePaperForTimeline);
+  const pageEnglishSessions = englishSessions
+    .filter(session => sessionIds.has(session._id))
+    .map(summarizeEnglishSessionForTimeline);
+  const lastRecord = pageRecords[pageRecords.length - 1] || null;
 
   return withAccess(access, {
     student: access.student,
     subject,
     limit,
-    reports,
-    papers,
-    englishSessions,
-    items: buildTimeline({ reports, papers, englishSessions }),
+    cursor,
+    nextCursor: hasMore && lastRecord ? lastRecord.cursor : '',
+    hasMore,
+    reports: pageReports,
+    papers: pagePapers,
+    englishSessions: pageEnglishSessions,
+    items: buildTimeline({ reports: pageReports, papers: pagePapers, englishSessions: pageEnglishSessions }),
   });
 }
 
@@ -445,6 +583,7 @@ exports.main = async (event = {}) => {
     if (action === 'getLearningTimeline') {
       return getLearningTimeline(openId, event.studentId, event.subject, {
         limit: event.limit,
+        cursor: event.cursor,
       });
     }
     if (action === 'getReportDetail') {
