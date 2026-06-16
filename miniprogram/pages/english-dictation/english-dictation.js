@@ -31,6 +31,7 @@ Page({
     currentItem: null,
     uploadedPhotoCount: 0,
     analysisStatus: '',
+    dictationResults: [],
     voiceUnavailableText: ''
   },
 
@@ -158,10 +159,20 @@ Page({
         photoFileIds
       })
       this.setData({
-        uploading: false,
         analysisStatus: result.analysisStatus || 'pending_analysis',
         uploadedPhotoCount: (result.photoFileIds || photoFileIds).length
       })
+      if (typeof cloud.analyzeEnglishDictationPhoto === 'function') {
+        const analysis = await cloud.analyzeEnglishDictationPhoto({
+          studentId: this.data.studentId,
+          sessionId: this.data.sessionId
+        })
+        this.setData({
+          analysisStatus: analysis.analysisStatus || 'completed',
+          dictationResults: analysis.results || []
+        })
+      }
+      this.setData({ uploading: false })
       wx.showToast({ title: '已上传听写纸', icon: 'success' })
     } catch (error) {
       this.setData({

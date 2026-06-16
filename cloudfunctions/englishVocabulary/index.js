@@ -36,6 +36,7 @@ const ACTIONS = new Set([
   'submitRecognitionAttempt',
   'generatePaperDictationSession',
   'submitDictationPhoto',
+  'analyzeDictationPhoto',
   'generatePracticeSession',
   'submitDictationAttempt',
   'submitPracticeResult'
@@ -508,6 +509,125 @@ async function submitDictationPhoto(event) {
   })
 }
 
+function normalizeDictationVerdict(value) {
+  const verdict = cleanText(value, 20)
+  return ['correct', 'incorrect', 'unclear'].includes(verdict) ? verdict : 'unclear'
+}
+
+function normalizeDictationOcrResults(rawResults = [], wordItems = []) {
+  const byWordId = new Map()
+  const byWord = new Map()
+  for (const result of rawResults || []) {
+    const wordId = cleanText(result.wordId, 80)
+    const targetWord = cleanText(result.targetWord || result.word, 80).toLowerCase()
+    if (wordId) byWordId.set(wordId, result)
+    if (targetWord) byWord.set(targetWord, result)
+  }
+  return (wordItems || []).map(item => {
+    const source = byWordId.get(item.wordId) || byWord.get(cleanText(item.word, 80).toLowerCase()) || {}
+    const verdict = normalizeDictationVerdict(source.verdict || source.status)
+    return {
+      queueKey: cleanText(item.queueKey, 120),
+      wordId: cleanText(item.wordId, 80),
+      targetWord: cleanText(item.word, 80),
+      recognizedText: cleanText(source.recognizedText || source.answer || '', 120),
+      verdict,
+      reason: cleanText(source.reason, 200) || (verdict === 'unclear' ? 'AI 未返回可判断结果' : ''),
+      confidence: Math.max(0, Math.min(1, Number(source.confidence) || 0))
+    }
+  })
+}
+
+async function analyzeDictationPhoto(event) {
+  const session = await getDocument('englishPracticeSessions', event.sessionId)
+  if (!session || session.studentId !== event.studentId) return fail('纸面听写记录不存在')
+  if (session.functionType !== 'spelling') return fail('听写记录类型不匹配')
+  const photoFileIds = (session.photoFileIds || [])
+    .map(item => cleanText(item, 240))
+    .filter(item => /^cloud:\/\//.test(item))
+  if (photoFileIds.length === 0) return fail('缺少听写纸照片')
+
+  const tempRes = await cloud.getTempFileURL({ fileList: photoFileIds })
+  const imageUrls = (tempRes.fileList || [])
+    .filter(item => item.tempFileURL)
+    .map(item => item.tempFileURL)
+  if (imageUrls.length === 0) return fail('听写纸照片暂时无法读取')
+
+  const wordItems = session.wordItems || []
+  const candidates = wordItems.map((item, index) => ({
+    index: index + 1,
+    wordId: item.wordId,
+    targetWord: item.word,
+    meanings: item.meanings || []
+  }))
+  const prompt = `请批改这份小学生英语纸面听写照片。只允许在候选词范围内判断，不要新增候选词以外的单词。
+
+候选词 JSON：
+${JSON.stringify(candidates)}
+
+判定规则：
+1. 逐个候选词输出结果，保持候选词数量和 wordId。
+2. recognizedText 写照片中看到的学生拼写；空白或看不清则留空。
+3. verdict 只能是 correct、incorrect、unclear。
+4. 只有拼写完整且与 targetWord 一致才是 correct。
+5. 看不清、空白、无法对应到题号时使用 unclear。
+6. 返回严格 JSON，不要 markdown。
+
+输出格式：
+{
+  "results": [
+    {"wordId":"word-1","targetWord":"science","recognizedText":"science","verdict":"correct","confidence":0.98,"reason":"拼写正确"}
+  ]
+}`
+  const ai = app.ai()
+  const model = ai.createModel('cloudbase')
+  const result = await model.generateText({
+    model: 'hy3-preview',
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text', text: prompt },
+        ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } }))
+      ]
+    }],
+    temperature: 0.1
+  })
+  const parsed = parseJsonText(result.text)
+  const results = normalizeDictationOcrResults(parsed.results || [], wordItems)
+  const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
+  const byId = new Map(words.map(item => [item._id, item]))
+  const reviewedAt = event.reviewedAt || new Date()
+
+  for (const item of results) {
+    const word = byId.get(item.wordId)
+    if (!word || item.verdict === 'unclear') continue
+    const updated = applyWordDimensionAttempt(word, 'spelling', {
+      judgment: { status: item.verdict },
+      reviewedAt
+    })
+    await updateDocument('studentEnglishWords', word._id, {
+      familiarity: updated.familiarity,
+      spelling: updated.spelling,
+      overallMastery: updated.overallMastery,
+      updatedAt: nowDate()
+    })
+  }
+
+  await updateDocument('englishPracticeSessions', event.sessionId, {
+    status: 'completed',
+    analysisStatus: 'completed',
+    dictationResults: results,
+    analyzedAt: nowDate(),
+    updatedAt: nowDate()
+  })
+
+  return ok({
+    sessionId: event.sessionId,
+    analysisStatus: 'completed',
+    results
+  })
+}
+
 function findSessionItem(session, event) {
   const items = session.wordItems || []
   return items.find(item => (
@@ -689,6 +809,7 @@ exports.main = async (event = {}) => {
     if (action === 'submitRecognitionAttempt') return submitRecognitionAttempt(event)
     if (action === 'generatePaperDictationSession') return generatePaperDictationSession(event, auth.openId)
     if (action === 'submitDictationPhoto') return submitDictationPhoto(event)
+    if (action === 'analyzeDictationPhoto') return analyzeDictationPhoto(event)
     if (action === 'generatePracticeSession') return generatePracticeSession(event, auth.openId)
     if (action === 'submitDictationAttempt') return submitDictationAttempt(event)
     if (action === 'submitPracticeResult') return submitPracticeResult(event)
