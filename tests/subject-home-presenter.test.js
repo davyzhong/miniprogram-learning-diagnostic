@@ -57,3 +57,72 @@ test('empty profile exposes a first-use workbench action', () => {
   assert.equal(view.taskQueue.length, 0)
   assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history'])
 })
+
+test('English workbench uses vocabulary summary as the primary learning asset', () => {
+  const view = buildSubjectHomeView({}, [], relative, {
+    subject: 'english',
+    subjectName: '英语',
+    englishVocabulary: {
+      summary: {
+        totalWords: 320,
+        familiarity: {
+          masteredCount: 120,
+          needsPracticeCount: 18,
+          reviewingCount: 12,
+          untestedCount: 170,
+          dueReviewCount: 8
+        },
+        spelling: {
+          masteredCount: 80,
+          needsPracticeCount: 22,
+          reviewingCount: 10,
+          untestedCount: 208,
+          dueReviewCount: 4
+        },
+        overall: {
+          masteredCount: 70,
+          partialCount: 180,
+          untestedCount: 70
+        }
+      },
+      patternCount: 42
+    }
+  })
+
+  assert.equal(view.subjectTitle, '英语工作台')
+  assert.equal(view.primaryTask.actionType, 'englishPractice')
+  assert.equal(view.primaryTask.actionText, '开始 20 词听写')
+  assert.match(view.primaryTask.summary, /320 个个人词库单词/)
+  assert.match(view.primaryTask.summary, /安排 20 个/)
+  assert.equal(view.englishVocabularyStats.totalWords, 320)
+  assert.equal(view.englishVocabularyStats.familiarityMasteredCount, 120)
+  assert.equal(view.englishVocabularyStats.spellingNeedsPracticeCount, 22)
+  assert.equal(view.englishVocabularyStats.overallMasteredCount, 70)
+  assert.deepEqual(view.englishQuickStats.map(item => item.label), ['今日待练', '已熟悉', '拼写薄弱', '真正掌握'])
+  assert.ok(view.tools.some(item => item.key === 'englishPractice'))
+  assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
+})
+
+test('English workbench keeps dictation entry visible before vocabulary is imported', () => {
+  const view = buildSubjectHomeView({}, [], relative, {
+    subject: 'english',
+    subjectName: '英语',
+    englishVocabulary: {
+      summary: {
+        totalWords: 0,
+        needsPracticeCount: 0,
+        reviewingCount: 0,
+        masteredCount: 0,
+        dueReviewCount: 0
+      }
+    }
+  })
+
+  assert.equal(view.subjectTitle, '英语工作台')
+  assert.equal(view.primaryTask.actionType, 'importVocabulary')
+  assert.equal(view.primaryTask.actionText, '导入个人词库')
+  assert.match(view.primaryTask.summary, /个人词库还没有单词/)
+  assert.ok(view.tools.some(item => item.key === 'importVocabulary'))
+  assert.ok(view.tools.some(item => item.key === 'englishPractice'))
+  assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
+})

@@ -383,6 +383,56 @@ function buildVocabularySummary(words = [], todayValue = dateOnly(new Date())) {
   return summary
 }
 
+function buildDimensionVocabularySummary(words = [], dimension = 'familiarity', todayValue = dateOnly(new Date())) {
+  const today = dateOnly(todayValue) || todayValue
+  const summary = {
+    totalWords: words.length,
+    untestedCount: 0,
+    needsPracticeCount: 0,
+    reviewingCount: 0,
+    masteredCount: 0,
+    dueReviewCount: 0
+  }
+  for (const word of words) {
+    const progress = (word && word[dimension]) || {}
+    const status = normalizeProgressStatus(progress.status)
+    if (status === 'mastered') summary.masteredCount += 1
+    else if (status === 'reviewing') summary.reviewingCount += 1
+    else if (status === 'needs_practice') summary.needsPracticeCount += 1
+    else summary.untestedCount += 1
+    if (dimensionDue(progress, today)) summary.dueReviewCount += 1
+  }
+  return summary
+}
+
+function buildDualVocabularySummary(words = [], todayValue = dateOnly(new Date())) {
+  const normalizedWords = (words || []).map(normalizeWordProgress)
+  const familiarity = buildDimensionVocabularySummary(normalizedWords, 'familiarity', todayValue)
+  const spelling = buildDimensionVocabularySummary(normalizedWords, 'spelling', todayValue)
+  const overall = {
+    untestedCount: 0,
+    partialCount: 0,
+    masteredCount: 0
+  }
+  for (const word of normalizedWords) {
+    const status = deriveOverallMastery(word)
+    if (status === 'mastered') overall.masteredCount += 1
+    else if (status === 'partial') overall.partialCount += 1
+    else overall.untestedCount += 1
+  }
+  return {
+    totalWords: normalizedWords.length,
+    untestedCount: familiarity.untestedCount,
+    needsPracticeCount: familiarity.needsPracticeCount,
+    reviewingCount: familiarity.reviewingCount,
+    masteredCount: familiarity.masteredCount,
+    dueReviewCount: familiarity.dueReviewCount,
+    familiarity,
+    spelling,
+    overall
+  }
+}
+
 function practicePriority(word, today) {
   if (isDue(word, today)) return 0
   if (word.masteryStatus === 'needs_practice') return 1
@@ -485,6 +535,7 @@ module.exports = {
   applyDimensionAttempt,
   applyWordDimensionAttempt,
   selectWordsForDimension,
+  buildDualVocabularySummary,
   applyWordReviewResult,
   applyWordDictationAttempt,
   buildVocabularySummary,

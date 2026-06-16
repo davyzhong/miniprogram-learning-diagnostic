@@ -94,8 +94,125 @@ function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions = {}
   }
 }
 
-function buildTools(latestReport, permissions = {}) {
+function hasEnglishVocabulary(options = {}) {
+  const summary = options.englishVocabulary && options.englishVocabulary.summary
+  return options.subject === 'english' && summary && Number(summary.totalWords) > 0
+}
+
+function buildEnglishPrimaryTask(options = {}, permissions = {}) {
   const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
+  const summary = options.englishVocabulary && options.englishVocabulary.summary || {}
+  const totalWords = Number(summary.totalWords) || 0
+  const todayCount = Math.min(20, (
+    Number(summary.dueReviewCount) +
+    Number(summary.needsPracticeCount) +
+    Number(summary.untestedCount) +
+    Number(summary.reviewingCount) ||
+    totalWords ||
+    0
+  ))
+  if (!canWrite) {
+    return {
+      title: '当前可查看',
+      summary: `已整理 ${totalWords} 个英语单词，可查看听写记录和掌握情况。`,
+      actionText: '查看学习记录',
+      actionType: 'history'
+    }
+  }
+  if (totalWords === 0) {
+    return {
+      title: '先准备个人词库',
+      summary: '个人词库还没有单词。导入钟青羽的 PEP 三年级到六年级个人单词表后，就可以从这里开始 20 词听写。',
+      actionText: '导入个人词库',
+      actionType: 'importVocabulary'
+    }
+  }
+  return {
+    title: '今日单词听写',
+    summary: `从 ${totalWords} 个个人词库单词中安排 ${todayCount || 20} 个，优先抽取错词、待复测词和未测词。`,
+    actionText: '开始 20 词听写',
+    actionType: 'englishPractice'
+  }
+}
+
+function buildEnglishEmptyTask(permissions = {}) {
+  const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
+  return {
+    title: '先准备个人词库',
+    summary: '导入 PEP 单词表后，这里会按掌握度安排每日听写。',
+    actionText: canWrite ? '开始 20 词听写' : '查看学习记录',
+    actionType: canWrite ? 'englishPractice' : 'history'
+  }
+}
+
+function buildEnglishVocabularyStats(vocabulary = {}) {
+  const safeVocabulary = vocabulary || {}
+  const summary = safeVocabulary.summary || {}
+  const familiarity = summary.familiarity || {}
+  const spelling = summary.spelling || {}
+  const overall = summary.overall || {}
+  return {
+    totalWords: Number(summary.totalWords) || 0,
+    needsPracticeCount: Number(summary.needsPracticeCount) || 0,
+    reviewingCount: Number(summary.reviewingCount) || 0,
+    masteredCount: Number(summary.masteredCount) || 0,
+    untestedCount: Number(summary.untestedCount) || 0,
+    dueReviewCount: Number(summary.dueReviewCount) || 0,
+    familiarityMasteredCount: Number(familiarity.masteredCount) || Number(summary.masteredCount) || 0,
+    familiarityNeedsPracticeCount: Number(familiarity.needsPracticeCount) || Number(summary.needsPracticeCount) || 0,
+    familiarityDueReviewCount: Number(familiarity.dueReviewCount) || Number(summary.dueReviewCount) || 0,
+    spellingNeedsPracticeCount: Number(spelling.needsPracticeCount) || 0,
+    spellingDueReviewCount: Number(spelling.dueReviewCount) || 0,
+    overallMasteredCount: Number(overall.masteredCount) || Number(summary.masteredCount) || 0,
+    overallPartialCount: Number(overall.partialCount) || 0,
+    patternCount: Number(safeVocabulary.patternCount) || 0,
+    weakWords: safeVocabulary.weakWords || []
+  }
+}
+
+function buildEnglishQuickStats(stats) {
+  const todayCount = Math.min(20, (
+    stats.familiarityDueReviewCount +
+    stats.spellingDueReviewCount +
+    stats.familiarityNeedsPracticeCount +
+    stats.spellingNeedsPracticeCount +
+    stats.untestedCount
+  ))
+  return [
+    { key: 'today', label: '今日待练', value: todayCount || 0 },
+    { key: 'familiarity', label: '已熟悉', value: stats.familiarityMasteredCount },
+    { key: 'spellingWeak', label: '拼写薄弱', value: stats.spellingNeedsPracticeCount },
+    { key: 'mastered', label: '真正掌握', value: stats.overallMasteredCount }
+  ]
+}
+
+function buildTools(latestReport, permissions = {}, options = {}) {
+  const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
+  if (options.subject === 'english') {
+    return [
+      canWrite && !hasEnglishVocabulary(options) ? {
+        key: 'importVocabulary',
+        title: '导入词库',
+        desc: 'PEP 3-6 年级个人词表',
+        icon: '↓',
+        actionType: 'importVocabulary'
+      } : null,
+      canWrite ? {
+        key: 'englishPractice',
+        title: '20词听写',
+        desc: hasEnglishVocabulary(options) ? '语音拼读，AI 自动判定' : '词库导入后即可开始',
+        icon: 'Aa',
+        actionType: 'englishPractice'
+      } : null,
+      {
+        key: 'history',
+        title: '学习记录',
+        desc: '听写、词库和掌握变化',
+        icon: '▧',
+        actionType: 'history'
+      }
+    ].filter(Boolean)
+  }
   return [
     canWrite ? {
       key: 'diagnosis',
@@ -141,7 +258,11 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
   const recentChanges = buildRecentChanges(reports, formatRelativeTime)
   const latestReport = getEffectiveReports(reports)[0] || null
   const hasDiagnosis = currentBottlenecks.length > 0 || recentChanges.length > 0
-  const primaryTask = buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions)
+  const englishVocabularyStats = buildEnglishVocabularyStats(options.englishVocabulary)
+  const englishQuickStats = buildEnglishQuickStats(englishVocabularyStats)
+  const primaryTask = options.subject === 'english'
+    ? buildEnglishPrimaryTask(options, permissions)
+    : buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions)
 
   return {
     subjectTitle: `${subjectName}工作台`,
@@ -149,19 +270,22 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     currentSummary: primaryTask.summary,
     nextAction: primaryTask.actionText,
     primaryTask,
-    taskQueue,
-    tools: buildTools(latestReport, permissions),
+    taskQueue: options.subject === 'english' ? [] : taskQueue,
+    tools: buildTools(latestReport, permissions, options),
     permissions,
     canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
     latestReportId: latestReport ? latestReport._id : '',
-    currentBottlenecks,
+    currentBottlenecks: options.subject === 'english' ? [] : currentBottlenecks,
     bottleneckStats,
     recentChanges,
     persistingCount: bottleneckStats.persistingCount,
     pendingCount: bottleneckStats.pendingCount,
     improvedCount: bottleneckStats.improvedCount,
-    hasDiagnosis,
-    isFirstUse: !hasDiagnosis
+    hasDiagnosis: options.subject === 'english' ? hasEnglishVocabulary(options) : hasDiagnosis,
+    isFirstUse: options.subject === 'english' ? !hasEnglishVocabulary(options) : (!hasDiagnosis && !hasEnglishVocabulary(options)),
+    englishVocabularyStats,
+    englishQuickStats,
+    hasEnglishVocabulary: hasEnglishVocabulary(options)
   }
 }
 
@@ -169,5 +293,6 @@ module.exports = {
   buildSubjectHomeView,
   normalizeBottlenecks: profileBottlenecks,
   buildBottleneckDetail,
-  buildSubjectBottleneckViews
+  buildSubjectBottleneckViews,
+  buildEnglishVocabularyStats
 }

@@ -215,6 +215,11 @@ test('English vocabulary summary and dictation session use confirmed personal wo
   assert.equal(summary.success, true)
   assert.equal(summary.summary.totalWords, 28)
   assert.equal(summary.summary.dueReviewCount, 1)
+  assert.equal(summary.summary.familiarity.totalWords, 28)
+  assert.equal(summary.summary.familiarity.dueReviewCount, 1)
+  assert.equal(summary.summary.spelling.totalWords, 28)
+  assert.equal(summary.summary.spelling.untestedCount, 28)
+  assert.equal(summary.summary.overall.partialCount, 3)
   assert.equal(summary.patternCount, 1)
 
   const session = await handler.main({

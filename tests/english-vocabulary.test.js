@@ -6,6 +6,7 @@ const {
   normalizeWordProgress,
   applyWordDimensionAttempt,
   selectWordsForDimension,
+  buildDualVocabularySummary,
   applyWordReviewResult,
   buildVocabularySummary,
   selectPracticeItems,
@@ -205,6 +206,42 @@ test('dimension word selection prioritizes weak words due reviews and cross-dime
     'new',
     'future'
   ])
+})
+
+test('dual vocabulary summary counts familiarity spelling and overall mastery separately', () => {
+  const summary = buildDualVocabularySummary([
+    {
+      word: 'both-mastered',
+      familiarity: { status: 'mastered' },
+      spelling: { status: 'mastered' }
+    },
+    {
+      word: 'familiar-only',
+      familiarity: { status: 'mastered' },
+      spelling: { status: 'untested' }
+    },
+    {
+      word: 'spelling-weak',
+      familiarity: { status: 'reviewing', nextReviewAt: '2026-06-18' },
+      spelling: { status: 'needs_practice', wrongCount: 2, nextReviewAt: '2026-06-16' }
+    },
+    {
+      word: 'due-familiarity',
+      familiarity: { status: 'reviewing', nextReviewAt: '2026-06-16' },
+      spelling: { status: 'reviewing', nextReviewAt: '2026-06-20' }
+    }
+  ], '2026-06-16')
+
+  assert.equal(summary.totalWords, 4)
+  assert.equal(summary.familiarity.masteredCount, 2)
+  assert.equal(summary.familiarity.dueReviewCount, 1)
+  assert.equal(summary.spelling.needsPracticeCount, 1)
+  assert.equal(summary.spelling.dueReviewCount, 1)
+  assert.deepEqual(summary.overall, {
+    untestedCount: 0,
+    partialCount: 3,
+    masteredCount: 1
+  })
 })
 
 test('spaced mastery follows one day three day and seven day reviews before mastered', () => {

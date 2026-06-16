@@ -10,6 +10,7 @@
 - [studentAccess](#studentaccess)
 - [studentData](#studentdata)
 - [reportFeedback](#reportfeedback)
+- [englishVocabulary](#englishvocabulary)
 - [analyzePhotos](#analyzephotos)
 - [analyzeBatch](#analyzebatch)
 - [generatePaper](#generatepaper)
@@ -357,6 +358,140 @@ wx.cloud.callFunction({
 2. 会写入 `subjectProfiles.analysisStatus = 'analyzing'`，失败时会保留该状态，需由下游清理。
 3. `imageMetas` 中的 `fileName` 会被截断到 120 字符，`fileSize` 强制转为非负数。
 4. 仅在 `mode === 'verification'` 时校验 paperId；其他模式下传入 paperId 会作为普通关联记录。
+
+---
+
+## englishVocabulary
+
+### 功能描述
+
+钟青羽个人英语词库与 20 词语音听写云函数。当前阶段只服务单词掌握：导入 PEP 个人词库、生成听写队列、接收语音识别文本并由云函数自动判定 `correct / incorrect / unclear`。
+
+### 调用方式
+
+```javascript
+wx.cloud.callFunction({
+  name: 'englishVocabulary',
+  data: {
+    action: 'generatePracticeSession',
+    studentId: 'stu_xxx',
+    wordLimit: 20
+  }
+})
+```
+
+### action 列表
+
+| action | 必填参数 | 权限 | 描述 |
+| --- | --- | --- | --- |
+| `createImportBatch` | `studentId`, `sourceFile`；`words` 或 `pageFileIDs` | owner/viewer 可操作 | 从结构化候选或词表图片创建待确认单词批次 |
+| `confirmImportBatch` | `studentId`, `batchId` | owner/viewer 可操作 | 将候选单词写入 `studentEnglishWords` |
+| `seedPersonalVocabulary` | `studentId` | owner/viewer 可操作 | 将项目内置的钟青羽 PEP 3上-6上个人词库写入 `studentEnglishWords`，重复导入只合并来源不新增重复词 |
+| `getVocabularySummary` | `studentId` | owner/viewer 可查看 | 返回总词数、熟悉度维度、拼写维度、整体掌握和高频错词 |
+| `listWords` | `studentId` | owner/viewer 可查看 | 按状态或单元读取个人词库 |
+| `generatePracticeSession` | `studentId` | owner/viewer 可操作 | 默认生成 20 个单词的 `word-dictation` 听写会话 |
+| `submitDictationAttempt` | `studentId`, `sessionId`, `wordId`, `recognizedText` | owner/viewer 可操作 | 逐题提交语音识别结果，云函数自动判定并更新掌握度 |
+| `submitPracticeResult` | `studentId`, `sessionId` | owner/viewer 可操作 | 标记会话完成，兼容旧练习提交 |
+
+### 听写判定
+
+| 判定 | 规则 | 数据影响 |
+| --- | --- | --- |
+| `correct` | 识别文本与目标单词一致，或可明确还原为目标拼写 | `correctCount + 1`，按 1/3/7 天推进复测，连续完成后 `mastered` |
+| `incorrect` | 识别文本存在明确拼写差异 | `wrongCount + 1`，`masteryStatus=needs_practice`，本轮建议重现 |
+| `unclear` | 识别为空、噪音过大或无法判断字母序列 | 只记录 attempt，不计正确也不计错误，本轮重听 |
+
+### 输出示例
+
+**generatePracticeSession**
+
+```json
+{
+  "success": true,
+  "sessionId": "englishPracticeSessions-1",
+  "wordItems": [
+    {
+      "queueKey": "word-1:0:0",
+      "wordId": "word-1",
+      "word": "science",
+      "meanings": ["科学"],
+      "promptType": "chinese",
+      "retryCount": 0
+    }
+  ],
+  "patternItems": []
+}
+```
+
+**seedPersonalVocabulary**
+
+```json
+{
+  "success": true,
+  "batchId": "englishImportBatches-1",
+  "importedWordCount": 505,
+  "importedPatternCount": 0,
+  "totalSeedWords": 505,
+  "sourceCount": 7
+}
+```
+
+**getVocabularySummary**
+
+```json
+{
+  "success": true,
+  "summary": {
+    "totalWords": 505,
+    "familiarity": {
+      "untestedCount": 300,
+      "needsPracticeCount": 20,
+      "reviewingCount": 80,
+      "masteredCount": 105,
+      "dueReviewCount": 12
+    },
+    "spelling": {
+      "untestedCount": 420,
+      "needsPracticeCount": 15,
+      "reviewingCount": 40,
+      "masteredCount": 30,
+      "dueReviewCount": 8
+    },
+    "overall": {
+      "untestedCount": 280,
+      "partialCount": 195,
+      "masteredCount": 30
+    }
+  },
+  "weakWords": [],
+  "patternCount": 0
+}
+```
+
+`summary.needsPracticeCount`、`summary.reviewingCount`、`summary.masteredCount`、`summary.dueReviewCount` 仍作为兼容字段保留，当前按 `familiarity` 维度派生。
+
+**submitDictationAttempt**
+
+```json
+{
+  "success": true,
+  "judgment": {
+    "status": "incorrect",
+    "normalizedText": "siense",
+    "normalizedTarget": "science",
+    "reason": "识别文本与目标单词拼写不同"
+  },
+  "shouldRepeat": true
+}
+```
+
+### 注意事项
+
+1. 当前阶段不生成时态、句型、阅读或作文任务。
+2. 语音识别由小程序端插件完成，云函数只接收识别文本并做 AI 判定式归一。
+3. 高频错词由 `wrongCount` 和 `needs_practice` 状态派生，展示在英语工作台首页；v2 新页面应优先读取双维 summary。
+4. `unclear` 保留为独立状态，避免把识别失败误算成孩子拼错。
+5. 内置个人词库由 `data/english/zhong-qingyu-pep-vocabulary.seed.json` 生成，并同步复制到 `cloudfunctions/englishVocabulary/` 供云函数部署使用。
 
 ---
 
