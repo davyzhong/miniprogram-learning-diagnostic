@@ -90,7 +90,7 @@ function verificationBottlenecks(profile = {}, targetCodes = []) {
       subject: profile.subject,
       subjectName: profile.subjectName
     })), {
-      subject: profile.subject,
+    subject: profile.subject,
     subjectName: profile.subjectName,
     expandCandidates: profile.subject === 'math'
   })
@@ -107,7 +107,32 @@ function targetMatchesBottleneck(targetCodes = [], bottleneck = {}) {
 }
 
 function targetCodeForPaper(bottleneck = {}) {
-  return bottleneck.reviewItemId || bottleneck.lpCode
+  return bottleneck.reviewItemId || bottleneck.bottleneckId || bottleneck.lpCode
+}
+
+function targetCodesForPaper(bottlenecks = []) {
+  const seen = new Set()
+  const result = []
+  ;(bottlenecks || []).forEach(item => {
+    const code = targetCodeForPaper(item)
+    if (!code || seen.has(code)) return
+    seen.add(code)
+    result.push(code)
+  })
+  return result
+}
+
+function applySelectionLimit(bottlenecks = [], initialTargetCodes = []) {
+  const hasInitialTargets = initialTargetCodes.length > 0
+  let selectedCount = 0
+  return bottlenecks.map((b, index) => {
+    const shouldSelect = hasInitialTargets
+      ? targetMatchesBottleneck(initialTargetCodes, b)
+      : index < MAX_SELECTED_BOTTLENECKS
+    const selected = Boolean(shouldSelect && selectedCount < MAX_SELECTED_BOTTLENECKS)
+    if (selected) selectedCount += 1
+    return { ...b, selected }
+  })
 }
 
 Page({
@@ -160,19 +185,18 @@ Page({
 
       let bottlenecks = []
       if (profile) {
-        const hasInitialTargets = this.data.initialTargetCodes.length > 0
-        bottlenecks = verificationBottlenecks(profile, this.data.initialTargetCodes)
-          .map((b, index) => {
-            const sinceDateText = this.formatDate(b.sinceDate || b.firstSeenAt)
-            return {
-              ...b,
-              selected: hasInitialTargets
-                ? targetMatchesBottleneck(this.data.initialTargetCodes, b)
-                : index < MAX_SELECTED_BOTTLENECKS,
-              sinceDateText,
-              rangeText: b.detailText || `首次发现：${sinceDateText || '待补充'}`
-            }
-          })
+        bottlenecks = applySelectionLimit(
+          verificationBottlenecks(profile, this.data.initialTargetCodes)
+            .map(b => {
+              const sinceDateText = this.formatDate(b.sinceDate || b.firstSeenAt)
+              return {
+                ...b,
+                sinceDateText,
+                rangeText: b.detailText || `首次发现：${sinceDateText || '待补充'}`
+              }
+            }),
+          this.data.initialTargetCodes
+        )
       }
 
       this.setSelectionState(bottlenecks)
@@ -210,6 +234,11 @@ Page({
     const selected = bottlenecks.filter(b => b.selected)
     if (selected.length === 0 || this.data.previewing) return
     const questionCount = this.questionCountForSelection(selected.length, paperConfig.questionCount)
+    const targets = targetCodesForPaper(selected)
+    if (targets.length === 0) {
+      wx.showToast({ title: '学习卡点参数无效', icon: 'none' })
+      return
+    }
 
     this.setData({ previewing: true })
     wx.showLoading({ title: '生成预览...' })
@@ -219,7 +248,7 @@ Page({
         studentId,
         subject,
         type: 'verification',
-        targets: selected.map(targetCodeForPaper),
+        targets,
         questionCount,
         preview: true
       })
@@ -247,6 +276,11 @@ Page({
     const selected = bottlenecks.filter(b => b.selected)
     if (selected.length === 0 || this.data.generating) return
     const questionCount = this.questionCountForSelection(selected.length, paperConfig.questionCount)
+    const targets = targetCodesForPaper(selected)
+    if (targets.length === 0) {
+      wx.showToast({ title: '学习卡点参数无效', icon: 'none' })
+      return
+    }
 
     this.setData({ generating: true })
     wx.showLoading({ title: '生成试卷...' })
@@ -256,7 +290,7 @@ Page({
         studentId,
         subject,
         type: 'verification',
-        targets: selected.map(targetCodeForPaper),
+        targets,
         questionCount,
         preview: false
       })

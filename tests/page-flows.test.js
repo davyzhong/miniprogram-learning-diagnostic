@@ -1519,6 +1519,60 @@ test('verification page expands math bottlenecks into fine-grained candidates', 
   assert.match(page.data.selectedSummary, /除数是小数的除法中/)
 })
 
+test('verification page caps report-selected fine math targets and sends fine target ids', async () => {
+  let request = null
+  const candidates = Array.from({ length: 7 }, (_, index) => ({
+    bottleneckId: `BN-FINE-${index + 1}`,
+    title: `细分卡点 ${index + 1}`,
+    evidenceStrength: 'high'
+  }))
+  const currentBottlenecks = [{
+    lpCode: 'LP-001',
+    lpName: '计算错误（加减乘除）',
+    status: 'needs_verification',
+    severity: 'high',
+    candidateBottlenecks: candidates
+  }]
+  const cloud = {
+    getSubjectProfile: async () => ({ subject: 'math', currentBottlenecks }),
+    callGeneratePaper: async payload => {
+      request = payload
+      return { paperId: 'paper-fine' }
+    }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/generate-verification/generate-verification.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.onLoad({
+    studentId: 'student-1',
+    subject: 'math',
+    subjectName: encodeURIComponent('数学'),
+    bottlenecks: 'LP-001'
+  })
+  await page.loadPendingBottlenecks()
+
+  assert.equal(page.data.bottlenecks.length, 7)
+  assert.equal(page.data.selectedCount, 5)
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(page.data.bottlenecks.filter(item => item.selected).map(item => item.bottleneckId))),
+    ['BN-FINE-1', 'BN-FINE-2', 'BN-FINE-3', 'BN-FINE-4', 'BN-FINE-5']
+  )
+
+  await page.onGenerate()
+
+  assert.deepEqual(JSON.parse(JSON.stringify(request.targets)), [
+    'BN-FINE-1',
+    'BN-FINE-2',
+    'BN-FINE-3',
+    'BN-FINE-4',
+    'BN-FINE-5'
+  ])
+  assert.equal(request.questionCount, 25)
+})
+
 test('verification page uses Chinese concrete review items as selectable targets', async () => {
   let request = null
   const cloud = {
