@@ -54,6 +54,25 @@ function buildPrompt(subject, verificationPlan = []) {
   const verificationInstruction = verificationPlan.length > 0
     ? `\n## 验证试卷判定\n这是验证试卷。请按卡点统计证据质量，不要把不确定情况当成已改善：\n${verificationPlan.map(item => `- ${item.lpCode}：整份试卷预期 ${item.expectedQuestionCount} 道`).join('\n')}\n- attemptedQuestionCount：清晰可见、已经作答、能够判断对错的题目数量\n- incorrectQuestionCount：attemptedQuestionCount 中明确答错的题目数量\n- blankQuestionCount：清晰可见但没有作答或明显空白的题目数量\n- unclearQuestionCount：被遮挡、模糊、拍摄不完整、无法判断答案是否正确的题目数量\n- missingQuestionCount：预期题目中未在图片中找到或无法归入以上类别的数量\n未作答、被遮挡、模糊或无法确认的题目不得计入 attemptedQuestionCount。`
     : '';
+  const mathLearningMapInstruction = subject === 'math'
+    ? `\n## 数学诊断升级字段\n数学卡点除了旧的 lpCode/lpName 外，还要尽量补充知识地图字段，无法判断时用空数组或空字符串，不要编造：\n- nodeIds：对应知识节点 ID，例如 MATH-NUM-DEC-MUL-POINT、MATH-NUM-FRACTION-DIV-RECIPROCAL、MATH-MOD-PERCENT-BASE、MATH-GEO-CYLINDER-VOLUME\n- candidateBottlenecks：细颗粒度候选卡点数组，每项包含 bottleneckId、title、evidenceStrength，可选 microValidationRequired、suggestedMicroValidation、recommendedResourceIds\n- recommendedResourceIds：推荐资源 ID。优先给“高质量锚点 + 国内补充”的组合，例如 RES-YT-FRACTION-DIV-001 + RES-BILI-FRACTION-DIV-001\n- nextActionType：resourceReview / microValidation / verificationPaper 三选一。发现漏洞时优先 resourceReview 或 microValidation，不要一上来就 verificationPaper\n- nextActionText：一句给家长看的下一步建议`
+    : '';
+  const mathBottleneckJsonFields = subject === 'math'
+    ? `,
+        "nodeIds": ["MATH-NUM-DEC-MUL-POINT"],
+        "candidateBottlenecks": [{
+          "bottleneckId": "BN-DEC-MUL-POINT-COUNT",
+          "title": "小数乘法中小数位数累计规则不稳",
+          "evidenceStrength": "medium",
+          "microValidationRequired": true,
+          "suggestedMicroValidation": ["8.5×3.16", "0.85×3.16"],
+          "recommendedResourceIds": ["RES-BILI-DEC-MUL-001", "RES-KHAN-DEC-MUL-001"]
+        }],
+        "evidenceStrength": "medium",
+        "nextActionType": "resourceReview",
+        "nextActionText": "先用资源重学小数点定位，再做微验证。",
+        "recommendedResourceIds": ["RES-BILI-DEC-MUL-001", "RES-KHAN-DEC-MUL-001"]`
+    : '';
 
   return `你是一位资深${subjectName}教师，专门分析小学生的错题根因。
 
@@ -80,7 +99,7 @@ ${verificationInstruction}
         "errorCount": 1,
         "severity": "high",
         "rootCause": "进位加法不熟练",
-        "suggestion": "练习连续进位"
+        "suggestion": "练习连续进位"${mathBottleneckJsonFields}
       }],
       "errorDetails": [{
         "questionContent": "题目内容（简要）",
@@ -104,6 +123,7 @@ ${verificationInstruction}
 
 ## 卡点分类体系（${subjectName}）
 ${taxonomy.map(t => `- ${t.code}：${t.name}——${t.desc}`).join('\n')}
+${mathLearningMapInstruction}
 
 ## 注意
 1. severity 只能是 "high" / "medium" / "low"

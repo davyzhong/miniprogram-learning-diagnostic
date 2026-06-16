@@ -2,6 +2,43 @@ function cleanText(value, maxLength) {
   return String(value || '').slice(0, maxLength);
 }
 
+function cleanStringArray(values, maxItems = 8, maxLength = 100) {
+  if (!Array.isArray(values)) return [];
+  return values
+    .map(value => cleanText(value, maxLength))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function normalizeEvidenceStrength(value) {
+  return ['high', 'medium', 'low'].includes(value) ? value : '';
+}
+
+function normalizeNextActionType(value) {
+  return ['resourceReview', 'microValidation', 'verificationPaper'].includes(value) ? value : '';
+}
+
+function normalizeCandidateBottlenecks(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map(item => {
+      if (typeof item === 'string') {
+        return { bottleneckId: cleanText(item, 80) };
+      }
+      if (!item || typeof item !== 'object') return null;
+      return {
+        bottleneckId: cleanText(item.bottleneckId || item.id, 80),
+        title: cleanText(item.title, 120),
+        evidenceStrength: normalizeEvidenceStrength(item.evidenceStrength),
+        microValidationRequired: Boolean(item.microValidationRequired),
+        suggestedMicroValidation: cleanStringArray(item.suggestedMicroValidation, 6, 120),
+        recommendedResourceIds: cleanStringArray(item.recommendedResourceIds, 6, 80),
+      };
+    })
+    .filter(item => item && item.bottleneckId)
+    .slice(0, 5);
+}
+
 function normalizeBottlenecks(items) {
   return items
     .filter(item => item && typeof item.lpCode === 'string' && typeof item.lpName === 'string')
@@ -12,6 +49,12 @@ function normalizeBottlenecks(items) {
       severity: ['high', 'medium', 'low'].includes(item.severity) ? item.severity : 'medium',
       rootCause: cleanText(item.rootCause, 300),
       suggestion: cleanText(item.suggestion, 300),
+      nodeIds: cleanStringArray(item.nodeIds, 6, 80),
+      candidateBottlenecks: normalizeCandidateBottlenecks(item.candidateBottlenecks),
+      evidenceStrength: normalizeEvidenceStrength(item.evidenceStrength),
+      nextActionType: normalizeNextActionType(item.nextActionType),
+      nextActionText: cleanText(item.nextActionText, 200),
+      recommendedResourceIds: cleanStringArray(item.recommendedResourceIds, 8, 80),
     }));
 }
 
