@@ -104,6 +104,73 @@ function normalizeWordProgress(word = {}) {
   }
 }
 
+function judgmentStatus(attempt = {}) {
+  return cleanText(attempt.status || (attempt.judgment && attempt.judgment.status), 20)
+}
+
+function applyDimensionAttempt(progress = {}, attempt = {}) {
+  const current = createDefaultDimensionProgress(progress)
+  const status = judgmentStatus(attempt)
+  if (status === 'unclear') return current
+
+  const reviewedAt = optionalDateOnly(attempt.reviewedAt) || dateOnly(new Date())
+  if (status !== 'correct') {
+    return {
+      ...current,
+      status: 'needs_practice',
+      correctCount: 0,
+      wrongCount: current.wrongCount + 1,
+      lastTestedAt: reviewedAt,
+      nextReviewAt: addDays(reviewedAt, 1)
+    }
+  }
+
+  if (current.status === 'mastered') {
+    return {
+      ...current,
+      lastTestedAt: reviewedAt
+    }
+  }
+
+  const correctCount = current.correctCount + 1
+  if (correctCount >= 4) {
+    return {
+      ...current,
+      status: 'mastered',
+      correctCount,
+      lastTestedAt: reviewedAt,
+      nextReviewAt: ''
+    }
+  }
+
+  return {
+    ...current,
+    status: 'reviewing',
+    correctCount,
+    lastTestedAt: reviewedAt,
+    nextReviewAt: addDays(reviewedAt, [1, 3, 7][correctCount - 1] || 7)
+  }
+}
+
+function applyWordDimensionAttempt(word = {}, dimension = 'familiarity', attempt = {}) {
+  const normalized = normalizeWordProgress(word)
+  const targetDimension = dimension === 'spelling' ? 'spelling' : 'familiarity'
+  const updatedDimension = targetDimension === 'familiarity'
+    ? createDefaultFamiliarityProgress({
+      ...applyDimensionAttempt(normalized.familiarity, attempt),
+      lastDirection: cleanText(attempt.direction || normalized.familiarity.lastDirection, 20)
+    })
+    : createDefaultSpellingProgress(applyDimensionAttempt(normalized.spelling, attempt))
+  const updated = {
+    ...normalized,
+    [targetDimension]: updatedDimension
+  }
+  return {
+    ...updated,
+    overallMastery: deriveOverallMastery(updated)
+  }
+}
+
 function normalizeSpokenText(value) {
   return cleanText(value, 200)
     .toLowerCase()
@@ -324,6 +391,50 @@ function practicePriority(word, today) {
   return 9
 }
 
+function dimensionDue(progress = {}, today) {
+  return Boolean(progress.nextReviewAt && progress.nextReviewAt <= today && progress.status !== 'mastered')
+}
+
+function otherDimensionName(dimension) {
+  return dimension === 'spelling' ? 'familiarity' : 'spelling'
+}
+
+function dimensionSelectionPriority(word = {}, dimension = 'familiarity', today = dateOnly(new Date())) {
+  const normalized = normalizeWordProgress(word)
+  const target = normalized[dimension] || createDefaultDimensionProgress()
+  const other = normalized[otherDimensionName(dimension)] || createDefaultDimensionProgress()
+  if (target.status === 'mastered') return 6
+  if (target.status === 'needs_practice' && other.status === 'needs_practice') return 0
+  if (target.status === 'needs_practice') return 1
+  if (dimensionDue(target, today)) return 2
+  if (target.status === 'untested' && (other.status === 'reviewing' || other.status === 'mastered')) return 3
+  if (target.status === 'untested') return 4
+  if (target.status === 'reviewing') return 5
+  return 6
+}
+
+function selectWordsForDimension(words = [], options = {}) {
+  const dimension = options.dimension === 'spelling' ? 'spelling' : 'familiarity'
+  const today = dateOnly(options.today) || dateOnly(new Date())
+  const limit = Math.max(1, Number(options.limit) || 20)
+  return (words || [])
+    .map(normalizeWordProgress)
+    .filter(word => dimensionSelectionPriority(word, dimension, today) < 6)
+    .sort((a, b) => {
+      const priority = dimensionSelectionPriority(a, dimension, today) - dimensionSelectionPriority(b, dimension, today)
+      if (priority) return priority
+      const aProgress = a[dimension] || {}
+      const bProgress = b[dimension] || {}
+      const wrong = (Number(bProgress.wrongCount) || 0) - (Number(aProgress.wrongCount) || 0)
+      if (wrong) return wrong
+      const aReview = aProgress.nextReviewAt || '9999-12-31'
+      const bReview = bProgress.nextReviewAt || '9999-12-31'
+      if (aReview !== bReview) return String(aReview).localeCompare(String(bReview))
+      return String(a.word || '').localeCompare(String(b.word || ''))
+    })
+    .slice(0, limit)
+}
+
 function selectPracticeItems(words = [], options = {}) {
   const today = dateOnly(options.today) || dateOnly(new Date())
   const limit = Math.max(1, Number(options.limit) || 10)
@@ -371,6 +482,9 @@ module.exports = {
   normalizeImportCandidates,
   normalizeWordProgress,
   deriveOverallMastery,
+  applyDimensionAttempt,
+  applyWordDimensionAttempt,
+  selectWordsForDimension,
   applyWordReviewResult,
   applyWordDictationAttempt,
   buildVocabularySummary,
