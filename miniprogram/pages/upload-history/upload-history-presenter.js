@@ -306,6 +306,80 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
   }
 }
 
+function sessionTimeOf(session = {}) {
+  return session.analyzedAt || session.completedAt || session.submittedAt || session.updatedAt || session.createdAt || ''
+}
+
+function countVerdicts(items = [], getter) {
+  return (items || []).reduce((acc, item = {}) => {
+    const status = getter(item) || 'unclear'
+    if (status === 'correct') acc.correctCount += 1
+    else if (status === 'incorrect') acc.incorrectCount += 1
+    else acc.unclearCount += 1
+    return acc
+  }, { correctCount: 0, incorrectCount: 0, unclearCount: 0 })
+}
+
+function buildEnglishPhotoEvidenceRows(session = {}, urlByFileID = new Map()) {
+  return (session.photoFileIds || []).map((fileID, index) => ({
+    kind: 'english-dictation-photo',
+    icon: '写',
+    title: `听写纸照片${index + 1}`,
+    summary: session.analysisStatus === 'completed' ? '听写纸已完成 AI 批改' : '听写纸已上传，等待 AI 批改',
+    isDuplicate: false,
+    fileID,
+    tempFileURL: urlByFileID.get(fileID) || ''
+  }))
+}
+
+function buildEnglishSessionEvent(session = {}, subjectName = '英语', urlByFileID = new Map()) {
+  const isSpelling = session.functionType === 'spelling' || session.type === 'word-dictation-paper'
+  const eventTime = sessionTimeOf(session)
+  const wordCount = session.wordCount || (session.wordItems || []).length
+  const counts = isSpelling
+    ? countVerdicts(session.dictationResults || [], item => item.verdict)
+    : countVerdicts(session.attempts || [], item => item.judgment && item.judgment.status)
+  const hasResult = counts.correctCount + counts.incorrectCount + counts.unclearCount > 0
+  const photoCount = (session.photoFileIds || []).length
+  const title = isSpelling ? `${subjectName}纸面听写` : `${subjectName}单词熟悉度`
+  const statusText = isSpelling && session.analysisStatus === 'pending_analysis'
+    ? '听写纸批改中'
+    : (session.status === 'completed' ? '已完成' : '进行中')
+  const summary = hasResult
+    ? `本轮 ${wordCount || 0} 词，正确 ${counts.correctCount} 个，需练习 ${counts.incorrectCount} 个，无法确认 ${counts.unclearCount} 个。`
+    : (isSpelling ? '已生成纸面听写任务，完成后拍照上传批改。' : '已生成单词熟悉度练习。')
+  const chips = [
+    wordCount ? `${wordCount} 词` : '',
+    counts.correctCount ? `正确 ${counts.correctCount}` : '',
+    counts.incorrectCount ? `需练习 ${counts.incorrectCount}` : '',
+    counts.unclearCount ? `待确认 ${counts.unclearCount}` : '',
+    photoCount ? `${photoCount} 张听写纸` : ''
+  ].filter(Boolean)
+
+  return {
+    id: session._id,
+    subject: 'english',
+    kind: isSpelling ? 'english-dictation-session' : 'english-familiarity-session',
+    displayLevel: 'main',
+    icon: isSpelling ? '写' : '词',
+    url: '',
+    title,
+    timeText: timeText(eventTime),
+    createdAt: eventTime,
+    summary,
+    actionText: '',
+    sessionId: session._id,
+    photos: [],
+    foldedEvidence: isSpelling ? buildEnglishPhotoEvidenceRows(session, urlByFileID) : [],
+    photoCount,
+    duplicateCount: 0,
+    statusText,
+    statusUrl: '',
+    chips,
+    chipItems: chips.map(text => ({ text, url: '' }))
+  }
+}
+
 function groupEventsByDay(events, statusItems = []) {
   const byDay = new Map()
   function ensureDay(value) {
@@ -414,8 +488,11 @@ function buildHistoryState(events, activeSubject, statusItems = [], options = {}
   }
 }
 
-function collectFileIDs(reports) {
-  return reports.flatMap(report => getReportPhotos(report).map(photo => photo.fileID).filter(Boolean))
+function collectFileIDs(reports, englishSessions = []) {
+  return [
+    ...reports.flatMap(report => getReportPhotos(report).map(photo => photo.fileID).filter(Boolean)),
+    ...englishSessions.flatMap(session => session.photoFileIds || [])
+  ]
 }
 
 function attachTempUrlsToReports(reports, urlByFileID) {
@@ -469,7 +546,7 @@ function withAttachedPhotos(report, photosByReportId) {
   }
 }
 
-function buildTimelineEvents(reports, papers, urlByFileID, activeSubject, fallbackSubjectName) {
+function buildTimelineEvents(reports, papers, urlByFileID, activeSubject, fallbackSubjectName, englishSessions = []) {
   const visibleReports = (reports || []).filter(report => isVisibleTimelineReport(report))
   const paperById = buildPaperLookup(papers)
   const paperCodeById = buildPaperCodeById(papers, fallbackSubjectName)
@@ -503,6 +580,12 @@ function buildTimelineEvents(reports, papers, urlByFileID, activeSubject, fallba
       ))
     })
 
+  ;(englishSessions || [])
+    .forEach(session => {
+      events.push(buildEnglishSessionEvent(session, recordSubjectName({ subject: 'english' }, '英语'), urlByFileID))
+    })
+
+  events.sort((a, b) => toDate(b.createdAt) - toDate(a.createdAt))
   return { events, statusItems }
 }
 

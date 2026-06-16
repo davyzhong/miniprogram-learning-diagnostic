@@ -129,6 +129,19 @@ async function getPapers(studentId, subject, limit = 20) {
   return res.data || [];
 }
 
+async function getEnglishSessions(studentId, subject, limit = 50) {
+  if (subject && subject !== 'english') return [];
+  const res = await db.collection('englishPracticeSessions')
+    .where({ studentId })
+    .orderBy('createdAt', 'desc')
+    .limit(limit)
+    .get();
+  return (res.data || []).map(session => ({
+    subject: 'english',
+    ...session,
+  }));
+}
+
 function bottleneckSummaryFrom(items = []) {
   const names = items
     .map(item => item && (item.summary || item.name || item.title || item.lpName || item.label))
@@ -152,7 +165,24 @@ function reportBottleneckSummary(report) {
   return bottleneckSummaryFrom(report && report.bottlenecks);
 }
 
-function buildTimeline({ reports = [], papers = [] }) {
+function sessionTimeOf(session = {}) {
+  return session.analyzedAt || session.completedAt || session.submittedAt || session.updatedAt || session.createdAt || '';
+}
+
+function sessionVerdictCounts(session = {}) {
+  const source = session.functionType === 'spelling'
+    ? (session.dictationResults || [])
+    : (session.attempts || []);
+  return source.reduce((acc, item = {}) => {
+    const status = item.verdict || (item.judgment && item.judgment.status) || item.status || 'unclear';
+    if (status === 'correct') acc.correctCount += 1;
+    else if (status === 'incorrect') acc.incorrectCount += 1;
+    else acc.unclearCount += 1;
+    return acc;
+  }, { correctCount: 0, incorrectCount: 0, unclearCount: 0 });
+}
+
+function buildTimeline({ reports = [], papers = [], englishSessions = [] }) {
   const items = [];
 
   reports.forEach(report => {
@@ -198,6 +228,25 @@ function buildTimeline({ reports = [], papers = [] }) {
       pdfFileId: paper.pdfFileId || '',
       bottleneckSummary: paperBottleneckSummary(paper),
       paperDate: paper.paperDate || '',
+      createdAt: eventTime,
+      occurredAt: eventTime,
+    });
+  });
+
+  englishSessions.forEach(session => {
+    const eventTime = sessionTimeOf(session);
+    const isSpelling = session.functionType === 'spelling' || session.type === 'word-dictation-paper';
+    items.push({
+      id: `english-session-${session._id}`,
+      type: isSpelling ? 'english-dictation-session' : 'english-familiarity-session',
+      subject: 'english',
+      sessionId: session._id,
+      functionType: isSpelling ? 'spelling' : 'familiarity',
+      status: session.status || '',
+      analysisStatus: session.analysisStatus || '',
+      wordCount: session.wordCount || (session.wordItems || []).length,
+      photoFileIds: session.photoFileIds || [],
+      ...sessionVerdictCounts(session),
       createdAt: eventTime,
       occurredAt: eventTime,
     });
@@ -254,9 +303,10 @@ async function getLearningTimeline(openId, studentId, subjectValue) {
   if (!access.allowed) return failure('无权访问该学生');
 
   const subject = subjectValue ? normalizeSubject(subjectValue) : '';
-  const [reports, papers] = await Promise.all([
+  const [reports, papers, englishSessions] = await Promise.all([
     getReports(studentId, subject, 50),
     getPapers(studentId, subject, 50),
+    getEnglishSessions(studentId, subject, 50),
   ]);
 
   return withAccess(access, {
@@ -264,7 +314,8 @@ async function getLearningTimeline(openId, studentId, subjectValue) {
     subject,
     reports,
     papers,
-    items: buildTimeline({ reports, papers }),
+    englishSessions,
+    items: buildTimeline({ reports, papers, englishSessions }),
   });
 }
 

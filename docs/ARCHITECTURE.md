@@ -369,7 +369,7 @@ bottleneck-detail（学习卡点详情）
 | `pages/subject-select/subject-select` | 学科入口兼容页 | cloud.getSubjectProfiles, ensureSubjectProfile |
 | `pages/subject-home/subject-home` | 学科工作台：主任务、待处理队列、工具入口、状态轮询 | cloud.getSubjectProfile, getReports, getLatestReport, getAnalysisProgress; poller |
 | `pages/upload/upload` | 拍照/选图 + 上传 + 触发分析 | cloud.uploadPhoto, callUploadAndAnalyze, getReports |
-| `pages/upload-history/upload-history` | 学习记录时间线 | cloud.getReports, getPapers, getTempFileURLs |
+| `pages/upload-history/upload-history` | 学习记录时间线 | cloud.getLearningTimeline, getReports, getPapers, getTempFileURLs |
 | `pages/report/report` | 报告详情 + 分析进度轮询 + PDF 生成 | cloud.getReport, getSubjectProfile, getAnalysisProgress, callAnalyzePhotos, callGenerateReportPDF; poller |
 | `pages/generate-verification/generate-verification` | 出卷配置器：选择范围 → 生成验证试卷 | cloud.getSubjectProfile, callGeneratePaper |
 | `pages/default-paper/default-paper` | 选年级 → 生成/选择默认诊断试卷 | cloud.getPapers, callGeneratePaper |
@@ -383,7 +383,7 @@ bottleneck-detail（学习卡点详情）
 - `subject-home`：`getSubjectDashboard` 失败时回退到 `getSubjectProfile` 和 `getReports`，保留主任务、待处理卡点和工具入口。
 - `bottleneck-center`：`getStudentDashboard` 失败时回退到各学科档案里的当前卡点。
 - `report`：`getReportDetail` 失败时回退到直接读取 `reports`；反馈读取或学科档案读取失败不能阻塞报告正文。
-- `upload-history`：`getLearningTimeline` 失败时回退到 `reports` / `papers`；`getTempFileURLs` 失败时继续展示文字时间线，只禁用原图预览。
+- `upload-history`：`getLearningTimeline` 成功时会合并 `reports`、`papers` 和 `englishPracticeSessions`；失败时回退到 `reports` / `papers`；`getTempFileURLs` 失败时继续展示文字时间线，只禁用原图预览。
 
 `utils/cloud.js` 会在云函数超时时把错误标注为 `functionName:action`，例如 `studentData:getLearningTimeline 请求超时，请稍后重试`。页面日志应保留这个上下文，但面向用户只显示可恢复提示，避免把后端函数名暴露为主要交互文案。
 
