@@ -689,6 +689,110 @@ test('subject home loads a compact action workbench', async () => {
   assert.ok(page.data.tools.some(item => item.key === 'latestReport'))
 })
 
+test('English subject home loads vocabulary summary and opens English practice', async () => {
+  const calls = []
+  const cloud = {
+    getSubjectDashboard: async () => ({
+      permissions: { canUpload: true, canGeneratePaper: true },
+      profile: { totalReports: 0, currentBottlenecks: [] },
+      reports: []
+    }),
+    getEnglishVocabularySummary: async studentId => {
+      calls.push(['summary', studentId])
+      return {
+        summary: {
+          totalWords: 320,
+          needsPracticeCount: 18,
+          reviewingCount: 12,
+          masteredCount: 90,
+          dueReviewCount: 8
+        },
+        patternCount: 42
+      }
+    }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/subject-home/subject-home.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatRelativeTime: () => '今天' },
+      '../../utils/analysis-poller': { createAnalysisPoller: () => ({ start() {}, stop() {}, isRunning: () => false }) }
+    }
+  })
+  page.onLoad({
+    studentId: 'student-1',
+    subject: 'english',
+    subjectName: encodeURIComponent('英语'),
+    studentName: encodeURIComponent('钟青羽'),
+    grade: '6'
+  })
+
+  await page.loadProfile()
+  page.onPrimaryAction()
+
+  assert.deepEqual(calls, [['summary', 'student-1']])
+  assert.equal(page.data.primaryTask.actionType, 'englishPractice')
+  assert.equal(page.data.englishVocabularyStats.totalWords, 320)
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/english-practice\/english-practice/)
+})
+
+test('English subject home imports Zhong Qingyu personal vocabulary seed when empty', async () => {
+  const calls = []
+  let imported = false
+  const cloud = {
+    getSubjectDashboard: async () => ({
+      permissions: { canUpload: true, canGeneratePaper: true },
+      profile: { totalReports: 0, currentBottlenecks: [] },
+      reports: []
+    }),
+    getEnglishVocabularySummary: async studentId => ({
+      summary: {
+        totalWords: imported ? 505 : 0,
+        needsPracticeCount: 0,
+        reviewingCount: 0,
+        masteredCount: 0,
+        dueReviewCount: 0
+      },
+      weakWords: [],
+      patternCount: 0,
+      studentId
+    }),
+    seedEnglishPersonalVocabulary: async studentId => {
+      calls.push(['seed', studentId])
+      imported = true
+      return { importedWordCount: 505, totalSeedWords: 505 }
+    }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/subject-home/subject-home.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatRelativeTime: () => '今天' },
+      '../../utils/analysis-poller': { createAnalysisPoller: () => ({ start() {}, stop() {}, isRunning: () => false }) }
+    }
+  })
+  page.onLoad({
+    studentId: 'student-1',
+    subject: 'english',
+    subjectName: encodeURIComponent('英语'),
+    studentName: encodeURIComponent('钟青羽'),
+    grade: '6'
+  })
+
+  await page.loadProfile()
+  assert.equal(page.data.primaryTask.actionType, 'importVocabulary')
+  assert.ok(page.data.tools.some(item => item.key === 'importVocabulary'))
+
+  await page.importEnglishVocabulary()
+
+  assert.deepEqual(calls, [['seed', 'student-1']])
+  assert.equal(page.data.englishVocabularyStats.totalWords, 505)
+  assert.equal(page.data.primaryTask.actionType, 'englishPractice')
+  assert.equal(wx.calls.find(call => call.name === 'showToast').payload.title, '已导入505词')
+})
+
 test('subject home shows learning workflow tools for co-parent access', async () => {
   const cloud = {
     getSubjectDashboard: async () => ({
@@ -802,6 +906,116 @@ test('subject home task and primary actions open the focused workflow', () => {
   assert.match(urls[0], /pages\/bottleneck-detail\/bottleneck-detail/)
   assert.match(urls[0], /lpCode=LP-001/)
   assert.match(urls[1], /pages\/generate-verification\/generate-verification/)
+})
+
+test('English practice page generates a 20 word familiarity session without patterns', async () => {
+  const generated = []
+  const cloud = {
+    generateEnglishRecognitionSession: async payload => {
+      generated.push(payload)
+      return {
+        sessionId: 'session-1',
+        functionType: 'familiarity',
+        wordItems: Array.from({ length: 20 }, (_, index) => ({
+          queueKey: `word-${index + 1}:0`,
+          wordId: `word-${index + 1}`,
+          word: `word${index + 1}`,
+          meanings: [`词义${index + 1}`],
+          promptType: index % 2 === 0 ? 'chinese' : 'english'
+        })),
+        patternItems: []
+      }
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({
+    studentId: 'student-1',
+    studentName: encodeURIComponent('钟青羽'),
+    grade: '6'
+  })
+
+  assert.equal(generated[0].studentId, 'student-1')
+  assert.equal(generated[0].wordLimit, 20)
+  assert.equal(generated[0].dimension, 'familiarity')
+  assert.equal(page.data.sessionId, 'session-1')
+  assert.equal(page.data.functionType, 'familiarity')
+  assert.equal(page.data.queue.length, 20)
+  assert.equal(page.data.currentItem.word, 'word1')
+  assert.match(page.data.currentItem.promptText, /说出英文单词/)
+  assert.equal(page.data.queue[1].promptTypeText, '英文提示')
+  assert.match(page.data.queue[1].promptText, /说出中文意思/)
+  assert.equal(page.data.patternItems.length, 0)
+})
+
+test('English practice page explains when no vocabulary words are available', async () => {
+  const cloud = {
+    generateEnglishRecognitionSession: async () => ({
+      sessionId: 'session-empty',
+      functionType: 'familiarity',
+      wordItems: [],
+      patternItems: []
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({
+    studentId: 'student-1',
+    studentName: encodeURIComponent('钟青羽'),
+    grade: '6'
+  })
+
+  assert.equal(page.data.finished, false)
+  assert.match(page.data.error, /还没有可练习单词/)
+  assert.equal(page.data.queue.length, 0)
+})
+
+test('English practice page submits AI recognition attempts and requeues wrong words', async () => {
+  const submitted = []
+  const cloud = {
+    generateEnglishRecognitionSession: async () => ({
+      sessionId: 'session-1',
+      functionType: 'familiarity',
+      wordItems: [{
+        queueKey: 'word-1:0',
+        wordId: 'word-1',
+        word: 'science',
+        meanings: ['科学'],
+        promptType: 'chinese'
+      }],
+      patternItems: []
+    }),
+    submitEnglishRecognitionAttempt: async payload => {
+      submitted.push(payload)
+      return {
+        judgment: { status: 'incorrect', normalizedText: 'siense', confidence: 0.5, reason: '拼写不同' },
+        shouldRepeat: true
+      }
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({
+    studentId: 'student-1',
+    studentName: encodeURIComponent('钟青羽'),
+    grade: '6'
+  })
+  await page.onRecognitionResult({ recognizedText: 'siense', audioFileID: 'cloud://audio-1' })
+
+  assert.equal(submitted[0].targetWord, 'science')
+  assert.equal(submitted[0].recognizedText, 'siense')
+  assert.equal(submitted[0].dimension, 'familiarity')
+  assert.equal(page.data.lastResult.status, 'incorrect')
+  assert.equal(page.data.lastAnsweredItem.word, 'science')
+  assert.equal(page.data.queue.length, 2)
+  assert.equal(page.data.currentIndex, 1)
+  assert.equal(page.data.currentItem.retryCount, 1)
 })
 
 test('upload selection warns about duplicate filenames but keeps the images', () => {

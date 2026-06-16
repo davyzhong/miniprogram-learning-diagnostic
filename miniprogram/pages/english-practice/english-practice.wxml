@@ -1,0 +1,63 @@
+<view class="page">
+  <view class="hero">
+    <view class="back" bindtap="onBack">‹</view>
+    <view class="hero-copy">
+      <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
+      <text class="title">单词熟悉度</text>
+      <text class="subtitle">中文和英文提示各一半，AI 自动判断是否熟悉这个词。</text>
+    </view>
+  </view>
+
+  <view class="state-card" wx:if="{{loading}}">
+    <text class="state-title">正在准备听写</text>
+    <text class="state-desc">优先抽取薄弱词、待复测词和未测词。</text>
+  </view>
+
+  <view class="state-card error" wx:elif="{{error}}">
+    <text class="state-title">{{errorTitle || '生成失败'}}</text>
+    <text class="state-desc">{{error}}</text>
+    <button class="retry-btn" bindtap="onRegenerateTap">重新生成</button>
+  </view>
+
+  <view wx:elif="{{finished}}" class="finish-card">
+    <text class="finish-mark">✓</text>
+    <text class="finish-title">本轮熟悉度练习完成</text>
+    <text class="finish-desc">不熟悉和听不清的单词已经记录，后续会提高出现频率。</text>
+    <button class="primary-btn" bindtap="onFinishTap">完成并返回</button>
+  </view>
+
+  <view wx:else class="dictation-wrap">
+    <view class="progress-card">
+      <text class="progress-label">当前进度</text>
+      <text class="progress-value">{{currentIndex + 1}} / {{queue.length}}</text>
+    </view>
+
+    <view class="prompt-card">
+      <view class="prompt-top">
+        <text class="prompt-pill">{{currentItem.promptTypeText}}</text>
+        <text class="retry-pill" wx:if="{{currentItem.retryCount > 0}}">第 {{currentItem.retryCount + 1}} 次出现</text>
+      </view>
+      <text class="prompt-title">{{currentItem.promptText}}</text>
+      <text class="prompt-desc">听到提示后，请说出对应的英文单词或中文意思。</text>
+      <button class="play-btn" bindtap="onPlayPromptTap">播放提示</button>
+    </view>
+
+    <view class="voice-card">
+      <button class="record-btn {{recording ? 'recording' : ''}}" loading="{{submitting}}" bindtap="onRecordTap">
+        {{recording ? '停止录音并识别' : '开始回答'}}
+      </button>
+      <text class="voice-hint" wx:if="{{voiceUnavailableText}}">{{voiceUnavailableText}}</text>
+      <text class="voice-hint" wx:else>读完后再次点击按钮，系统会自动识别并判断。</text>
+    </view>
+
+    <view class="result-card result-{{lastResult.status}}" wx:if="{{lastResult}}">
+      <text class="result-title">
+        <block wx:if="{{lastResult.status === 'correct'}}">AI 判断：正确</block>
+        <block wx:elif="{{lastResult.status === 'incorrect'}}">AI 判断：需要重听</block>
+        <block wx:else>AI 判断：无法确认</block>
+      </text>
+      <text class="result-desc">{{lastResult.reason}}</text>
+      <text class="answer-line">目标单词：{{lastAnsweredItem ? lastAnsweredItem.word : ''}}</text>
+    </view>
+  </view>
+</view>

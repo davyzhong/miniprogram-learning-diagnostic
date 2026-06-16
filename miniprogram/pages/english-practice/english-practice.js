@@ -1,0 +1,240 @@
+const cloud = require('../../utils/cloud')
+
+function buildMeaningText(item = {}) {
+  return Array.isArray(item.meanings) ? item.meanings.join(' / ') : (item.meanings || '')
+}
+
+function withDisplayFields(item = {}) {
+  const meaningText = buildMeaningText(item)
+  return {
+    ...item,
+    meaningText,
+    promptText: item.promptType === 'english'
+      ? '听英文发音，然后说出中文意思'
+      : `听中文意思，然后说出英文单词：${meaningText || '这个单词'}`,
+    promptTypeText: item.promptType === 'english' ? '英文提示' : '中文提示'
+  }
+}
+
+Page({
+  data: {
+    studentId: '',
+    studentName: '',
+    grade: '',
+    loading: false,
+    submitting: false,
+    error: '',
+    errorTitle: '',
+    sessionId: '',
+    functionType: 'familiarity',
+    queue: [],
+    currentIndex: 0,
+    currentItem: null,
+    lastAnsweredItem: null,
+    lastResult: null,
+    finished: false,
+    recording: false,
+    voiceReady: false,
+    voiceUnavailableText: '',
+    patternItems: []
+  },
+
+  async onLoad(options = {}) {
+    this.setData({
+      studentId: options.studentId || '',
+      studentName: decodeURIComponent(options.studentName || ''),
+      grade: options.grade || ''
+    })
+    this.initVoice()
+    await this.generateSession()
+  },
+
+  initVoice() {
+    if (typeof requirePlugin !== 'function') {
+      this.setData({ voiceReady: false, voiceUnavailableText: '当前环境暂不支持语音识别，可在真机中使用。' })
+      return
+    }
+    try {
+      const plugin = requirePlugin('WechatSI')
+      const manager = plugin && plugin.getRecordRecognitionManager ? plugin.getRecordRecognitionManager() : null
+      if (!manager) throw new Error('WechatSI unavailable')
+      manager.onStop(res => {
+        this.setData({ recording: false })
+        this.onRecognitionResult({
+          recognizedText: res && (res.result || res.text || ''),
+          audioFileID: res && (res.tempFilePath || res.fileID || '')
+        })
+      })
+      manager.onError(() => {
+        this.setData({
+          recording: false,
+          lastResult: { status: 'unclear', reason: '语音识别失败，请再读一次。' }
+        })
+      })
+      this._voiceManager = manager
+      this._voicePlugin = plugin
+      this.setData({ voiceReady: true, voiceUnavailableText: '' })
+    } catch (error) {
+      this.setData({ voiceReady: false, voiceUnavailableText: '语音插件暂不可用，请确认小程序后台已添加同声传译插件。' })
+    }
+  },
+
+  async generateSession() {
+    if (!this.data.studentId) return
+    this.setData({ loading: true, error: '', errorTitle: '', finished: false, lastResult: null })
+    try {
+      const result = await cloud.generateEnglishRecognitionSession({
+        studentId: this.data.studentId,
+        wordLimit: 20,
+        dimension: 'familiarity'
+      })
+      const queue = (result.wordItems || []).map(withDisplayFields)
+      if (queue.length === 0) {
+        this.setData({
+          loading: false,
+          sessionId: result.sessionId || '',
+          functionType: result.functionType || 'familiarity',
+          queue: [],
+          currentIndex: 0,
+          currentItem: null,
+          lastAnsweredItem: null,
+          patternItems: [],
+          finished: false,
+          errorTitle: '暂无可练习单词',
+          error: '还没有可练习单词，请先导入钟青羽的个人英语词库。'
+        })
+        return
+      }
+      this.setData({
+        loading: false,
+        sessionId: result.sessionId || '',
+        functionType: result.functionType || 'familiarity',
+        queue,
+        currentIndex: 0,
+        currentItem: queue[0] || null,
+        lastAnsweredItem: null,
+        patternItems: [],
+        finished: queue.length === 0
+      })
+    } catch (error) {
+      this.setData({
+        loading: false,
+        errorTitle: '生成失败',
+        error: error && error.message ? error.message : '单词熟悉度生成失败'
+      })
+    }
+  },
+
+  onRegenerateTap() {
+    this.generateSession()
+  },
+
+  onBack() {
+    wx.navigateBack({ delta: 1 })
+  },
+
+  onRecordTap() {
+    if (this.data.recording) {
+      this.stopRecord()
+    } else {
+      this.startRecord()
+    }
+  },
+
+  startRecord() {
+    if (!this._voiceManager) {
+      this.setData({ lastResult: { status: 'unclear', reason: '语音识别暂不可用，请在真机中重试。' } })
+      return
+    }
+    this.setData({ recording: true, lastResult: null })
+    this._voiceManager.start({ lang: this.getRecognitionLang(this.data.currentItem) })
+  },
+
+  getRecognitionLang(item = {}) {
+    return item.promptType === 'english' ? 'zh_CN' : 'en_US'
+  },
+
+  stopRecord() {
+    if (!this._voiceManager) return
+    this._voiceManager.stop()
+  },
+
+  async onRecognitionResult(result = {}) {
+    const current = this.data.currentItem
+    if (!current || this.data.submitting) return
+    this.setData({ submitting: true })
+    try {
+      const response = await cloud.submitEnglishRecognitionAttempt({
+        studentId: this.data.studentId,
+        sessionId: this.data.sessionId,
+        queueKey: current.queueKey,
+        wordId: current.wordId,
+        targetWord: current.word,
+        dimension: 'familiarity',
+        promptType: current.promptType,
+        direction: current.direction || (current.promptType === 'english' ? 'en2cn' : 'cn2en'),
+        retryCount: current.retryCount || 0,
+        recognizedText: result.recognizedText || '',
+        audioFileID: result.audioFileID || ''
+      })
+      let queue = this.data.queue
+      if (response.shouldRepeat) {
+        const retryCount = (current.retryCount || 0) + 1
+        queue = queue.concat(withDisplayFields({
+          ...current,
+          retryCount,
+          queueKey: `${current.wordId}:${this.data.currentIndex}:${retryCount}`
+        }))
+      }
+      const nextIndex = this.data.currentIndex + 1
+      this.setData({
+        submitting: false,
+        queue,
+        lastResult: response.judgment || null,
+        lastAnsweredItem: current,
+        currentIndex: nextIndex,
+        currentItem: queue[nextIndex] || null,
+        finished: nextIndex >= queue.length
+      })
+    } catch (error) {
+      this.setData({
+        submitting: false,
+        lastResult: {
+          status: 'unclear',
+          reason: error && error.message ? error.message : 'AI 判定失败，请稍后重试。'
+        }
+      })
+    }
+  },
+
+  async onFinishTap() {
+    if (!this.data.sessionId) return
+    await cloud.submitEnglishPracticeResult({
+      studentId: this.data.studentId,
+      sessionId: this.data.sessionId,
+      wordResults: []
+    })
+    wx.navigateBack({ delta: 1 })
+  },
+
+  onPlayPromptTap() {
+    const current = this.data.currentItem
+    if (!current || !this._voicePlugin || !this._voicePlugin.textToSpeech) {
+      wx.showToast({ title: '请按提示读出答案', icon: 'none' })
+      return
+    }
+    const content = current.promptType === 'english' ? current.word : current.meaningText
+    this._voicePlugin.textToSpeech({
+      lang: current.promptType === 'english' ? 'en_US' : 'zh_CN',
+      tts: true,
+      content,
+      success: res => {
+        if (!res || !res.filename) return
+        const audio = wx.createInnerAudioContext()
+        audio.src = res.filename
+        audio.play()
+      },
+      fail: () => wx.showToast({ title: '播放失败，请直接看提示', icon: 'none' })
+    })
+  }
+})

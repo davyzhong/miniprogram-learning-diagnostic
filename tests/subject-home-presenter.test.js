@@ -91,7 +91,7 @@ test('English workbench uses vocabulary summary as the primary learning asset', 
 
   assert.equal(view.subjectTitle, '英语工作台')
   assert.equal(view.primaryTask.actionType, 'englishPractice')
-  assert.equal(view.primaryTask.actionText, '开始 20 词听写')
+  assert.equal(view.primaryTask.actionText, '开始单词熟悉度')
   assert.match(view.primaryTask.summary, /320 个个人词库单词/)
   assert.match(view.primaryTask.summary, /安排 20 个/)
   assert.equal(view.englishVocabularyStats.totalWords, 320)
@@ -103,7 +103,7 @@ test('English workbench uses vocabulary summary as the primary learning asset', 
   assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
 })
 
-test('English workbench keeps dictation entry visible before vocabulary is imported', () => {
+test('English workbench keeps familiarity entry visible before vocabulary is imported', () => {
   const view = buildSubjectHomeView({}, [], relative, {
     subject: 'english',
     subjectName: '英语',

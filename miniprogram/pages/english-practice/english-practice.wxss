@@ -1,0 +1,222 @@
+.page {
+  min-height: 100vh;
+  background: #f7fafc;
+  padding-bottom: 48rpx;
+}
+
+.hero {
+  background: #9c4f24;
+  color: #fff;
+  padding: 42rpx 28rpx 34rpx;
+  display: flex;
+  gap: 12rpx;
+  align-items: flex-start;
+}
+
+.back {
+  width: 62rpx;
+  font-size: 48rpx;
+  line-height: 1;
+}
+
+.hero-copy { flex: 1; min-width: 0; }
+
+.eyebrow,
+.subtitle {
+  display: block;
+  opacity: .86;
+  font-size: 23rpx;
+  line-height: 1.45;
+}
+
+.title {
+  display: block;
+  font-size: 42rpx;
+  font-weight: 800;
+  margin: 8rpx 0;
+}
+
+.state-card,
+.dictation-wrap,
+.finish-card {
+  margin: 24rpx 28rpx 0;
+}
+
+.state-card,
+.finish-card,
+.progress-card,
+.prompt-card,
+.voice-card,
+.result-card {
+  border-radius: 18rpx;
+  background: #fff;
+  box-shadow: 0 4rpx 18rpx rgba(15, 23, 42, .06);
+}
+
+.state-card {
+  padding: 28rpx;
+  background: #fff7ed;
+  border: 1rpx solid #fed7aa;
+}
+
+.state-card.error {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.state-title,
+.finish-title,
+.result-title {
+  display: block;
+  color: #25364a;
+  font-size: 30rpx;
+  font-weight: 750;
+}
+
+.state-desc,
+.finish-desc,
+.result-desc,
+.voice-hint,
+.prompt-desc {
+  display: block;
+  color: #64748b;
+  font-size: 24rpx;
+  line-height: 1.5;
+  margin-top: 8rpx;
+}
+
+.retry-btn,
+.primary-btn {
+  margin-top: 20rpx;
+  background: #9c4f24;
+  color: #fff;
+  border-radius: 14rpx;
+}
+
+.dictation-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 22rpx;
+}
+
+.progress-card {
+  padding: 22rpx 26rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.progress-label {
+  color: #64748b;
+  font-size: 24rpx;
+}
+
+.progress-value {
+  color: #9c4f24;
+  font-size: 30rpx;
+  font-weight: 800;
+}
+
+.prompt-card,
+.voice-card,
+.result-card,
+.finish-card {
+  padding: 30rpx;
+}
+
+.prompt-top {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.prompt-pill,
+.retry-pill {
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.prompt-pill {
+  background: #fff7ed;
+  color: #9c4f24;
+}
+
+.retry-pill {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.prompt-title {
+  display: block;
+  color: #1f2937;
+  font-size: 34rpx;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.play-btn {
+  margin-top: 24rpx;
+  border: 2rpx solid #9c4f24;
+  background: #fff;
+  color: #9c4f24;
+  border-radius: 14rpx;
+}
+
+.record-btn {
+  background: #2b6cb0;
+  color: #fff;
+  border-radius: 18rpx;
+  font-size: 30rpx;
+  font-weight: 750;
+}
+
+.record-btn.recording {
+  background: #c2410c;
+}
+
+.result-card {
+  border-left: 8rpx solid #94a3b8;
+}
+
+.result-correct {
+  border-left-color: #2f855a;
+  background: #f0fff4;
+}
+
+.result-incorrect {
+  border-left-color: #c05621;
+  background: #fff7ed;
+}
+
+.result-unclear {
+  border-left-color: #64748b;
+  background: #f8fafc;
+}
+
+.answer-line {
+  display: block;
+  color: #1f2937;
+  font-size: 26rpx;
+  font-weight: 700;
+  margin-top: 14rpx;
+}
+
+.finish-card {
+  text-align: center;
+}
+
+.finish-mark {
+  display: block;
+  width: 72rpx;
+  height: 72rpx;
+  line-height: 72rpx;
+  margin: 0 auto 18rpx;
+  border-radius: 22rpx;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 42rpx;
+  font-weight: 800;
+}

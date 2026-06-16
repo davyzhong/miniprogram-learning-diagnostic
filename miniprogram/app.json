@@ -12,6 +12,7 @@
     "pages/report/report",
     "pages/bottleneck-center/bottleneck-center",
     "pages/bottleneck-detail/bottleneck-detail",
+    "pages/english-practice/english-practice",
     "pages/generate-verification/generate-verification",
     "pages/default-paper/default-paper",
     "pages/paper-preview/paper-preview"
@@ -24,6 +25,12 @@
     "backgroundColor": "#f7fafc"
   },
   "cloud": true,
+  "plugins": {
+    "WechatSI": {
+      "version": "0.3.5",
+      "provider": "wx069ba97219f66d99"
+    }
+  },
   "style": "v2",
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"

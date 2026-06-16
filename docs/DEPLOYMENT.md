@@ -36,6 +36,7 @@ git diff --check
 | `studentAccess` | 家庭成员、邀请、访问权限 |
 | `studentData` | 访问感知的学生主页、学科、报告、试卷、学习记录聚合读取 |
 | `reportFeedback` | 收集家长对报告、卡点、错题、照片的纠错反馈 |
+| `englishVocabulary` | 英语个人词库、20 词听写、AI 判定和掌握度更新 |
 
 ## 3. 微信开发者工具部署步骤
 
@@ -51,12 +52,13 @@ git diff --check
 1. `studentAccess`
 2. `studentData`
 3. `reportFeedback`
-4. `uploadAndAnalyze`
-5. `analyzePhotos`
-6. `analyzeBatch`
-7. `generatePaper`
-8. `generateReportPDF`
-9. `getAnalysisProgress`
+4. `englishVocabulary`
+5. `uploadAndAnalyze`
+6. `analyzePhotos`
+7. `analyzeBatch`
+8. `generatePaper`
+9. `generateReportPDF`
+10. `getAnalysisProgress`
 
 如果只改了单个云函数，可以只部署该函数；但涉及报告结构、卡点更新、反馈或访问权限时，优先部署相关函数组合，避免前后端结构不一致。
 
@@ -83,6 +85,8 @@ git diff --check
 4. 点击学习卡点中心能展示卡点列表。
 5. 点击生成验证试卷能进入出卷页。
 6. 学习记录能展示报告、试卷和反馈事件。
+7. 英语工作台在无词库时能导入钟青羽 PEP 个人词库；导入后能展示个人词库统计，并能进入 20 词听写页。
+8. 英语听写页能基于 `studentEnglishWords` 生成单词队列；真机上麦克风/语音识别不可用时有可读降级提示。
 
 如果出现 `timeout`，查看 vConsole 中的错误上下文。现在前端会尽量显示类似：
 
@@ -113,3 +117,20 @@ studentData:getStudentDashboard 请求超时，请稍后重试
 ### 反馈提交失败
 
 确认 `reportFeedback` 已部署，并且云数据库中允许云函数创建或读写 `reportFeedback` 集合。该集合缺失时，云函数会尝试自动创建。
+
+### 英语单词熟悉度无法语音识别
+
+英语单词熟悉度页面会优先尝试调用“微信同声传译”插件；如果插件授权、版本或当前环境不支持，页面会显示“语音插件暂不可用”或“当前环境暂不支持语音识别”的降级提示。
+
+当前代码已在 `miniprogram/app.json` 中声明该插件：
+
+```json
+"plugins": {
+  "WechatSI": {
+    "version": "0.3.5",
+    "provider": "wx069ba97219f66d99"
+  }
+}
+```
+
+如果开发者工具预览提示 `插件未授权使用`，请重新确认小程序后台的插件管理中已添加“微信同声传译”，并检查授权的小程序 AppID 是否与 `project.config.json` 中的 AppID 一致。正式发布前，还需要在小程序隐私保护指引中声明麦克风用途。
