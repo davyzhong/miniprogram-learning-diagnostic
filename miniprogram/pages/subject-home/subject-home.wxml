@@ -32,7 +32,7 @@
     <text class="arrow">›</text>
   </view>
 
-  <view class="quick-strip">
+  <view class="quick-strip" wx:if="{{subject !== 'english'}}">
     <view class="quick-cell" bindtap="onQuickStatTap" data-target="pending">
       <text class="quick-num pending-color">{{taskQueue.length}}</text>
       <text class="quick-label">待处理</text>
@@ -47,7 +47,25 @@
     </view>
   </view>
 
-  <view class="section" wx:if="{{taskQueue.length > 0}}">
+  <view class="english-vocab-card" wx:if="{{subject === 'english'}}">
+    <view class="section-heading">
+      <view class="heading-icon">Aa</view>
+      <text>个人英语词库</text>
+    </view>
+    <view class="english-stat-grid">
+      <view class="english-stat" wx:for="{{englishQuickStats}}" wx:key="key">
+        <text class="english-stat-value">{{item.value}}</text>
+        <text class="english-stat-label">{{item.label}}</text>
+      </view>
+    </view>
+    <text class="english-vocab-desc">基于 PEP 个人词库和真实听写记录，按错词优先、复测优先的节奏安排单词出现频率。</text>
+    <view class="weak-word-list" wx:if="{{englishVocabularyStats.weakWords.length > 0}}">
+      <text class="weak-word-label">高频错词</text>
+      <text class="weak-word-item" wx:for="{{englishVocabularyStats.weakWords}}" wx:key="wordId">{{item.word}}</text>
+    </view>
+  </view>
+
+  <view class="section" wx:if="{{subject !== 'english' && taskQueue.length > 0}}">
     <view class="section-heading">
       <view class="heading-icon">1</view>
       <text>待处理队列</text>
@@ -70,7 +88,7 @@
     </view>
   </view>
 
-  <view class="empty-queue" wx:if="{{taskQueue.length === 0}}">
+  <view class="empty-queue" wx:if="{{subject !== 'english' && taskQueue.length === 0}}">
     <view class="empty-icon">✓</view>
     <view class="empty-copy">
       <text class="empty-title">{{isFirstUse ? '还没有学科记录' : '暂时没有待处理卡点'}}</text>

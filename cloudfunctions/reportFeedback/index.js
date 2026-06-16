@@ -1,4 +1,9 @@
 const cloud = require('wx-server-sdk')
+const {
+  getLearningResourceAccess,
+  canReadLearning,
+  canOperateLearning
+} = require('../_shared/access')
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
@@ -28,51 +33,6 @@ function isMissingCollectionError(error) {
     || /collection not exists|Db or Table not exist|DATABASE_COLLECTION_NOT_EXIST|ResourceNotFound/i.test(text)
 }
 
-async function getStudent(studentId) {
-  if (!studentId) return null
-  const res = await db.collection('students').doc(studentId).get()
-  return res.data || null
-}
-
-async function getActiveMember(studentId, openId) {
-  if (!studentId || !openId) return null
-  const res = await db.collection('studentMembers').where({
-    studentId,
-    memberOpenId: openId,
-    status: 'active'
-  }).get()
-  return (res.data || [])[0] || null
-}
-
-async function getLearningResourceAccess(resource, openId) {
-  if (!resource) return { allowed: false, owner: false, role: '', student: null }
-  if (resource._openid && resource._openid === openId) {
-    const student = resource.studentId ? await getStudent(resource.studentId) : null
-    return { allowed: true, owner: true, role: 'owner', student }
-  }
-  const member = await getActiveMember(resource.studentId, openId)
-  if (member) {
-    const role = member.role || 'viewer'
-    const student = resource.studentId ? await getStudent(resource.studentId) : null
-    return {
-      allowed: true,
-      owner: role === 'owner',
-      role,
-      student,
-      member
-    }
-  }
-  return { allowed: false, owner: false, role: '', student: null }
-}
-
-function canReadLearning(access) {
-  return Boolean(access && access.allowed)
-}
-
-function canOperateLearning(access) {
-  return Boolean(access && access.allowed)
-}
-
 function publicFeedback(item) {
   return {
     _id: item._id,
@@ -98,7 +58,7 @@ async function getReport(reportId) {
 }
 
 async function assertReportAccess(report, openId, operation = 'read') {
-  const access = await getLearningResourceAccess(report, openId)
+  const access = await getLearningResourceAccess(db, report, openId)
   const allowed = operation === 'operate' ? canOperateLearning(access) : canReadLearning(access)
   if (!allowed) throw new Error('无权限访问该报告')
   return access

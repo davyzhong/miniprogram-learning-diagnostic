@@ -1,6 +1,6 @@
 # Learning Diagnostic MVP 产品设计文档（PRD）
 
-> 版本：v2.8 | 日期：2026-06-14 | 状态：MVP 编码完成，常规自动化测试 261/261 通过，JS 语法检查 86 文件通过，待真机验收
+> 版本：v2.9 | 日期：2026-06-15 | 状态：MVP 编码完成，常规自动化测试 334/334 通过，JS 语法检查 107 文件通过，待真机验收
 
 ---
 
@@ -558,7 +558,7 @@ cloudfunctions/
 
 | 能力 | 状态 | 备注 |
 |------|------|------|
-| 15 个页面 + 四件套文件 | ✅ | `project-integrity.test.js` 校验 |
+| 16 个页面 + 四件套文件 | ✅ | `project-integrity.test.js` 校验 |
 | 家庭工作台 + 单孩子学习档案 | ✅ | `index` 处理 0/1/多孩子分流，`student-profile` 承载单孩子完整档案 |
 | 家长成员管理 | ✅ | owner 可邀请/移除共同家长，viewer 除成员管理外可参与学习流程 |
 | 添加学生并同步创建三条学科档案 | ✅ | `cloud.createStudentWithProfiles()` |
@@ -578,11 +578,12 @@ cloudfunctions/
 | 试卷预览/打印/分享 | ✅ | `paper-preview.js` 支持 paperId 与 fileId 两种模式，并记录已下载状态 |
 | 学习记录时间线 + 原图预览 | ✅ | `upload-history.js` 按天聚合报告、试卷、验证上传和照片 |
 | 学习卡点中心 + 单卡点工作台 | ✅ | `bottleneck-center` / `bottleneck-detail` 基于共享 `BottleneckView` 展示卡点、证据链和验证入口 |
+| 英语个人词库 + 20 词语音听写 | ✅ | `englishVocabulary` + `english-practice`，只做单词掌握，AI 自动判定 correct/incorrect/unclear |
 | 学习卡点短名称展示 | ✅ | `utils/util.js` 将 LP 编号转为家长可读的短摘要，如“小数分数”“单位换算” |
 | Skill / CLI P0 | ✅ | `services/skills` 与 `cli/ldx.js` 封装诊断、报告、卡点、验证卷、反馈和时间线能力 |
 | 数据归属校验（openID）+ 参数白名单 | ✅ | 各云函数入口 |
-| 自动化测试覆盖（261 常规用例全绿） | ✅ | `npm test`；真实图片 E2E 脚本需通过 `npm run test:e2e-real-image` 单独运行 |
-| JS 语法检查 | ✅ | `npm run check`（86 个文件） |
+| 自动化测试覆盖（334 常规用例全绿） | ✅ | `npm test`；真实图片 E2E 脚本需通过 `npm run test:e2e-real-image` 单独运行 |
+| JS 语法检查 | ✅ | `npm run check`（107 个文件） |
 | 微信订阅消息推送 | ⚠️ | `sendNotification()` 仍为空实现，待申请模板 |
 | 上传与分析解耦 | ✅ | `uploadAndAnalyze` 不等待 `analyzePhotos` 完成 |
 | 默认试卷跨学生共享模板 | ⚠️ | 仅同学生复用 |

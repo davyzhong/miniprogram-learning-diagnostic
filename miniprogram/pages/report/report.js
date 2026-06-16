@@ -5,6 +5,33 @@ const { createAnalysisPoller } = require('../../utils/analysis-poller')
 const { buildReportView } = require('./report-presenter')
 const { getSubjectName } = require('../../utils/constants')
 
+function downloadCloudFile(fileID) {
+  return new Promise((resolve, reject) => {
+    const request = wx.cloud.downloadFile({
+      fileID,
+      success: resolve,
+      fail: reject
+    })
+    if (request && typeof request.then === 'function') {
+      request.then(resolve).catch(reject)
+    }
+  })
+}
+
+function openPdfDocument(filePath) {
+  return new Promise((resolve, reject) => {
+    const request = wx.openDocument({
+      filePath,
+      showMenu: true,
+      success: resolve,
+      fail: reject
+    })
+    if (request && typeof request.then === 'function') {
+      request.then(resolve).catch(reject)
+    }
+  })
+}
+
 Page({
   data: {
     reportId: '',
@@ -403,23 +430,13 @@ Page({
     wx.showLoading({ title: '生成 PDF...' })
 
     try {
-      var result = await cloud.callGenerateReportPDF({ reportId: this.data.reportId })
+      const result = await cloud.callGenerateReportPDF({ reportId: this.data.reportId })
 
       wx.hideLoading()
 
       if (result.pdfFileId) {
-        wx.cloud.downloadFile({
-          fileID: result.pdfFileId,
-          success: function(dlRes) {
-            wx.openDocument({
-              filePath: dlRes.tempFilePath,
-              showMenu: true,
-              success: function() {},
-              fail: function() { wx.showToast({ title: '打开失败', icon: 'none' }) }
-            })
-          },
-          fail: function() { wx.showToast({ title: '下载失败', icon: 'none' }) }
-        })
+        const dlRes = await downloadCloudFile(result.pdfFileId)
+        await openPdfDocument(dlRes.tempFilePath)
       }
     } catch (err) {
       console.error('生成 PDF 失败', err)

@@ -87,7 +87,7 @@ npm run release:check
 | `analyze-batch-result.test.js` | `analyzeBatch/result-normalizer.js` 字段截断、严重度归一 | 3 |
 | `analyze-photos-pipeline.test.js` | `analyzePhotos/pipeline.js` 分批、逐页完整性、合并与 imageFiles 构造 | 7 |
 | `bottleneck-view.test.js` | 共享学习卡点视图模型、排序和统计规则 | 3 |
-| `cloud-functions.test.js` | 8 个云函数的集成流程、权限校验、边界条件 | 28 |
+| `cloud-functions.test.js` | 10 个云函数的集成流程、权限校验、边界条件 | 28 |
 | `cli-p0.test.js` | P0 `ldx` CLI 命令合同，使用 fixture adapter 离线验证 | 4 |
 | `comparison.test.js` | 验证报告对比算法（improved/worsened/new/persisting） | 4 |
 | `contracts.test.js` | 跨模块契约、命名一致性、已修复缺陷回归保护 | 39 |

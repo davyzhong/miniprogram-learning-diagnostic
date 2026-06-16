@@ -158,7 +158,21 @@ async function sendNotification(studentId, reportId, subject) {
   return { studentId, reportId, subject };
 }
 
-async function loadReportContext(reportId) {
+async function getAnalysisTask(taskId) {
+  if (!taskId) return null;
+  const taskRes = await db.collection('analysisTasks').doc(taskId).get();
+  return taskRes.data || null;
+}
+
+function taskMatchesReportOwner(task, report, reportId) {
+  return Boolean(task
+    && report
+    && task.reportId === reportId
+    && task.status === 'processing'
+    && (!report._openid || task._openid === report._openid));
+}
+
+async function loadReportContext(reportId, continuationTaskId = '') {
   const reportRes = await db.collection('reports').doc(reportId).get();
   const report = reportRes.data;
   const currentOpenId = cloud.getWXContext().OPENID;
@@ -166,7 +180,16 @@ async function loadReportContext(reportId) {
   if (!report) {
     return { earlyResult: { success: false, error: '报告不存在' } };
   }
-  if (report._openid && currentOpenId && report._openid !== currentOpenId) {
+  if (report._openid && currentOpenId) {
+    if (report._openid !== currentOpenId) {
+      return { earlyResult: { success: false, error: '无权访问该报告' } };
+    }
+  } else if (continuationTaskId) {
+    const task = await getAnalysisTask(continuationTaskId);
+    if (!taskMatchesReportOwner(task, report, reportId)) {
+      return { earlyResult: { success: false, error: '无权访问该报告' } };
+    }
+  } else if (report._openid && !currentOpenId) {
     return { earlyResult: { success: false, error: '无权访问该报告' } };
   }
 
@@ -255,8 +278,7 @@ async function createAnalysisTask({ reportId, totalBatches, fileIDs, mode, subje
 
 async function loadAnalysisTask(taskId, reportId) {
   if (!taskId) return null;
-  const taskRes = await db.collection('analysisTasks').doc(taskId).get();
-  const task = taskRes.data;
+  const task = await getAnalysisTask(taskId);
   if (!task || task.reportId !== reportId || task.status !== 'processing') {
     throw new Error('分析任务不存在或已结束');
   }
@@ -311,6 +333,7 @@ async function runAnalyzeBatches({ batches, batchOffset = 0, totalBatches, subje
             subject,
             batchIndex: globalIndex,
             reportId,
+            taskId,
             verificationPlan: verificationPaper ? verificationPaper.plan : [],
           },
         });
@@ -339,7 +362,9 @@ async function runAnalyzeBatches({ batches, batchOffset = 0, totalBatches, subje
     }
     await db.collection('analysisTasks').doc(taskId).update({
       data: { completedBatches: _.inc(1) },
-    }).catch(() => {});
+    }).catch(err => {
+      console.error('更新分析进度失败：', err);
+    });
   }
 
   async function worker() {
@@ -504,7 +529,7 @@ exports.main = async (event) => {
   }
 
   try {
-    const context = await loadReportContext(reportId);
+    const context = await loadReportContext(reportId, continuationTaskId);
     if (context.earlyResult) return context.earlyResult;
 
     ({ report } = context);

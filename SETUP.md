@@ -56,6 +56,7 @@
    - `studentAccess`
    - `studentData`
    - `reportFeedback`
+   - `englishVocabulary`
 
 ### 注意：
 - `uploadAndAnalyze` 会在服务端创建报告并 fire-and-forget 启动 `analyzePhotos`，客户端提交成功后即可返回学科主页
@@ -79,6 +80,9 @@
 | `studentMembers` | 云函数访问 | 孩子档案的家长成员关系 |
 | `studentInvites` | 云函数访问 | 扫码加入邀请 |
 | `reportFeedback` | 云函数访问 | 家长对报告、卡点、错题、照片的纠错反馈 |
+| `englishImportBatches` | 云函数访问 | 英语词库候选导入批次 |
+| `studentEnglishWords` | 云函数访问 | 单个孩子的个人英语单词库 |
+| `englishPracticeSessions` | 云函数访问 | 英语 20 词听写会话与逐题记录 |
 
 ### 数据库安全规则（推荐配置）
 主学习数据集合（`students` / `subjectProfiles` / `reports` / `papers` / `analysisTasks`）建议保持创建者直接读写规则：
@@ -177,9 +181,9 @@ PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sen
 miniprogram-learning-diagnostic/
 ├── miniprogram/
 │   ├── app.js                 ✅
-│   ├── app.json               ✅（15 个页面路径）
+│   ├── app.json               ✅（16 个页面路径）
 │   ├── app.wxss               ✅
-│   └── pages/                ✅（15 个页面）
+│   └── pages/                ✅（16 个页面）
 │       ├── index/
 │       ├── student-profile/
 │       ├── add-student/
@@ -192,6 +196,7 @@ miniprogram-learning-diagnostic/
 │       ├── report/
 │       ├── bottleneck-center/
 │       ├── bottleneck-detail/
+│       ├── english-practice/
 │       ├── generate-verification/
 │       ├── default-paper/
 │       └── paper-preview/
@@ -204,15 +209,16 @@ miniprogram-learning-diagnostic/
 │   ├── getAnalysisProgress/  ✅
 │   ├── studentAccess/        ✅
 │   ├── studentData/          ✅
-│   └── reportFeedback/       ✅
+│   ├── reportFeedback/       ✅
+│   └── englishVocabulary/    ✅
 ├── services/skills/          ✅（P0 Skill 能力内核）
 ├── cli/ldx.js                ✅（本地 CLI 入口）
-├── tests/                    ✅（32 个常规测试文件 + 真实图片 E2E 脚本 + helpers，313 常规用例）
-├── scripts/check-js.js       ✅（102 文件语法检查）
+├── tests/                    ✅（常规测试文件 + 真实图片 E2E 脚本 + helpers，334 常规用例）
+├── scripts/check-js.js       ✅（107 文件语法检查）
 ├── project.config.json        ✅
 ├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / test:devtools-parent-timeline / test:real-data-smoke / check / verify / release:check）
 ├── PROJECT_PLAN.md          ✅
-├── PRD.md                   ✅（v2.8）
+├── PRD.md                   ✅（v2.9）
 ├── SETUP.md                ✅（本文件）
 └── docs/TEST_MATRIX.md     ✅
 ```
