@@ -183,7 +183,7 @@ miniprogram-learning-diagnostic/
 │   ├── app.js                 ✅
 │   ├── app.json               ✅（16 个页面路径）
 │   ├── app.wxss               ✅
-│   └── pages/                ✅（16 个页面）
+│   └── pages/                ✅（17 个页面）
 │       ├── index/
 │       ├── student-profile/
 │       ├── add-student/
@@ -213,8 +213,8 @@ miniprogram-learning-diagnostic/
 │   └── englishVocabulary/    ✅
 ├── services/skills/          ✅（P0 Skill 能力内核）
 ├── cli/ldx.js                ✅（本地 CLI 入口）
-├── tests/                    ✅（常规测试文件 + 真实图片 E2E 脚本 + helpers，334 常规用例）
-├── scripts/check-js.js       ✅（107 文件语法检查）
+├── tests/                    ✅（常规测试文件 + 真实图片 E2E 脚本 + helpers，353 常规用例）
+├── scripts/check-js.js       ✅（121 文件语法检查）
 ├── project.config.json        ✅
 ├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / test:devtools-parent-timeline / test:real-data-smoke / check / verify / release:check）
 ├── PROJECT_PLAN.md          ✅

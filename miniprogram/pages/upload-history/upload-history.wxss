@@ -621,3 +621,19 @@
   font-weight: 650;
   margin-top: 14rpx;
 }
+
+.load-more-btn {
+  background: #ffffff;
+  border: 1rpx solid #cfe0f5;
+  border-radius: 14rpx;
+  color: #2d6cdf;
+  font-size: 25rpx;
+  font-weight: 720;
+  line-height: 1.2;
+  margin: 24rpx 0 42rpx;
+  padding: 22rpx 24rpx;
+}
+
+.load-more-btn::after {
+  border: 0;
+}

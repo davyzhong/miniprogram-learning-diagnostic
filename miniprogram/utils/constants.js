@@ -18,6 +18,17 @@ const SUBJECT_COLORS = {
   english: { bg: '#9c4f24', fg: '#ffffff' }
 }
 
+const RELATION_OPTIONS = [
+  { key: 'father', name: '爸爸' },
+  { key: 'mother', name: '妈妈' },
+  { key: 'grandfather', name: '爷爷' },
+  { key: 'grandmother', name: '奶奶' },
+  { key: 'maternal_grandfather', name: '外公' },
+  { key: 'maternal_grandmother', name: '外婆' },
+  { key: 'teacher', name: '老师' },
+  { key: 'other', name: '其他' }
+]
+
 function getSubjectName(subject, fallback = '') {
   return SUBJECT_NAMES[subject] || fallback || ''
 }
@@ -35,6 +46,7 @@ module.exports = {
   SUBJECT_NAMES,
   SUBJECT_SHORT_NAMES,
   SUBJECT_COLORS,
+  RELATION_OPTIONS,
   getSubjectName,
   normalizeSubject,
   getSubjectColor,

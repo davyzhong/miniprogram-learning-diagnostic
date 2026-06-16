@@ -128,4 +128,13 @@
       </view>
     </view>
   </view>
+
+  <button
+    class="load-more-btn"
+    wx:if="{{!loading && hasMoreRecords}}"
+    bindtap="onLoadMoreRecords"
+    disabled="{{loadingMoreRecords}}"
+  >
+    {{loadingMoreRecords ? '加载中...' : '加载更多记录'}}
+  </button>
 </view>

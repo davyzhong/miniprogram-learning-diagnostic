@@ -1,6 +1,6 @@
 # Learning Diagnostic MVP 产品设计文档（PRD）
 
-> 版本：v2.9 | 日期：2026-06-15 | 状态：MVP 编码完成，常规自动化测试 334/334 通过，JS 语法检查 107 文件通过，待真机验收
+> 版本：v2.9 | 日期：2026-06-15 | 状态：MVP 编码完成，常规自动化测试 353/353 通过，JS 语法检查 121 文件通过，待真机验收
 
 ---
 
@@ -33,7 +33,7 @@
 
 ---
 
-## 3. 页面设计（共 15 页）
+## 3. 页面设计（共 17 页）
 
 ### Page 1：首页 / 家庭学习工作台
 
@@ -508,7 +508,7 @@ cloudfunctions/
 }
 ```
 
-共 15 个注册页面。`app.json` 中已按上述顺序注册。
+共 17 个注册页面。`app.json` 中已按上述顺序注册。
 
 ---
 
@@ -558,7 +558,7 @@ cloudfunctions/
 
 | 能力 | 状态 | 备注 |
 |------|------|------|
-| 16 个页面 + 四件套文件 | ✅ | `project-integrity.test.js` 校验 |
+| 17 个页面 + 四件套文件 | ✅ | `project-integrity.test.js` 校验 |
 | 家庭工作台 + 单孩子学习档案 | ✅ | `index` 处理 0/1/多孩子分流，`student-profile` 承载单孩子完整档案 |
 | 家长成员管理 | ✅ | owner 可邀请/移除共同家长，viewer 除成员管理外可参与学习流程 |
 | 添加学生并同步创建三条学科档案 | ✅ | `cloud.createStudentWithProfiles()` |
@@ -582,8 +582,8 @@ cloudfunctions/
 | 学习卡点短名称展示 | ✅ | `utils/util.js` 将 LP 编号转为家长可读的短摘要，如“小数分数”“单位换算” |
 | Skill / CLI P0 | ✅ | `services/skills` 与 `cli/ldx.js` 封装诊断、报告、卡点、验证卷、反馈和时间线能力 |
 | 数据归属校验（openID）+ 参数白名单 | ✅ | 各云函数入口 |
-| 自动化测试覆盖（334 常规用例全绿） | ✅ | `npm test`；真实图片 E2E 脚本需通过 `npm run test:e2e-real-image` 单独运行 |
-| JS 语法检查 | ✅ | `npm run check`（107 个文件） |
+| 自动化测试覆盖（353 常规用例全绿） | ✅ | `npm test`；真实图片 E2E 脚本需通过 `npm run test:e2e-real-image` 单独运行 |
+| JS 语法检查 | ✅ | `npm run check`（121 个文件） |
 | 微信订阅消息推送 | ⚠️ | `sendNotification()` 仍为空实现，待申请模板 |
 | 上传与分析解耦 | ✅ | `uploadAndAnalyze` 不等待 `analyzePhotos` 完成 |
 | 默认试卷跨学生共享模板 | ⚠️ | 仅同学生复用 |

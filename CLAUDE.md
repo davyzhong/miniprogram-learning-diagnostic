@@ -19,7 +19,7 @@ Node.js tasks run from the repo root:
 | Full test suite | `npm test` |
 | Tests with coverage | `npm run test:coverage` |
 | Run **one** test file | `node --test tests/<file>.test.js` |
-| JS syntax check (74 files) | `npm run check` |
+| JS syntax check (121 files) | `npm run check` |
 | Full verify (tests + syntax) | `npm run verify` |
 | Real-image e2e (not in `npm test`) | `npm run test:e2e-real-image` |
 
@@ -28,7 +28,7 @@ Node.js tasks run from the repo root:
 ## Architecture
 
 ```
-Mini Program (12 pages, WXML/WXSS/JS)
+Mini Program (16 pages, WXML/WXSS/JS)
     │  wx.cloud.callFunction()  /  direct wx.cloud.database() reads
     ▼
 CloudBase (serverless)
@@ -39,7 +39,9 @@ CloudBase (serverless)
     ├─ generatePaper      → AI (deepseek-v4-flash) generates questions → pdfkit renders A4 PDF
     ├─ generateReportPDF  → renders diagnosis report PDF, writes back reports.pdfFileId
     ├─ studentAccess      → family member invites + owner-only family management
-    └─ studentData        → access-aware reads of student/report/paper/timeline
+    ├─ studentData        → access-aware reads of student/report/paper/timeline
+    ├─ reportFeedback     → parent feedback on reports, bottlenecks, errors, photos
+    └─ englishVocabulary  → personal word library, familiarity/spelling practice, AI dictation
 ```
 
 ### Cross-cutting patterns (read multiple files before changing these)
@@ -55,7 +57,7 @@ CloudBase (serverless)
 
 ### Database collections
 
-`students`, `studentMembers` (owner/co-parent access), `studentInvites` (one-time join tokens), `subjectProfiles` (per-subject bottleneck tracking + analysis status), `reports` (diagnosis/verification, with `bottlenecks[]`, `errorDetails[]`, `pdfFileId`), `papers` (generated/default, with `paperKey` for default-paper caching), `analysisTasks` (async job progress). Full schema in `docs/DATA_DICTIONARY.md`.
+`students`, `studentMembers` (owner/co-parent access), `studentInvites` (one-time join tokens), `subjectProfiles` (per-subject bottleneck tracking + analysis status), `reports` (diagnosis/verification, with `bottlenecks[]`, `errorDetails[]`, `pdfFileId`), `papers` (generated/default, with `paperKey` for default-paper caching), `analysisTasks` (async job progress), `reportFeedback` (parent feedback), `englishImportBatches` (vocabulary import staging), `studentEnglishWords` (personal word library), `englishPracticeSessions` (practice/dictation sessions). Full schema in `docs/DATA_DICTIONARY.md`.
 
 ## Conventions
 
@@ -71,7 +73,7 @@ CloudBase (serverless)
 
 ## Reference docs
 
-- `PRD.md` — product requirements (v2.2)
+- `PRD.md` — product requirements (v2.9)
 - `PROJECT_PLAN.md` — architecture, data models, progress tracker
 - `SETUP.md` — deployment (env, DB setup, font upload)
 - `docs/ARCHITECTURE.md`, `docs/CLOUD_FUNCTIONS.md`, `docs/DATA_DICTIONARY.md`, `docs/TESTING.md`, `docs/TROUBLESHOOTING.md`, `docs/TEST_MATRIX.md`

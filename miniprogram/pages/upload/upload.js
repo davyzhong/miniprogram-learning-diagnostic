@@ -249,11 +249,19 @@ Page({
   onDeleteImage(e) {
     const idx = e.currentTarget.dataset.index
     const { images } = this.data
-    const updated = images.filter((_, index) => index !== idx)
-    this.setData({
-      images: updated,
-      canSubmit: updated.length > 0,
-      submitBtnText: formatChosenImagesCount(updated.length)
+    wx.showModal({
+      title: '移除照片',
+      content: '确定移除这张照片吗？',
+      confirmText: '移除',
+      success: res => {
+        if (!res.confirm) return
+        const updated = images.filter((_, index) => index !== idx)
+        this.setData({
+          images: updated,
+          canSubmit: updated.length > 0,
+          submitBtnText: formatChosenImagesCount(updated.length)
+        })
+      }
     })
   },
 
@@ -314,6 +322,7 @@ Page({
         paperId: paperId || ''
       })
 
+      this.invalidatePreviousSubjectHome()
       wx.showToast({ title: '已提交，AI 正在分析', icon: 'success', duration: 2000 })
       setTimeout(() => wx.navigateBack(), 1200)
     } catch (err) {
@@ -327,6 +336,19 @@ Page({
       this.setData({ uploading: false, images: errorImages, submitBtnText: '重试上传并分析' })
       console.error('上传或提交分析失败', err)
       wx.showToast({ title: err.message || '上传失败，请重试', icon: 'none' })
+    }
+  },
+
+  invalidatePreviousSubjectHome() {
+    if (typeof getCurrentPages !== 'function') return
+    const pages = getCurrentPages()
+    const previousPage = pages && pages[pages.length - 2]
+    if (previousPage && previousPage.route === 'pages/subject-home/subject-home') {
+      if (typeof previousPage.invalidateProfileCache === 'function') {
+        previousPage.invalidateProfileCache()
+      } else {
+        previousPage._profileCacheInvalidated = true
+      }
     }
   },
 

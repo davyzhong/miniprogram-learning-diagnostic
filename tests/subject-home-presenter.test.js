@@ -47,6 +47,91 @@ test('builds a compatible workbench from legacy profile fields', () => {
   assert.equal(view.taskQueue[0].evidenceText, '最近 1 道相关错题')
 })
 
+test('math workbench expands coarse bottlenecks into fine-grained candidate bottlenecks', () => {
+  const view = buildSubjectHomeView({
+    subject: 'math',
+    subjectName: '数学',
+    currentBottlenecks: [{
+      lpCode: 'LP-001',
+      lpName: '计算基础',
+      status: 'persisting',
+      errorCount: 178,
+      severity: 'high',
+      evidenceStrength: 'high',
+      nodeIds: ['MATH-NUM-DEC-MUL-POINT'],
+      recommendedResourceIds: ['RES-BILI-DEC-MUL-001'],
+      candidateBottlenecks: [
+        {
+          bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+          title: '小数乘法中小数位数累计规则不稳',
+          evidenceStrength: 'high',
+          microValidationRequired: true,
+          recommendedResourceIds: ['RES-KHAN-DEC-MUL-001']
+        },
+        {
+          bottleneckId: 'BN-DEC-DIV-POINT-MOVE',
+          title: '除数是小数的除法中，被除数小数点移动规则不熟练',
+          evidenceStrength: 'medium',
+          recommendedResourceIds: ['RES-BILI-DEC-DIV-001']
+        }
+      ]
+    }]
+  }, [], relative, { subject: 'math', subjectName: '数学' })
+
+  assert.deepEqual(view.taskQueue.map(item => item.displayName), [
+    '小数乘法中小数位数累计规则不稳',
+    '除数是小数的除法中，被除数小数点移动规则不熟练'
+  ])
+  assert.equal(view.taskQueue[0].fineBottleneck, true)
+  assert.equal(view.taskQueue[0].lpCode, 'LP-001')
+  assert.equal(view.taskQueue[0].bottleneckId, 'BN-DEC-MUL-POINT-COUNT')
+  assert.match(view.taskQueue[0].evidenceText, /高置信证据/)
+  assert.match(view.taskQueue[0].evidenceText, /归属计算基础/)
+  assert.match(view.taskQueue[0].evidenceText, /推荐资源 1 个/)
+  assert.equal(view.taskQueue[0].viewId, 'LP-001:BN-DEC-MUL-POINT-COUNT')
+  assert.equal(view.pendingCount, 0)
+  assert.equal(view.persistingCount, 2)
+})
+
+test('Chinese workbench prioritizes concrete review items over coarse bottlenecks', () => {
+  const view = buildSubjectHomeView({
+    subject: 'chinese',
+    subjectName: '语文',
+    chineseReviewItems: [
+      {
+        itemId: 'CHI-001',
+        itemType: 'character',
+        targetText: '莺',
+        expectedAnswer: '莺',
+        lastWrongAnswer: '鹰',
+        sourceContext: '草长莺飞二月天',
+        status: 'recurring',
+        evidenceCount: 2,
+        relatedLpCode: 'LP-101'
+      },
+      {
+        itemId: 'CHI-002',
+        itemType: 'poem',
+        targetText: '春风拂槛露华浓',
+        expectedAnswer: '春风拂槛露华浓',
+        status: 'mastered',
+        evidenceCount: 1
+      }
+    ],
+    currentBottlenecks: [
+      { lpCode: 'LP-101', lpName: '字词积累', status: 'needs_verification', errorCount: 1 }
+    ]
+  }, [], relative, { subject: 'chinese', subjectName: '语文' })
+
+  assert.equal(view.primaryTask.actionType, 'verification')
+  assert.equal(view.primaryTask.summary, '1 个具体错项等待复测，建议先生成语文错项复测卷。')
+  assert.equal(view.pendingTaskCount, 1)
+  assert.equal(view.hasChineseReviewQueue, true)
+  assert.equal(view.chineseReviewQueue[0].displayName, '莺')
+  assert.match(view.chineseReviewQueue[0].detailText, /上次写成：鹰/)
+  assert.match(view.chineseReviewQueue[0].detailText, /草长莺飞二月天/)
+})
+
 test('empty profile exposes a first-use workbench action', () => {
   const view = buildSubjectHomeView({}, [], relative, { subjectName: '数学' })
 
@@ -91,7 +176,8 @@ test('English workbench uses vocabulary summary as the primary learning asset', 
 
   assert.equal(view.subjectTitle, '英语工作台')
   assert.equal(view.primaryTask.actionType, 'englishPractice')
-  assert.equal(view.primaryTask.actionText, '开始单词熟悉度')
+  assert.equal(view.primaryTask.actionText, '开始今日练习')
+  assert.equal(view.primaryTask.recommendedMode, 'familiarity')
   assert.match(view.primaryTask.summary, /320 个个人词库单词/)
   assert.match(view.primaryTask.summary, /安排 20 个/)
   assert.equal(view.englishVocabularyStats.totalWords, 320)
@@ -99,8 +185,9 @@ test('English workbench uses vocabulary summary as the primary learning asset', 
   assert.equal(view.englishVocabularyStats.spellingNeedsPracticeCount, 22)
   assert.equal(view.englishVocabularyStats.overallMasteredCount, 70)
   assert.deepEqual(view.englishQuickStats.map(item => item.label), ['今日待练', '已熟悉', '拼写薄弱', '真正掌握'])
-  assert.ok(view.tools.some(item => item.key === 'englishPractice'))
   assert.ok(view.tools.some(item => item.key === 'englishDictation'))
+  assert.ok(view.tools.some(item => item.key === 'history'))
+  assert.ok(view.tools.every(item => item.key !== 'englishPractice'))
   assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
 })
 
@@ -123,7 +210,45 @@ test('English workbench keeps learning actions primary while empty vocabulary is
   assert.notEqual(view.primaryTask.actionType, 'importVocabulary')
   assert.equal(view.primaryTask.actionText, '查看学习记录')
   assert.match(view.primaryTask.summary, /系统会自动导入/)
-  assert.equal(view.tools.at(-1).key, 'importVocabulary')
   assert.ok(view.tools.some(item => item.key === 'englishPractice'))
   assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
+  assert.ok(view.tools.every(item => item.key !== 'importVocabulary'))
+})
+
+test('English workbench recommends paper dictation when spelling has more weak words', () => {
+  const view = buildSubjectHomeView({}, [], relative, {
+    subject: 'english',
+    subjectName: '英语',
+    englishVocabulary: {
+      summary: {
+        totalWords: 505,
+        familiarity: {
+          masteredCount: 220,
+          needsPracticeCount: 2,
+          reviewingCount: 8,
+          untestedCount: 80,
+          dueReviewCount: 1
+        },
+        spelling: {
+          masteredCount: 120,
+          needsPracticeCount: 35,
+          reviewingCount: 15,
+          untestedCount: 260,
+          dueReviewCount: 12
+        },
+        overall: {
+          masteredCount: 110,
+          partialCount: 260,
+          untestedCount: 135
+        }
+      }
+    }
+  })
+
+  assert.equal(view.primaryTask.actionType, 'englishDictation')
+  assert.equal(view.primaryTask.actionText, '开始今日练习')
+  assert.equal(view.primaryTask.recommendedMode, 'spelling')
+  assert.match(view.primaryTask.summary, /纸面听写/)
+  assert.ok(view.tools.some(item => item.key === 'englishPractice'))
+  assert.ok(view.tools.every(item => item.key !== 'englishDictation'))
 })
