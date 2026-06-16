@@ -154,6 +154,9 @@
           <text class="source-evidence-summary">{{item.summary}}</text>
           <text class="source-evidence-errors" wx:if="{{item.relatedErrorText}}">关联错题：{{item.relatedErrorText}}</text>
         </view>
+        <view class="source-evidence-more" wx:if="{{hasMoreSourceEvidence}}" catchtap="onExpandSourceEvidence">
+          展开剩余 {{hiddenSourceEvidenceCount}} 条来源摘要
+        </view>
       </view>
     </view>
 
@@ -169,6 +172,9 @@
           <view class="feedback-link error-feedback" catchtap="onOpenFeedback" data-target-type="errorDetail" data-target-id="{{item.feedbackTargetId}}" data-type="wrong_question">这道题识别错了</view>
         </view>
         <text class="expand-hint">{{item.expanded ? '收起' : '展开详情'}}</text>
+      </view>
+      <view class="error-detail-more" wx:if="{{hasMoreErrorDetails}}" catchtap="onExpandErrorDetails">
+        展开剩余 {{hiddenErrorDetailCount}} 道错题
       </view>
     </view>
 

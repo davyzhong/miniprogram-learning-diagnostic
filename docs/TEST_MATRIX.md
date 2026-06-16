@@ -2,7 +2,7 @@
 
 > 更新日期：2026-06-16
 > 范围：`PRD.md`、`PROJECT_PLAN.md` 中的 MVP P0 功能
-> 自动化结果：`npm test` → 389/389 通过；`npm run check` → 133 个 JS 文件通过；`npm run check:deployment` → 10/10 通过；微信开发者工具 CLI `preview` → 690.3 KB
+> 自动化结果：`npm test` → 392/392 通过；`npm run check` → 133 个 JS 文件通过；`npm run check:deployment` → 10/10 通过；微信开发者工具 CLI `preview` → 692.4 KB
 
 ## 1. 自动化验证命令
 
@@ -86,7 +86,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/generate-paper-pdf.test.js` | 可打印 PDF 中文字体、分页和答案页回归 | 5 |
 | `tests/index-presenter.test.js` | 孩子档案视图模型与家庭工作台卡片 | 9 |
 | `tests/learning-records.test.js` | 学习记录四级分类、试卷编号、卡点名称和英语 session 展示规则 | 18 |
-| `tests/page-flows.test.js` | 页面主流程、首页分流与错误恢复 | 74 |
+| `tests/page-flows.test.js` | 页面主流程、首页分流与错误恢复 | 75 |
 | `tests/paper-preview-presenter.test.js` | 试卷预览、任务包页进度和下载状态视图模型 | 7 |
 | `tests/parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
 | `tests/photo-dedup.test.js` | OCR 去重算法 | 3 |
@@ -94,7 +94,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/project-integrity.test.js` | 页面文件、事件绑定和品牌资产完整性 | 3 |
 | `tests/real-image-config.test.js` | 真实图片 E2E 配置解析 | 5 |
 | `tests/report-feedback.test.js` | 报告反馈云函数 | 3 |
-| `tests/report-presenter.test.js` | 报告视图预计算、质量标签和验证证据状态 | 18 |
+| `tests/report-presenter.test.js` | 报告视图预计算、质量标签和验证证据状态 | 19 |
 | `tests/report-quality.test.js` | 报告质量模型 | 4 |
 | `tests/skills-p0.test.js` | P0 Skill 能力内核 | 8 |
 | `tests/profile-summary.test.js` | 当前综合诊断状态规则 | 6 |
@@ -105,4 +105,4 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/verification-evidence.test.js` | 验证试卷证据完整性 | 5 |
 | `tests/verification-pack.test.js` | 验证任务包分页、页面编号和题目归属规划 | 4 |
 | `tests/util.test.js` | 工具函数 | 11 |
-| **合计** | | **389 常规用例** |
+| **合计** | | **392 常规用例** |

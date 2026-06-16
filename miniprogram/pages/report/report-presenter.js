@@ -7,6 +7,9 @@ const { buildLearningMapReportItems } = require('../../utils/math-learning-map')
 const { paperCodeOf } = require('../../utils/paper-display')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 
+const DEFAULT_SOURCE_EVIDENCE_LIMIT = 3
+const DEFAULT_ERROR_DETAIL_LIMIT = 20
+
 function pad2(value) {
   return String(value).padStart(2, '0')
 }
@@ -353,7 +356,21 @@ function buildSourceEvidenceItems(photos = [], errorDetails = []) {
   })
 }
 
-function buildReportView(report) {
+function normalizeSourceEvidenceLimit(limit) {
+  if (limit === Infinity) return Number.MAX_SAFE_INTEGER
+  const value = Number(limit)
+  if (!Number.isFinite(value)) return DEFAULT_SOURCE_EVIDENCE_LIMIT
+  return Math.max(0, Math.floor(value))
+}
+
+function normalizeErrorDetailLimit(limit) {
+  if (limit === Infinity) return Number.MAX_SAFE_INTEGER
+  const value = Number(limit)
+  if (!Number.isFinite(value)) return DEFAULT_ERROR_DETAIL_LIMIT
+  return Math.max(0, Math.floor(value))
+}
+
+function buildReportView(report, options = {}) {
   const isVerification = report.type === 'verification'
   const paperCodeText = paperCodeOf(report.linkedPaper || report.paper)
   const linkedPaper = report.linkedPaper || report.paper || {}
@@ -393,7 +410,7 @@ function buildReportView(report) {
     }
   })
   const learningMapItems = buildLearningMapReportItems(rawBottlenecks)
-  const errorDetailList = errorDetails.map((item, index) => {
+  const allErrorDetailList = errorDetails.map((item, index) => {
     const detail = item && typeof item === 'object' ? item : { questionContent: String(item || '') }
     const sourceIndex = sourceIndexOf(detail, sourcePhotos)
     return {
@@ -404,7 +421,13 @@ function buildReportView(report) {
       feedbackTargetId: detail.id || detail._id || `${index + 1}`
     }
   })
-  const sourceEvidenceItems = buildSourceEvidenceItems(sourcePhotos, errorDetails)
+  const errorDetailLimit = normalizeErrorDetailLimit(options.errorDetailLimit)
+  const errorDetailList = allErrorDetailList.slice(0, errorDetailLimit)
+  const hiddenErrorDetailCount = Math.max(0, allErrorDetailList.length - errorDetailList.length)
+  const allSourceEvidenceItems = buildSourceEvidenceItems(sourcePhotos, errorDetails)
+  const sourceEvidenceLimit = normalizeSourceEvidenceLimit(options.sourceEvidenceLimit)
+  const sourceEvidenceItems = allSourceEvidenceItems.slice(0, sourceEvidenceLimit)
+  const hiddenSourceEvidenceCount = Math.max(0, allSourceEvidenceItems.length - sourceEvidenceItems.length)
   const verificationEvidenceItems = (report.verificationEvidence || []).map(item => ({
     ...item,
     displayName: bottleneckLabelOf(item),
@@ -442,8 +465,10 @@ function buildReportView(report) {
     }),
     trendSummaryText: buildTrendSummary(bottlenecks),
     sourceImageCount: sourcePhotos.length,
-    hasSourceEvidence: sourceEvidenceItems.length > 0,
+    hasSourceEvidence: allSourceEvidenceItems.length > 0,
     sourceEvidenceItems,
+    hiddenSourceEvidenceCount,
+    hasMoreSourceEvidence: hiddenSourceEvidenceCount > 0,
     ...qualityView,
     metricActions: {
       errorsUrl: buildTraceableUrl({ type: 'report-detail', id: report._id }),
@@ -471,8 +496,10 @@ function buildReportView(report) {
     chineseErrorItems,
     hasLearningMap: learningMapItems.length > 0,
     learningMapItems,
-    hasErrorDetails: errorDetails.length > 0,
+    hasErrorDetails: allErrorDetailList.length > 0,
     errorDetailList,
+    hiddenErrorDetailCount,
+    hasMoreErrorDetails: hiddenErrorDetailCount > 0,
     hasVerificationEvidence: verificationEvidenceItems.length > 0,
     verificationEvidenceItems,
     improvedCount: isVerification
