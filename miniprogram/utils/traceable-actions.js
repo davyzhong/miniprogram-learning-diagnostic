@@ -41,6 +41,8 @@ function normalizeTraceableAction(action) {
     studentId: clean(action.studentId),
     subject: clean(action.subject),
     id: clean(action.id),
+    bottleneckId: clean(action.bottleneckId),
+    viewId: clean(action.viewId),
     filter: clean(action.filter),
     title: clean(action.title)
   }
@@ -103,6 +105,8 @@ function buildTraceableUrl(action) {
       studentId,
       subject,
       lpCode: id || normalized.lpCode,
+      bottleneckId: normalized.bottleneckId,
+      viewId: normalized.viewId,
       studentName
     })
   }

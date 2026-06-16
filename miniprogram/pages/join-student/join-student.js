@@ -1,15 +1,5 @@
 const cloud = require('../../utils/cloud')
-
-const RELATION_OPTIONS = [
-  { key: 'father', name: '爸爸' },
-  { key: 'mother', name: '妈妈' },
-  { key: 'grandfather', name: '爷爷' },
-  { key: 'grandmother', name: '奶奶' },
-  { key: 'maternal_grandfather', name: '外公' },
-  { key: 'maternal_grandmother', name: '外婆' },
-  { key: 'teacher', name: '老师' },
-  { key: 'other', name: '其他' }
-]
+const { RELATION_OPTIONS } = require('../../utils/constants')
 
 Page({
   data: {

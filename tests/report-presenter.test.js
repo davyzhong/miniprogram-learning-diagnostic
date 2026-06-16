@@ -37,6 +37,36 @@ test('diagnosis report zeroes improvement counters and shows next step when bott
   assert.equal(view.hasErrorDetails, false)
 })
 
+test('chinese diagnosis report exposes concrete error items as review targets', () => {
+  const view = buildReportView({
+    subject: 'chinese',
+    type: 'diagnosis',
+    chineseErrorItems: [
+      {
+        itemId: 'CHI-001',
+        itemType: 'character',
+        targetText: '莺',
+        expectedAnswer: '莺',
+        studentAnswer: '鹰',
+        sourceContext: '草长莺飞二月天',
+        mistakeType: '形近字混淆',
+        verificationMethods: ['dictation', 'context_fill'],
+        relatedLpCode: 'LP-101'
+      }
+    ],
+    bottlenecks: []
+  })
+
+  assert.equal(view.hasChineseErrorItems, true)
+  assert.equal(view.chineseErrorItemCount, 1)
+  assert.equal(view.chineseErrorItems[0].displayName, '莺')
+  assert.match(view.chineseErrorItems[0].answerText, /正确：莺/)
+  assert.match(view.chineseErrorItems[0].studentText, /上次写成：鹰/)
+  assert.match(view.chineseErrorItems[0].methodText, /听写/)
+  assert.equal(view.showNextStep, true)
+  assert.match(view.explanationEvidence, /1 个具体错项/)
+})
+
 test('empty bottleneck and detail lists render without NaN widths', () => {
   const view = buildReportView({ type: 'diagnosis' })
 
@@ -274,4 +304,147 @@ test('verification report exposes readable evidence status summaries', () => {
   assert.match(view.explanationUncertainty, /不会计入已改善/)
   assert.equal(view.explanationActionText, '继续练习或重新上传验证')
   assert.equal(view.explanationActionType, 'upload-verification')
+})
+
+test('diagnosis report exposes math learning map nodes, fine bottlenecks and resource plan', () => {
+  const view = buildReportView({
+    _id: 'report-math-v2',
+    studentId: 'student-1',
+    studentName: '钟青羽',
+    subject: 'math',
+    type: 'diagnosis',
+    bottlenecks: [
+      {
+        lpCode: 'LP-FD',
+        lpName: '分数除法',
+        errorCount: 2,
+        status: 'found',
+        nodeIds: ['MATH-NUM-FRACTION-DIV-RECIPROCAL'],
+        candidateBottlenecks: [
+          {
+            bottleneckId: 'BN-FRACTION-DIV-RECIPROCAL-MISSING',
+            title: '分数除法没有稳定转化为乘倒数'
+          }
+        ],
+        recommendedResourceIds: [
+          'RES-YT-FRACTION-DIV-001',
+          'RES-BILI-FRACTION-DIV-001'
+        ],
+        nextActionText: '先看高质量锚点校准概念，再用国内资源复述。'
+      }
+    ]
+  })
+
+  assert.equal(view.hasLearningMap, true)
+  assert.equal(view.learningMapItems.length, 1)
+  assert.equal(view.learningMapItems[0].nodeText, '分数除法与倒数')
+  assert.match(view.learningMapItems[0].bottleneckText, /除以分数未稳定转换为乘倒数/)
+  assert.equal(view.learningMapItems[0].nextActionText, '先看高质量锚点校准概念，再用国内资源复述。')
+  assert.ok(view.learningMapItems[0].resources.some(item => item.role === '高质量锚点'))
+  assert.ok(view.learningMapItems[0].resources.some(item => item.role === '国内补充'))
+  assert.match(view.learningMapItems[0].resourceSummary, /高质量锚点：YouTube/)
+  assert.match(view.learningMapItems[0].resourceSummary, /国内补充：B站/)
+})
+
+test('math learning map hides raw node ids and exposes actionable resource links', () => {
+  const view = buildReportView({
+    _id: 'report-math-readable-map',
+    studentId: 'student-1',
+    studentName: '钟青羽',
+    subject: 'math',
+    type: 'diagnosis',
+    bottlenecks: [
+      {
+        lpCode: 'LP-001',
+        lpName: '计算基础',
+        errorCount: 5,
+        status: 'found',
+        nodeIds: [
+          'MATH-NUM-DEC-DIV-POINT',
+          'MATH-NUM-FRACTION-ADD-SUB',
+          'MATH-NUM-DEC-DIV-QUOTIENT',
+          'MATH-NUM-FRACTION-ADD-UNLIKE'
+        ],
+        candidateBottlenecks: [
+          {
+            bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+            title: '小数乘法中小数位数累计规则不稳'
+          }
+        ],
+        recommendedResourceIds: [
+          'RES-KHAN-DEC-MUL-001',
+          'RES-BILI-DEC-MUL-001',
+          'RES-BILI-UNIT-CONVERT-001'
+        ]
+      }
+    ]
+  })
+
+  const item = view.learningMapItems[0]
+  assert.doesNotMatch(item.nodeText, /MATH-/)
+  assert.doesNotMatch(item.nodeDetailText, /MATH-/)
+  assert.match(item.nodeText, /小数除法中的小数点移动/)
+  assert.match(item.nodeDetailText, /异分母分数加减法/)
+
+  const khan = item.resources.find(resource => resource.resourceId === 'RES-KHAN-DEC-MUL-001')
+  assert.ok(khan)
+  assert.equal(khan.displayTitle, '小数乘法示例：怎样确定积的小数点')
+  assert.equal(khan.typeLabel, '视频')
+  assert.equal(khan.actionText, '复制视频链接')
+  assert.match(khan.url, /^https?:\/\//)
+
+  const unitSearch = item.resources.find(resource => resource.resourceId === 'RES-BILI-UNIT-CONVERT-001')
+  assert.ok(unitSearch)
+  assert.equal(unitSearch.displayTitle, '小学单位换算：厘米、分米、米资源搜索')
+  assert.equal(unitSearch.typeLabel, '搜索入口')
+  assert.doesNotMatch(unitSearch.displayTitle, /候选|cm dm m/i)
+})
+
+test('math diagnosis report expands visible bottleneck list to fine-grained candidates', () => {
+  const view = buildReportView({
+    _id: 'report-math-full',
+    studentId: 'student-1',
+    studentName: '钟青羽',
+    subject: 'math',
+    type: 'diagnosis',
+    summary: '共发现 12 道错题，主要卡点：计算基础',
+    totalErrors: 12,
+    bottlenecks: [
+      {
+        lpCode: 'LP-001',
+        lpName: '计算错误（加减乘除）',
+        errorCount: 8,
+        status: 'found',
+        candidateBottlenecks: [
+          {
+            bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+            title: '小数乘法中小数位数累计规则不稳',
+            evidenceStrength: 'high',
+            microValidationRequired: true,
+            recommendedResourceIds: ['RES-BILI-DEC-MUL-001']
+          },
+          {
+            bottleneckId: 'BN-FRACTION-DIV-RECIPROCAL',
+            title: '分数除法未正确转化为乘倒数',
+            evidenceStrength: 'medium',
+            recommendedResourceIds: ['RES-YT-FRACTION-DIV-001', 'RES-BILI-FRACTION-DIV-001']
+          }
+        ]
+      }
+    ]
+  })
+
+  assert.equal(view.bottleneckCount, 2)
+  assert.match(view.headline, /发现 2 个细分学习卡点/)
+  assert.match(view.reportSummaryText, /细颗粒度卡点展开/)
+  assert.deepEqual(view.bottleneckList.map(item => item.displayName), [
+    '小数乘法中小数位数累计规则不稳',
+    '分数除法未正确转化为乘倒数'
+  ])
+  assert.equal(view.bottleneckList[0].fineBottleneck, true)
+  assert.match(view.bottleneckList[0].metaText, /归属计算基础/)
+  assert.match(view.bottleneckList[0].metaText, /推荐资源 1 个/)
+  assert.match(view.bottleneckList[0].detailUrl, /bottleneckId=BN-DEC-MUL-POINT-COUNT/)
+  assert.doesNotMatch(view.bottleneckList[0].displayName, /^计算基础$/)
+  assert.match(view.explanationEvidence, /2 个学习卡点/)
 })

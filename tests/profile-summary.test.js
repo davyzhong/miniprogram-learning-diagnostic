@@ -122,3 +122,104 @@ test('effective report requires a usable discovery or explicit verification evid
     verificationEvidence: [{ lpCode: 'LP-001', complete: true, allCorrect: true }]
   }), true)
 })
+
+test('chinese diagnosis tracks concrete review items separately from coarse bottlenecks', () => {
+  const result = buildProfileSummary({
+    subject: 'chinese',
+    currentBottlenecks: [],
+    chineseReviewItems: []
+  }, {
+    _id: 'report-chinese-1',
+    subject: 'chinese',
+    type: 'diagnosis',
+    bottlenecks: [{ lpCode: 'LP-101', lpName: '识字词语', severity: 'high', errorCount: 1 }],
+    chineseErrorItems: [{
+      itemId: 'CHI-WORD-BIANLUN',
+      itemType: 'word',
+      targetText: '辩论',
+      expectedAnswer: '辩论',
+      studentAnswer: '辨论',
+      sourceContext: '看拼音写词语：biàn lùn',
+      mistakeType: '形近字混淆',
+      verificationMethods: ['pinyin_to_word', 'dictation'],
+      relatedLpCode: 'LP-101'
+    }]
+  }, NOW)
+
+  assert.equal(result.currentBottlenecks[0].lpCode, 'LP-101')
+  assert.deepEqual(result.chineseReviewItems.map(item => ({
+    itemId: item.itemId,
+    itemType: item.itemType,
+    targetText: item.targetText,
+    expectedAnswer: item.expectedAnswer,
+    lastWrongAnswer: item.lastWrongAnswer,
+    status: item.status,
+    evidenceCount: item.evidenceCount,
+    reviewPassCount: item.reviewPassCount,
+    reviewFailCount: item.reviewFailCount,
+    intervalLevel: item.intervalLevel,
+    relatedLpCode: item.relatedLpCode,
+    sourceReportId: item.sourceReportId
+  })), [{
+    itemId: 'CHI-WORD-BIANLUN',
+    itemType: 'word',
+    targetText: '辩论',
+    expectedAnswer: '辩论',
+    lastWrongAnswer: '辨论',
+    status: 'needs_review',
+    evidenceCount: 1,
+    reviewPassCount: 0,
+    reviewFailCount: 0,
+    intervalLevel: 0,
+    relatedLpCode: 'LP-101',
+    sourceReportId: 'report-chinese-1'
+  }])
+})
+
+test('chinese verification evidence updates the concrete review item status', () => {
+  const result = buildProfileSummary({
+    subject: 'chinese',
+    currentBottlenecks: [{
+      lpCode: 'LP-101',
+      lpName: '识字词语',
+      status: 'needs_verification'
+    }],
+    chineseReviewItems: [{
+      itemId: 'CHI-WORD-BIANLUN',
+      itemType: 'word',
+      targetText: '辩论',
+      expectedAnswer: '辩论',
+      lastWrongAnswer: '辨论',
+      status: 'needs_review',
+      evidenceCount: 1,
+      reviewPassCount: 0,
+      reviewFailCount: 0,
+      intervalLevel: 0,
+      relatedLpCode: 'LP-101'
+    }]
+  }, {
+    _id: 'report-chinese-verification',
+    subject: 'chinese',
+    type: 'verification',
+    bottlenecks: [],
+    verificationTargets: ['LP-101'],
+    verificationEvidence: [{
+      lpCode: 'LP-101',
+      complete: true,
+      allCorrect: true
+    }],
+    chineseReviewEvidence: [{
+      itemId: 'CHI-WORD-BIANLUN',
+      targetText: '辩论',
+      evidenceStatus: 'passed',
+      complete: true,
+      allCorrect: true
+    }]
+  }, NOW)
+
+  assert.equal(result.chineseReviewItems[0].status, 'reviewing')
+  assert.equal(result.chineseReviewItems[0].reviewPassCount, 1)
+  assert.equal(result.chineseReviewItems[0].reviewFailCount, 0)
+  assert.equal(result.chineseReviewItems[0].intervalLevel, 1)
+  assert.equal(result.chineseReviewItems[0].sourceReportId, 'report-chinese-verification')
+})

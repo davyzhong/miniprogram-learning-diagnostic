@@ -21,6 +21,10 @@ const EMPTY_CLEANUP = {
   desc: ''
 }
 
+const INITIAL_TEMP_URL_LIMIT = 12
+const INITIAL_TIMELINE_LIMIT = 20
+const TIMELINE_LIMIT_STEP = 20
+
 async function previewStaleRecordsIfPossible(studentId, subject) {
   if (!studentId || typeof cloud.cleanupStaleLearningRecords !== 'function') return
   try {
@@ -47,6 +51,9 @@ Page({
     summaryCards: [],
     cleanup: EMPTY_CLEANUP,
     cleaningStaleRecords: false,
+    timelineLimit: INITIAL_TIMELINE_LIMIT,
+    hasMoreRecords: false,
+    loadingMoreRecords: false,
     permissions: {},
     ...GLOBAL_EMPTY_STATE,
     loading: true,
@@ -61,6 +68,7 @@ Page({
       studentId: options.studentId || '',
       subject,
       activeSubject: normalizeSubject(subject),
+      timelineLimit: INITIAL_TIMELINE_LIMIT,
       subjectName,
       studentName,
       titleText: buildTitleText(studentName)
@@ -69,21 +77,41 @@ Page({
     this.loadHistory()
   },
 
-  async loadHistory() {
-    this.setData({ loading: true })
+  updateCleanupPreview(cleanupPreview, permissions = {}) {
+    if (!cleanupPreview) return
+    const nextPermissions = cleanupPreview.permissions || permissions || this.data.permissions || {}
+    this.setData({
+      permissions: nextPermissions,
+      ...buildHistoryState(this.data.allEvents || [], this.data.activeSubject, this.data.allStatusItems || [], {
+        cleanupPreview,
+        permissions: nextPermissions
+      })
+    })
+  },
+
+  previewCleanupAfterFirstPaint(activeSubject, permissions) {
+    previewStaleRecordsIfPossible(this.data.studentId, activeSubject)
+      .then(cleanupPreview => this.updateCleanupPreview(cleanupPreview, permissions))
+      .catch(() => {})
+  },
+
+  async loadHistory(options = {}) {
+    if (!options.keepVisible) {
+      this.setData({ loading: true })
+    }
     try {
       const activeSubject = normalizeSubject(this.data.activeSubject || this.data.subject || '')
       const fallbackSubjectName = this.data.subjectName || subjectNameOf(activeSubject)
       const titleText = buildTitleText(this.data.studentName)
+      const timelineLimit = Math.max(INITIAL_TIMELINE_LIMIT, Number(this.data.timelineLimit) || INITIAL_TIMELINE_LIMIT)
       let reports = []
       let papers = []
       let englishSessions = []
       let permissions = {}
-      let cleanupPreview = null
 
       try {
         if (typeof cloud.getLearningTimeline === 'function') {
-          const timeline = await cloud.getLearningTimeline({ studentId: this.data.studentId })
+          const timeline = await cloud.getLearningTimeline({ studentId: this.data.studentId, limit: timelineLimit })
           reports = timeline.reports || []
           papers = timeline.papers || []
           englishSessions = timeline.englishSessions || []
@@ -93,11 +121,8 @@ Page({
         console.warn('共享学习记录不可用，回退到旧记录读取', error && error.message ? error.message : error)
       }
 
-      cleanupPreview = await previewStaleRecordsIfPossible(this.data.studentId, activeSubject)
-      if (cleanupPreview && cleanupPreview.permissions) permissions = cleanupPreview.permissions
-
       if (!reports.length && !papers.length && !englishSessions.length) {
-        reports = await cloud.getReports(this.data.studentId, undefined, 50)
+        reports = await cloud.getReports(this.data.studentId, undefined, timelineLimit)
         papers = typeof cloud.getPapers === 'function'
           ? await cloud.getPapers({ studentId: this.data.studentId })
           : []
@@ -107,12 +132,13 @@ Page({
       let tempFiles = []
       if (fileIDs.length) {
         try {
-          tempFiles = await cloud.getTempFileURLs(fileIDs)
+          tempFiles = await cloud.getTempFileURLs(fileIDs.slice(0, INITIAL_TEMP_URL_LIMIT))
         } catch (error) {
           console.warn('学习记录图片临时链接不可用，继续展示文字记录', error && error.message ? error.message : error)
         }
       }
       const urlByFileID = new Map(tempFiles.map(item => [item.fileID, item.tempFileURL || '']))
+      this._tempUrlByFileID = urlByFileID
       const { events, statusItems } = buildTimelineEvents(
         reports,
         papers,
@@ -125,9 +151,14 @@ Page({
       this.setData({
         titleText,
         permissions,
-        ...buildHistoryState(events, activeSubject, statusItems, { cleanupPreview, permissions }),
+        timelineLimit,
+        hasMoreRecords: reports.length >= timelineLimit || papers.length >= timelineLimit || englishSessions.length >= timelineLimit,
+        ...buildHistoryState(events, activeSubject, statusItems, { cleanupPreview: null, permissions }),
         loading: false
       })
+      if (!options.skipCleanupPreview) {
+        this.previewCleanupAfterFirstPaint(activeSubject, permissions)
+      }
     } catch (err) {
       console.error('加载学习记录失败', err)
       this.setData({
@@ -135,6 +166,19 @@ Page({
         loading: false
       })
       wx.showToast({ title: '学习记录加载失败', icon: 'none' })
+    }
+  },
+
+  async onLoadMoreRecords() {
+    if (this.data.loading || this.data.loadingMoreRecords || !this.data.hasMoreRecords) return
+    this.setData({
+      loadingMoreRecords: true,
+      timelineLimit: (Number(this.data.timelineLimit) || INITIAL_TIMELINE_LIMIT) + TIMELINE_LIMIT_STEP
+    })
+    try {
+      await this.loadHistory({ keepVisible: true, skipCleanupPreview: true })
+    } finally {
+      this.setData({ loadingMoreRecords: false })
     }
   },
 
@@ -186,28 +230,58 @@ Page({
     })
   },
 
-  onPreviewPhoto(e) {
-    const { event, photo } = photoFromDataset(this.data.days, e.currentTarget.dataset)
-    if (!photo || !photo.tempFileURL) {
+  async resolveTempFileURL(fileID) {
+    if (!fileID) return ''
+    this._tempUrlByFileID = this._tempUrlByFileID || new Map()
+    if (this._tempUrlByFileID.has(fileID)) {
+      return this._tempUrlByFileID.get(fileID) || ''
+    }
+    if (typeof cloud.getTempFileURLs !== 'function') return ''
+    try {
+      const files = await cloud.getTempFileURLs([fileID])
+      const item = (files || []).find(file => file.fileID === fileID) || {}
+      const tempFileURL = item.tempFileURL || ''
+      this._tempUrlByFileID.set(fileID, tempFileURL)
+      return tempFileURL
+    } catch (error) {
+      console.warn('学习记录图片临时链接懒加载失败', error && error.message ? error.message : error)
+      return ''
+    }
+  },
+
+  async previewTimelineImage(target, list = []) {
+    const tempFileURL = target.tempFileURL || await this.resolveTempFileURL(target.fileID)
+    if (!tempFileURL) {
       wx.showToast({ title: '原图暂时无法预览', icon: 'none' })
       return
     }
+    const urls = []
+    for (const item of list) {
+      const url = item.tempFileURL || (item.fileID === target.fileID ? tempFileURL : '')
+      if (url) urls.push(url)
+    }
     wx.previewImage({
-      current: photo.tempFileURL,
-      urls: (event.photos || []).map(item => item.tempFileURL).filter(Boolean)
+      current: tempFileURL,
+      urls: urls.length ? urls : [tempFileURL]
     })
+  },
+
+  onPreviewPhoto(e) {
+    const { event, photo } = photoFromDataset(this.data.days, e.currentTarget.dataset)
+    if (!photo) {
+      wx.showToast({ title: '原图暂时无法预览', icon: 'none' })
+      return
+    }
+    return this.previewTimelineImage(photo, event.photos || [])
   },
 
   onPreviewFoldedEvidence(e) {
     const { event, evidence } = evidenceFromDataset(this.data.days, e.currentTarget.dataset)
-    if (!evidence || !evidence.tempFileURL) {
+    if (!evidence) {
       wx.showToast({ title: '原图暂时无法预览', icon: 'none' })
       return
     }
-    wx.previewImage({
-      current: evidence.tempFileURL,
-      urls: (event.foldedEvidence || []).map(item => item.tempFileURL).filter(Boolean)
-    })
+    return this.previewTimelineImage(evidence, event.foldedEvidence || [])
   },
 
   onStatusTap(e) {

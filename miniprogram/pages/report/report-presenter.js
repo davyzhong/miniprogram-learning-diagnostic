@@ -1,4 +1,9 @@
 const { bottleneckLabelOf } = require('../../utils/learning-records')
+const {
+  buildBottleneckView,
+  expandFineBottleneckItems
+} = require('../../utils/bottleneck-view')
+const { buildLearningMapReportItems } = require('../../utils/math-learning-map')
 const { paperCodeOf } = require('../../utils/paper-display')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 
@@ -79,6 +84,73 @@ function joinParts(parts = []) {
   return parts.filter(Boolean).join('、')
 }
 
+const CHINESE_ITEM_TYPE_LABELS = {
+  character: '汉字',
+  word: '词语',
+  pinyin: '拼音',
+  poem: '古诗文',
+  idiom: '成语',
+  daily_accumulation: '日积月累',
+  reading_skill: '阅读能力',
+  writing_skill: '表达能力'
+}
+
+const CHINESE_METHOD_LABELS = {
+  dictation: '听写',
+  context_fill: '语境填空',
+  pinyin_write: '看拼音写词语',
+  poem_fill: '古诗文补写',
+  sentence_rewrite: '句式改写',
+  meaning_choice: '含义辨析',
+  error_correction: '错字辨析'
+}
+
+function cleanText(value) {
+  return String(value || '').trim()
+}
+
+function chineseItemTitleOf(item = {}) {
+  return cleanText(item.targetText)
+    || cleanText(item.expectedAnswer)
+    || cleanText(item.sourceContext)
+    || '待复测错项'
+}
+
+function chineseMethodTextOf(methods = []) {
+  const labels = (Array.isArray(methods) ? methods : [])
+    .map(method => CHINESE_METHOD_LABELS[method] || cleanText(method))
+    .filter(Boolean)
+  return labels.length > 0 ? `建议复测：${labels.join('、')}` : '建议复测：听写、语境填空'
+}
+
+function buildChineseErrorItemViews(report = {}) {
+  if (report.subject !== 'chinese') return []
+  return (report.chineseErrorItems || [])
+    .map((item, index) => {
+      const displayName = chineseItemTitleOf(item)
+      const expectedAnswer = cleanText(item.expectedAnswer)
+      const studentAnswer = cleanText(item.studentAnswer || item.lastWrongAnswer)
+      const sourceContext = cleanText(item.sourceContext)
+      const mistakeType = cleanText(item.mistakeType)
+      return {
+        ...item,
+        viewId: item.itemId || `chinese-error-${index + 1}`,
+        displayIndex: `${index + 1}.`,
+        displayName,
+        typeText: CHINESE_ITEM_TYPE_LABELS[item.itemType] || cleanText(item.itemType) || '语文错项',
+        answerText: expectedAnswer ? `正确：${expectedAnswer}` : '',
+        studentText: studentAnswer ? `上次写成：${studentAnswer}` : '',
+        sourceText: sourceContext ? `原文/语境：${sourceContext}` : '',
+        mistakeText: mistakeType ? `错误类型：${mistakeType}` : '',
+        methodText: chineseMethodTextOf(item.verificationMethods),
+        relatedText: item.relatedLpCode ? `归属卡点：${item.relatedLpCode}` : '',
+        statusText: '待复测',
+        statusClass: 'pending'
+      }
+    })
+    .filter(item => item.displayName)
+}
+
 function buildQualityUncertainty(qualityView = {}) {
   if (!qualityView.hasQuality) return ''
   if (qualityView.qualityClass === 'usable') return ''
@@ -88,13 +160,15 @@ function buildQualityUncertainty(qualityView = {}) {
 }
 
 function buildDiagnosisExplanation(report, context = {}) {
-  const { headline, sourceImageCount, bottleneckCount, qualityView } = context
+  const { headline, sourceImageCount, bottleneckCount, chineseErrorItemCount, qualityView } = context
   const evidenceParts = [
     sourceImageCount ? `${sourceImageCount} 张试卷图片` : '',
     report.totalErrors ? `${report.totalErrors} 道相关错题` : '',
+    report.subject === 'chinese' && chineseErrorItemCount ? `${chineseErrorItemCount} 个具体错项` : '',
     bottleneckCount ? `${bottleneckCount} 个学习卡点` : ''
   ]
   const qualityUncertainty = buildQualityUncertainty(qualityView)
+  const hasChineseErrorItems = report.subject === 'chinese' && chineseErrorItemCount > 0
   return {
     explanationTitle: '给家长的结论',
     explanationConclusion: headline,
@@ -103,10 +177,12 @@ function buildDiagnosisExplanation(report, context = {}) {
       : '本次可用证据较少，建议继续上传清晰试卷后再判断。',
     explanationUncertainty: qualityUncertainty || (bottleneckCount > 0
       ? '这些学习卡点还需要通过验证试卷或后续作答继续确认。'
-      : '暂未发现明确学习卡点，建议继续积累样本。'),
-    explanationActionText: bottleneckCount > 0 ? '生成验证试卷' : '继续拍照诊断',
-    explanationActionType: bottleneckCount > 0 ? 'generate-verification' : 'upload-diagnosis',
-    explanationActionUrl: bottleneckCount > 0
+      : (hasChineseErrorItems
+        ? '语文记忆型错项已单独列出，验证卷会优先复测这些字词、诗句或积累项。'
+        : '暂未发现明确学习卡点，建议继续积累样本。')),
+    explanationActionText: bottleneckCount > 0 || hasChineseErrorItems ? '生成验证试卷' : '继续拍照诊断',
+    explanationActionType: bottleneckCount > 0 || hasChineseErrorItems ? 'generate-verification' : 'upload-diagnosis',
+    explanationActionUrl: bottleneckCount > 0 || hasChineseErrorItems
       ? buildTraceableUrl({
         type: 'generate-verification',
         studentId: report.studentId,
@@ -183,6 +259,49 @@ function buildReportExplanation(report, context = {}) {
   return buildDiagnosisExplanation(report, context)
 }
 
+function shouldUseFineBottlenecks(report = {}) {
+  return report.subject === 'math'
+    && report.type !== 'verification'
+    && Array.isArray(report.bottlenecks)
+    && report.bottlenecks.some(item => (
+      Array.isArray(item.candidateBottlenecks) && item.candidateBottlenecks.length > 0
+    ))
+}
+
+function buildReportBottleneckViews(report = {}) {
+  const raw = (report.bottlenecks || []).map(item => ({
+    ...item,
+    subject: item.subject || report.subject,
+    subjectName: item.subjectName || report.subjectName
+  }))
+  const options = {
+    subject: report.subject,
+    subjectName: report.subjectName,
+    expandCandidates: shouldUseFineBottlenecks(report)
+  }
+  return expandFineBottleneckItems(raw, options)
+    .map(item => buildBottleneckView(item, options))
+}
+
+function buildFineReportHeadline(report = {}, bottleneckList = [], fallback = '') {
+  if (!shouldUseFineBottlenecks(report) || bottleneckList.length === 0) return fallback
+  const topNames = bottleneckList
+    .map(item => item.displayName)
+    .filter(Boolean)
+    .slice(0, 3)
+    .join('、')
+  return topNames
+    ? `发现 ${bottleneckList.length} 个细分学习卡点，优先关注：${topNames}`
+    : `发现 ${bottleneckList.length} 个细分学习卡点`
+}
+
+function buildReportSummaryText(report = {}, bottleneckList = []) {
+  if (shouldUseFineBottlenecks(report) && bottleneckList.length > 0) {
+    return '本页已按细颗粒度卡点展开；粗类只作为归属维度，用于理解这些卡点属于哪一类能力。'
+  }
+  return report.summary || ''
+}
+
 function reportImageFiles(report = {}) {
   if (Array.isArray(report.imageFiles) && report.imageFiles.length > 0) {
     return report.imageFiles
@@ -238,9 +357,11 @@ function buildReportView(report) {
   const isVerification = report.type === 'verification'
   const paperCodeText = paperCodeOf(report.linkedPaper || report.paper)
   const linkedPaper = report.linkedPaper || report.paper || {}
-  const bottlenecks = report.bottlenecks || []
+  const rawBottlenecks = report.bottlenecks || []
+  const bottlenecks = buildReportBottleneckViews(report)
   const errorDetails = report.errorDetails || []
   const sourcePhotos = reportImageFiles(report)
+  const chineseErrorItems = buildChineseErrorItemViews(report)
   const maxErrorCount = bottlenecks.length > 0
     ? Math.max(...bottlenecks.map(item => item.errorCount || 0), 1)
     : 1
@@ -256,17 +377,22 @@ function buildReportView(report) {
       ...item,
       ...status,
       displayName,
-      metaText: `${item.errorCount || 0} 道相关错题 · ${displayName}`,
+      metaText: item.fineBottleneck && item.evidenceText
+        ? item.evidenceText
+        : `${item.errorCount || 0} 道相关错题 · ${displayName}`,
       barWidth: Math.round(((item.errorCount || 0) / maxErrorCount) * 100),
       detailUrl: buildTraceableUrl({
         type: 'bottleneck-detail',
         studentId: report.studentId,
         studentName: report.studentName,
         subject: report.subject,
-        id: item.lpCode
+        id: item.lpCode,
+        bottleneckId: item.bottleneckId,
+        viewId: item.viewId
       })
     }
   })
+  const learningMapItems = buildLearningMapReportItems(rawBottlenecks)
   const errorDetailList = errorDetails.map((item, index) => {
     const detail = item && typeof item === 'object' ? item : { questionContent: String(item || '') }
     const sourceIndex = sourceIndexOf(detail, sourcePhotos)
@@ -285,17 +411,21 @@ function buildReportView(report) {
     ...evidenceStatusViewOf(item.evidenceStatus || (item.complete && item.allCorrect ? 'passed' : 'missing'))
   }))
   const qualityView = qualityViewOf(report.quality)
-  const headline = report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断结果'
+  const rawHeadline = report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断结果'
+  const headline = buildFineReportHeadline(report, bottleneckList, rawHeadline)
+  const reportSummaryText = buildReportSummaryText(report, bottleneckList)
   const explanation = buildReportExplanation(report, {
     headline,
     sourceImageCount: sourcePhotos.length,
     bottleneckCount: bottlenecks.length,
+    chineseErrorItemCount: chineseErrorItems.length,
     verificationEvidenceItems,
     qualityView
   })
 
   return {
     headline,
+    reportSummaryText,
     ...explanation,
     paperCodeText,
     paperCodeUrl: paperCodeText ? buildTraceableUrl({
@@ -336,17 +466,22 @@ function buildReportView(report) {
     bottleneckCount: bottlenecks.length,
     hasBottlenecks: bottlenecks.length > 0,
     bottleneckList,
+    chineseErrorItemCount: chineseErrorItems.length,
+    hasChineseErrorItems: chineseErrorItems.length > 0,
+    chineseErrorItems,
+    hasLearningMap: learningMapItems.length > 0,
+    learningMapItems,
     hasErrorDetails: errorDetails.length > 0,
     errorDetailList,
     hasVerificationEvidence: verificationEvidenceItems.length > 0,
     verificationEvidenceItems,
     improvedCount: isVerification
-      ? bottlenecks.filter(item => item.status === 'improved').length
+      ? rawBottlenecks.filter(item => item.status === 'improved').length
       : 0,
     worsenedCount: isVerification
-      ? bottlenecks.filter(item => item.status === 'worsened').length
+      ? rawBottlenecks.filter(item => item.status === 'worsened').length
       : 0,
-    showNextStep: !isVerification && bottlenecks.length > 0
+    showNextStep: !isVerification && (bottlenecks.length > 0 || chineseErrorItems.length > 0)
   }
 }
 

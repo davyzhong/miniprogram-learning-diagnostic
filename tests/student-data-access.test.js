@@ -57,6 +57,24 @@ test('viewer can read dashboard for a joined child with role-aware permissions',
   assert.equal(result.latestPaper._id, 'paper-1')
 })
 
+test('student dashboard can skip recent reports and papers for lightweight pages', async () => {
+  const db = seedDatabase()
+  const handler = loadStudentData(db, 'viewer-1')
+
+  const result = await handler.main({
+    action: 'getStudentDashboard',
+    studentId: 'student-1',
+    includeRecent: false
+  })
+
+  assert.equal(result.success, true)
+  assert.deepEqual(result.subjectProfiles.map(item => item.subject), ['math', 'chinese'])
+  assert.equal(result.latestReport, null)
+  assert.equal(result.latestPaper, null)
+  assert.deepEqual(JSON.parse(JSON.stringify(result.recentReports)), [])
+  assert.deepEqual(JSON.parse(JSON.stringify(result.recentPapers)), [])
+})
+
 test('viewer can read subject dashboard, report detail, paper detail and timeline', async () => {
   const db = seedDatabase()
   const handler = loadStudentData(db, 'viewer-1')
@@ -71,6 +89,8 @@ test('viewer can read subject dashboard, report detail, paper detail and timelin
   assert.equal(report.success, true)
   assert.equal(report.role, 'viewer')
   assert.equal(report.report.summary, '发现审题理解卡点')
+  assert.equal(report.profile.subject, 'math')
+  assert.equal(report.pendingCount, 1)
 
   const verificationReport = await handler.main({ action: 'getReportDetail', reportId: 'report-2' })
   assert.equal(verificationReport.success, true)
@@ -123,6 +143,30 @@ test('timeline sorts papers by generated time while preserving paper date', asyn
   assert.equal(timeline.success, true)
   assert.deepEqual(JSON.parse(JSON.stringify(timeline.items.map(item => item.id))), ['paper-paper-1', 'report-report-1'])
   assert.equal(timeline.items[0].paperDate, '2026-06-13')
+})
+
+test('learning timeline respects the requested lightweight limit', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentMembers: [{ _id: 'member-1', studentId: 'student-1', ownerOpenId: 'owner-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }],
+    reports: Array.from({ length: 35 }, (_, index) => ({
+      _id: `report-${index + 1}`,
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      status: 'completed',
+      createdAt: `2026-06-${String(10 + Math.floor(index / 5)).padStart(2, '0')}T10:00:00Z`
+    })),
+    papers: [],
+    englishPracticeSessions: []
+  })
+  const handler = loadStudentData(db, 'viewer-1')
+
+  const timeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1', limit: 20 })
+
+  assert.equal(timeline.success, true)
+  assert.equal(timeline.limit, 20)
+  assert.equal(timeline.reports.length, 20)
 })
 
 test('timeline includes English vocabulary sessions as learning records', async () => {

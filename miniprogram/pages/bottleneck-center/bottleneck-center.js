@@ -31,7 +31,7 @@ function buildViewsFromProfiles(profiles = []) {
       subjectName: profile.subjectName || SUBJECT_NAMES[subject] || ''
     }))
   })
-  return buildBottleneckViews(raw)
+  return buildBottleneckViews(raw, { expandCandidates: true })
 }
 
 function matchesStatus(item, status) {
@@ -92,7 +92,7 @@ Page({
 
       if (typeof cloud.getStudentDashboard === 'function') {
         try {
-          dashboard = await cloud.getStudentDashboard(this.data.studentId)
+          dashboard = await cloud.getStudentDashboard(this.data.studentId, { includeRecent: false })
           profiles = dashboard.subjectProfiles || dashboard.profiles || []
           studentName = studentName || (dashboard.student && dashboard.student.name) || ''
         } catch (error) {
@@ -155,10 +155,10 @@ Page({
   },
 
   onBottleneckTap(e) {
-    const { subject = 'math', lpCode = '' } = e.currentTarget.dataset
-    if (!lpCode) return
+    const { subject = 'math', lpCode = '', bottleneckId = '', viewId = '' } = e.currentTarget.dataset
+    if (!lpCode && !bottleneckId && !viewId) return
     wx.navigateTo({
-      url: `/pages/bottleneck-detail/bottleneck-detail?studentId=${this.data.studentId}&subject=${subject}&lpCode=${encodeURIComponent(lpCode)}&studentName=${encodeURIComponent(this.data.studentName || '')}`
+      url: `/pages/bottleneck-detail/bottleneck-detail?studentId=${this.data.studentId}&subject=${subject}&lpCode=${encodeURIComponent(lpCode)}&bottleneckId=${encodeURIComponent(bottleneckId)}&viewId=${encodeURIComponent(viewId)}&studentName=${encodeURIComponent(this.data.studentName || '')}`
     })
   },
 

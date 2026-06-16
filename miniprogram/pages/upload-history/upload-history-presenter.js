@@ -452,13 +452,14 @@ function buildRecordAnalytics(events = [], statusItems = []) {
 }
 
 function buildCleanupState(cleanupPreview = {}, permissions = {}) {
-  const count = Number(cleanupPreview.cleanedCount || cleanupPreview.staleCount || cleanupPreview.count || 0)
+  const preview = cleanupPreview || {}
+  const count = Number(preview.cleanedCount || preview.staleCount || preview.count || 0)
   const canCleanup = count > 0 && permissions.canManageParents === true
   return {
     hasCandidates: count > 0,
     canCleanup,
     count,
-    reportIds: cleanupPreview.cleanedReportIds || cleanupPreview.staleReportIds || cleanupPreview.reportIds || [],
+    reportIds: preview.cleanedReportIds || preview.staleReportIds || preview.reportIds || [],
     title: count > 0 ? `发现 ${count} 条可清理的中断记录` : '',
     desc: canCleanup
       ? '这些是长时间停留在分析中或失败的记录，清理后不会删除已完成报告、试卷和照片证据。'

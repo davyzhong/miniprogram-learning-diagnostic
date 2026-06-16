@@ -5,10 +5,73 @@ const {
 } = require('../../utils/bottleneck-view')
 
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
+const CHINESE_REVIEW_TYPE_LABELS = {
+  character: '汉字',
+  word: '词语',
+  pinyin: '拼音',
+  poem: '古诗文',
+  idiom: '成语',
+  daily_accumulation: '日积月累',
+  reading_skill: '阅读能力',
+  writing_skill: '表达能力'
+}
+const CHINESE_REVIEW_STATUS_WEIGHT = {
+  recurring: 100,
+  needs_review: 80,
+  reviewing: 60,
+  pending: 50
+}
 
 function normalizeWeight(item = {}) {
   if (item.weight !== undefined && item.weight !== null) return item.weight
   return SEVERITY_WEIGHT[item.severity] || 0
+}
+
+function cleanText(value) {
+  return String(value || '').trim()
+}
+
+function isActiveChineseReviewItem(item = {}) {
+  return !['mastered', 'archived', 'ignored'].includes(item.status)
+}
+
+function chineseReviewTitleOf(item = {}) {
+  return cleanText(item.targetText)
+    || cleanText(item.expectedAnswer)
+    || cleanText(item.sourceContext)
+    || '待复测错项'
+}
+
+function buildChineseReviewDetail(item = {}) {
+  const parts = [
+    item.lastWrongAnswer || item.studentAnswer ? `上次写成：${item.lastWrongAnswer || item.studentAnswer}` : '',
+    item.sourceContext ? `语境：${item.sourceContext}` : '',
+    item.evidenceCount ? `${item.evidenceCount} 次证据` : ''
+  ].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : '建议在验证卷中直接复测这个错项'
+}
+
+function buildChineseReviewQueue(profile = {}) {
+  return (profile.chineseReviewItems || [])
+    .filter(isActiveChineseReviewItem)
+    .map((item, index) => {
+      const displayName = chineseReviewTitleOf(item)
+      const status = item.status || 'needs_review'
+      return {
+        ...item,
+        viewId: item.itemId || `chinese-review-${index + 1}`,
+        reviewItemId: item.itemId || item.id || '',
+        displayName,
+        typeText: CHINESE_REVIEW_TYPE_LABELS[item.itemType] || cleanText(item.itemType) || '语文错项',
+        detailText: buildChineseReviewDetail(item),
+        statusText: status === 'recurring' ? '反复出现' : (status === 'reviewing' ? '复测中' : '待复测'),
+        statusClass: status === 'recurring' ? 'persisting' : 'pending',
+        statusIcon: status === 'recurring' ? '!' : '?',
+        weight: CHINESE_REVIEW_STATUS_WEIGHT[status] || 40
+      }
+    })
+    .filter(item => item.displayName)
+    .sort((a, b) => (b.weight || 0) - (a.weight || 0) || (b.evidenceCount || 0) - (a.evidenceCount || 0))
 }
 
 function buildBottleneckDetail(item) {
@@ -26,12 +89,17 @@ function buildBottleneckDetail(item) {
 }
 
 function buildSubjectBottleneckViews(profile = {}, options = {}) {
+  const subject = options.subject || profile.subject || ''
   return buildBottleneckViews(profileBottlenecks(profile).map(item => ({
     ...item,
     weight: normalizeWeight(item),
-    subject: options.subject || profile.subject || item.subject || '',
+    subject: subject || item.subject || '',
     subjectName: options.subjectName || profile.subjectName || item.subjectName || ''
-  }))).map(item => ({
+  })), {
+    subject,
+    subjectName: options.subjectName || profile.subjectName || '',
+    expandCandidates: subject === 'math'
+  }).map(item => ({
     ...item,
     detailText: buildBottleneckDetail(item)
   }))
@@ -57,14 +125,24 @@ function buildRecentChanges(reports, formatRelativeTime) {
     }))
 }
 
-function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions = {}) {
+function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions = {}, options = {}) {
   const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
+  const chineseReviewQueue = options.chineseReviewQueue || []
   if (!canWrite) {
     return {
       title: '当前可查看',
       summary: `${subjectName}学习资料已开放给你查看，上传和生成试卷由档案创建者操作。`,
       actionText: '查看学习记录',
       actionType: 'history'
+    }
+  }
+
+  if (options.subject === 'chinese' && chineseReviewQueue.length > 0) {
+    return {
+      title: '下一步建议',
+      summary: `${chineseReviewQueue.length} 个具体错项等待复测，建议先生成语文错项复测卷。`,
+      actionText: '生成验证试卷',
+      actionType: 'verification'
     }
   }
 
@@ -127,22 +205,31 @@ function buildEnglishPrimaryTask(options = {}, permissions = {}) {
       title: '当前可查看',
       summary: `已整理 ${totalWords} 个英语单词，可查看听写记录和掌握情况。`,
       actionText: '查看学习记录',
-      actionType: 'history'
+      actionType: 'history',
+      recommendedMode: 'history'
     }
   }
   if (totalWords === 0) {
     return {
-      title: '个人词库准备中',
+      title: '正在准备个人词库',
       summary: '系统会自动导入钟青羽的 PEP 三年级到六年级个人单词表。完成后，这里会直接进入单词熟悉度和纸面听写。',
       actionText: '查看学习记录',
-      actionType: 'history'
+      actionType: 'history',
+      recommendedMode: 'preparing'
     }
   }
+  const familiarityLoad = toSafeCount(familiarity.needsPracticeCount) + toSafeCount(familiarity.dueReviewCount)
+  const spellingLoad = toSafeCount(spelling.needsPracticeCount) + toSafeCount(spelling.dueReviewCount)
+  const recommendSpelling = spellingLoad > familiarityLoad && spellingLoad > 0
+  const recommendedMode = recommendSpelling ? 'spelling' : 'familiarity'
+  const actionType = recommendSpelling ? 'englishDictation' : 'englishPractice'
+  const modeText = recommendSpelling ? '纸面听写' : '单词熟悉度'
   return {
-    title: '今日单词熟悉度',
-    summary: `从 ${totalWords} 个个人词库单词中安排 ${todayCount || 20} 个，先练“听到中文说英文、听到英文说中文”的熟悉度。`,
-    actionText: '开始单词熟悉度',
-    actionType: 'englishPractice'
+    title: '今日建议',
+    summary: `从 ${totalWords} 个个人词库单词中安排 ${todayCount || 20} 个，今天建议先做${modeText}。`,
+    actionText: '开始今日练习',
+    actionType,
+    recommendedMode
   }
 }
 
@@ -208,16 +295,17 @@ function buildEnglishQuickStats(stats) {
 
 function buildTools(latestReport, permissions = {}, options = {}) {
   const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
+  const primaryActionType = options.primaryActionType || ''
   if (options.subject === 'english') {
     return [
-      canWrite ? {
+      canWrite && primaryActionType !== 'englishPractice' ? {
         key: 'englishPractice',
         title: '单词熟悉度',
         desc: hasEnglishVocabulary(options) ? '听中文说英文，听英文说中文' : '词库导入后即可开始',
         icon: 'Aa',
         actionType: 'englishPractice'
       } : null,
-      canWrite ? {
+      canWrite && primaryActionType !== 'englishDictation' ? {
         key: 'englishDictation',
         title: '纸面听写',
         desc: hasEnglishVocabulary(options) ? 'AI 读词，孩子写在纸上' : '词库导入后即可开始',
@@ -230,14 +318,7 @@ function buildTools(latestReport, permissions = {}, options = {}) {
         desc: '听写、词库和掌握变化',
         icon: '▧',
         actionType: 'history'
-      },
-      canWrite && !hasEnglishVocabulary(options) ? {
-        key: 'importVocabulary',
-        title: '词库维护',
-        desc: '自动导入异常时使用',
-        icon: '↓',
-        actionType: 'importVocabulary'
-      } : null
+      }
     ].filter(Boolean)
   }
   return [
@@ -281,15 +362,23 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     subjectName
   })
   const taskQueue = currentBottlenecks.filter(item => item.status !== 'improved')
+  const chineseReviewQueue = options.subject === 'chinese' ? buildChineseReviewQueue(profile) : []
   const bottleneckStats = buildBottleneckStats(currentBottlenecks)
   const recentChanges = buildRecentChanges(reports, formatRelativeTime)
   const latestReport = getEffectiveReports(reports)[0] || null
-  const hasDiagnosis = currentBottlenecks.length > 0 || recentChanges.length > 0
+  const hasDiagnosis = currentBottlenecks.length > 0 || chineseReviewQueue.length > 0 || recentChanges.length > 0
   const englishVocabularyStats = buildEnglishVocabularyStats(options.englishVocabulary)
   const englishQuickStats = buildEnglishQuickStats(englishVocabularyStats)
   const primaryTask = options.subject === 'english'
     ? buildEnglishPrimaryTask(options, permissions)
-    : buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions)
+    : buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions, {
+      subject: options.subject,
+      chineseReviewQueue
+    })
+  const toolOptions = {
+    ...options,
+    primaryActionType: primaryTask.actionType
+  }
 
   return {
     subjectTitle: `${subjectName}工作台`,
@@ -298,7 +387,12 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     nextAction: primaryTask.actionText,
     primaryTask,
     taskQueue: options.subject === 'english' ? [] : taskQueue,
-    tools: buildTools(latestReport, permissions, options),
+    pendingTaskCount: options.subject === 'chinese' && chineseReviewQueue.length > 0
+      ? chineseReviewQueue.length
+      : (options.subject === 'english' ? 0 : taskQueue.length),
+    chineseReviewQueue,
+    hasChineseReviewQueue: chineseReviewQueue.length > 0,
+    tools: buildTools(latestReport, permissions, toolOptions),
     permissions,
     canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
     latestReportId: latestReport ? latestReport._id : '',

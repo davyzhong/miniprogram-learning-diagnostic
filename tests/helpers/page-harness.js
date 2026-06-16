@@ -34,6 +34,7 @@ function createWxMock(overrides = {}) {
     navigateBack: record('navigateBack'),
     setNavigationBarTitle: record('setNavigationBarTitle'),
     setNavigationBarColor: record('setNavigationBarColor'),
+    setClipboardData: record('setClipboardData'),
     previewImage: record('previewImage'),
     openDocument: record('openDocument'),
     chooseMedia: () => {},
@@ -52,26 +53,78 @@ function loadPage(relativePath, options = {}) {
   const source = fs.readFileSync(filename, 'utf8')
   const wx = options.wx || createWxMock()
   let definition = null
+  const moduleCache = {}
 
-  const sandbox = {
+  // Sandbox require: resolves relative paths INSIDE the sandbox so that
+  // shared modules (e.g. shared-navigation.js) can access sandbox globals
+  // like `wx`. Non-relative requires (node builtins, npm packages) fall
+  // through to the host require.
+  function sandboxRequire(request, fromDir, depth) {
+    // options.modules mocks only apply at depth 0 (the page file's direct requires).
+    // Deeper transitive requires use the real host modules to avoid partial mocks.
+    if (depth === 0 && options.modules && Object.prototype.hasOwnProperty.call(options.modules, request)) {
+      return options.modules[request]
+    }
+    if (!request.startsWith('.')) {
+      return require(request)
+    }
+    const resolved = path.resolve(fromDir, request)
+    if (moduleCache[resolved]) return moduleCache[resolved].exports
+    if (resolved.endsWith('.json')) {
+      const data = JSON.parse(fs.readFileSync(resolved, 'utf8'))
+      moduleCache[resolved] = { exports: data }
+      return data
+    }
+    const jsPath = resolved.endsWith('.js') ? resolved : resolved + '.js'
+    if (!fs.existsSync(jsPath)) {
+      return require(resolved)
+    }
+    // Modules that reference `wx` need the sandbox context (e.g. shared-navigation.js).
+    // Pure utility modules (util.js, constants.js, etc.) are loaded via host require
+    // to avoid breaking partial mocks at transitive depth.
+    const depSource = fs.readFileSync(jsPath, 'utf8')
+    if (!/\bwx\b/.test(depSource)) {
+      return require(jsPath)
+    }
+    const mod = { exports: {} }
+    moduleCache[resolved] = mod
+    const depDir = path.dirname(jsPath)
+    vm.runInNewContext(depSource, {
+      ...sandboxGlobals,
+      __filename: jsPath,
+      __dirname: depDir,
+      module: mod,
+      exports: mod.exports,
+      require: req => sandboxRequire(req, depDir, depth + 1)
+    }, { filename: jsPath })
+    return mod.exports
+  }
+
+  const sandboxGlobals = {
     console,
     Date: options.Date || Date,
     Promise,
     Map,
     Set,
+    Array,
+    Object,
+    Buffer,
+    JSON,
+    RegExp,
     encodeURIComponent,
     decodeURIComponent,
     setTimeout: options.setTimeout || (callback => callback()),
     clearTimeout,
-    wx,
+    wx
+  }
+
+  const sandbox = {
+    ...sandboxGlobals,
     Page: config => { definition = config },
     requirePlugin: options.requirePlugin,
-    require: request => {
-      if (options.modules && Object.prototype.hasOwnProperty.call(options.modules, request)) {
-        return options.modules[request]
-      }
-      return require(path.resolve(path.dirname(filename), request))
-    }
+    require: request => sandboxRequire(request, path.dirname(filename), 0),
+    __filename: filename,
+    __dirname: path.dirname(filename)
   }
 
   vm.runInNewContext(source, sandbox, { filename })

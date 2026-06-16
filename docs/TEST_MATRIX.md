@@ -2,7 +2,7 @@
 
 > 更新日期：2026-06-15
 > 范围：`PRD.md`、`PROJECT_PLAN.md` 中的 MVP P0 功能
-> 自动化结果：`npm test` → 277/277 通过；`npm run check` → 以本机输出为准
+> 自动化结果：`npm test` → 353/353 通过；`npm run check` → 以本机输出为准
 
 ## 1. 自动化验证命令
 
@@ -102,4 +102,4 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/time-aware-bottlenecks.test.js` | 时间化学习卡点趋势和权重 | 5 |
 | `tests/verification-evidence.test.js` | 验证试卷证据完整性 | 3 |
 | `tests/util.test.js` | 工具函数 | 11 |
-| **合计** | | **277 常规用例** |
+| **合计** | | **353 常规用例** |

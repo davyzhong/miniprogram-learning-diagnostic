@@ -32,6 +32,14 @@ function openPdfDocument(filePath) {
   })
 }
 
+function pendingCountFromProfile(profile) {
+  if (!profile) return 0
+  if (Array.isArray(profile.currentBottlenecks)) {
+    return profile.currentBottlenecks.filter(item => item.status !== 'improved').length
+  }
+  return (profile.pendingBottlenecks || []).length
+}
+
 Page({
   data: {
     reportId: '',
@@ -138,22 +146,22 @@ Page({
       const dateText = formatChineseDateTime(report.createdAt)
       const view = buildReportView(reportWithContext)
 
-      // 待验证卡点数（从 subjectProfile 获取）
-      var pendingCount = 0
-      try {
-        var profile = null
-        if (typeof cloud.getSubjectDashboard === 'function') {
-          var dashboard = await cloud.getSubjectDashboard(report.studentId, report.subject)
-          profile = dashboard.profile
-        } else {
-          profile = await cloud.getSubjectProfile(report.studentId, report.subject)
-        }
-        if (profile) {
-          pendingCount = Array.isArray(profile.currentBottlenecks)
-            ? profile.currentBottlenecks.filter(item => item.status !== 'improved').length
-            : (profile.pendingBottlenecks || []).length
-        }
-      } catch (e) { console.error('获取学科档案失败:', e) }
+      // 待验证卡点数优先来自报告详情，避免报告页再拉整套学科 Dashboard。
+      var pendingCount = typeof detail.pendingCount === 'number'
+        ? detail.pendingCount
+        : pendingCountFromProfile(detail.profile || detail.subjectProfile)
+      if (typeof detail.pendingCount !== 'number' && !detail.profile && !detail.subjectProfile) {
+        try {
+          var profile = null
+          if (typeof cloud.getSubjectProfile === 'function') {
+            profile = await cloud.getSubjectProfile(report.studentId, report.subject)
+          } else if (typeof cloud.getSubjectDashboard === 'function') {
+            var dashboard = await cloud.getSubjectDashboard(report.studentId, report.subject)
+            profile = dashboard.profile
+          }
+          pendingCount = pendingCountFromProfile(profile)
+        } catch (e) { console.error('获取学科档案失败:', e) }
+      }
 
       this.setData({
         report: reportWithContext,
@@ -203,9 +211,12 @@ Page({
     var subjectName = getSubjectName(subject)
 
     // 获取卡点列表，传给验证试卷生成页
-    var bottlenecks = (report.bottlenecks || [])
+    var bottleneckCodes = (report.bottlenecks || [])
       .map(function(b) { return b.lpCode })
-      .join(',')
+    var chineseReviewItemIds = report.subject === 'chinese'
+      ? (report.chineseErrorItems || []).map(function(item) { return item.itemId || item.id }).filter(Boolean)
+      : []
+    var bottlenecks = bottleneckCodes.concat(chineseReviewItemIds).join(',')
 
     wx.navigateTo({
       url: '/pages/generate-verification/generate-verification?studentId=' + studentId + '&subject=' + subject + '&subjectName=' + encodeURIComponent(subjectName) + '&bottlenecks=' + encodeURIComponent(bottlenecks)
@@ -241,6 +252,29 @@ Page({
       return
     }
     wx.navigateTo({ url })
+  },
+
+  onLearningResourceTap(e) {
+    const dataset = e.currentTarget.dataset || {}
+    const url = dataset.url || ''
+    const platform = dataset.platform || '对应平台'
+    if (!url) {
+      wx.showToast({ title: '这个资源还没有链接', icon: 'none' })
+      return
+    }
+    if (typeof wx.setClipboardData === 'function') {
+      wx.setClipboardData({
+        data: url,
+        success: () => {
+          wx.showToast({ title: `链接已复制，请到${platform}打开`, icon: 'none' })
+        },
+        fail: () => {
+          wx.showToast({ title: '复制失败，请稍后重试', icon: 'none' })
+        }
+      })
+      return
+    }
+    wx.showToast({ title: '当前环境不支持复制链接', icon: 'none' })
   },
 
   onReportExplanationAction() {

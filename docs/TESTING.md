@@ -1,6 +1,6 @@
 # 测试指南（TESTING）
 
-> 更新日期：2026-06-15
+> 更新日期：2026-06-16
 > 适用对象：本项目的开发者与贡献者
 > 配套文档：`docs/TEST_MATRIX.md`、`SETUP.md`、`docs/TROUBLESHOOTING.md`
 
@@ -31,6 +31,7 @@
 | `npm test` | 运行常规自动化测试 | 串行运行常规测试文件，不包含真实图片 E2E |
 | `npm run test:coverage` | 运行常规测试并收集覆盖率 | 使用 V8 原生覆盖，输出到 stdout |
 | `npm run test:e2e-real-image` | 单独运行真实图片端到端脚本 | 依赖本机图片路径和 CloudBase 环境，发布前人工验收使用 |
+| `npm run test:devtools-english` | 使用微信开发者工具自动测试英语学科页面 | 依赖 `miniprogram-automator` 和微信开发者工具 CLI，输出到 `tmp/english-devtools-e2e` |
 | `npm run test:real-data-smoke` | 使用微信开发者工具打开真实数据页面 | 需设置 `REAL_DATA_STUDENT_ID`，不提交截图产物 |
 | `npm run metrics:student` | 从本地 JSON 导出计算单个孩子的运营指标 | 需设置 `METRICS_INPUT`，详见 `docs/METRICS.md` |
 | `npm run check:deployment` | 检查云函数部署清单和前端封装 | 发布前确认没有漏部署函数 |
@@ -68,6 +69,9 @@ REAL_DATA_STUDENT_ID=student-id REAL_DATA_STUDENT_NAME=钟青羽 npm run test:re
 # 真实数据烟测：只检查部分页面
 REAL_DATA_STUDENT_ID=student-id REAL_DATA_SMOKE_ROUTES=profile,bottlenecks npm run test:real-data-smoke
 
+# 英语学科页面自动化：工作台、自动导入、熟悉度、纸面听写、学习记录、空态
+npm run test:devtools-english
+
 # 单个孩子运营指标：文本摘要
 METRICS_INPUT=/path/to/student-export.json METRICS_STUDENT_ID=student-id npm run metrics:student
 
@@ -83,41 +87,43 @@ npm run release:check
 ## 3. 测试文件说明
 
 | 文件 | 职责 | 用例数 |
-|------|------|--------|
-| `analyze-batch-result.test.js` | `analyzeBatch/result-normalizer.js` 字段截断、严重度归一 | 3 |
-| `analyze-photos-pipeline.test.js` | `analyzePhotos/pipeline.js` 分批、逐页完整性、合并与 imageFiles 构造 | 7 |
-| `bottleneck-view.test.js` | 共享学习卡点视图模型、排序和统计规则 | 3 |
-| `cloud-functions.test.js` | 10 个云函数的集成流程、权限校验、边界条件 | 28 |
+|------|------|:------:|
+| `analyze-batch-result.test.js` | `analyzeBatch/result-normalizer.js` 字段截断、严重度归一 | 4 |
+| `analyze-photos-pipeline.test.js` | 分批、合并、imageFiles 构造、对比算法、OCR 去重 | 15 |
+| `bottleneck-view.test.js` | 共享卡点视图模型、排序、统计、分类元数据和别名解析 | 7 |
 | `cli-p0.test.js` | P0 `ldx` CLI 命令合同，使用 fixture adapter 离线验证 | 4 |
-| `comparison.test.js` | 验证报告对比算法（improved/worsened/new/persisting） | 4 |
-| `contracts.test.js` | 跨模块契约、命名一致性、已修复缺陷回归保护 | 39 |
-| `coverage-gap.test.js` | 历史修复的回归场景、轮询器/数据层边界分支 | 7 |
-| `data-layer.test.js` | `miniprogram/utils/cloud.js` 统一数据访问层 | 8 |
-| `deployment-readiness.test.js` | 云函数部署清单、配置文件、前端封装、发布与回滚文档门禁 | 4 |
-| `e2e-real-image.test.js` | 端到端真实图片链路脚本，单独运行 | 1（含云端条件步骤） |
+| `cloud-functions.test.js` | 10 个云函数的集成流程、权限校验、边界条件 | 30 |
+| `contracts.test.js` | 架构红线：SDK 初始化、env 硬编码、PDF 字体、安全、共享模块复用 | 21 |
+| `coverage-gap.test.js` | 轮询器边界、callFunction 错误规范化、isTimeoutError、导航栏颜色 | 6 |
+| `data-layer.test.js` | `miniprogram/utils/cloud.js` 统一数据访问层 | 10 |
+| `deployment-readiness.test.js` | 云函数部署清单、前端封装、发布回滚文档、页面四件套完整性 | 9 |
+| `e2e-real-image.test.js` | 端到端真实图片链路脚本，单独运行（不在 npm test 中） | — |
+| `english-devtools-cases.test.js` | 英语 DevTools 页面自动化用例库结构和功能覆盖校验 | 2 |
+| `english-vocabulary-cloud.test.js` | 英语词库导入、确认、种子数据、熟悉度/拼写练习、AI 听写 | 17 |
+| `english-vocabulary.test.js` | 英语词库前端工具和会话状态逻辑 | 14 |
 | `generate-paper-pdf.test.js` | 验证试卷 PDF 中文字体、分页和答案页回归 | 4 |
-| `index-presenter.test.js` | 孩子档案视图模型、家庭工作台卡片、样本覆盖、重点提示、卡点透出和空态 | 9 |
-| `learning-metrics.test.js` | 单个孩子运营指标、周趋势和隐私安全输出 | 3 |
-| `learning-records.test.js` | 学习记录四级分类、验证卷编号、卡点名称、时间线统计和清理提示规则 | 11 |
-| `page-flows.test.js` | 主要页面的主流程、首页 0/1/多孩子分流、孩子档案页、错误恢复、导航跳转和学习记录清理确认 | 61 |
+| `index-presenter.test.js` | 孩子档案视图模型、家庭工作台卡片、样本覆盖、重点提示、卡点透出 | 9 |
+| `learning-records.test.js` | 学习记录四级分类、验证卷编号、时间线统计、运营指标 | 17 |
+| `math-learning-map-seed.test.js` | 数学知识图谱种子数据完整性 | 7 |
+| `page-flows.test.js` | 主要页面流程：首页分流、学科工作台、英语练习、上传、出卷、报告、学习记录 | 68 |
+| `paper-preview-presenter.test.js` | 试卷预览生命周期、工作台状态、默认试卷命名 | 6 |
 | `parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
-| `photo-dedup.test.js` | OCR 摘要去重算法（含完全重复分支） | 3 |
 | `poller.test.js` | 通用轮询器与分析轮询包装 | 6 |
-| `project-integrity.test.js` | 页面四件套完整性、WXML 事件绑定匹配、品牌资产完整性 | 3 |
 | `profile-summary.test.js` | 当前综合诊断状态规则 | 6 |
 | `real-data-smoke-config.test.js` | 真实数据烟测配置、页面路由和输出目录解析 | 5 |
 | `real-image-config.test.js` | 真实图片 E2E 参数、manifest 和临时报告输出 | 5 |
-| `report-feedback.test.js` | 家长反馈云函数权限、参数白名单和列表读取 | 3 |
-| `report-presenter.test.js` | 报告视图预计算、质量标签和验证证据状态 | 11 |
+| `report-feedback.test.js` | 家长反馈云函数权限、参数白名单和列表读取 | 4 |
+| `report-presenter.test.js` | 报告视图预计算、质量标签和验证证据状态 | 14 |
 | `report-quality.test.js` | 报告质量等级、样本不足和复核规则 | 4 |
 | `skills-p0.test.js` | P0 Skill 能力内核，覆盖诊断、报告、卡点、验证卷、验证反馈、时间线 | 8 |
 | `student-access.test.js` | `studentAccess` 家长成员、邀请、加入、移除权限和首次建表兜底 | 8 |
-| `student-data-access.test.js` | `studentData` 共享家长学习数据访问、学习记录 dry-run 清理权限 | 6 |
-| `subject-home-presenter.test.js` | 学科工作台视图模型 | 3 |
+| `student-data-access.test.js` | `studentData` 共享家长学习数据访问、学习记录 dry-run 清理权限 | 9 |
+| `subject-home-presenter.test.js` | 学科工作台视图模型 | 6 |
 | `time-aware-bottlenecks.test.js` | 时间化学习卡点趋势和权重 | 5 |
+| `traceable-actions.test.js` | 可追踪操作 URL 构建、归一化和 fallback | 3 |
 | `util.test.js` | 时间、卡点短名称等纯工具函数 | 11 |
 | `verification-evidence.test.js` | 验证试卷证据完整性和证据状态规则 | 3 |
-| **合计** | | **以 `npm test` 输出为准；另有真实图片 E2E 与真实数据烟测脚本** |
+| **合计** | | **以 `npm test` 输出为准** |
 
 > 注：常规测试以 `npm test` 输出为准；真实图片 E2E 由于依赖本机文件和云端环境，始终单独运行。
 
@@ -175,6 +181,42 @@ npm run test:real-data-smoke
 
 - `tmp/real-data-smoke/results.json`
 - `tmp/real-data-smoke/*.png`
+
+这些产物只用于本机验收，`tmp/` 已加入 `.gitignore`。
+
+### 3.3 英语学科 DevTools 页面自动化
+
+英语学科页面自动化用于验证当前单词 MVP 的完整页面职责：
+
+- 英语工作台展示今日建议、学习进度、弱词提示和不重复的继续练习入口。
+- 词库为空时自动导入钟青羽 PEP 个人词库。
+- 单词熟悉度页面生成 20 词并提交一次 AI 判定。
+- 纸面听写页面生成 20 词，支持“下一个”语音辅助，上传听写纸并展示 AI 批改结果。
+- 学习记录展示英语熟悉度、纸面听写和听写纸照片证据。
+- 无词库时展示可恢复空态。
+
+机器可读用例库：
+
+```text
+tests/fixtures/english-devtools-test-cases.json
+```
+
+人工阅读版：
+
+```text
+docs/test-cases/钟青羽英语学科测试用例库.md
+```
+
+运行：
+
+```bash
+npm run test:devtools-english
+```
+
+输出：
+
+- `tmp/english-devtools-e2e/results.json`
+- `tmp/english-devtools-e2e/*.png`
 
 这些产物只用于本机验收，`tmp/` 已加入 `.gitignore`。
 
@@ -473,3 +515,58 @@ jobs:
 - PR 必须通过 `npm run verify`
 - 主分支禁止直推，强制走 PR
 - 合并前人工确认 SETUP.md 第七章的真机验收清单已执行
+
+## 9. 测试纪律（长期规则）
+
+> 这些规则用于防止测试套件再次膨胀。每次新增测试前对照检查。
+
+### 9.1 新增测试必须回答：保护什么风险？
+
+写测试之前先回答这个问题。如果答不上来，不写。
+
+好的回答：
+- "防止云函数向客户端泄露 stack trace"
+- "防止 shared access 模块被绕过导致权限不一致"
+- "防止分析流水线在全部批次失败时静默成功"
+
+不好的回答：
+- "提高覆盖率"
+- "这个函数还没有测试"
+- "防止以后有人改这个代码"
+
+### 9.2 一个行为只测一次
+
+不要在 page flow 里测已经在 presenter / unit test 里测过的逻辑。
+
+判断方法：如果删掉这个测试，行为是否仍然被其他测试保护？如果是，这个测试就是冗余的。
+
+### 9.3 不测实现细节
+
+- 不测 CSS 类名拼写（用视觉验收）
+- 不测变量名或函数名（重命名不应该导致测试失败）
+- 不测函数调用顺序（只测可观察的行为结果）
+- 不测源码字符串匹配（`assert.match(sourceCode, /pattern/)` 仅用于架构红线，放在 `contracts.test.js`）
+
+### 9.4 fallback 测试上限
+
+每个模块最多 1-2 个 fallback 测试（最可能触发的那个）。
+
+常见错误：同一个 fallback 路径写了 3-4 个变体（"接口超时"、"返回空"、"返回 null"、"抛出异常"）。选最有代表性的 1 个即可。
+
+### 9.5 文件大小上限
+
+单测试文件 ≤ 300 行。超过就拆分。
+
+按功能域拆分，不按文件类型拆分：
+- ✅ `upload-and-paper-flows.test.js`（上传 + 试卷相关页面）
+- ❌ `all-page-tests.test.js`（所有页面放一起）
+
+### 9.6 季度审查
+
+每季度跑一次：
+
+```bash
+wc -l tests/*.test.js | sort -rn | head -10
+```
+
+超过 300 行的文件列入下个迭代的拆分或精简计划。同时检查 `npm test` 的总耗时，如果 > 10s 就排查最慢的测试。

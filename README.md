@@ -325,9 +325,11 @@ flowchart LR
 - ✅ 验证报告对比：标注改善 / 加重 / 新增 / 持续四种状态
 - ✅ 分析进度轮询：学科主页和报告页每 10s 轮询，支持手动重试
 - ✅ 报告 PDF 生成与下载
+- ✅ 英语学科：工作台 + 单词熟悉度练习 + AI 语音判定 + 纸面听写 + OCR 批改 + 学习记录证据链
+- ✅ 英语词库管理：PEP 个人词库种子、批量导入、熟悉度和拼写双维度进度追踪
 - ✅ Skill / CLI P0：封装诊断、报告、卡点、验证卷、反馈和时间线能力，提供 `ldx` 本地 CLI 合同测试
 - ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 自动化测试：334 个常规用例通过，JS 语法检查 107 文件通过
+- ✅ 自动化测试：353 个常规用例通过，JS 语法检查 121 文件通过，测试套件 < 2s
 
 ### 待完善
 
@@ -363,7 +365,8 @@ miniprogram-learning-diagnostic/
 │                                #   subject-select / subject-home / upload / upload-history /
 │                                #   parent-management / join-student / report /
 │                                #   bottleneck-center / bottleneck-detail / english-practice /
-│                                #   generate-verification / default-paper / paper-preview）
+│                                #   english-dictation / generate-verification /
+│                                #   default-paper / paper-preview）
 ├── cloudfunctions/              # 云函数后端（10 个）
 │   ├── uploadAndAnalyze/        #   入口：校验 → 创建报告 → 触发分析
 │   ├── analyzePhotos/           #   主控：分批 → 串行分析 → 去重 → 合并 → 对比
@@ -372,13 +375,13 @@ miniprogram-learning-diagnostic/
 │   ├── studentAccess/           #   家长成员、邀请和加入管理
 │   ├── studentData/             #   访问感知的学习资料聚合读取
 │   ├── reportFeedback/          #   家长反馈和复核线索
-│   ├── englishVocabulary/       #   英语个人词库和 20 词听写
+│   ├── englishVocabulary/       #   英语个人词库、熟悉度练习和纸面听写
 │   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF
 │   └── generateReportPDF/       #   生成报告 PDF
 ├── services/skills/             # P0 Skill 能力内核
 ├── cli/ldx.js                   # 本地 CLI 入口
-├── tests/                       # 自动化测试（334 个常规用例 + 真实图片 E2E 脚本）
-├── scripts/                     # check-js.js（语法检查）
+├── tests/                       # 自动化测试（353 个常规用例 + 真实图片 E2E 脚本）
+├── scripts/                     # check-js.js（语法检查）、DevTools E2E、指标导出
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
 ├── PROJECT_PLAN.md              # 技术架构与开发计划
@@ -423,6 +426,10 @@ cd miniprogram-learning-diagnostic
 - `analysisTasks`
 - `studentMembers`
 - `studentInvites`
+- `reportFeedback`
+- `englishImportBatches`
+- `studentEnglishWords`
+- `englishPracticeSessions`
 
 详细步骤参见 [SETUP.md](./SETUP.md)。
 
@@ -431,7 +438,7 @@ cd miniprogram-learning-diagnostic
 ## 测试
 
 ```bash
-# 运行常规自动化测试（334 用例，不含真实图片 E2E）
+# 运行常规自动化测试（353 用例，不含真实图片 E2E）
 npm test
 
 # 带覆盖率报告

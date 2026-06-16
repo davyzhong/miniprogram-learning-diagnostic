@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { summarizeBottleneckName } = require('./bottleneck-display');
-const { getSubjectName } = require('../_shared/constants');
+const { getSubjectName } = require('./constants');
 
 const COLORS = {
   navy: '#17365D',

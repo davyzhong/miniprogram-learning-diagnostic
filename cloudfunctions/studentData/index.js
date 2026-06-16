@@ -56,6 +56,11 @@ function normalizeSubject(subject) {
   return ['math', 'chinese', 'english'].includes(subject) ? subject : 'math';
 }
 
+function normalizeLimit(value, fallback = 20, max = 100) {
+  const limit = Math.floor(Number(value) || fallback);
+  return Math.min(max, Math.max(1, limit));
+}
+
 async function getAccess(studentId, openId) {
   return getStudentAccess(db, studentId, openId);
 }
@@ -219,37 +224,41 @@ function buildTimeline({ reports = [], papers = [], englishSessions = [] }) {
   return items.sort((a, b) => toTime(b.occurredAt || b.createdAt) - toTime(a.occurredAt || a.createdAt));
 }
 
-async function getStudentDashboard(openId, studentId) {
+async function getStudentDashboard(openId, studentId, options = {}) {
   if (!studentId) return failure('缺少 studentId');
   const access = await getAccess(studentId, openId);
   if (!access.allowed) return failure('无权访问该学生');
 
+  const includeRecent = options.includeRecent !== false;
   const [subjectProfiles, reports, papers] = await Promise.all([
     getSubjectProfiles(studentId),
-    getReports(studentId, '', 10),
-    getPapers(studentId, '', 10),
+    includeRecent ? getReports(studentId, '', 10) : Promise.resolve([]),
+    includeRecent ? getPapers(studentId, '', 10) : Promise.resolve([]),
   ]);
 
   return withAccess(access, {
     student: access.student,
     subjectProfiles,
-    latestReport: reports[0] || null,
-    latestPaper: papers[0] || null,
+    latestReport: includeRecent ? (reports[0] || null) : null,
+    latestPaper: includeRecent ? (papers[0] || null) : null,
     recentReports: reports,
     recentPapers: papers,
   });
 }
 
-async function getSubjectDashboard(openId, studentId, subjectValue) {
+async function getSubjectDashboard(openId, studentId, subjectValue, options = {}) {
   if (!studentId) return failure('缺少 studentId');
   const access = await getAccess(studentId, openId);
   if (!access.allowed) return failure('无权访问该学生');
 
   const subject = normalizeSubject(subjectValue);
+  const includePapers = options.includePapers !== false;
+  const reportLimit = normalizeLimit(options.reportLimit, 20, 50);
+  const paperLimit = normalizeLimit(options.paperLimit, 20, 50);
   const [profiles, reports, papers] = await Promise.all([
     getSubjectProfiles(studentId),
-    getReports(studentId, subject, 20),
-    getPapers(studentId, subject, 20),
+    getReports(studentId, subject, reportLimit),
+    includePapers ? getPapers(studentId, subject, paperLimit) : Promise.resolve([]),
   ]);
 
   return withAccess(access, {
@@ -261,21 +270,23 @@ async function getSubjectDashboard(openId, studentId, subjectValue) {
   });
 }
 
-async function getLearningTimeline(openId, studentId, subjectValue) {
+async function getLearningTimeline(openId, studentId, subjectValue, options = {}) {
   if (!studentId) return failure('缺少 studentId');
   const access = await getAccess(studentId, openId);
   if (!access.allowed) return failure('无权访问该学生');
 
   const subject = subjectValue ? normalizeSubject(subjectValue) : '';
+  const limit = normalizeLimit(options.limit, 20, 100);
   const [reports, papers, englishSessions] = await Promise.all([
-    getReports(studentId, subject, 50),
-    getPapers(studentId, subject, 50),
-    getEnglishSessions(studentId, subject, 50),
+    getReports(studentId, subject, limit),
+    getPapers(studentId, subject, limit),
+    getEnglishSessions(studentId, subject, limit),
   ]);
 
   return withAccess(access, {
     student: access.student,
     subject,
+    limit,
     reports,
     papers,
     englishSessions,
@@ -362,6 +373,21 @@ async function getReportDetail(openId, reportId) {
   if (!report) return failure('报告不存在');
   const access = await getAccess(report.studentId, openId);
   if (!access.allowed) return failure('无权访问该学生');
+  let profile = null;
+  try {
+    const profileRes = await db.collection('subjectProfiles')
+      .where({ studentId: report.studentId, subject: normalizeSubject(report.subject) })
+      .limit(1)
+      .get();
+    profile = (profileRes.data || [])[0] || null;
+  } catch (e) {
+    profile = null;
+  }
+  const pendingCount = profile
+    ? (Array.isArray(profile.currentBottlenecks)
+      ? profile.currentBottlenecks.filter(item => item.status !== 'improved').length
+      : (profile.pendingBottlenecks || []).length)
+    : 0;
   let linkedPaper = null;
   if (report.paperId) {
     try {
@@ -371,7 +397,7 @@ async function getReportDetail(openId, reportId) {
       linkedPaper = null;
     }
   }
-  return withAccess(access, { student: access.student, report, linkedPaper });
+  return withAccess(access, { student: access.student, report, linkedPaper, profile, pendingCount });
 }
 
 async function getPaperDetail(openId, paperId) {
@@ -405,13 +431,21 @@ exports.main = async (event = {}) => {
 
   try {
     if (action === 'getStudentDashboard') {
-      return getStudentDashboard(openId, event.studentId);
+      return getStudentDashboard(openId, event.studentId, {
+        includeRecent: event.includeRecent,
+      });
     }
     if (action === 'getSubjectDashboard') {
-      return getSubjectDashboard(openId, event.studentId, event.subject);
+      return getSubjectDashboard(openId, event.studentId, event.subject, {
+        includePapers: event.includePapers,
+        reportLimit: event.reportLimit,
+        paperLimit: event.paperLimit,
+      });
     }
     if (action === 'getLearningTimeline') {
-      return getLearningTimeline(openId, event.studentId, event.subject);
+      return getLearningTimeline(openId, event.studentId, event.subject, {
+        limit: event.limit,
+      });
     }
     if (action === 'getReportDetail') {
       return getReportDetail(openId, event.reportId);

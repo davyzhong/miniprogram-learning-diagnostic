@@ -34,11 +34,11 @@
 
     <view class="prompt-card">
       <view class="prompt-top">
-        <text class="prompt-pill">{{currentItem.promptTypeText}}</text>
-        <text class="retry-pill" wx:if="{{currentItem.retryCount > 0}}">第 {{currentItem.retryCount + 1}} 次出现</text>
-      </view>
-      <text class="prompt-title">{{currentItem.promptText}}</text>
-      <text class="prompt-desc">听到提示后，请说出对应的英文单词或中文意思。</text>
+      <text class="prompt-pill">{{currentItem.promptTypeText}}</text>
+      <text class="retry-pill" wx:if="{{currentItem.retryCount > 0}}">第 {{currentItem.retryCount + 1}} 次出现</text>
+    </view>
+    <text class="prompt-title">{{currentItem.promptText}}</text>
+      <text class="prompt-desc">听到提示后，说出对应的英文单词或中文意思。系统会把不熟的词安排稍后再出现。</text>
       <button class="play-btn" bindtap="onPlayPromptTap">播放提示</button>
     </view>
 
@@ -52,9 +52,9 @@
 
     <view class="result-card result-{{lastResult.status}}" wx:if="{{lastResult}}">
       <text class="result-title">
-        <block wx:if="{{lastResult.status === 'correct'}}">AI 判断：正确</block>
-        <block wx:elif="{{lastResult.status === 'incorrect'}}">AI 判断：需要重听</block>
-        <block wx:else>AI 判断：无法确认</block>
+        <block wx:if="{{lastResult.status === 'correct'}}">这个词已经比较熟了</block>
+        <block wx:elif="{{lastResult.status === 'incorrect'}}">这个词还需要再见几次</block>
+        <block wx:else>刚才没听清，再试一次</block>
       </text>
       <text class="result-desc">{{lastResult.reason}}</text>
       <text class="answer-line">目标单词：{{lastAnsweredItem ? lastAnsweredItem.word : ''}}</text>

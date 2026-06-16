@@ -1,0 +1,1041 @@
+module.exports = {
+  "version": "0.1.0",
+  "updatedAt": "2026-06-16",
+  "subject": "math",
+  "scope": "小学数学自用知识地图首批高优先级节点，优先覆盖钟青羽六年级与小升初历史错题。",
+  "domains": [
+    "数与代数",
+    "图形与几何",
+    "统计与概率",
+    "综合与实践"
+  ],
+  "nodes": [
+    {
+      "nodeId": "MATH-NUM-INT-MUL-PARTIAL",
+      "subject": "math",
+      "title": "多位数乘法中的部分积完整性",
+      "domain": "数与代数",
+      "gradeRange": [
+        4,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-INT-MUL-BASIC"
+      ],
+      "successors": [
+        "MATH-NUM-DEC-MUL-POINT",
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "typicalProblems": [
+        "28 × 204",
+        "306 × 45",
+        "125 × 408"
+      ],
+      "commonBottlenecks": [
+        "BN-INT-MUL-PARTIAL-OMIT"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "3 道含 0 或跨位部分积的乘法题全对。",
+        "transferPractice": "能解释每个部分积对应原式中的哪一部分。",
+        "spacedReview": "72 小时后同类题不再漏加部分积。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-NUM-INT-DIV-LONG",
+      "subject": "math",
+      "title": "长除法试商与商位",
+      "domain": "数与代数",
+      "gradeRange": [
+        4,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-INT-MUL-BASIC"
+      ],
+      "successors": [
+        "MATH-NUM-FRACTION-DIV-RECIPROCAL",
+        "MATH-MOD-RATIO-SCALE"
+      ],
+      "typicalProblems": [
+        "8008 ÷ 26",
+        "7350 ÷ 25",
+        "10080 ÷ 32"
+      ],
+      "commonBottlenecks": [
+        "BN-INT-DIV-DIVISOR-SIMPLIFY"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能写出长除法过程，并用乘法验商。",
+        "transferPractice": "在混合运算中能稳定完成中间除法。",
+        "spacedReview": "间隔复测中不把两位数除数误当一位数。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-NUM-DEC-PLACE-VALUE",
+      "subject": "math",
+      "title": "小数位值与数量级",
+      "domain": "数与代数",
+      "gradeRange": [
+        4,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-INT-PLACE-VALUE"
+      ],
+      "successors": [
+        "MATH-NUM-DEC-MUL-POINT",
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "typicalProblems": [
+        "2.186 与 26.86 的数量级比较",
+        "0.24 的百分位含义"
+      ],
+      "commonBottlenecks": [
+        "BN-DEC-PLACE-VALUE-WEAK"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能说出十分位、百分位、千分位的意义。",
+        "transferPractice": "能用估算判断小数结果是否合理。",
+        "spacedReview": "后续小数乘除题能主动做数量级检查。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-NUM-DEC-MUL-POINT",
+      "subject": "math",
+      "title": "小数乘法中的小数点定位",
+      "domain": "数与代数",
+      "gradeRange": [
+        5,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-INT-MUL-PARTIAL",
+        "MATH-NUM-DEC-PLACE-VALUE"
+      ],
+      "successors": [
+        "MATH-MOD-PERCENT-DISCOUNT",
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "typicalProblems": [
+        "8.5 × 3.16",
+        "0.24 × 1.5",
+        "12.5 × 0.08"
+      ],
+      "commonBottlenecks": [
+        "BN-DEC-MUL-POINT-COUNT",
+        "BN-DEC-MUL-POINT-ESTIMATE"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "3 道同类题全对，并能说出两个因数共有几位小数。",
+        "transferPractice": "能在应用题和竖式题中稳定定位小数点。",
+        "spacedReview": "24/72 小时间隔复测均通过。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-DEC-MUL-001",
+        "RES-KHAN-DEC-MUL-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-NUM-FRACTION-MEANING",
+      "subject": "math",
+      "title": "分数的整体-部分意义",
+      "domain": "数与代数",
+      "gradeRange": [
+        3,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-INT-PLACE-VALUE"
+      ],
+      "successors": [
+        "MATH-NUM-FRACTION-ADD-COMMON-DENOM",
+        "MATH-MOD-RATIO-PART-WHOLE"
+      ],
+      "typicalProblems": [
+        "把 1 平均分成若干份",
+        "解释 3/4 的整体是谁"
+      ],
+      "commonBottlenecks": [
+        "BN-FRACTION-WHOLE-REFERENCE"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能指出每个分数对应的整体。",
+        "transferPractice": "能在应用题中区分整体与部分。",
+        "spacedReview": "遇到比例或百分数题能先找基准量。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-NUM-FRACTION-ADD-COMMON-DENOM",
+      "subject": "math",
+      "title": "异分母分数加减中的通分",
+      "domain": "数与代数",
+      "gradeRange": [
+        5,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-FRACTION-MEANING",
+        "MATH-NUM-MULTIPLE-LCM"
+      ],
+      "successors": [
+        "MATH-NUM-FRACTION-MIXED-OPS"
+      ],
+      "typicalProblems": [
+        "1/4 + 1/8",
+        "5/6 - 3/4",
+        "2/3 + 0.25"
+      ],
+      "commonBottlenecks": [
+        "BN-FRACTION-ADD-DENOM-MISMATCH"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "3 道异分母加减全对，并能写出通分过程。",
+        "transferPractice": "分数小数混合题中能先统一形式。",
+        "spacedReview": "间隔复测中不再把分母直接相加或误换分母。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-FRACTION-COMMON-001",
+        "RES-KHAN-FRACTION-ADD-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-NUM-FRACTION-MUL-SIMPLIFY",
+      "subject": "math",
+      "title": "分数乘法中的约分与结果大小",
+      "domain": "数与代数",
+      "gradeRange": [
+        5,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-FRACTION-MEANING",
+        "MATH-NUM-FACTOR-GCD"
+      ],
+      "successors": [
+        "MATH-NUM-FRACTION-MIXED-OPS"
+      ],
+      "typicalProblems": [
+        "4/9 × 1/15",
+        "3/8 × 16/9"
+      ],
+      "commonBottlenecks": [
+        "BN-FRACTION-MUL-SIMPLIFY-DIRECTION"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能正确跨分子分母约分，不把结果约大。",
+        "transferPractice": "能用估算判断分数乘法结果应变大还是变小。",
+        "spacedReview": "嵌套运算中约分方向稳定。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-NUM-FRACTION-DIV-RECIPROCAL",
+      "subject": "math",
+      "title": "分数除法与倒数",
+      "domain": "数与代数",
+      "gradeRange": [
+        6,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-FRACTION-MEANING",
+        "MATH-NUM-FRACTION-MUL-SIMPLIFY"
+      ],
+      "successors": [
+        "MATH-MOD-RATIO-PART-WHOLE",
+        "MATH-MOD-PERCENT-BASE"
+      ],
+      "typicalProblems": [
+        "6 ÷ 7/8",
+        "2/5 ÷ 7/3",
+        "3 ÷ 1/4"
+      ],
+      "commonBottlenecks": [
+        "BN-FRACTION-DIV-RECIPROCAL-MISSING",
+        "BN-FRACTION-DIV-CONCEPT-JUMPS"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能把除以分数稳定改写为乘倒数。",
+        "transferPractice": "能解释为什么除以 1/4 等于看有几个 1/4。",
+        "spacedReview": "间隔复测中不再把除数近似成小数后乱算。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-FRACTION-DIV-001",
+        "RES-KHAN-FRACTION-DIV-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-NUM-FRACTION-DECIMAL-CONVERT",
+      "subject": "math",
+      "title": "分数、小数、百分数互化",
+      "domain": "数与代数",
+      "gradeRange": [
+        5,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-DEC-PLACE-VALUE",
+        "MATH-NUM-FRACTION-MEANING"
+      ],
+      "successors": [
+        "MATH-MOD-PERCENT-BASE",
+        "MATH-MOD-PERCENT-DISCOUNT"
+      ],
+      "typicalProblems": [
+        "1/3 + 0.2",
+        "0.15 ÷ 3/4",
+        "25% = 1/4"
+      ],
+      "commonBottlenecks": [
+        "BN-FRACTION-DECIMAL-MIXED-LOAD"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能选择分数或小数形式统一计算。",
+        "transferPractice": "复杂混合运算中不随意近似 1/3。",
+        "spacedReview": "真实试卷中互化错误显著减少。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-MOD-PERCENT-BASE",
+      "subject": "math",
+      "title": "百分数应用中的单位 1 判断",
+      "domain": "综合与实践",
+      "gradeRange": [
+        6,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-FRACTION-MEANING",
+        "MATH-NUM-FRACTION-DECIMAL-CONVERT"
+      ],
+      "successors": [
+        "MATH-MOD-PERCENT-DISCOUNT",
+        "MATH-MOD-TAX-PIECEWISE"
+      ],
+      "typicalProblems": [
+        "已知优惠后价格求原价",
+        "比原来增加百分之几",
+        "求全价票的 1.5%"
+      ],
+      "commonBottlenecks": [
+        "BN-PERCENT-BASE-WHOLE-MISSING"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能在题目中圈出谁是单位 1。",
+        "transferPractice": "已知现价求原价、已知原价求现价都能列对式子。",
+        "spacedReview": "后续百分数应用题不再反复除以 1.05 或 0.96。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-PERCENT-BASE-001",
+        "RES-KHAN-PERCENT-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-MOD-PERCENT-DISCOUNT",
+      "subject": "math",
+      "title": "折扣、优惠、增长和减少方向",
+      "domain": "综合与实践",
+      "gradeRange": [
+        6,
+        7
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-MOD-PERCENT-BASE"
+      ],
+      "successors": [
+        "MATH-MOD-TAX-PIECEWISE"
+      ],
+      "typicalProblems": [
+        "含 5% 优惠后价格 47.25 万，求原价",
+        "涨价 20% 后再降价 20%"
+      ],
+      "commonBottlenecks": [
+        "BN-PERCENT-DISCOUNT-DIRECTION"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能判断乘 0.95、除 0.95、乘 1.05、除 1.05 的适用场景。",
+        "transferPractice": "能用线段图解释现价和原价关系。",
+        "spacedReview": "间隔复测中方向不再反复修改。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-KHAN-PERCENT-DISCOUNT-001",
+        "RES-XHS-PERCENT-DISCOUNT-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-MOD-TAX-PIECEWISE",
+      "subject": "math",
+      "title": "分段税率和分段函数",
+      "domain": "综合与实践",
+      "gradeRange": [
+        6,
+        7
+      ],
+      "priority": "medium",
+      "prerequisites": [
+        "MATH-MOD-PERCENT-BASE",
+        "MATH-NUM-FRACTION-DECIMAL-CONVERT"
+      ],
+      "successors": [],
+      "typicalProblems": [
+        "稿费按三段税率反推总额",
+        "阶梯水费、电费"
+      ],
+      "commonBottlenecks": [
+        "BN-PIECEWISE-TAX-BRACKET"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能把总量拆到不同区间分别计算。",
+        "transferPractice": "能解释每一档的基数是什么。",
+        "spacedReview": "后续分段收费题列式稳定。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-MOD-RATIO-MEANING",
+      "subject": "math",
+      "title": "比和比值的意义",
+      "domain": "数与代数",
+      "gradeRange": [
+        6,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-FRACTION-MEANING"
+      ],
+      "successors": [
+        "MATH-MOD-RATIO-PART-WHOLE",
+        "MATH-MOD-RATIO-PROPERTY"
+      ],
+      "typicalProblems": [
+        "5:3 的意义",
+        "a:b 与 b:a 的区别"
+      ],
+      "commonBottlenecks": [
+        "BN-RATIO-MEANING-ORDER"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能说出比的前项后项分别代表什么。",
+        "transferPractice": "能在应用题中保持比的顺序不反。",
+        "spacedReview": "比例应用题中不再把对象换位。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-MOD-RATIO-PART-WHOLE",
+      "subject": "math",
+      "title": "部分:部分与部分:整体的参照系",
+      "domain": "综合与实践",
+      "gradeRange": [
+        6,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-MOD-RATIO-MEANING",
+        "MATH-NUM-FRACTION-MEANING"
+      ],
+      "successors": [
+        "MATH-MOD-EQUATION-WORD-PROBLEM"
+      ],
+      "typicalProblems": [
+        "剩余:已运 = 5:3",
+        "男生:女生 = 3:2，男生占全班几分之几"
+      ],
+      "commonBottlenecks": [
+        "BN-RATIO-PART-WHOLE-REFERENCE"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能画出两部分和整体的线段图。",
+        "transferPractice": "能解释 5/8 是谁占谁。",
+        "spacedReview": "后续比例应用题中先确定参照系。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-RATIO-PARTWHOLE-001",
+        "RES-XHS-RATIO-PARTWHOLE-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-MOD-RATIO-PROPERTY",
+      "subject": "math",
+      "title": "比例基本性质与交叉相乘",
+      "domain": "数与代数",
+      "gradeRange": [
+        6,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-MOD-RATIO-MEANING"
+      ],
+      "successors": [
+        "MATH-MOD-RATIO-SCALE"
+      ],
+      "typicalProblems": [
+        "判断四个数能否组成比例",
+        "1/a = 3/b 求 a:b"
+      ],
+      "commonBottlenecks": [
+        "BN-RATIO-CROSS-MULTIPLY-DIRECTION",
+        "BN-RATIO-PROPORTION-EXHAUSTIVE"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能正确写出内项积等于外项积。",
+        "transferPractice": "能处理含字母和小数的比例判断。",
+        "spacedReview": "间隔复测中交叉方向不反。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-MOD-RATIO-SCALE",
+      "subject": "math",
+      "title": "比例尺与实际距离双向换算",
+      "domain": "综合与实践",
+      "gradeRange": [
+        6,
+        6
+      ],
+      "priority": "medium",
+      "prerequisites": [
+        "MATH-MOD-RATIO-PROPERTY",
+        "MATH-MEASURE-UNIT-LENGTH"
+      ],
+      "successors": [],
+      "typicalProblems": [
+        "比例尺 1:400000 图上 3cm 对应实际距离",
+        "换到 1:1600000 图上距离"
+      ],
+      "commonBottlenecks": [
+        "BN-SCALE-DOUBLE-CONVERSION"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能写出图上距离、实际距离、比例尺三者关系。",
+        "transferPractice": "能完成实际距离到另一张图上距离的两步换算。",
+        "spacedReview": "后续比例尺题不再凭感觉写 12 或 16。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-MEASURE-UNIT-LENGTH",
+      "subject": "math",
+      "title": "长度单位 cm/dm/m 换算",
+      "domain": "综合与实践",
+      "gradeRange": [
+        3,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-DEC-PLACE-VALUE"
+      ],
+      "successors": [
+        "MATH-MEASURE-UNIT-AREA-VOLUME",
+        "MATH-MOD-RATIO-SCALE"
+      ],
+      "typicalProblems": [
+        "14 cm = 1.4 dm",
+        "图上单位 cm、题目参数 dm"
+      ],
+      "commonBottlenecks": [
+        "BN-UNIT-LENGTH-CM-DM-M"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能正确换算 cm、dm、m。",
+        "transferPractice": "图表和题干单位不一致时能先统一单位。",
+        "spacedReview": "后续应用题中单位不再混写。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-UNIT-CONVERT-001",
+        "RES-XHS-UNIT-CONVERT-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-MEASURE-UNIT-AREA-VOLUME",
+      "subject": "math",
+      "title": "面积单位与体积单位量纲",
+      "domain": "综合与实践",
+      "gradeRange": [
+        5,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-MEASURE-UNIT-LENGTH"
+      ],
+      "successors": [
+        "MATH-GEO-CIRCLE-AREA",
+        "MATH-GEO-CYLINDER-VOLUME"
+      ],
+      "typicalProblems": [
+        "m² 与 cm² 区分",
+        "cm³ 与 dm³ 转换"
+      ],
+      "commonBottlenecks": [
+        "BN-UNIT-AREA-VOLUME-DIMENSION"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能说出长度、面积、体积单位的维度差异。",
+        "transferPractice": "几何应用题中能先统一单位再套公式。",
+        "spacedReview": "后续不把 m² 写成 cm²。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-GEO-TRIANGLE-AREA",
+      "subject": "math",
+      "title": "三角形面积公式与平移不变性",
+      "domain": "图形与几何",
+      "gradeRange": [
+        5,
+        6
+      ],
+      "priority": "medium",
+      "prerequisites": [
+        "MATH-GEO-RECTANGLE-AREA"
+      ],
+      "successors": [
+        "MATH-GEO-TRANSFORM-AREA-INVARIANT"
+      ],
+      "typicalProblems": [
+        "底 3 高 4 的三角形面积",
+        "坐标三角形平移后面积"
+      ],
+      "commonBottlenecks": [
+        "BN-TRIANGLE-AREA-MISSING-HALF"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "三角形面积计算不忘除以 2。",
+        "transferPractice": "坐标图中能找底和高。",
+        "spacedReview": "平移题中不把平移距离代入面积。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-GEO-TRANSFORM-AREA-INVARIANT",
+      "subject": "math",
+      "title": "平移、旋转、对称中的面积不变性",
+      "domain": "图形与几何",
+      "gradeRange": [
+        5,
+        7
+      ],
+      "priority": "medium",
+      "prerequisites": [
+        "MATH-GEO-TRIANGLE-AREA"
+      ],
+      "successors": [
+        "MATH-GEO-ROTATION-SOLID"
+      ],
+      "typicalProblems": [
+        "图形平移 3 格后面积",
+        "旋转不改变平面图形大小"
+      ],
+      "commonBottlenecks": [
+        "BN-TRANSFORM-AREA-DISTANCE-MISUSE"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能说出平移不改变面积。",
+        "transferPractice": "遇到平移距离时不把它当底或高。",
+        "spacedReview": "图形变换题中先判断不变量。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-GEO-CIRCLE-CIRCUMFERENCE",
+      "subject": "math",
+      "title": "圆的周长",
+      "domain": "图形与几何",
+      "gradeRange": [
+        6,
+        6
+      ],
+      "priority": "medium",
+      "prerequisites": [
+        "MATH-GEO-CIRCLE-RADIUS-DIAMETER"
+      ],
+      "successors": [
+        "MATH-GEO-CIRCLE-AREA"
+      ],
+      "typicalProblems": [
+        "C = 2πr",
+        "直径和半径转换"
+      ],
+      "commonBottlenecks": [
+        "BN-CIRCLE-CIRCUMFERENCE-AREA-MIX"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能区分求长度还是求面积。",
+        "transferPractice": "应用题中不把周长公式用于面积。",
+        "spacedReview": "圆相关题目先标注目标量。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-GEO-CIRCLE-AREA",
+      "subject": "math",
+      "title": "圆面积公式 πr²",
+      "domain": "图形与几何",
+      "gradeRange": [
+        6,
+        6
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-GEO-CIRCLE-CIRCUMFERENCE",
+        "MATH-MEASURE-UNIT-AREA-VOLUME"
+      ],
+      "successors": [
+        "MATH-GEO-CYLINDER-VOLUME"
+      ],
+      "typicalProblems": [
+        "喷水半径 9m，求清洁面积",
+        "圆形草坪面积"
+      ],
+      "commonBottlenecks": [
+        "BN-CIRCLE-AREA-EXTRA-R",
+        "BN-CIRCLE-CIRCUMFERENCE-AREA-MIX"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能用 πr² 求圆面积，且不多乘 r。",
+        "transferPractice": "能区分面积、周长、体积的公式。",
+        "spacedReview": "后续圆面积题单位和公式均正确。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-CIRCLE-AREA-001",
+        "RES-XHS-CIRCLE-AREA-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-GEO-CYLINDER-VOLUME",
+      "subject": "math",
+      "title": "圆柱体积：底面积乘高",
+      "domain": "图形与几何",
+      "gradeRange": [
+        6,
+        7
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-GEO-CIRCLE-AREA",
+        "MATH-MEASURE-UNIT-AREA-VOLUME"
+      ],
+      "successors": [
+        "MATH-GEO-CONE-VOLUME",
+        "MATH-GEO-SOLID-SURFACE-ENUM"
+      ],
+      "typicalProblems": [
+        "V = πr²h",
+        "水柱体积",
+        "圆柱和长方体体积模型对比"
+      ],
+      "commonBottlenecks": [
+        "BN-CYLINDER-VOLUME-FORMULA-MIX"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能解释底面积乘高的含义。",
+        "transferPractice": "单位不一致时能先统一单位。",
+        "spacedReview": "圆面积题不再误多乘高，体积题能正确乘高。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-CYLINDER-VOLUME-001",
+        "RES-KHAN-CYLINDER-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-GEO-CONE-VOLUME",
+      "subject": "math",
+      "title": "圆锥体积与三分之一",
+      "domain": "图形与几何",
+      "gradeRange": [
+        6,
+        7
+      ],
+      "priority": "medium",
+      "prerequisites": [
+        "MATH-GEO-CYLINDER-VOLUME"
+      ],
+      "successors": [
+        "MATH-GEO-ROTATION-SOLID"
+      ],
+      "typicalProblems": [
+        "V = 1/3πr²h",
+        "等底等高圆柱与圆锥体积关系"
+      ],
+      "commonBottlenecks": [
+        "BN-CONE-VOLUME-ONE-THIRD"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能说出圆锥是等底等高圆柱体积的三分之一。",
+        "transferPractice": "应用题中不漏乘或误乘 1/3。",
+        "spacedReview": "间隔复测稳定。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-GEO-SOLID-SURFACE-ENUM",
+      "subject": "math",
+      "title": "复杂立体表面积的暴露面枚举",
+      "domain": "图形与几何",
+      "gradeRange": [
+        6,
+        7
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-GEO-CYLINDER-VOLUME",
+        "MATH-GEO-CIRCLE-AREA"
+      ],
+      "successors": [
+        "MATH-GEO-ROTATION-SOLID"
+      ],
+      "typicalProblems": [
+        "大圆柱内挖三个小圆柱，求剩余表面积"
+      ],
+      "commonBottlenecks": [
+        "BN-SOLID-SURFACE-EXPOSED-FACES-OMIT"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能按外侧、内侧、上面、下面系统枚举。",
+        "transferPractice": "挖空、拼接、切割题能列出增减面。",
+        "spacedReview": "不再漏算底面或内侧面。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-SOLID-SURFACE-001",
+        "RES-XHS-SOLID-SURFACE-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-GEO-ROTATION-SOLID",
+      "subject": "math",
+      "title": "二维图形旋转形成空间体",
+      "domain": "图形与几何",
+      "gradeRange": [
+        6,
+        7
+      ],
+      "priority": "medium",
+      "prerequisites": [
+        "MATH-GEO-TRANSFORM-AREA-INVARIANT",
+        "MATH-GEO-CYLINDER-VOLUME",
+        "MATH-GEO-CONE-VOLUME"
+      ],
+      "successors": [],
+      "typicalProblems": [
+        "梯形绕轴旋转求体积",
+        "三角形绕顶点旋转求体积"
+      ],
+      "commonBottlenecks": [
+        "BN-ROTATION-SOLID-SHAPE-MISIDENTIFY"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能先画出旋转后的立体形状。",
+        "transferPractice": "不把所有旋转体都当圆柱或圆锥。",
+        "spacedReview": "高阶旋转体题能至少正确识别形状。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-STAT-COORDINATE-READING",
+      "subject": "math",
+      "title": "坐标轴与图表数据读取",
+      "domain": "统计与概率",
+      "gradeRange": [
+        5,
+        7
+      ],
+      "priority": "medium",
+      "prerequisites": [
+        "MATH-MEASURE-UNIT-LENGTH"
+      ],
+      "successors": [
+        "MATH-MOD-RATE-DISTANCE-TIME"
+      ],
+      "typicalProblems": [
+        "从距离-时间图读取路程变化",
+        "坐标点读数"
+      ],
+      "commonBottlenecks": [
+        "BN-CHART-POINT-READING"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能准确读横轴、纵轴和单位。",
+        "transferPractice": "能从图中提取两点差值。",
+        "spacedReview": "图表应用题不再看错单位。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-MOD-RATE-DISTANCE-TIME",
+      "subject": "math",
+      "title": "路程、时间、速度关系",
+      "domain": "综合与实践",
+      "gradeRange": [
+        5,
+        7
+      ],
+      "priority": "medium",
+      "prerequisites": [
+        "MATH-STAT-COORDINATE-READING",
+        "MATH-MEASURE-UNIT-LENGTH"
+      ],
+      "successors": [
+        "MATH-MOD-UNIFORM-CHANGE"
+      ],
+      "typicalProblems": [
+        "km/min 转 km/h",
+        "距离-时间图求速度"
+      ],
+      "commonBottlenecks": [
+        "BN-RATE-UNIT-CONVERSION-BREAK"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能写出速度 = 路程 ÷ 时间。",
+        "transferPractice": "能完成 km/min 到 km/h 的单位换算。",
+        "spacedReview": "图表速度题不再只凭近似写整数。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-MOD-UNIFORM-CHANGE",
+      "subject": "math",
+      "title": "匀速变化模型中的单位变化量",
+      "domain": "综合与实践",
+      "gradeRange": [
+        5,
+        7
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-MOD-RATE-DISTANCE-TIME"
+      ],
+      "successors": [
+        "MATH-MOD-EQUATION-WORD-PROBLEM"
+      ],
+      "typicalProblems": [
+        "蜡烛 1 小时后余 14.6cm，2 小时后余 11.8cm，求原长"
+      ],
+      "commonBottlenecks": [
+        "BN-UNIFORM-CHANGE-INTERVAL-DIFF"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能说出相邻两个时刻差值就是一个时间间隔的变化量。",
+        "transferPractice": "水位、蜡烛、行程等匀速变化题能识别单位变化量。",
+        "spacedReview": "不再把已经是一小时差值的数再除以 2。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-UNIFORM-CHANGE-001",
+        "RES-XHS-UNIFORM-CHANGE-001"
+      ]
+    },
+    {
+      "nodeId": "MATH-MOD-EQUATION-WORD-PROBLEM",
+      "subject": "math",
+      "title": "应用题中的方程建模",
+      "domain": "综合与实践",
+      "gradeRange": [
+        5,
+        7
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-MOD-RATIO-PART-WHOLE",
+        "MATH-MOD-UNIFORM-CHANGE"
+      ],
+      "successors": [],
+      "typicalProblems": [
+        "多条件比例应用题",
+        "未知总量问题"
+      ],
+      "commonBottlenecks": [
+        "BN-MODEL-EQUATION-AVOIDANCE"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "能为未知总量设 x 并解释 x 的含义。",
+        "transferPractice": "复杂应用题能选择方程降低认知负荷。",
+        "spacedReview": "后续多条件题不再只靠算术硬凑。"
+      },
+      "textbookRefs": [],
+      "resourceIds": []
+    },
+    {
+      "nodeId": "MATH-META-ESTIMATION-CHECK",
+      "subject": "math",
+      "title": "答案数量级估算与合理性检查",
+      "domain": "综合与实践",
+      "gradeRange": [
+        3,
+        7
+      ],
+      "priority": "high",
+      "prerequisites": [
+        "MATH-NUM-DEC-PLACE-VALUE",
+        "MATH-NUM-INT-MUL-PARTIAL"
+      ],
+      "successors": [],
+      "typicalProblems": [
+        "8.5 × 3.16 不可能等于 2.186",
+        "5600 ÷ 28 = 200 不等于 204"
+      ],
+      "commonBottlenecks": [
+        "BN-META-ESTIMATION-MISSING",
+        "BN-META-INVERSE-CHECK-MISSING"
+      ],
+      "masteryCriteria": {
+        "immediatePractice": "做完题能主动说出答案大概范围。",
+        "transferPractice": "遇到明显不合理答案能停下来检查。",
+        "spacedReview": "真实试卷中出现验算痕迹。"
+      },
+      "textbookRefs": [],
+      "resourceIds": [
+        "RES-BILI-ESTIMATION-001",
+        "RES-XHS-ESTIMATION-001"
+      ]
+    }
+  ]
+}

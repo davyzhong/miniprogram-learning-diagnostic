@@ -4,6 +4,7 @@ const {
   buildPaperPreviewState,
   buildWorkbenchStatus
 } = require('../miniprogram/pages/paper-preview/paper-preview-presenter')
+const { loadPage } = require('./helpers/page-harness')
 
 function basePaper() {
   return {
@@ -120,4 +121,16 @@ test('paper preview lifecycle sends completed feedback to the report', () => {
   assert.equal(state.primaryActionText, '查看验证反馈')
   assert.match(state.primaryActionUrl, /report-completed/)
   assert.deepEqual(state.lifecycleSteps.map(step => step.status), ['completed', 'completed', 'completed'])
+})
+
+// ── Page-level helper (migrated from page-flows.test.js) ──
+
+test('paper preview formats default paper names without repeating the grade key', () => {
+  const { page } = loadPage('miniprogram/pages/paper-preview/paper-preview.js', {
+    modules: { '../../utils/cloud': {} }
+  })
+  assert.equal(
+    page.getPaperName({ type: 'default-diagnosis', grade: 3, paperKey: 'grade3_a' }),
+    '3年级 A 卷'
+  )
 })

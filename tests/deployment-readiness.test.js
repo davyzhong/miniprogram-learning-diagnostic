@@ -13,6 +13,14 @@ function exists(relativePath) {
   return fs.existsSync(path.join(root, relativePath))
 }
 
+function read(relativePath) {
+  return fs.readFileSync(path.join(root, relativePath), 'utf8')
+}
+
+function exists(relativePath) {
+  return fs.existsSync(path.join(root, relativePath))
+}
+
 const REQUIRED_CLOUD_FUNCTIONS = [
   'uploadAndAnalyze',
   'analyzePhotos',
@@ -84,6 +92,42 @@ test('English vocabulary cloud function package is self-contained for deployment
   assert.match(source, /require\(['"]\.\/english-vocabulary['"]\)/)
 })
 
+test('generatePaper PDF display helpers are self-contained for single-function deployment', () => {
+  const sources = [
+    read('cloudfunctions/generatePaper/index.js'),
+    read('cloudfunctions/generatePaper/pdf-renderer.js'),
+    read('cloudfunctions/generatePaper/bottleneck-display.js')
+  ].join('\n')
+
+  assert.ok(exists('cloudfunctions/generatePaper/bottleneck-name.js'))
+  assert.ok(exists('cloudfunctions/generatePaper/constants.js'))
+  assert.ok(exists('cloudfunctions/generatePaper/access.js'))
+  assert.doesNotMatch(sources, /require\(['"]\.\.\/_shared\//)
+  assert.match(sources, /require\(['"]\.\/bottleneck-name['"]\)/)
+  assert.match(sources, /require\(['"]\.\/constants['"]\)/)
+  assert.match(sources, /require\(['"]\.\/access['"]\)/)
+})
+
+test('math learning map seed data is packaged with the miniprogram runtime', () => {
+  const runtimeSeeds = [
+    'knowledge-nodes.seed',
+    'bottleneck-taxonomy-v2.seed',
+    'learning-resources.seed'
+  ]
+  const source = read('miniprogram/utils/math-learning-map.js')
+
+  for (const seedName of runtimeSeeds) {
+    const sourcePath = `data/math/${seedName}.json`
+    const runtimePath = `miniprogram/data/math/${seedName}.js`
+
+    assert.ok(exists(runtimePath), `${runtimePath} should be packaged for miniprogram runtime`)
+    assert.deepEqual(require(path.join(root, runtimePath)), JSON.parse(read(sourcePath)), `${runtimePath} should match ${sourcePath}`)
+    assert.match(source, new RegExp(`require\\(['"]\\.\\./data/math/${seedName.replaceAll('.', '\\.')}['"]\\)`))
+  }
+
+  assert.doesNotMatch(source, /require\(['"][^'"]+\.json['"]\)/)
+})
+
 test('deployment workflow is documented and exposed as a package script', () => {
   const pkg = JSON.parse(read('package.json'))
 
@@ -107,4 +151,52 @@ test('release and rollback workflow is documented and exposed as a package scrip
   assert.match(checklist, /回滚/)
   assert.equal(pkg.scripts['release:check'], 'npm run check:deployment && npm run verify && npm run test:coverage')
   assert.match(read('README.md'), /docs\/RELEASE_CHECKLIST\.md/)
+})
+
+// ── Project structural integrity (merged from project-integrity.test.js) ──
+
+test('every registered page has its complete four-file bundle', () => {
+  const app = require('../miniprogram/app.json')
+  for (const page of app.pages) {
+    for (const extension of ['js', 'json', 'wxml', 'wxss']) {
+      assert.equal(
+        fs.existsSync(path.join(root, 'miniprogram', `${page}.${extension}`)),
+        true,
+        `${page}.${extension} is missing`
+      )
+    }
+  }
+})
+
+test('every WXML event handler exists on its page controller', () => {
+  const pagesDir = path.join(root, 'miniprogram/pages')
+  for (const directory of fs.readdirSync(pagesDir)) {
+    const base = path.join(pagesDir, directory, directory)
+    if (!fs.existsSync(`${base}.wxml`)) continue
+    const wxml = fs.readFileSync(`${base}.wxml`, 'utf8')
+    let js = fs.readFileSync(`${base}.js`, 'utf8')
+    // If the page spreads shared navigation, include those handlers too
+    if (js.includes('sharedNavigation')) {
+      js += fs.readFileSync(path.join(root, 'miniprogram/utils/shared-navigation.js'), 'utf8')
+    }
+    const handlers = [...wxml.matchAll(/(?:bind|catch)(?:tap|input|change|submit|longpress)="([^"]+)"/g)]
+      .map(match => match[1])
+    for (const handler of handlers) {
+      assert.match(js, new RegExp(`\\b${handler}\\s*\\(`), `${directory} is missing ${handler}`)
+    }
+  }
+})
+
+test('brand illustration and logo assets exist', () => {
+  const assets = [
+    'miniprogram/assets/images/math-diagnostic-guide.jpg',
+    'miniprogram/assets/images/app-logo-share.jpg',
+    'brand-assets/app-logo.png'
+  ]
+
+  for (const asset of assets) {
+    const absolutePath = path.join(root, asset)
+    assert.equal(fs.existsSync(absolutePath), true, `${asset} is missing`)
+    assert.ok(fs.statSync(absolutePath).size > 0, `${asset} is empty`)
+  }
 })
