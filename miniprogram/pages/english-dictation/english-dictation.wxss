@@ -47,7 +47,8 @@
 .state-card,
 .progress-card,
 .prompt-card,
-.upload-card {
+.upload-card,
+.result-card {
   border-radius: 18rpx;
   background: #fff;
   box-shadow: 0 4rpx 18rpx rgba(15, 23, 42, .06);
@@ -109,7 +110,8 @@
 }
 
 .prompt-card,
-.upload-card {
+.upload-card,
+.result-card {
   padding: 30rpx;
 }
 
@@ -166,4 +168,47 @@
   border-radius: 18rpx;
   font-size: 30rpx;
   font-weight: 750;
+}
+
+.result-row {
+  margin-top: 18rpx;
+  padding: 18rpx 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1rpx solid #e2e8f0;
+}
+
+.result-row:last-child {
+  border-bottom: 0;
+}
+
+.result-word {
+  color: #1f2937;
+  font-size: 28rpx;
+  font-weight: 750;
+}
+
+.result-verdict {
+  padding: 6rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 750;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.verdict-correct {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.verdict-incorrect {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.verdict-unclear {
+  background: #e2e8f0;
+  color: #475569;
 }

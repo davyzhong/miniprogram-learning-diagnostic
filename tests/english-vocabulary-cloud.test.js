@@ -457,3 +457,91 @@ test('submitting English dictation photos stores evidence without judging spelli
   assert.deepEqual(session.photoFileIds, ['cloud://photo-1', 'cloud://photo-2'])
   assert.equal(db.dump('studentEnglishWords')[0].spelling.status, 'untested')
 })
+
+test('analyzing English dictation photos updates only spelling progress from constrained OCR', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [
+      {
+        _id: 'word-1',
+        studentId: 'student-1',
+        word: 'science',
+        meanings: ['科学'],
+        familiarity: { status: 'mastered', correctCount: 4, wrongCount: 0, lastTestedAt: '2026-06-15', nextReviewAt: '', lastDirection: 'cn2en' },
+        spelling: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '' },
+        overallMastery: 'partial'
+      },
+      {
+        _id: 'word-2',
+        studentId: 'student-1',
+        word: 'museum',
+        meanings: ['博物馆'],
+        familiarity: { status: 'reviewing', correctCount: 2, wrongCount: 0, lastTestedAt: '2026-06-15', nextReviewAt: '2026-06-18', lastDirection: 'en2cn' },
+        spelling: { status: 'reviewing', correctCount: 2, wrongCount: 0, lastTestedAt: '2026-06-15', nextReviewAt: '2026-06-18' },
+        overallMastery: 'partial'
+      },
+      {
+        _id: 'word-3',
+        studentId: 'student-1',
+        word: 'library',
+        meanings: ['图书馆'],
+        familiarity: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '', lastDirection: '' },
+        spelling: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '' },
+        overallMastery: 'untested'
+      }
+    ],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      functionType: 'spelling',
+      type: 'word-dictation-paper',
+      status: 'submitted',
+      analysisStatus: 'pending_analysis',
+      photoFileIds: ['cloud://dictation-1'],
+      wordItems: [
+        { queueKey: 'word-1:0:0', wordId: 'word-1', word: 'science' },
+        { queueKey: 'word-2:1:0', wordId: 'word-2', word: 'museum' },
+        { queueKey: 'word-3:2:0', wordId: 'word-3', word: 'library' }
+      ]
+    }]
+  })
+  const handler = loadEnglishVocabulary(db, 'owner-1', {
+    cloudOptions: {
+      getTempFileURL: async ({ fileList }) => ({
+        fileList: fileList.map(fileID => ({ fileID, tempFileURL: `https://temp/${fileID}.jpg` }))
+      })
+    },
+    tcb: createTcbMock(JSON.stringify({
+      results: [
+        { wordId: 'word-1', targetWord: 'science', recognizedText: 'science', verdict: 'correct', confidence: 0.98, reason: '拼写正确' },
+        { wordId: 'word-2', targetWord: 'museum', recognizedText: 'musem', verdict: 'incorrect', confidence: 0.9, reason: '少写一个 u' },
+        { wordId: 'word-3', targetWord: 'library', recognizedText: '', verdict: 'unclear', confidence: 0.2, reason: '空白或看不清' }
+      ]
+    }))
+  })
+
+  const result = await handler.main({
+    action: 'analyzeDictationPhoto',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    reviewedAt: '2026-06-16T09:00:00+08:00'
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.analysisStatus, 'completed')
+  assert.equal(result.results.length, 3)
+  const words = db.dump('studentEnglishWords')
+  const science = words.find(item => item._id === 'word-1')
+  const museum = words.find(item => item._id === 'word-2')
+  const library = words.find(item => item._id === 'word-3')
+  assert.equal(science.spelling.status, 'reviewing')
+  assert.equal(science.spelling.nextReviewAt, '2026-06-17')
+  assert.equal(science.familiarity.status, 'mastered')
+  assert.equal(museum.spelling.status, 'needs_practice')
+  assert.equal(museum.spelling.wrongCount, 1)
+  assert.equal(library.spelling.status, 'untested')
+  const session = db.dump('englishPracticeSessions')[0]
+  assert.equal(session.status, 'completed')
+  assert.equal(session.analysisStatus, 'completed')
+  assert.equal(session.dictationResults.length, 3)
+})

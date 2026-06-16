@@ -352,13 +352,16 @@ MVP 数学卡点当前包含：
 | `analysisStatus` | String | 纸面听写分析状态：`waiting_upload` \| `pending_analysis` \| `completed`；熟悉度会话可为空 | `"pending_analysis"` |
 | `wordItems` | Array\<Object\> | 本轮词队列，默认 20 个词，中文/英文提示约各半 | `[{ "word": "science" }]` |
 | `attempts` | Array\<Object\> | 逐题识别和 AI 判定记录 | 见下方 |
-| `photoFileIds` | Array\<String\> | 纸面听写上传的答案照片 fileID，Phase 6 先保存证据，Phase 7 再 OCR 判定 | `["cloud://xxx"]` |
+| `photoFileIds` | Array\<String\> | 纸面听写上传的答案照片 fileID | `["cloud://xxx"]` |
+| `dictationResults` | Array\<Object\> | 候选词约束 OCR 后的逐词批改结果，只服务纸面听写 | `[{ "targetWord": "science", "verdict": "correct" }]` |
 
 `attempts` 子结构：`wordId`、`targetWord`、`promptType`、`recognizedText`、`audioFileID`、`judgment.status`（`correct/incorrect/unclear`）、`retryCount`、`reviewedAt`。`unclear` 只安排本轮重听，不更新正误计数。
 
+`dictationResults` 子结构：`queueKey`、`wordId`、`targetWord`、`recognizedText`、`verdict`（`correct/incorrect/unclear`）、`reason`、`confidence`。缺失、空白、模糊或无法对应候选词的项统一落到 `unclear`。
+
 **熟悉度规则**：默认每轮 20 词；错词本轮稍后重现并更新 `familiarity`；正确词按 1 天、3 天、7 天进入复测，完成连续复测后进入 `mastered`。
 
-**纸面听写规则**：Phase 6 只创建 `functionType=spelling` 的听写会话，并保存 `photoFileIds` 作为答案证据，不更新 `spelling` 状态。Phase 7 将接入候选词约束 OCR 后，再基于逐词判定更新 `spelling`。
+**纸面听写规则**：先创建 `functionType=spelling` 的听写会话并保存 `photoFileIds` 作为答案证据；随后用本次 `wordItems` 作为候选词做约束 OCR，只有 `correct/incorrect` 更新 `spelling`，`unclear` 只记录证据、不计正误、不更新 `familiarity`。
 
 ---
 
@@ -572,3 +575,4 @@ MVP 数学卡点当前包含：
 | wordLimit 范围 | englishVocabulary.generatePracticeSession | 1-40，默认 20 |
 | 内置词库导入 | englishVocabulary.seedPersonalVocabulary | 仅接收 `studentId`；固定使用项目内置钟青羽 PEP 个人词库 |
 | dictation judgment 枚举 | englishVocabulary.submitDictationAttempt | 仅返回 `correct/incorrect/unclear`，由云函数根据识别文本判定 |
+| dictation OCR 判定枚举 | englishVocabulary.analyzeDictationPhoto | 仅接收 AI 输出中的 `correct/incorrect/unclear`；缺失或非法值归一为 `unclear` |

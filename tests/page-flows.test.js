@@ -1024,6 +1024,7 @@ test('English practice page submits AI recognition attempts and requeues wrong w
 test('English dictation page creates a paper session and uploads answer photos', async () => {
   const uploaded = []
   const submitted = []
+  const analyzed = []
   const cloud = {
     generateEnglishPaperDictationSession: async payload => ({
       sessionId: 'paper-session-1',
@@ -1044,6 +1045,17 @@ test('English dictation page creates a paper session and uploads answer photos',
     submitEnglishDictationPhoto: async payload => {
       submitted.push(payload)
       return { success: true, analysisStatus: 'pending_analysis', photoFileIds: payload.photoFileIds }
+    },
+    analyzeEnglishDictationPhoto: async payload => {
+      analyzed.push(payload)
+      return {
+        success: true,
+        analysisStatus: 'completed',
+        results: [
+          { wordId: 'word-1', targetWord: 'word1', verdict: 'correct' },
+          { wordId: 'word-2', targetWord: 'word2', verdict: 'incorrect' }
+        ]
+      }
     }
   }
   const wx = createWxMock({
@@ -1075,7 +1087,9 @@ test('English dictation page creates a paper session and uploads answer photos',
   assert.equal(uploaded[0].studentId, 'student-1')
   assert.equal(submitted[0].sessionId, 'paper-session-1')
   assert.deepEqual(JSON.parse(JSON.stringify(submitted[0].photoFileIds)), ['cloud://dictation-1.jpg', 'cloud://dictation-2.jpg'])
-  assert.equal(page.data.analysisStatus, 'pending_analysis')
+  assert.equal(analyzed[0].sessionId, 'paper-session-1')
+  assert.equal(page.data.analysisStatus, 'completed')
+  assert.equal(page.data.dictationResults.length, 2)
   assert.equal(page.data.uploadedPhotoCount, 2)
 })
 

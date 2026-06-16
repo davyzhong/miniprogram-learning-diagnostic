@@ -45,5 +45,13 @@
       <button class="primary-btn" loading="{{uploading}}" bindtap="onChoosePhotoTap">拍照上传</button>
       <text class="upload-status" wx:if="{{uploadedPhotoCount > 0}}">已上传 {{uploadedPhotoCount}} 张 · {{analysisStatus}}</text>
     </view>
+
+    <view class="result-card" wx:if="{{dictationResults.length > 0}}">
+      <text class="upload-title">AI 批改结果</text>
+      <view class="result-row" wx:for="{{dictationResults}}" wx:key="wordId">
+        <text class="result-word">{{item.targetWord}}</text>
+        <text class="result-verdict verdict-{{item.verdict}}">{{item.verdict}}</text>
+      </view>
+    </view>
   </view>
 </view>

@@ -392,7 +392,8 @@ wx.cloud.callFunction({
 | `generateRecognitionSession` | `studentId` | owner/viewer 可操作 | 默认生成 20 个单词的熟悉度口头练习会话，方向为中英混合 |
 | `submitRecognitionAttempt` | `studentId`, `sessionId`, `wordId`, `recognizedText` | owner/viewer 可操作 | 逐题提交熟悉度语音识别结果，只更新 `familiarity` 维度 |
 | `generatePaperDictationSession` | `studentId` | owner/viewer 可操作 | 默认生成 20 个单词的纸面听写会话，只创建 `spelling` 维度任务，不更新掌握状态 |
-| `submitDictationPhoto` | `studentId`, `sessionId`, `photoFileIds` | owner/viewer 可操作 | 保存纸面听写照片证据，状态置为 `pending_analysis`，OCR 判定在后续阶段完成 |
+| `submitDictationPhoto` | `studentId`, `sessionId`, `photoFileIds` | owner/viewer 可操作 | 保存纸面听写照片证据，状态置为 `pending_analysis` |
+| `analyzeDictationPhoto` | `studentId`, `sessionId` | owner/viewer 可操作 | 对本次听写纸做候选词约束 OCR，写入逐词判定并只更新 `spelling` 维度 |
 | `generatePracticeSession` | `studentId` | owner/viewer 可操作 | 默认生成 20 个单词的 `word-dictation` 听写会话 |
 | `submitDictationAttempt` | `studentId`, `sessionId`, `wordId`, `recognizedText` | owner/viewer 可操作 | 逐题提交语音识别结果，云函数自动判定并更新掌握度 |
 | `submitPracticeResult` | `studentId`, `sessionId` | owner/viewer 可操作 | 标记会话完成，兼容旧练习提交 |
@@ -538,6 +539,34 @@ wx.cloud.callFunction({
 }
 ```
 
+**analyzeDictationPhoto**
+
+```json
+{
+  "success": true,
+  "sessionId": "englishPracticeSessions-2",
+  "analysisStatus": "completed",
+  "results": [
+    {
+      "wordId": "word-1",
+      "targetWord": "science",
+      "recognizedText": "science",
+      "verdict": "correct",
+      "reason": "拼写正确",
+      "confidence": 0.98
+    },
+    {
+      "wordId": "word-2",
+      "targetWord": "museum",
+      "recognizedText": "musem",
+      "verdict": "incorrect",
+      "reason": "少写一个 u",
+      "confidence": 0.9
+    }
+  ]
+}
+```
+
 **submitDictationAttempt**
 
 ```json
@@ -560,7 +589,7 @@ wx.cloud.callFunction({
 3. 高频错词由 `wrongCount` 和 `needs_practice` 状态派生，展示在英语工作台首页；v2 新页面应优先读取双维 summary。
 4. `unclear` 保留为独立状态，避免把识别失败误算成孩子拼错。
 5. 内置个人词库由 `data/english/zhong-qingyu-pep-vocabulary.seed.json` 生成，并同步复制到 `cloudfunctions/englishVocabulary/` 供云函数部署使用。
-6. 纸面听写照片当前只保存到 `englishPracticeSessions.photoFileIds`，并将 `analysisStatus` 置为 `pending_analysis`；候选词约束 OCR 判定留到下一阶段。
+6. 纸面听写先通过 `submitDictationPhoto` 保存 `photoFileIds`，再通过 `analyzeDictationPhoto` 读取本次 `wordItems` 作为候选词做约束 OCR；`unclear` 不更新正误计数，`correct/incorrect` 只更新 `spelling`，不影响 `familiarity`。
 
 ---
 

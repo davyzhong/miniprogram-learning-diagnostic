@@ -360,6 +360,10 @@ async function submitEnglishDictationPhoto(payload = {}) {
   return callFunction('englishVocabulary', { action: 'submitDictationPhoto', ...payload })
 }
 
+async function analyzeEnglishDictationPhoto(payload = {}) {
+  return callFunction('englishVocabulary', { action: 'analyzeDictationPhoto', ...payload })
+}
+
 async function generateEnglishPracticeSession(payload = {}) {
   return callFunction('englishVocabulary', { action: 'generatePracticeSession', ...payload })
 }
@@ -420,6 +424,7 @@ module.exports = {
   submitEnglishRecognitionAttempt,
   generateEnglishPaperDictationSession,
   submitEnglishDictationPhoto,
+  analyzeEnglishDictationPhoto,
   generateEnglishPracticeSession,
   submitEnglishDictationAttempt,
   submitEnglishPracticeResult,

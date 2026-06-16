@@ -189,6 +189,7 @@ test('English vocabulary helpers call englishVocabulary cloud function actions',
   assert.equal((await cloud.submitEnglishRecognitionAttempt({ studentId: 'student-1', sessionId: 'session-1' })).action, 'submitRecognitionAttempt')
   assert.equal((await cloud.generateEnglishPaperDictationSession({ studentId: 'student-1' })).action, 'generatePaperDictationSession')
   assert.equal((await cloud.submitEnglishDictationPhoto({ studentId: 'student-1', sessionId: 'session-1' })).action, 'submitDictationPhoto')
+  assert.equal((await cloud.analyzeEnglishDictationPhoto({ studentId: 'student-1', sessionId: 'session-1' })).action, 'analyzeDictationPhoto')
   assert.equal((await cloud.generateEnglishPracticeSession({ studentId: 'student-1' })).action, 'generatePracticeSession')
   assert.equal((await cloud.submitEnglishDictationAttempt({ studentId: 'student-1', sessionId: 'session-1' })).action, 'submitDictationAttempt')
   assert.equal((await cloud.submitEnglishPracticeResult({ studentId: 'student-1', sessionId: 'session-1' })).action, 'submitPracticeResult')
@@ -202,6 +203,7 @@ test('English vocabulary helpers call englishVocabulary cloud function actions',
     'englishVocabulary:submitRecognitionAttempt',
     'englishVocabulary:generatePaperDictationSession',
     'englishVocabulary:submitDictationPhoto',
+    'englishVocabulary:analyzeDictationPhoto',
     'englishVocabulary:generatePracticeSession',
     'englishVocabulary:submitDictationAttempt',
     'englishVocabulary:submitPracticeResult'
