@@ -128,9 +128,9 @@ function buildEnglishPrimaryTask(options = {}, permissions = {}) {
     }
   }
   return {
-    title: '今日单词听写',
-    summary: `从 ${totalWords} 个个人词库单词中安排 ${todayCount || 20} 个，优先抽取错词、待复测词和未测词。`,
-    actionText: '开始 20 词听写',
+    title: '今日单词熟悉度',
+    summary: `从 ${totalWords} 个个人词库单词中安排 ${todayCount || 20} 个，先练“听到中文说英文、听到英文说中文”的熟悉度。`,
+    actionText: '开始单词熟悉度',
     actionType: 'englishPractice'
   }
 }
@@ -199,8 +199,8 @@ function buildTools(latestReport, permissions = {}, options = {}) {
       } : null,
       canWrite ? {
         key: 'englishPractice',
-        title: '20词听写',
-        desc: hasEnglishVocabulary(options) ? '语音拼读，AI 自动判定' : '词库导入后即可开始',
+        title: '单词熟悉度',
+        desc: hasEnglishVocabulary(options) ? '听中文说英文，听英文说中文' : '词库导入后即可开始',
         icon: 'Aa',
         actionType: 'englishPractice'
       } : null,
