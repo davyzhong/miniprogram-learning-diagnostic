@@ -18,7 +18,7 @@
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
 | `analysisTasks` | 异步分析任务进度追踪 | analyzePhotos 启动时 | analyzePhotos 云函数 |
 
-> 学习记录页面不是独立集合，而是前端按天聚合 `reports`、`papers` 和 `reports.imageFiles` 后得到的时间线视图。页面会派生学习天数、主记录数、验证试卷数、验证反馈数等摘要；长时间中断的分析记录通过 `studentData.cleanupStaleLearningRecords` 预检和 owner 确认后归档，不新增事件集合。
+> 学习记录页面不是独立集合，而是前端按天聚合 `reports`、`papers`、`reports.imageFiles` 和 `englishPracticeSessions` 后得到的时间线视图。页面会派生学习天数、主记录数、验证试卷数、验证反馈数等摘要；长时间中断的分析记录通过 `studentData.cleanupStaleLearningRecords` 预检和 owner 确认后归档，不新增事件集合。
 
 ---
 

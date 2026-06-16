@@ -310,6 +310,54 @@ test('photo evidence titles hide machine-generated hash file names', () => {
   assert.doesNotMatch(photo.fileName, /7sM83Cph/)
 })
 
+test('learning records render English familiarity and paper dictation sessions', () => {
+  const englishSessions = [
+    {
+      _id: 'familiarity-1',
+      subject: 'english',
+      functionType: 'familiarity',
+      type: 'word-familiarity',
+      status: 'completed',
+      wordItems: Array.from({ length: 20 }, (_, index) => ({ wordId: `word-${index}`, word: `word${index}` })),
+      attempts: [
+        { judgment: { status: 'correct' } },
+        { judgment: { status: 'incorrect' } },
+        { judgment: { status: 'unclear' } }
+      ],
+      createdAt: '2026-06-16T09:00:00+08:00'
+    },
+    {
+      _id: 'dictation-1',
+      subject: 'english',
+      functionType: 'spelling',
+      type: 'word-dictation-paper',
+      status: 'completed',
+      analysisStatus: 'completed',
+      photoFileIds: ['cloud://dictation-1.jpg'],
+      wordItems: [{ wordId: 'word-1', word: 'science' }, { wordId: 'word-2', word: 'museum' }],
+      dictationResults: [
+        { wordId: 'word-1', targetWord: 'science', verdict: 'correct' },
+        { wordId: 'word-2', targetWord: 'museum', verdict: 'incorrect' }
+      ],
+      createdAt: '2026-06-16T10:00:00+08:00'
+    }
+  ]
+
+  const { events } = buildTimelineEvents([], [], new Map([['cloud://dictation-1.jpg', 'https://temp/dictation-1']]), 'english', '英语', englishSessions)
+
+  assert.deepEqual(JSON.parse(JSON.stringify(events.map(event => event.kind))), [
+    'english-dictation-session',
+    'english-familiarity-session'
+  ])
+  assert.equal(events[0].title, '英语纸面听写')
+  assert.match(events[0].summary, /正确 1 个/)
+  assert.equal(events[0].foldedEvidence.length, 1)
+  assert.equal(events[0].foldedEvidence[0].tempFileURL, 'https://temp/dictation-1')
+  assert.equal(events[1].title, '英语单词熟悉度')
+  assert.match(events[1].summary, /正确 1 个/)
+  assert.ok(events[1].chips.includes('20 词'))
+})
+
 test('paper preview presenter builds workbench state, question preview and feedback copy', () => {
   const paper = {
     _id: 'paper-1',

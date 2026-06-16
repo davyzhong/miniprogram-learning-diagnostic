@@ -77,6 +77,7 @@ Page({
       const titleText = buildTitleText(this.data.studentName)
       let reports = []
       let papers = []
+      let englishSessions = []
       let permissions = {}
       let cleanupPreview = null
 
@@ -85,6 +86,7 @@ Page({
           const timeline = await cloud.getLearningTimeline({ studentId: this.data.studentId })
           reports = timeline.reports || []
           papers = timeline.papers || []
+          englishSessions = timeline.englishSessions || []
           permissions = timeline.permissions || {}
         }
       } catch (error) {
@@ -94,14 +96,14 @@ Page({
       cleanupPreview = await previewStaleRecordsIfPossible(this.data.studentId, activeSubject)
       if (cleanupPreview && cleanupPreview.permissions) permissions = cleanupPreview.permissions
 
-      if (!reports.length && !papers.length) {
+      if (!reports.length && !papers.length && !englishSessions.length) {
         reports = await cloud.getReports(this.data.studentId, undefined, 50)
         papers = typeof cloud.getPapers === 'function'
           ? await cloud.getPapers({ studentId: this.data.studentId })
           : []
       }
 
-      const fileIDs = collectFileIDs(reports)
+      const fileIDs = collectFileIDs(reports, englishSessions)
       let tempFiles = []
       if (fileIDs.length) {
         try {
@@ -116,7 +118,8 @@ Page({
         papers,
         urlByFileID,
         activeSubject,
-        fallbackSubjectName
+        fallbackSubjectName,
+        englishSessions
       )
 
       this.setData({

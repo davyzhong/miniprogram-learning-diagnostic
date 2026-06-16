@@ -139,7 +139,7 @@ wx.cloud.callFunction({
 | --- | --- | --- |
 | `getStudentDashboard` | `studentId` | student、subjectProfiles、latestReport、latestPaper、recentReports、recentPapers |
 | `getSubjectDashboard` | `studentId`, `subject` | student、profile、reports、papers |
-| `getLearningTimeline` | `studentId`；`subject` 可选 | reports、papers、items 派生时间线 |
+| `getLearningTimeline` | `studentId`；`subject` 可选 | reports、papers、englishSessions、items 派生时间线 |
 | `getReportDetail` | `reportId` | student、report |
 | `getPaperDetail` | `paperId` | student、paper |
 | `cleanupStaleLearningRecords` | `studentId`；`subject` 可选；`dryRun` 可选 | owner 清理长时间中断的分析记录；`dryRun=true` 只返回可清理数量和记录 ID，不写库 |
@@ -180,7 +180,7 @@ wx.cloud.callFunction({
 ### 注意事项
 
 1. 除 `cleanupStaleLearningRecords` 外，本函数只做共享读取，不创建、不修改学习数据。
-2. 时间线仍是派生视图，由 `reports`、`papers` 和 `reports.imageFiles` 汇总，不新增独立事件集合。
+2. 时间线仍是派生视图，由 `reports`、`papers`、`reports.imageFiles` 和 `englishPracticeSessions` 汇总，不新增独立事件集合。
 3. `cleanupStaleLearningRecords` 只归档长时间停留在分析中、失败或超时的中间态报告，不删除已完成报告、试卷和照片证据；页面会先用 `dryRun=true` 预检，再由 owner 确认执行。
 4. `studentData` 本身只做读取聚合；共同家长是否能上传、重试或生成试卷由对应写入云函数的成员权限校验决定。
 

@@ -125,6 +125,55 @@ test('timeline sorts papers by generated time while preserving paper date', asyn
   assert.equal(timeline.items[0].paperDate, '2026-06-13')
 })
 
+test('timeline includes English vocabulary sessions as learning records', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentMembers: [{ _id: 'member-1', studentId: 'student-1', ownerOpenId: 'owner-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }],
+    reports: [],
+    papers: [],
+    englishPracticeSessions: [
+      {
+        _id: 'familiarity-1',
+        studentId: 'student-1',
+        subject: 'english',
+        functionType: 'familiarity',
+        type: 'word-familiarity',
+        status: 'completed',
+        wordItems: [{ wordId: 'word-1', word: 'science' }],
+        attempts: [{ wordId: 'word-1', targetWord: 'science', judgment: { status: 'correct' } }],
+        createdAt: '2026-06-15T09:00:00Z',
+        completedAt: '2026-06-15T09:10:00Z'
+      },
+      {
+        _id: 'dictation-1',
+        studentId: 'student-1',
+        subject: 'english',
+        functionType: 'spelling',
+        type: 'word-dictation-paper',
+        status: 'completed',
+        analysisStatus: 'completed',
+        photoFileIds: ['cloud://dictation-1.jpg'],
+        wordItems: [{ wordId: 'word-2', word: 'museum' }],
+        dictationResults: [{ wordId: 'word-2', targetWord: 'museum', verdict: 'incorrect' }],
+        createdAt: '2026-06-16T09:00:00Z',
+        analyzedAt: '2026-06-16T09:20:00Z'
+      }
+    ]
+  })
+  const handler = loadStudentData(db, 'viewer-1')
+
+  const timeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1' })
+
+  assert.equal(timeline.success, true)
+  assert.deepEqual(JSON.parse(JSON.stringify(timeline.englishSessions.map(item => item._id))), ['dictation-1', 'familiarity-1'])
+  assert.deepEqual(JSON.parse(JSON.stringify(timeline.items.map(item => item.id))), ['english-session-dictation-1', 'english-session-familiarity-1'])
+  assert.equal(timeline.items[0].type, 'english-dictation-session')
+  assert.equal(timeline.items[0].photoFileIds.length, 1)
+
+  const mathTimeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1', subject: 'math' })
+  assert.deepEqual(JSON.parse(JSON.stringify(mathTimeline.englishSessions)), [])
+})
+
 test('owner can archive stale interrupted analysis records from the timeline', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],

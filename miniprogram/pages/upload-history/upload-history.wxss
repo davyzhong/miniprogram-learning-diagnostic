@@ -348,6 +348,14 @@
   border-left: 6rpx solid #e46f2e;
 }
 
+.record-english-familiarity-session {
+  border-left: 6rpx solid #9b6ad6;
+}
+
+.record-english-dictation-session {
+  border-left: 6rpx solid #c96b2c;
+}
+
 .event-icon {
   align-items: center;
   background: #eef4fb;

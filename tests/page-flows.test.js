@@ -2169,6 +2169,50 @@ test('learning records prefer shared timeline access before legacy collection qu
   ])
 })
 
+test('learning records render English sessions from shared timeline', async () => {
+  const cloud = {
+    getLearningTimeline: async () => ({
+      reports: [],
+      papers: [],
+      englishSessions: [{
+        _id: 'dictation-1',
+        subject: 'english',
+        functionType: 'spelling',
+        type: 'word-dictation-paper',
+        status: 'completed',
+        analysisStatus: 'completed',
+        photoFileIds: ['cloud://dictation-1.jpg'],
+        wordItems: [{ wordId: 'word-1', word: 'science' }],
+        dictationResults: [{ wordId: 'word-1', targetWord: 'science', verdict: 'correct' }],
+        createdAt: '2026-06-16T09:00:00Z'
+      }],
+      permissions: { canView: true }
+    }),
+    getReports: async () => {
+      throw new Error('legacy reports should not be called')
+    },
+    getPapers: async () => {
+      throw new Error('legacy papers should not be called')
+    },
+    getTempFileURLs: async fileIDs => fileIDs.map(fileID => ({ fileID, tempFileURL: `https://temp/${fileID}` }))
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', activeSubject: 'english', subject: 'english', studentName: '钟青羽' })
+
+  await page.loadHistory()
+
+  assert.equal(page.data.days.length, 1)
+  assert.equal(page.data.days[0].events[0].kind, 'english-dictation-session')
+  assert.equal(page.data.days[0].events[0].title, '英语纸面听写')
+  assert.equal(page.data.days[0].events[0].foldedEvidence[0].tempFileURL, 'https://temp/cloud://dictation-1.jpg')
+  assert.equal(page.data.filters.find(item => item.key === 'english').count, 1)
+})
+
 test('learning records treat route subject as an initial filter on the complete timeline', async () => {
   const seen = {}
   const cloud = {

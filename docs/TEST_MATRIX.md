@@ -26,8 +26,8 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | 分批 AI 分析、进度任务、报告和学科档案更新 | `cloud-functions.test.js`、`analyze-batch-result.test.js`、`analyze-photos-pipeline.test.js` | 已覆盖，包括 5+1 分批、逐页结果完整性和失败结果拒绝 |
 | 诊断报告、错题详情、卡点统计 | `report-presenter.test.js`、`page-flows.test.js` | 已覆盖 |
 | 家长可读的卡点短名称展示 | `util.test.js`、`report-presenter.test.js`、`subject-home-presenter.test.js`、`page-flows.test.js` | 已覆盖，不再向家长和学生展示裸 LP 编号 |
-| 学习记录按天聚合报告、试卷和验证上传 | `page-flows.test.js` | 已覆盖；真实照片临时 URL 仍需真机验证 |
-| 学习记录四级展示分类 | `learning-records.test.js`、`page-flows.test.js`、`contracts.test.js` | 已覆盖；诊断报告/验证试卷/验证反馈为主记录，照片/OCR 和作答上传折叠，分析中/失败为紧凑状态，默认诊断试卷不进入主时间线 |
+| 学习记录按天聚合报告、试卷、验证上传和英语练习会话 | `page-flows.test.js`、`student-data-access.test.js` | 已覆盖；真实照片临时 URL 仍需真机验证 |
+| 学习记录四级展示分类 | `learning-records.test.js`、`page-flows.test.js`、`contracts.test.js` | 已覆盖；诊断报告/验证试卷/验证反馈/英语熟悉度/英语纸面听写为主记录，照片/OCR 和作答上传折叠，分析中/失败为紧凑状态，默认诊断试卷不进入主时间线 |
 | 当前综合诊断三状态和旧数据兼容 | `profile-summary.test.js`、`cloud-functions.test.js` | 已覆盖 |
 | 时间化学习卡点趋势和权重 | `time-aware-bottlenecks.test.js`、`profile-summary.test.js`、`cloud-functions.test.js`、`page-flows.test.js` | 已覆盖；照片证据以上传时间为准，验证卷保留 paperDate |
 | 学科工作台主任务、待处理队列和工具入口 | `subject-home-presenter.test.js`、`page-flows.test.js`、`contracts.test.js` | 已覆盖；学科主页不再重复综合诊断摘要 |
@@ -84,7 +84,7 @@ npm run test:e2e-real-image # 真实图片 E2E，发布前单独运行
 | `tests/e2e-real-image.test.js` | 端到端真实图片测试脚本 | 1（含云端条件步骤） |
 | `tests/generate-paper-pdf.test.js` | 可打印 PDF 中文字体、分页和答案页回归 | 4 |
 | `tests/index-presenter.test.js` | 孩子档案视图模型与家庭工作台卡片 | 9 |
-| `tests/learning-records.test.js` | 学习记录四级分类、试卷编号和卡点名称规则 | 10 |
+| `tests/learning-records.test.js` | 学习记录四级分类、试卷编号、卡点名称和英语 session 展示规则 | 11 |
 | `tests/page-flows.test.js` | 页面主流程、首页分流与错误恢复 | 60 |
 | `tests/parent-management-page-flows.test.js` | 家长管理和扫码加入页面流程 | 6 |
 | `tests/photo-dedup.test.js` | OCR 去重算法 | 3 |
