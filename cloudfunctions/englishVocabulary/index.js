@@ -7,6 +7,7 @@ const {
   applyWordReviewResult,
   applyWordDictationAttempt,
   buildVocabularySummary,
+  buildDualVocabularySummary,
   selectPracticeItems,
   buildDictationItems,
   judgeSpokenWord,
@@ -383,7 +384,7 @@ async function getVocabularySummaryAction(event) {
       meanings: item.meanings || []
     }))
   return ok({
-    summary: buildVocabularySummary(words, event.today),
+    summary: buildDualVocabularySummary(words, event.today),
     weakWords,
     patternCount: patterns.filter(item => item.status !== 'archived').length
   })
