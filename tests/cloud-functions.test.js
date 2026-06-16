@@ -7,6 +7,8 @@ const {
   loadModule
 } = require('./helpers/cloud-function-harness')
 
+process.env.BATCH_RETRY_DELAY_MS = '0'
+
 function createPdfKitMock() {
   return class PdfMock extends EventEmitter {
     constructor() {
@@ -462,6 +464,85 @@ test('generatePaper asks verification papers to include core and extension quest
   assert.match(prompt, /2 道迁移延展题/)
 })
 
+test('generatePaper uses chinese concrete review items before generic bottleneck drills', async () => {
+  let prompt = ''
+  const questions = Array.from({ length: 5 }, (_, index) => ({
+    index: index + 1,
+    content: index === 0 ? '看拼音写词语：biàn lùn。' : `语文复测题 ${index + 1}`,
+    answer: index === 0 ? '辩论' : '略',
+    points: 10,
+    lpCode: 'LP-101',
+    lpName: '识字词语',
+    reviewItemId: 'CHI-WORD-BIANLUN',
+    targetText: '辩论',
+    verificationMethod: 'pinyin_to_word'
+  }))
+  const aiApp = {
+    ai: () => ({
+      createModel: () => ({
+        generateText: async ({ messages }) => {
+          prompt = messages[0].content
+          return { text: JSON.stringify({ title: '语文错项复测卷', questions }) }
+        }
+      })
+    })
+  }
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    subjectProfiles: [{
+      _id: 'profile-chinese',
+      studentId: 'student-1',
+      subject: 'chinese',
+      pendingBottlenecks: [{ lpCode: 'LP-101', lpName: '识字词语' }],
+      chineseReviewItems: [{
+        itemId: 'CHI-WORD-BIANLUN',
+        itemType: 'word',
+        targetText: '辩论',
+        expectedAnswer: '辩论',
+        lastWrongAnswer: '辨论',
+        sourceContext: '看拼音写词语：biàn lùn',
+        mistakeType: '形近字混淆',
+        status: 'needs_review',
+        relatedLpCode: 'LP-101',
+        verificationMethods: ['pinyin_to_word', 'dictation']
+      }]
+    }],
+    papers: []
+  })
+  const handler = loadModule('cloudfunctions/generatePaper/index.js', {
+    'wx-server-sdk': createCloudMock({ db }),
+    '@cloudbase/node-sdk': { init: () => aiApp },
+    './pdf-renderer': { generatePDF: async () => ({ buffer: Buffer.from('pdf'), studentPages: 1, answerPages: 1, totalPages: 2 }) }
+  })
+
+  const result = await handler.main({
+    studentId: 'student-1',
+    subject: 'chinese',
+    type: 'verification',
+    targets: ['LP-101']
+  })
+  const paper = db.dump('papers')[0]
+
+  assert.equal(result.success, true)
+  assert.match(prompt, /语文错项复测目标/)
+  assert.match(prompt, /targetText=辩论/)
+  assert.match(prompt, /每个 targetText 至少直接考察一次/)
+  assert.deepEqual(paper.chineseReviewTargets, [{
+    itemId: 'CHI-WORD-BIANLUN',
+    itemType: 'word',
+    targetText: '辩论',
+    expectedAnswer: '辩论',
+    lastWrongAnswer: '辨论',
+    sourceContext: '看拼音写词语：biàn lùn',
+    mistakeType: '形近字混淆',
+    relatedLpCode: 'LP-101',
+    verificationMethods: ['pinyin_to_word', 'dictation']
+  }])
+  assert.equal(paper.questions[0].reviewItemId, 'CHI-WORD-BIANLUN')
+  assert.equal(paper.questions[0].targetText, '辩论')
+  assert.equal(paper.questions[0].verificationMethod, 'pinyin_to_word')
+})
+
 test('analyzePhotos splits batches, excludes duplicate pages and updates the profile', async () => {
   const fileIDs = Array.from({ length: 2 }, (_, index) => `cloud://photo-${index + 1}`)
   const db = createDatabase({
@@ -564,6 +645,85 @@ test('analyzePhotos splits batches, excludes duplicate pages and updates the pro
   assert.match(profile.currentSummary, /计算/)
   assert.equal(profile.analysisStatus, null)
   assert.equal(db.dump('analysisTasks')[0].status, 'completed')
+})
+
+test('analyzePhotos stores chinese concrete error items on report and profile', async () => {
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-chinese-1',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'chinese',
+      type: 'diagnosis',
+      status: 'analyzing',
+      createdAt: '2026-06-11T10:00:00Z',
+      imageFileIds: ['cloud://chinese-1'],
+      imageFiles: [{ fileID: 'cloud://chinese-1' }]
+    }],
+    subjectProfiles: [{
+      _id: 'profile-chinese',
+      studentId: 'student-1',
+      subject: 'chinese',
+      totalReports: 0,
+      pendingBottlenecks: [],
+      improvedBottlenecks: [],
+      chineseReviewItems: []
+    }],
+    analysisTasks: []
+  })
+  const cloud = createCloudMock({
+    db,
+    callFunction: async payload => ({
+      result: {
+        success: true,
+        data: {
+          pageResults: [{
+            fileID: payload.data.fileIDs[0],
+            imageIndex: 1,
+            ocrSummary: '看拼音写词语：biàn lùn，学生写成辨论',
+            totalErrors: 1,
+            bottlenecks: [{
+              lpCode: 'LP-101',
+              lpName: '识字词语',
+              errorCount: 1,
+              severity: 'high'
+            }],
+            errorDetails: [{
+              questionContent: '看拼音写词语：biàn lùn',
+              studentAnswer: '辨论',
+              correctAnswer: '辩论',
+              lpCode: 'LP-101'
+            }],
+            chineseErrorItems: [{
+              itemId: 'CHI-WORD-BIANLUN',
+              itemType: 'word',
+              targetText: '辩论',
+              expectedAnswer: '辩论',
+              studentAnswer: '辨论',
+              sourceContext: '看拼音写词语：biàn lùn',
+              mistakeType: '形近字混淆',
+              verificationMethods: ['pinyin_to_word'],
+              relatedLpCode: 'LP-101'
+            }]
+          }]
+        }
+      }
+    })
+  })
+  const handler = loadModule('cloudfunctions/analyzePhotos/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({ reportId: 'report-chinese-1' })
+  const report = db.dump('reports')[0]
+  const profile = db.dump('subjectProfiles')[0]
+
+  assert.equal(result.success, true)
+  assert.equal(report.chineseErrorItems[0].targetText, '辩论')
+  assert.equal(report.chineseErrorItems[0].sourceFileID, 'cloud://chinese-1')
+  assert.equal(profile.chineseReviewItems[0].targetText, '辩论')
+  assert.equal(profile.chineseReviewItems[0].lastWrongAnswer, '辨论')
+  assert.equal(profile.chineseReviewItems[0].status, 'needs_review')
 })
 
 test('analyzePhotos runs one image at a time and schedules the next image asynchronously', async () => {
@@ -1275,6 +1435,69 @@ test('analyzeBatch fails the whole batch when any uploaded image URL is unavaila
   assert.equal(result.success, false)
   assert.equal(result.error, '部分图片无法读取，请重新上传')
   assert.equal(aiCalls, 0)
+})
+
+test('analyzeBatch asks chinese diagnosis to output concrete error items', async () => {
+  let prompt = ''
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-chinese',
+      _openid: 'owner-1',
+      imageFileIds: ['cloud://photo-1']
+    }],
+    analysisTasks: [{
+      _id: 'task-chinese',
+      reportId: 'report-chinese',
+      status: 'processing',
+      _openid: 'owner-1',
+      fileIDs: ['cloud://photo-1']
+    }]
+  })
+  const cloud = createCloudMock({
+    db,
+    getTempFileURL: async () => ({
+      fileList: [{ fileID: 'cloud://photo-1', tempFileURL: 'https://temp/photo-1' }]
+    })
+  })
+  const handler = loadModule('cloudfunctions/analyzeBatch/index.js', {
+    'wx-server-sdk': cloud,
+    '@cloudbase/node-sdk': {
+      SYMBOL_CURRENT_ENV: 'test',
+      init: () => ({
+        ai: () => ({
+          createModel: () => ({
+            generateText: async request => {
+              prompt = request.messages[0].content[0].text
+              return {
+                text: JSON.stringify({
+                  pageResults: [{
+                    imageIndex: 1,
+                    ocrSummary: '语文错项',
+                    summary: '发现字词错项',
+                    bottlenecks: [],
+                    errorDetails: [],
+                    chineseErrorItems: []
+                  }]
+                })
+              }
+            }
+          })
+        })
+      })
+    }
+  })
+
+  const result = await handler.main({
+    reportId: 'report-chinese',
+    taskId: 'task-chinese',
+    fileIDs: ['cloud://photo-1'],
+    subject: 'chinese'
+  })
+
+  assert.equal(result.success, true)
+  assert.match(prompt, /chineseErrorItems/)
+  assert.match(prompt, /targetText/)
+  assert.match(prompt, /记忆型错项/)
 })
 
 test('generatePaper uses the grade selected for a default diagnostic paper', async () => {

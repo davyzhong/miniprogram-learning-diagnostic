@@ -7,16 +7,81 @@ const CORE_QUESTIONS_PER_BOTTLENECK = 3
 const EXTENSION_QUESTIONS_PER_BOTTLENECK = 2
 const QUESTIONS_PER_BOTTLENECK = CORE_QUESTIONS_PER_BOTTLENECK + EXTENSION_QUESTIONS_PER_BOTTLENECK
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
+const CHINESE_REVIEW_TYPE_LABELS = {
+  character: '汉字',
+  word: '词语',
+  pinyin: '拼音',
+  poem: '古诗文',
+  idiom: '成语',
+  daily_accumulation: '日积月累',
+  reading_skill: '阅读能力',
+  writing_skill: '表达能力'
+}
 
 function normalizeWeight(item = {}) {
   if (item.weight !== undefined && item.weight !== null) return item.weight
   return SEVERITY_WEIGHT[item.severity] || 0
 }
 
+function cleanText(value) {
+  return String(value || '').trim()
+}
+
+function isActiveChineseReviewItem(item = {}) {
+  return !['mastered', 'archived', 'ignored'].includes(item.status)
+}
+
+function chineseReviewTitleOf(item = {}) {
+  return cleanText(item.targetText)
+    || cleanText(item.expectedAnswer)
+    || cleanText(item.sourceContext)
+    || '待复测错项'
+}
+
+function chineseReviewDetailOf(item = {}) {
+  const parts = [
+    CHINESE_REVIEW_TYPE_LABELS[item.itemType] || cleanText(item.itemType),
+    item.lastWrongAnswer || item.studentAnswer ? `上次写成：${item.lastWrongAnswer || item.studentAnswer}` : '',
+    item.sourceContext ? `语境：${item.sourceContext}` : ''
+  ].filter(Boolean)
+  return parts.join(' · ') || '语文具体错项'
+}
+
+function chineseReviewTargets(profile = {}, targetCodes = []) {
+  const targetSet = new Set(targetCodes || [])
+  return (profile.chineseReviewItems || [])
+    .filter(isActiveChineseReviewItem)
+    .map((item, index) => {
+      const reviewItemId = item.itemId || item.id || ''
+      const lpCode = item.relatedLpCode || item.lpCode || 'LP-101'
+      return {
+        ...item,
+        reviewItemId,
+        lpCode,
+        viewId: reviewItemId || `chinese-review-${index + 1}`,
+        displayName: chineseReviewTitleOf(item),
+        lpName: chineseReviewTitleOf(item),
+        detailText: chineseReviewDetailOf(item),
+        severity: item.status === 'recurring' ? 'high' : 'medium',
+        status: item.status || 'needs_verification',
+        weight: item.status === 'recurring' ? 100 : 80,
+        isChineseReviewItem: true
+      }
+    })
+    .filter(item => item.displayName)
+    .filter(item => targetSet.size === 0
+      || targetSet.has(item.reviewItemId)
+      || targetSet.has(item.lpCode)
+      || targetSet.has(item.viewId))
+}
+
 function verificationBottlenecks(profile = {}, targetCodes = []) {
   const raw = profileBottlenecks(profile)
+  const chineseTargets = profile.subject === 'chinese'
+    ? chineseReviewTargets(profile, targetCodes)
+    : []
   const targetSet = new Set(targetCodes)
-  return buildBottleneckViews(raw
+  const bottleneckTargets = buildBottleneckViews(raw
     .filter(item => item.status !== 'improved' || targetSet.has(item.lpCode))
     .map(item => ({
       ...item,
@@ -24,7 +89,25 @@ function verificationBottlenecks(profile = {}, targetCodes = []) {
       weight: normalizeWeight(item),
       subject: profile.subject,
       subjectName: profile.subjectName
-    })))
+    })), {
+      subject: profile.subject,
+    subjectName: profile.subjectName,
+    expandCandidates: profile.subject === 'math'
+  })
+  return chineseTargets.length > 0 ? chineseTargets.concat(bottleneckTargets) : bottleneckTargets
+}
+
+function targetMatchesBottleneck(targetCodes = [], bottleneck = {}) {
+  const targetSet = new Set(targetCodes)
+  return targetSet.has(bottleneck.lpCode)
+    || targetSet.has(bottleneck.reviewItemId)
+    || targetSet.has(bottleneck.bottleneckId)
+    || targetSet.has(bottleneck.viewId)
+    || targetSet.has(bottleneck.id)
+}
+
+function targetCodeForPaper(bottleneck = {}) {
+  return bottleneck.reviewItemId || bottleneck.lpCode
 }
 
 Page({
@@ -45,6 +128,7 @@ Page({
       estimatedMinutes: 0,
       pages: 1,
       paperSize: 'A4',
+      targetUnitLabel: '卡点数',
       strategyText: ''
     }
   },
@@ -78,13 +162,17 @@ Page({
       if (profile) {
         const hasInitialTargets = this.data.initialTargetCodes.length > 0
         bottlenecks = verificationBottlenecks(profile, this.data.initialTargetCodes)
-          .map((b, index) => ({
-            ...b,
-            selected: hasInitialTargets
-              ? this.data.initialTargetCodes.includes(b.lpCode)
-              : index < MAX_SELECTED_BOTTLENECKS,
-            sinceDateText: this.formatDate(b.sinceDate || b.firstSeenAt)
-          }))
+          .map((b, index) => {
+            const sinceDateText = this.formatDate(b.sinceDate || b.firstSeenAt)
+            return {
+              ...b,
+              selected: hasInitialTargets
+                ? targetMatchesBottleneck(this.data.initialTargetCodes, b)
+                : index < MAX_SELECTED_BOTTLENECKS,
+              sinceDateText,
+              rangeText: b.detailText || `首次发现：${sinceDateText || '待补充'}`
+            }
+          })
       }
 
       this.setSelectionState(bottlenecks)
@@ -131,7 +219,7 @@ Page({
         studentId,
         subject,
         type: 'verification',
-        targets: selected.map(b => b.lpCode),
+        targets: selected.map(targetCodeForPaper),
         questionCount,
         preview: true
       })
@@ -168,7 +256,7 @@ Page({
         studentId,
         subject,
         type: 'verification',
-        targets: selected.map(b => b.lpCode),
+        targets: selected.map(targetCodeForPaper),
         questionCount,
         preview: false
       })
@@ -225,13 +313,17 @@ Page({
 
   buildPaperConfig(selectedCount, selectedSummary) {
     const questionCount = this.questionCountForSelection(selectedCount)
+    const isChinese = this.data.subject === 'chinese'
     return {
       scopeText: selectedSummary || '未选择学习卡点',
       questionCount,
       estimatedMinutes: Math.max(0, selectedCount * 8),
       pages: Math.max(1, Math.ceil(questionCount / 10)),
       paperSize: 'A4',
-      strategyText: `每个卡点 ${CORE_QUESTIONS_PER_BOTTLENECK} 道核心题 + ${EXTENSION_QUESTIONS_PER_BOTTLENECK} 道迁移题`
+      targetUnitLabel: isChinese ? '错项数' : '卡点数',
+      strategyText: isChinese
+        ? '每个错项至少直接复测一次，并补充语境迁移题'
+        : `每个卡点 ${CORE_QUESTIONS_PER_BOTTLENECK} 道核心题 + ${EXTENSION_QUESTIONS_PER_BOTTLENECK} 道迁移题`
     }
   },
 

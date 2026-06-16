@@ -26,6 +26,13 @@ function loadEnglishVocabulary(db, openId = 'owner-1', extraMocks = {}) {
   })
 }
 
+const seed = require('../data/english/zhong-qingyu-pep-vocabulary.seed.json')
+const cloudSeed = require('../cloudfunctions/englishVocabulary/zhong-qingyu-pep-vocabulary.json')
+
+function keyOf(word) {
+  return [word.word, word.grade, word.volume, word.unit].join('|')
+}
+
 test('English import batch stores candidates without writing the formal word library', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
@@ -240,6 +247,41 @@ test('English vocabulary summary and dictation session use confirmed personal wo
   assert.equal(db.dump('englishPracticeSessions')[0].type, 'word-dictation')
 })
 
+test('English vocabulary summary reuses a clean same-day cache', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishVocabularyStats: [{
+      _id: 'stats-1',
+      studentId: 'student-1',
+      today: '2026-06-11',
+      dirty: false,
+      summary: {
+        totalWords: 505,
+        untestedCount: 500,
+        needsPracticeCount: 5,
+        reviewingCount: 0,
+        masteredCount: 0,
+        dueReviewCount: 3,
+        familiarity: { totalWords: 505, untestedCount: 500, needsPracticeCount: 5, reviewingCount: 0, masteredCount: 0, dueReviewCount: 3 },
+        spelling: { totalWords: 505, untestedCount: 505, needsPracticeCount: 0, reviewingCount: 0, masteredCount: 0, dueReviewCount: 0 },
+        overall: { untestedCount: 500, partialCount: 5, masteredCount: 0 }
+      },
+      weakWords: [{ wordId: 'word-1', word: 'science', wrongCount: 3, meanings: ['科学'] }],
+      patternCount: 0
+    }],
+    studentEnglishWords: [],
+    studentEnglishPatterns: []
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const summary = await handler.main({ action: 'getVocabularySummary', studentId: 'student-1', today: '2026-06-11' })
+
+  assert.equal(summary.success, true)
+  assert.equal(summary.cacheHit, true)
+  assert.equal(summary.summary.totalWords, 505)
+  assert.deepEqual(JSON.parse(JSON.stringify(summary.weakWords.map(item => item.word))), ['science'])
+})
+
 test('submitting English dictation attempts uses AI judgment and updates word states', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
@@ -355,6 +397,15 @@ test('submitting English recognition attempts updates only familiarity progress'
       status: 'in_progress',
       attempts: [],
       wordItems: [{ queueKey: 'word-1:0:0', wordId: 'word-1', word: 'science', direction: 'en2cn' }]
+    }],
+    studentEnglishVocabularyStats: [{
+      _id: 'stats-1',
+      studentId: 'student-1',
+      today: '2026-06-16',
+      dirty: false,
+      summary: { totalWords: 1 },
+      weakWords: [],
+      patternCount: 0
     }]
   })
   const handler = loadEnglishVocabulary(db)
@@ -385,6 +436,7 @@ test('submitting English recognition attempts updates only familiarity progress'
     nextReviewAt: '2026-06-16'
   })
   assert.equal(db.dump('englishPracticeSessions')[0].attempts.length, 1)
+  assert.equal(db.dump('studentEnglishVocabularyStats')[0].dirty, true)
 })
 
 test('English paper dictation sessions generate spelling words without updating progress', async () => {
@@ -641,4 +693,41 @@ test('submitting English dictation photos records elapsed duration', async () =>
 
   assert.equal(result.success, true)
   assert.equal(db.dump('englishPracticeSessions')[0].durationMs, 123456)
+})
+
+// ── Seed data integrity (merged from english-vocabulary-seed.test.js) ──
+
+test('Zhong Qingyu PEP English vocabulary seed is complete enough for dictation', () => {
+  assert.equal(seed.studentName, '钟青羽')
+  assert.equal(seed.subject, 'english')
+  assert.equal(seed.wordCount, seed.words.length)
+  assert.ok(seed.wordCount >= 500)
+  assert.equal(seed.sources.length, 7)
+  assert.deepEqual(seed.sources.map(item => `${item.grade}${item.volume}`), [
+    '3上册',
+    '3下册',
+    '4上册',
+    '4下册',
+    '5上册',
+    '5下册',
+    '6上册'
+  ])
+})
+
+test('Zhong Qingyu PEP English vocabulary seed has stable word identities and meanings', () => {
+  const keys = seed.words.map(keyOf)
+  assert.equal(new Set(keys).size, keys.length)
+  assert.equal(seed.words.filter(word => !word.word || !word.unit || !word.meanings || !word.meanings[0]).length, 0)
+
+  const byKey = new Map(seed.words.map(word => [keyOf(word), word]))
+  assert.equal(byKey.get('science|6|上册|Unit 1').meanings[0], '科学')
+  assert.equal(byKey.get('museum|6|上册|Unit 1').meanings[0], '博物馆')
+  assert.equal(byKey.get('classroom|4|上册|Unit 1').meanings[0], '教室')
+  assert.equal(byKey.get('january|5|下册|Unit 3').meanings[0], '一月')
+  assert.equal(byKey.get('breakfast|4|下册|Unit 2').meanings[0], '早餐；早饭')
+})
+
+test('cloud function seed copy stays in sync with the project archive seed', () => {
+  assert.equal(cloudSeed.wordCount, seed.wordCount)
+  assert.deepEqual(cloudSeed.words.map(keyOf), seed.words.map(keyOf))
 })

@@ -6,6 +6,8 @@ const { createAnalysisPoller } = require('../../utils/analysis-poller')
 const { buildSubjectHomeView } = require('./subject-home-presenter')
 const { getSubjectColor } = require('../../utils/constants')
 
+const SUBJECT_HOME_CACHE_TTL_MS = 30 * 1000
+
 Page({
   data: {
     studentId: '',
@@ -18,6 +20,9 @@ Page({
     subjectTitle: '数学工作台',
     primaryTask: null,
     taskQueue: [],
+    pendingTaskCount: 0,
+    chineseReviewQueue: [],
+    hasChineseReviewQueue: false,
     tools: [],
     latestReportId: '',
     totalReports: 0,
@@ -79,12 +84,27 @@ Page({
   },
 
   // ========== 加载学科档案 ==========
-  async loadProfile() {
+  hasFreshProfileSnapshot() {
+    const loadedAt = this._lastProfileLoadedAt || 0
+    if (this._profileCacheInvalidated) return false
+    if (!loadedAt || Date.now() - loadedAt > SUBJECT_HOME_CACHE_TTL_MS) return false
+    return this.data.loading !== true && Boolean(this.data.primaryTask)
+  },
+
+  invalidateProfileCache() {
+    this._profileCacheInvalidated = true
+  },
+
+  async loadProfile(options = {}) {
+    if (!options.force && this.hasFreshProfileSnapshot()) {
+      return
+    }
+
     const { studentId, subject } = this.data
     try {
       if (typeof cloud.getSubjectDashboard === 'function') {
         try {
-          const dashboard = await cloud.getSubjectDashboard(studentId, subject)
+          const dashboard = await cloud.getSubjectDashboard(studentId, subject, { includePapers: false })
           const p = dashboard.profile
           const permissions = dashboard.permissions || {}
           this._profile = p || {}
@@ -133,7 +153,7 @@ Page({
     if (subject !== 'english' || typeof cloud.getEnglishVocabularySummary !== 'function') return
     try {
       this._englishVocabulary = await cloud.getEnglishVocabularySummary(studentId)
-      await this.autoSeedEnglishVocabularyIfNeeded(permissions)
+      this.autoSeedEnglishVocabularyIfNeeded(permissions)
     } catch (error) {
       console.warn('英语词库摘要读取失败，继续展示学科工作台', error && error.message ? error.message : error)
     }
@@ -148,14 +168,18 @@ Page({
 
     this._englishAutoSeedAttempted = true
     this._importingEnglishVocabulary = true
-    try {
+    this._englishAutoSeedPromise = (async () => {
       await cloud.seedEnglishPersonalVocabulary(this.data.studentId)
       this._englishVocabulary = await cloud.getEnglishVocabularySummary(this.data.studentId)
-    } catch (error) {
-      console.warn('英语个人词库自动导入失败', error && error.message ? error.message : error)
-    } finally {
-      this._importingEnglishVocabulary = false
-    }
+      this.applyDashboardView()
+    })()
+      .catch(error => {
+        console.warn('英语个人词库自动导入失败', error && error.message ? error.message : error)
+      })
+      .finally(() => {
+        this._importingEnglishVocabulary = false
+      })
+    return this._englishAutoSeedPromise
   },
 
   // ========== 加载历史记录 ==========
@@ -179,6 +203,8 @@ Page({
       permissions: this.data.permissions || {}
     })
     this.setData({ ...view, records: view.recentChanges })
+    this._lastProfileLoadedAt = Date.now()
+    this._profileCacheInvalidated = false
   },
 
   // ========== 检查分析状态（启动轮询） ==========
@@ -204,7 +230,7 @@ Page({
       loadProgress: report => cloud.getAnalysisProgress(report._id),
       onCompleted: () => {
         wx.showToast({ title: '诊断完成', icon: 'success' })
-        this.loadProfile()
+        this.loadProfile({ force: true })
         this.loadRecords()
         this.setData({
           analysisStatus: '',
@@ -258,11 +284,11 @@ Page({
     })
   },
 
-  navigateToBottleneckDetail(lpCode = '') {
-    if (!lpCode) return
+  navigateToBottleneckDetail(lpCode = '', bottleneckId = '', viewId = '') {
+    if (!lpCode && !bottleneckId && !viewId) return
     const { studentId, subject, subjectName, studentName } = this.data
     wx.navigateTo({
-      url: `/pages/bottleneck-detail/bottleneck-detail?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}&lpCode=${encodeURIComponent(lpCode)}`
+      url: `/pages/bottleneck-detail/bottleneck-detail?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}&lpCode=${encodeURIComponent(lpCode)}&bottleneckId=${encodeURIComponent(bottleneckId)}&viewId=${encodeURIComponent(viewId)}`
     })
   },
 
@@ -296,8 +322,8 @@ Page({
   },
 
   onTaskTap(e) {
-    const { code } = e.currentTarget.dataset
-    this.navigateToBottleneckDetail(code || '')
+    const { code, bottleneckId = '', viewId = '' } = e.currentTarget.dataset
+    this.navigateToBottleneckDetail(code || '', bottleneckId, viewId)
   },
 
   onToolTap(e) {
@@ -367,7 +393,7 @@ Page({
     try {
       const result = await cloud.seedEnglishPersonalVocabulary(this.data.studentId)
       this._englishAutoSeedAttempted = true
-      await this.loadProfile()
+      await this.loadProfile({ force: true })
       const imported = Number(result.importedWordCount) || 0
       wx.hideLoading()
       wx.showToast({

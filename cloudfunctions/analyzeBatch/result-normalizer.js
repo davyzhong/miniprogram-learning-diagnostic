@@ -18,6 +18,19 @@ function normalizeNextActionType(value) {
   return ['resourceReview', 'microValidation', 'verificationPaper'].includes(value) ? value : '';
 }
 
+function normalizeChineseItemType(value) {
+  return [
+    'character',
+    'word',
+    'pinyin',
+    'poem_line',
+    'idiom',
+    'accumulation',
+    'reading_skill',
+    'writing_skill',
+  ].includes(value) ? value : 'word';
+}
+
 function normalizeCandidateBottlenecks(items) {
   if (!Array.isArray(items)) return [];
   return items
@@ -37,6 +50,33 @@ function normalizeCandidateBottlenecks(items) {
     })
     .filter(item => item && item.bottleneckId)
     .slice(0, 5);
+}
+
+function normalizeChineseErrorItems(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map(item => {
+      if (!item || typeof item !== 'object') return null;
+      const targetText = cleanText(item.targetText, 120);
+      const expectedAnswer = cleanText(item.expectedAnswer || item.correctAnswer || targetText, 160);
+      if (!targetText && !expectedAnswer) return null;
+      return {
+        itemId: cleanText(item.itemId || item.id, 100),
+        itemType: normalizeChineseItemType(item.itemType || item.type),
+        targetText,
+        expectedAnswer,
+        studentAnswer: cleanText(item.studentAnswer || item.wrongAnswer, 160),
+        sourceContext: cleanText(item.sourceContext || item.context, 300),
+        mistakeType: cleanText(item.mistakeType, 80),
+        sourceQuestion: cleanText(item.sourceQuestion, 160),
+        evidenceStrength: normalizeEvidenceStrength(item.evidenceStrength),
+        verificationMethods: cleanStringArray(item.verificationMethods, 5, 60),
+        relatedLpCode: cleanText(item.relatedLpCode || item.lpCode, 30),
+        suggestion: cleanText(item.suggestion, 300),
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 100);
 }
 
 function normalizeBottlenecks(items) {
@@ -82,6 +122,21 @@ function normalizeVerificationEvidence(items) {
     }))
 }
 
+function normalizeChineseReviewEvidence(items) {
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter(item => item && typeof item.itemId === 'string')
+    .map(item => ({
+      itemId: cleanText(item.itemId, 100),
+      targetText: cleanText(item.targetText, 120),
+      attemptedQuestionCount: Math.max(0, Number(item.attemptedQuestionCount) || 0),
+      incorrectQuestionCount: Math.max(0, Number(item.incorrectQuestionCount) || 0),
+      blankQuestionCount: Math.max(0, Number(item.blankQuestionCount) || 0),
+      unclearQuestionCount: Math.max(0, Number(item.unclearQuestionCount) || 0),
+      missingQuestionCount: Math.max(0, Number(item.missingQuestionCount) || 0),
+    }));
+}
+
 function normalizePageResults(result, expectedPageCount) {
   if (!result || typeof result !== 'object' || !Array.isArray(result.pageResults)) {
     throw new Error('AI 返回的数据结构无效');
@@ -102,13 +157,16 @@ function normalizePageResults(result, expectedPageCount) {
     const verificationEvidence = normalizeVerificationEvidence(
       Array.isArray(page.verificationEvidence) ? page.verificationEvidence : []
     );
+    const chineseReviewEvidence = normalizeChineseReviewEvidence(page.chineseReviewEvidence);
     return {
       imageIndex,
       ocrSummary: cleanText(page.ocrSummary, 1000),
       summary: cleanText(page.summary, 200),
       bottlenecks,
       errorDetails,
+      chineseErrorItems: normalizeChineseErrorItems(page.chineseErrorItems),
       verificationEvidence,
+      chineseReviewEvidence,
       totalErrors: errorDetails.length,
     };
   }).sort((a, b) => a.imageIndex - b.imageIndex);

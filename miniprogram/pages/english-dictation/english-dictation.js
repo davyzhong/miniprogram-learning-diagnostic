@@ -1,19 +1,23 @@
 const cloud = require('../../utils/cloud')
+const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
 
-function buildMeaningText(item = {}) {
-  return Array.isArray(item.meanings) ? item.meanings.join(' / ') : (item.meanings || '')
+function withDisplayFields(item) {
+  return _withDisplayFields(item, {
+    englishLabel: '英文发音',
+    chineseLabel: '中文释义',
+    englishPrompt: '听英文发音，在纸上写出这个英文单词',
+    chinesePrefix: '听中文意思，在纸上写出英文单词：'
+  })
 }
 
-function withDisplayFields(item = {}) {
-  const meaningText = buildMeaningText(item)
-  return {
-    ...item,
-    meaningText,
-    promptTypeText: item.promptType === 'english' ? '英文发音' : '中文释义',
-    promptText: item.promptType === 'english'
-      ? '听英文发音，在纸上写出这个英文单词'
-      : `听中文意思，在纸上写出英文单词：${meaningText || '这个单词'}`
+function summarizeDictationResults(results = []) {
+  const summary = { correct: 0, incorrect: 0, unclear: 0, total: results.length }
+  for (const item of results || []) {
+    if (item.verdict === 'correct') summary.correct += 1
+    else if (item.verdict === 'incorrect') summary.incorrect += 1
+    else summary.unclear += 1
   }
+  return summary
 }
 
 Page({
@@ -32,6 +36,7 @@ Page({
     uploadedPhotoCount: 0,
     analysisStatus: '',
     dictationResults: [],
+    resultSummary: null,
     voiceReady: false,
     recordingCommand: false,
     voiceUnavailableText: ''
@@ -78,7 +83,8 @@ Page({
 
   async generateSession() {
     if (!this.data.studentId) return
-    this.setData({ loading: true, error: '', analysisStatus: '', uploadedPhotoCount: 0 })
+    this.setData({ loading: true, error: '', analysisStatus: '', uploadedPhotoCount: 0, resultSummary: null })
+    wx.showLoading({ title: '加载中...' })
     try {
       const result = await cloud.generateEnglishPaperDictationSession({
         studentId: this.data.studentId,
@@ -100,6 +106,8 @@ Page({
         loading: false,
         error: error && error.message ? error.message : '纸面听写生成失败'
       })
+    } finally {
+      wx.hideLoading()
     }
   },
 
@@ -124,26 +132,7 @@ Page({
   },
 
   onPlayPromptTap() {
-    const current = this.data.currentItem
-    if (!current || !this._voicePlugin || !this._voicePlugin.textToSpeech) {
-      wx.showToast({ title: '请按提示完成听写', icon: 'none' })
-      return
-    }
-    this.stopPromptAudio()
-    const content = current.promptType === 'english' ? current.word : current.meaningText
-    this._voicePlugin.textToSpeech({
-      lang: current.promptType === 'english' ? 'en_US' : 'zh_CN',
-      tts: true,
-      content,
-      success: res => {
-        if (!res || !res.filename) return
-        const audio = wx.createInnerAudioContext()
-        audio.src = res.filename
-        this._promptAudio = audio
-        audio.play()
-      },
-      fail: () => wx.showToast({ title: '播放失败，请直接看提示', icon: 'none' })
-    })
+    _onPlayPromptTap.call(this, '请按提示完成听写')
   },
 
   onVoiceNextTap() {
@@ -225,7 +214,8 @@ Page({
         })
         this.setData({
           analysisStatus: analysis.analysisStatus || 'completed',
-          dictationResults: analysis.results || []
+          dictationResults: analysis.results || [],
+          resultSummary: summarizeDictationResults(analysis.results || [])
         })
       }
       this.setData({ uploading: false })
@@ -238,13 +228,7 @@ Page({
     }
   },
 
-  stopPromptAudio() {
-    const audio = this._promptAudio
-    if (!audio) return
-    if (typeof audio.stop === 'function') audio.stop()
-    if (typeof audio.destroy === 'function') audio.destroy()
-    this._promptAudio = null
-  },
+  stopPromptAudio,
 
   cleanupVoice() {
     if (this._voiceCommandStarted && this._voiceManager && typeof this._voiceManager.stop === 'function') {

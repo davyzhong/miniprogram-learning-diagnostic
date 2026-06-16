@@ -85,6 +85,7 @@ function batchFailureSummary(batchResults = [], batches = []) {
 function mergeBatchResults(batchResults) {
   const allBottlenecks = {};
   const allErrorDetails = [];
+  const allChineseErrorItems = [];
   let totalErrors = 0;
 
   for (const batch of batchResults) {
@@ -132,6 +133,19 @@ function mergeBatchResults(batchResults) {
           : item
       )));
     }
+
+    if (Array.isArray(data.chineseErrorItems) && data.chineseErrorItems.length > 0) {
+      const sourceFields = {
+        sourceImageIndex: data.imageIndex || 0,
+        sourceFileID: data.fileID || '',
+        sourceOcrSummary: data.ocrSummary || '',
+      };
+      allChineseErrorItems.push(...data.chineseErrorItems.map(item => (
+        item && typeof item === 'object'
+          ? { ...sourceFields, ...item }
+          : item
+      )));
+    }
   }
 
   const bottlenecks = Object.values(allBottlenecks)
@@ -145,6 +159,7 @@ function mergeBatchResults(batchResults) {
     totalErrors,
     bottlenecks,
     errorDetails: allErrorDetails,
+    chineseErrorItems: allChineseErrorItems,
     completedAt: new Date(),
   };
 }

@@ -166,7 +166,7 @@
 }
 
 .record-btn {
-  background: #2b6cb0;
+  background: #c05621;
   color: #fff;
   border-radius: 18rpx;
   font-size: 30rpx;

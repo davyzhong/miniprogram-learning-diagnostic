@@ -3,6 +3,7 @@ const assert = require('node:assert/strict')
 
 const {
   aggregateVerificationEvidence,
+  aggregateChineseReviewEvidence,
   buildVerificationPlan
 } = require('../cloudfunctions/analyzePhotos/verification-evidence')
 
@@ -91,4 +92,61 @@ test('verification evidence distinguishes failed blank unclear and missing state
   }])[0].evidenceStatus, 'unclear')
 
   assert.deepEqual(aggregateVerificationEvidence(plan, [])[0].evidenceStatus, 'missing')
+})
+
+test('builds and aggregates chinese review item evidence separately from coarse lp codes', () => {
+  const plan = buildVerificationPlan({
+    bottleneckTargets: ['LP-101'],
+    chineseReviewTargets: [{
+      itemId: 'CHI-WORD-BIANLUN',
+      itemType: 'word',
+      targetText: '辩论',
+      expectedAnswer: '辩论',
+      relatedLpCode: 'LP-101'
+    }],
+    questions: [
+      { lpCode: 'LP-101', reviewItemId: 'CHI-WORD-BIANLUN' },
+      { lpCode: 'LP-101' }
+    ]
+  })
+
+  assert.deepEqual(plan, [{
+    lpCode: 'LP-101',
+    expectedQuestionCount: 2,
+    chineseReviewTargets: [{
+      itemId: 'CHI-WORD-BIANLUN',
+      itemType: 'word',
+      targetText: '辩论',
+      expectedAnswer: '辩论',
+      relatedLpCode: 'LP-101',
+      expectedQuestionCount: 1
+    }]
+  }])
+
+  const evidence = aggregateChineseReviewEvidence(plan, [{
+    chineseReviewEvidence: [{
+      itemId: 'CHI-WORD-BIANLUN',
+      targetText: '辩论',
+      attemptedQuestionCount: 1,
+      incorrectQuestionCount: 0
+    }]
+  }])
+
+  assert.deepEqual(evidence[0], {
+    itemId: 'CHI-WORD-BIANLUN',
+    itemType: 'word',
+    targetText: '辩论',
+    expectedAnswer: '辩论',
+    relatedLpCode: 'LP-101',
+    expectedQuestionCount: 1,
+    attemptedQuestionCount: 1,
+    incorrectQuestionCount: 0,
+    blankQuestionCount: 0,
+    unclearQuestionCount: 0,
+    missingQuestionCount: 0,
+    complete: true,
+    allCorrect: true,
+    evidenceStatus: 'passed',
+    evidenceReason: '1 道验证题均清晰作答且全部正确'
+  })
 })

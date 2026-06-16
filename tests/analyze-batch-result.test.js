@@ -103,3 +103,80 @@ test('preserves math learning map v2 fields from AI bottleneck output', () => {
   })
   assert.equal(result.pageResults[0].bottlenecks[0].nextActionType, 'resourceReview')
 })
+
+test('preserves chinese concrete error items from AI output', () => {
+  const result = normalizePageResults({
+    pageResults: [{
+      imageIndex: 1,
+      ocrSummary: '看拼音写词语和古诗默写',
+      bottlenecks: [{
+        lpCode: 'LP-101',
+        lpName: '识字词语',
+        errorCount: 1,
+        severity: 'high'
+      }],
+      errorDetails: [{
+        questionContent: '看拼音写词语：biàn lùn',
+        studentAnswer: '辨论',
+        correctAnswer: '辩论',
+        lpCode: 'LP-101'
+      }],
+      chineseErrorItems: [{
+        itemId: 'CHI-WORD-BIANLUN',
+        itemType: 'word',
+        targetText: '辩论',
+        expectedAnswer: '辩论',
+        studentAnswer: '辨论',
+        sourceContext: '看拼音写词语：biàn lùn',
+        mistakeType: '形近字混淆',
+        verificationMethods: ['dictation', 'pinyin_to_word', 'context_fill'],
+        relatedLpCode: 'LP-101',
+        suggestion: '区分辩、辨、辫、瓣。'
+      }]
+    }]
+  }, 1)
+
+  assert.deepEqual(result.pageResults[0].chineseErrorItems, [{
+    itemId: 'CHI-WORD-BIANLUN',
+    itemType: 'word',
+    targetText: '辩论',
+    expectedAnswer: '辩论',
+    studentAnswer: '辨论',
+    sourceContext: '看拼音写词语：biàn lùn',
+    mistakeType: '形近字混淆',
+    sourceQuestion: '',
+    evidenceStrength: '',
+    verificationMethods: ['dictation', 'pinyin_to_word', 'context_fill'],
+    relatedLpCode: 'LP-101',
+    suggestion: '区分辩、辨、辫、瓣。'
+  }])
+})
+
+test('normalizes chinese review evidence counts by concrete item id', () => {
+  const result = normalizePageResults({
+    pageResults: [{
+      imageIndex: 1,
+      bottlenecks: [],
+      errorDetails: [],
+      chineseReviewEvidence: [{
+        itemId: 'CHI-WORD-BIANLUN',
+        targetText: '辩论',
+        attemptedQuestionCount: '1',
+        incorrectQuestionCount: 0,
+        blankQuestionCount: 0,
+        unclearQuestionCount: 0,
+        missingQuestionCount: -1
+      }]
+    }]
+  }, 1)
+
+  assert.deepEqual(result.pageResults[0].chineseReviewEvidence, [{
+    itemId: 'CHI-WORD-BIANLUN',
+    targetText: '辩论',
+    attemptedQuestionCount: 1,
+    incorrectQuestionCount: 0,
+    blankQuestionCount: 0,
+    unclearQuestionCount: 0,
+    missingQuestionCount: 0
+  }])
+})

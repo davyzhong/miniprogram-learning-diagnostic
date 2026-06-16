@@ -44,14 +44,37 @@
       <text class="upload-title">完成后上传听写纸</text>
       <text class="upload-desc">上传后会进行 AI 批改，并把逐词拼写结果写入本次听写记录。</text>
       <button class="primary-btn" loading="{{uploading}}" bindtap="onChoosePhotoTap">拍照上传</button>
-      <text class="upload-status" wx:if="{{uploadedPhotoCount > 0}}">已上传 {{uploadedPhotoCount}} 张 · {{analysisStatus}}</text>
+      <text class="upload-status" wx:if="{{uploadedPhotoCount > 0}}">
+        <block wx:if="{{analysisStatus === 'completed'}}">已批改</block>
+        <block wx:elif="{{analysisStatus}}">批改中</block>
+        <block wx:else>已上传</block>
+        · {{uploadedPhotoCount}} 张听写纸
+      </text>
     </view>
 
     <view class="result-card" wx:if="{{dictationResults.length > 0}}">
       <text class="upload-title">AI 批改结果</text>
+      <view class="result-summary" wx:if="{{resultSummary}}">
+        <view class="result-summary-item">
+          <text class="summary-num">{{resultSummary.correct}}</text>
+          <text class="summary-label">写对</text>
+        </view>
+        <view class="result-summary-item">
+          <text class="summary-num">{{resultSummary.incorrect}}</text>
+          <text class="summary-label">待加强</text>
+        </view>
+        <view class="result-summary-item">
+          <text class="summary-num">{{resultSummary.unclear}}</text>
+          <text class="summary-label">看不清</text>
+        </view>
+      </view>
       <view class="result-row" wx:for="{{dictationResults}}" wx:key="wordId">
         <text class="result-word">{{item.targetWord}}</text>
-        <text class="result-verdict verdict-{{item.verdict}}">{{item.verdict}}</text>
+        <text class="result-verdict verdict-{{item.verdict}}">
+          <block wx:if="{{item.verdict === 'correct'}}">写对</block>
+          <block wx:elif="{{item.verdict === 'incorrect'}}">待加强</block>
+          <block wx:else>看不清</block>
+        </text>
       </view>
     </view>
   </view>

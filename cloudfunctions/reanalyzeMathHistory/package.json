@@ -1,0 +1,9 @@
+{
+  "name": "reanalyzeMathHistory",
+  "version": "1.0.0",
+  "description": "维护函数：为历史数学报告创建重分析替代报告，并在完成后归档旧报告",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

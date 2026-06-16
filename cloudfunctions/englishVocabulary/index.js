@@ -109,6 +109,41 @@ async function updateDocument(name, id, data) {
   return db.collection(name).doc(id).update({ data })
 }
 
+async function getVocabularySummaryCache(studentId, today) {
+  const caches = await getCollectionData('studentEnglishVocabularyStats', { studentId })
+  return (caches || []).find(item => item.today === today && item.dirty !== true) || null
+}
+
+async function saveVocabularySummaryCache(studentId, today, payload) {
+  const caches = await getCollectionData('studentEnglishVocabularyStats', { studentId })
+  const cache = (caches || [])[0]
+  const data = {
+    studentId,
+    today,
+    dirty: false,
+    summary: payload.summary,
+    weakWords: payload.weakWords,
+    patternCount: payload.patternCount,
+    updatedAt: nowDate()
+  }
+  if (cache && cache._id) {
+    await updateDocument('studentEnglishVocabularyStats', cache._id, data)
+    return
+  }
+  await addDocument('studentEnglishVocabularyStats', {
+    ...data,
+    createdAt: nowDate()
+  })
+}
+
+async function markVocabularySummaryDirty(studentId) {
+  const caches = await getCollectionData('studentEnglishVocabularyStats', { studentId })
+  await Promise.all((caches || []).map(item => updateDocument('studentEnglishVocabularyStats', item._id, {
+    dirty: true,
+    updatedAt: nowDate()
+  })))
+}
+
 function wordIdentity(word) {
   return [
     word.word,
@@ -252,6 +287,7 @@ async function upsertWords(studentId, openId, candidates) {
   const existing = await getCollectionData('studentEnglishWords', { studentId })
   const byIdentity = new Map(existing.map(item => [wordIdentity(item), item]))
   let imported = 0
+  let changed = false
   for (const candidate of candidates || []) {
     const identity = wordIdentity(candidate)
     const active = {
@@ -271,10 +307,15 @@ async function upsertWords(studentId, openId, candidates) {
         sources,
         updatedAt: nowDate()
       })
+      changed = true
     } else {
       await addDocument('studentEnglishWords', { ...active, createdAt: nowDate() })
       imported += 1
+      changed = true
     }
+  }
+  if (changed) {
+    await markVocabularySummaryDirty(studentId)
   }
   return imported
 }
@@ -373,6 +414,16 @@ async function seedPersonalVocabulary(event, openId) {
 }
 
 async function getVocabularySummaryAction(event) {
+  const today = dateOnly(event.today || new Date())
+  const cached = await getVocabularySummaryCache(event.studentId, today)
+  if (cached) {
+    return ok({
+      summary: cached.summary || buildDualVocabularySummary([], today),
+      weakWords: cached.weakWords || [],
+      patternCount: Number(cached.patternCount) || 0,
+      cacheHit: true
+    })
+  }
   const [words, patterns] = await Promise.all([
     getCollectionData('studentEnglishWords', { studentId: event.studentId }),
     getCollectionData('studentEnglishPatterns', { studentId: event.studentId })
@@ -392,11 +443,13 @@ async function getVocabularySummaryAction(event) {
       wrongCount: Number(item.wrongCount) || 0,
       meanings: item.meanings || []
     }))
-  return ok({
-    summary: buildDualVocabularySummary(words, event.today),
+  const payload = {
+    summary: buildDualVocabularySummary(words, today),
     weakWords,
     patternCount: patterns.filter(item => item.status !== 'archived').length
-  })
+  }
+  await saveVocabularySummaryCache(event.studentId, today, payload)
+  return ok(payload)
 }
 
 async function listWords(event) {
@@ -603,6 +656,7 @@ ${JSON.stringify(candidates)}
   const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
   const byId = new Map(words.map(item => [item._id, item]))
   const reviewedAt = event.reviewedAt || new Date()
+  let updatedWordCount = 0
 
   for (const item of results) {
     const word = byId.get(item.wordId)
@@ -617,6 +671,10 @@ ${JSON.stringify(candidates)}
       overallMastery: updated.overallMastery,
       updatedAt: nowDate()
     })
+    updatedWordCount += 1
+  }
+  if (updatedWordCount > 0) {
+    await markVocabularySummaryDirty(event.studentId)
   }
 
   await updateDocument('englishPracticeSessions', event.sessionId, {
@@ -692,6 +750,7 @@ async function submitRecognitionAttempt(event) {
       nextReviewAt: updated.familiarity.nextReviewAt,
       updatedAt: nowDate()
     })
+    await markVocabularySummaryDirty(event.studentId)
   }
 
   const attempts = [...(session.attempts || []), attempt]
@@ -746,6 +805,7 @@ async function submitDictationAttempt(event) {
       nextReviewAt: updated.nextReviewAt,
       updatedAt: nowDate()
     })
+    await markVocabularySummaryDirty(event.studentId)
   }
 
   const attempts = [...(session.attempts || []), attempt]
@@ -784,6 +844,9 @@ async function submitPracticeResult(event) {
       updatedAt: nowDate()
     })
     updatedWordCount += 1
+  }
+  if (updatedWordCount > 0) {
+    await markVocabularySummaryDirty(event.studentId)
   }
   await updateDocument('englishPracticeSessions', event.sessionId, {
     status: 'completed',

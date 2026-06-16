@@ -1,19 +1,13 @@
 const cloud = require('../../utils/cloud')
+const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
 
-function buildMeaningText(item = {}) {
-  return Array.isArray(item.meanings) ? item.meanings.join(' / ') : (item.meanings || '')
-}
-
-function withDisplayFields(item = {}) {
-  const meaningText = buildMeaningText(item)
-  return {
-    ...item,
-    meaningText,
-    promptText: item.promptType === 'english'
-      ? '听英文发音，然后说出中文意思'
-      : `听中文意思，然后说出英文单词：${meaningText || '这个单词'}`,
-    promptTypeText: item.promptType === 'english' ? '英文提示' : '中文提示'
-  }
+function withDisplayFields(item) {
+  return _withDisplayFields(item, {
+    englishLabel: '英文提示',
+    chineseLabel: '中文提示',
+    englishPrompt: '听英文发音，然后说出中文意思',
+    chinesePrefix: '听中文意思，然后说出英文单词：'
+  })
 }
 
 Page({
@@ -82,6 +76,7 @@ Page({
   async generateSession() {
     if (!this.data.studentId) return
     this.setData({ loading: true, error: '', errorTitle: '', finished: false, lastResult: null })
+    wx.showLoading({ title: '加载中...' })
     try {
       const result = await cloud.generateEnglishRecognitionSession({
         studentId: this.data.studentId,
@@ -124,6 +119,8 @@ Page({
         errorTitle: '生成失败',
         error: error && error.message ? error.message : '单词熟悉度生成失败'
       })
+    } finally {
+      wx.hideLoading()
     }
   },
 
@@ -224,35 +221,10 @@ Page({
   },
 
   onPlayPromptTap() {
-    const current = this.data.currentItem
-    if (!current || !this._voicePlugin || !this._voicePlugin.textToSpeech) {
-      wx.showToast({ title: '请按提示读出答案', icon: 'none' })
-      return
-    }
-    this.stopPromptAudio()
-    const content = current.promptType === 'english' ? current.word : current.meaningText
-    this._voicePlugin.textToSpeech({
-      lang: current.promptType === 'english' ? 'en_US' : 'zh_CN',
-      tts: true,
-      content,
-      success: res => {
-        if (!res || !res.filename) return
-        const audio = wx.createInnerAudioContext()
-        audio.src = res.filename
-        this._promptAudio = audio
-        audio.play()
-      },
-      fail: () => wx.showToast({ title: '播放失败，请直接看提示', icon: 'none' })
-    })
+    _onPlayPromptTap.call(this, '请按提示读出答案')
   },
 
-  stopPromptAudio() {
-    const audio = this._promptAudio
-    if (!audio) return
-    if (typeof audio.stop === 'function') audio.stop()
-    if (typeof audio.destroy === 'function') audio.destroy()
-    this._promptAudio = null
-  },
+  stopPromptAudio,
 
   cleanupVoice() {
     if (this.data.recording && this._voiceManager && typeof this._voiceManager.stop === 'function') {

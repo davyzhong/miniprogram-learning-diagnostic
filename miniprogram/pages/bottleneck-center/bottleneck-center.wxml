@@ -53,10 +53,12 @@
       <view
         class="bottleneck-card bottleneck-{{item.statusClass}}"
         wx:for="{{filteredBottlenecks}}"
-        wx:key="lpCode"
+        wx:key="viewId"
         bindtap="onBottleneckTap"
         data-subject="{{item.subject}}"
         data-lp-code="{{item.lpCode}}"
+        data-bottleneck-id="{{item.bottleneckId}}"
+        data-view-id="{{item.viewId}}"
       >
         <view class="bottleneck-status-badge status-badge-{{item.statusClass}}">
           <text>{{item.statusBadgeText}}</text>
@@ -80,6 +82,7 @@
           catchtap="onGenerateForBottleneck"
           data-subject="{{item.subject}}"
           data-lp-code="{{item.lpCode}}"
+          data-bottleneck-id="{{item.bottleneckId}}"
         >验证</view>
       </view>
     </view>

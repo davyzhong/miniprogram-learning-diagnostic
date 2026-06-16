@@ -1,14 +1,35 @@
 function buildVerificationPlan(paper = {}) {
   const counts = new Map()
+  const chineseReviewCounts = new Map()
   for (const question of paper.questions || []) {
     if (!question || !question.lpCode) continue
     counts.set(question.lpCode, (counts.get(question.lpCode) || 0) + 1)
+    if (question.reviewItemId) {
+      chineseReviewCounts.set(question.reviewItemId, (chineseReviewCounts.get(question.reviewItemId) || 0) + 1)
+    }
   }
 
-  return (paper.bottleneckTargets || []).map(lpCode => ({
-    lpCode,
-    expectedQuestionCount: counts.get(lpCode) || 0
-  }))
+  return (paper.bottleneckTargets || []).map(lpCode => {
+    const item = {
+      lpCode,
+      expectedQuestionCount: counts.get(lpCode) || 0
+    }
+    const chineseReviewTargets = (paper.chineseReviewTargets || [])
+      .filter(target => target && (target.relatedLpCode || target.lpCode) === lpCode)
+      .map(target => ({
+        itemId: target.itemId || '',
+        itemType: target.itemType || '',
+        targetText: target.targetText || '',
+        expectedAnswer: target.expectedAnswer || target.targetText || '',
+        relatedLpCode: target.relatedLpCode || target.lpCode || lpCode,
+        expectedQuestionCount: chineseReviewCounts.get(target.itemId) || 1
+      }))
+      .filter(target => target.itemId)
+    if (chineseReviewTargets.length > 0) {
+      item.chineseReviewTargets = chineseReviewTargets
+    }
+    return item
+  })
 }
 
 function aggregateVerificationEvidence(plan = [], pages = []) {
@@ -25,6 +46,55 @@ function aggregateVerificationEvidence(plan = [], pages = []) {
   for (const page of pages) {
     for (const evidence of page.verificationEvidence || []) {
       const total = totals.get(evidence.lpCode)
+      if (!total) continue
+      total.attemptedQuestionCount += Math.max(0, Number(evidence.attemptedQuestionCount) || 0)
+      total.incorrectQuestionCount += Math.max(0, Number(evidence.incorrectQuestionCount) || 0)
+      total.blankQuestionCount += Math.max(0, Number(evidence.blankQuestionCount) || 0)
+      total.unclearQuestionCount += Math.max(0, Number(evidence.unclearQuestionCount) || 0)
+      total.missingQuestionCount += Math.max(0, Number(evidence.missingQuestionCount) || 0)
+    }
+  }
+
+  return Array.from(totals.values()).map(item => {
+    const observedQuestionCount = item.attemptedQuestionCount
+      + item.blankQuestionCount
+      + item.unclearQuestionCount
+      + item.missingQuestionCount
+    const calculatedMissing = Math.max(0, item.expectedQuestionCount - observedQuestionCount)
+    const normalized = {
+      ...item,
+      missingQuestionCount: item.missingQuestionCount + calculatedMissing
+    }
+    const status = evidenceStatusOf(normalized)
+    return {
+      ...normalized,
+      complete: status === 'passed' || status === 'failed',
+      allCorrect: status === 'passed',
+      evidenceStatus: status,
+      evidenceReason: evidenceReasonOf(normalized, status)
+    }
+  })
+}
+
+function aggregateChineseReviewEvidence(plan = [], pages = []) {
+  const targets = plan.flatMap(item => item.chineseReviewTargets || [])
+  const totals = new Map(targets.map(target => [target.itemId, {
+    itemId: target.itemId,
+    itemType: target.itemType || '',
+    targetText: target.targetText || '',
+    expectedAnswer: target.expectedAnswer || target.targetText || '',
+    relatedLpCode: target.relatedLpCode || '',
+    expectedQuestionCount: Number(target.expectedQuestionCount) || 1,
+    attemptedQuestionCount: 0,
+    incorrectQuestionCount: 0,
+    blankQuestionCount: 0,
+    unclearQuestionCount: 0,
+    missingQuestionCount: 0
+  }]))
+
+  for (const page of pages) {
+    for (const evidence of page.chineseReviewEvidence || []) {
+      const total = totals.get(evidence.itemId)
       if (!total) continue
       total.attemptedQuestionCount += Math.max(0, Number(evidence.attemptedQuestionCount) || 0)
       total.incorrectQuestionCount += Math.max(0, Number(evidence.incorrectQuestionCount) || 0)
@@ -84,6 +154,7 @@ function evidenceReasonOf(item, status) {
 
 module.exports = {
   aggregateVerificationEvidence,
+  aggregateChineseReviewEvidence,
   buildVerificationPlan,
   evidenceStatusOf
 }

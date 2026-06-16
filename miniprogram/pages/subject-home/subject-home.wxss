@@ -36,6 +36,19 @@
 .page-chinese .subject-mark { background: #2f855a; }
 .page-english .subject-mark { background: #c05621; }
 
+.page-english .workbench-card {
+  background: linear-gradient(135deg, #fffaf5 0%, #fff7ed 46%, #eff6ff 100%);
+  box-shadow: 0 10rpx 28rpx rgba(154, 83, 28, .10);
+}
+
+.page-english .workbench-eyebrow {
+  color: #9c4f24;
+}
+
+.page-english .primary-action {
+  background: #c05621;
+}
+
 .workbench-copy {
   flex: 1;
   min-width: 0;
@@ -175,9 +188,31 @@
   margin: 0 28rpx 24rpx;
   padding: 24rpx;
   border-radius: 16rpx;
-  background: #fff7ed;
-  border: 1rpx solid #fed7aa;
+  background: #ffffff;
+  border: 1rpx solid #fde7cc;
   box-shadow: 0 2rpx 10rpx rgba(154, 83, 28, .06);
+}
+
+.english-vocab-status {
+  padding: 18rpx 20rpx;
+  border-radius: 14rpx;
+  background: #fff7ed;
+  margin-bottom: 16rpx;
+}
+
+.english-vocab-status-title {
+  display: block;
+  color: #7c2d12;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.english-vocab-status-desc {
+  display: block;
+  color: #7c5f4a;
+  font-size: 22rpx;
+  line-height: 1.45;
+  margin-top: 4rpx;
 }
 
 .english-stat-grid {
@@ -189,7 +224,7 @@
 .english-stat {
   min-height: 92rpx;
   border-radius: 14rpx;
-  background: #ffffff;
+  background: #f8fafc;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -239,7 +274,7 @@
 
 .weak-word-item {
   color: #7c2d12;
-  background: #ffffff;
+  background: #fff7ed;
 }
 
 .section {
@@ -285,6 +320,31 @@
 }
 
 .task-row:first-child { border-top: 0; }
+
+.row-title-line {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.row-title-line .row-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.chinese-review-row .row-desc {
+  color: #607466;
+}
+
+.review-type {
+  background: #dcfce7;
+  border-radius: 999rpx;
+  color: #166534;
+  flex-shrink: 0;
+  font-size: 19rpx;
+  font-weight: 750;
+  padding: 4rpx 9rpx;
+}
 
 .status-icon {
   width: 54rpx;
@@ -380,6 +440,10 @@
   color: #2b6cb0;
   font-size: 31rpx;
   margin-bottom: 8rpx;
+}
+
+.page-english .tool-icon {
+  color: #c05621;
 }
 
 .tool-title {

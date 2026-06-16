@@ -17,6 +17,7 @@ function isPassedEvidence(evidence) {
 function isEffectiveReport(report = {}) {
   if (report.allPhotosDuplicate) return false
   if ((report.bottlenecks || []).some(item => item && item.lpCode)) return true
+  if ((report.chineseErrorItems || []).some(item => item && (item.targetText || item.expectedAnswer))) return true
   return (report.verificationEvidence || []).some(isPassedEvidence)
 }
 
@@ -30,6 +31,163 @@ function getCurrentWeight(item, fallback = 60) {
 
 function errorCountOf(bottleneck) {
   return Math.max(0, Number(bottleneck && (bottleneck.errorCount || bottleneck.relatedErrorCount || bottleneck.evidenceCount)) || 0)
+}
+
+function uniqueStrings(values = []) {
+  return Array.from(new Set((values || []).filter(Boolean)))
+}
+
+function reviewItemKey(item = {}) {
+  return item.itemId
+    || [
+      item.itemType || 'item',
+      item.targetText || item.expectedAnswer || '',
+      item.sourceContext || ''
+    ].join(':')
+}
+
+function normalizeChineseReviewItems(items = []) {
+  return (Array.isArray(items) ? items : [])
+    .filter(item => item && (item.targetText || item.expectedAnswer || item.itemId))
+    .map(item => ({
+      itemId: item.itemId || reviewItemKey(item),
+      itemType: item.itemType || 'word',
+      targetText: item.targetText || item.expectedAnswer || '',
+      expectedAnswer: item.expectedAnswer || item.targetText || '',
+      lastWrongAnswer: item.lastWrongAnswer || item.studentAnswer || '',
+      sourceContext: item.sourceContext || '',
+      mistakeType: item.mistakeType || '',
+      status: item.status || 'needs_review',
+      firstSeenAt: item.firstSeenAt,
+      lastSeenAt: item.lastSeenAt,
+      evidenceCount: Number(item.evidenceCount) || 0,
+      reviewPassCount: Number(item.reviewPassCount) || 0,
+      reviewFailCount: Number(item.reviewFailCount) || 0,
+      nextReviewAt: item.nextReviewAt || '',
+      intervalLevel: Number(item.intervalLevel) || 0,
+      relatedLpCode: item.relatedLpCode || item.lpCode || 'LP-101',
+      verificationMethods: uniqueStrings(item.verificationMethods || []),
+      sourceReportId: item.sourceReportId || '',
+      suggestion: item.suggestion || ''
+    }))
+}
+
+function mergeChineseReviewItems(previousItems = [], errorItems = [], now = new Date(), report = {}) {
+  const byKey = new Map(normalizeChineseReviewItems(previousItems).map(item => [reviewItemKey(item), item]))
+  for (const errorItem of Array.isArray(errorItems) ? errorItems : []) {
+    if (!errorItem || (!errorItem.targetText && !errorItem.expectedAnswer)) continue
+    const itemId = errorItem.itemId || reviewItemKey(errorItem)
+    const key = reviewItemKey({ ...errorItem, itemId })
+    const previous = byKey.get(key)
+    byKey.set(key, {
+      ...previous,
+      itemId,
+      itemType: errorItem.itemType || (previous && previous.itemType) || 'word',
+      targetText: errorItem.targetText || errorItem.expectedAnswer || (previous && previous.targetText) || '',
+      expectedAnswer: errorItem.expectedAnswer || errorItem.targetText || (previous && previous.expectedAnswer) || '',
+      lastWrongAnswer: errorItem.studentAnswer || errorItem.lastWrongAnswer || (previous && previous.lastWrongAnswer) || '',
+      sourceContext: errorItem.sourceContext || (previous && previous.sourceContext) || '',
+      mistakeType: errorItem.mistakeType || (previous && previous.mistakeType) || '',
+      status: previous ? 'recurring' : 'needs_review',
+      firstSeenAt: (previous && previous.firstSeenAt) || now,
+      lastSeenAt: now,
+      evidenceCount: (Number(previous && previous.evidenceCount) || 0) + 1,
+      reviewPassCount: Number(previous && previous.reviewPassCount) || 0,
+      reviewFailCount: Number(previous && previous.reviewFailCount) || 0,
+      nextReviewAt: errorItem.nextReviewAt || (previous && previous.nextReviewAt) || '',
+      intervalLevel: previous ? Math.min(Number(previous.intervalLevel) || 0, 1) : 0,
+      relatedLpCode: errorItem.relatedLpCode || errorItem.lpCode || (previous && previous.relatedLpCode) || 'LP-101',
+      verificationMethods: uniqueStrings([
+        ...((previous && previous.verificationMethods) || []),
+        ...(errorItem.verificationMethods || [])
+      ]),
+      sourceReportId: report._id || (previous && previous.sourceReportId) || '',
+      suggestion: errorItem.suggestion || (previous && previous.suggestion) || ''
+    })
+  }
+  return Array.from(byKey.values()).sort((a, b) => {
+    const statusRank = { recurring: 0, needs_review: 1, reviewing: 2, mastered: 3 }
+    const rankDiff = (statusRank[a.status] ?? 9) - (statusRank[b.status] ?? 9)
+    if (rankDiff !== 0) return rankDiff
+    return (Number(b.evidenceCount) || 0) - (Number(a.evidenceCount) || 0)
+  })
+}
+
+function applyChineseReviewEvidence(reviewItems = [], evidenceItems = [], now = new Date(), report = {}) {
+  if (!Array.isArray(evidenceItems) || evidenceItems.length === 0) return reviewItems
+  const byId = new Map(reviewItems.map(item => [item.itemId, { ...item }]))
+  for (const evidence of evidenceItems) {
+    if (!evidence || !evidence.itemId || !byId.has(evidence.itemId)) continue
+    const previous = byId.get(evidence.itemId)
+    const passed = evidence.evidenceStatus
+      ? evidence.evidenceStatus === 'passed'
+      : Boolean(evidence.complete === true && evidence.allCorrect === true)
+    const failed = evidence.evidenceStatus === 'failed'
+      || (evidence.incorrectQuestionCount && Number(evidence.incorrectQuestionCount) > 0)
+    if (passed) {
+      const reviewPassCount = (Number(previous.reviewPassCount) || 0) + 1
+      byId.set(evidence.itemId, {
+        ...previous,
+        status: reviewPassCount >= 3 ? 'mastered' : 'reviewing',
+        reviewPassCount,
+        intervalLevel: Math.min(3, (Number(previous.intervalLevel) || 0) + 1),
+        lastVerifiedAt: now,
+        lastPassedAt: now,
+        sourceReportId: report._id || previous.sourceReportId || ''
+      })
+      continue
+    }
+    if (failed) {
+      byId.set(evidence.itemId, {
+        ...previous,
+        status: 'recurring',
+        reviewFailCount: (Number(previous.reviewFailCount) || 0) + 1,
+        intervalLevel: 0,
+        lastVerifiedAt: now,
+        lastFailedAt: now,
+        sourceReportId: report._id || previous.sourceReportId || ''
+      })
+    }
+  }
+  return Array.from(byId.values())
+}
+
+function mergeCandidateBottlenecks(left = [], right = []) {
+  const byId = new Map()
+  for (const item of [...(left || []), ...(right || [])]) {
+    if (!item || !item.bottleneckId) continue
+    const previous = byId.get(item.bottleneckId) || {}
+    byId.set(item.bottleneckId, {
+      ...previous,
+      ...item,
+      suggestedMicroValidation: uniqueStrings([
+        ...(previous.suggestedMicroValidation || []),
+        ...(item.suggestedMicroValidation || [])
+      ]),
+      recommendedResourceIds: uniqueStrings([
+        ...(previous.recommendedResourceIds || []),
+        ...(item.recommendedResourceIds || [])
+      ])
+    })
+  }
+  return Array.from(byId.values())
+}
+
+function learningMapFields(previous = {}, bottleneck = {}) {
+  return {
+    nodeIds: uniqueStrings([...(previous.nodeIds || []), ...(bottleneck.nodeIds || [])]),
+    candidateBottlenecks: mergeCandidateBottlenecks(previous.candidateBottlenecks, bottleneck.candidateBottlenecks),
+    recommendedResourceIds: uniqueStrings([
+      ...(previous.recommendedResourceIds || []),
+      ...(bottleneck.recommendedResourceIds || [])
+    ]),
+    resourcePlan: Array.isArray(bottleneck.resourcePlan) && bottleneck.resourcePlan.length > 0
+      ? bottleneck.resourcePlan
+      : (previous.resourcePlan || []),
+    evidenceStrength: bottleneck.evidenceStrength || previous.evidenceStrength || '',
+    nextActionType: bottleneck.nextActionType || previous.nextActionType || '',
+    nextActionText: bottleneck.nextActionText || previous.nextActionText || ''
+  }
 }
 
 function initialWeight(bottleneck) {
@@ -116,11 +274,23 @@ function buildNextAction(items) {
 
 function buildProfileSummary(profile = {}, report = {}, now = new Date()) {
   const current = normalizeCurrentBottlenecks(profile)
+  const chineseReviewItems = applyChineseReviewEvidence(
+    mergeChineseReviewItems(
+      profile.chineseReviewItems || [],
+      report.chineseErrorItems || [],
+      now,
+      report
+    ),
+    report.chineseReviewEvidence || [],
+    now,
+    report
+  )
   const effective = isEffectiveReport(report)
   if (!effective) {
     return {
       isEffective: false,
       currentBottlenecks: current,
+      chineseReviewItems,
       currentSummary: profile.currentSummary || buildCurrentSummary(current),
       nextAction: profile.nextAction || buildNextAction(current),
       changeSummary: '本次未产生新的诊断结论'
@@ -142,6 +312,7 @@ function buildProfileSummary(profile = {}, report = {}, now = new Date()) {
       lpCode: bottleneck.lpCode,
       lpName: bottleneck.lpName || (previous && previous.lpName) || bottleneck.lpCode,
       severity: bottleneck.severity || (previous && previous.severity) || 'medium',
+      ...learningMapFields(previous, bottleneck),
       status,
       trend: wasImproved ? 'recurring' : (previous ? 'persisting' : 'new'),
       firstSeenAt: (previous && previous.firstSeenAt) || now,
@@ -199,6 +370,7 @@ function buildProfileSummary(profile = {}, report = {}, now = new Date()) {
   return {
     isEffective: true,
     currentBottlenecks,
+    chineseReviewItems,
     currentSummary: buildCurrentSummary(currentBottlenecks),
     nextAction: buildNextAction(currentBottlenecks),
     changeSummary: buildChangeSummary(changes)
