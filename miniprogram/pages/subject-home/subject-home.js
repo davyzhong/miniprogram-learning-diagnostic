@@ -55,6 +55,7 @@ Page({
       grade: grade || ''
     })
 
+    wx.setNavigationBarTitle({ title: `${decodedSubjectName}工作台` })
     this.setNavColor()
   },
 
@@ -85,16 +86,16 @@ Page({
         try {
           const dashboard = await cloud.getSubjectDashboard(studentId, subject)
           const p = dashboard.profile
+          const permissions = dashboard.permissions || {}
           this._profile = p || {}
           this._reports = dashboard.reports || []
-          await this.loadEnglishVocabulary()
-          const permissions = dashboard.permissions || {}
           this.setData({
             permissions,
             canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
             analysisStatus: p && p.analysisStatus || '',
             currentAnalysisId: p && p.currentAnalysisId || '',
           })
+          await this.loadEnglishVocabulary(permissions)
           this.applyDashboardView()
           return
         } catch (error) {
@@ -118,22 +119,42 @@ Page({
       : []
     this._profile = p || {}
     this._reports = reports || []
-    await this.loadEnglishVocabulary()
     this.setData({
       analysisStatus: p && p.analysisStatus || '',
       currentAnalysisId: p && p.currentAnalysisId || '',
     })
+    await this.loadEnglishVocabulary(this.data.permissions || {})
     this.applyDashboardView()
   },
 
-  async loadEnglishVocabulary() {
+  async loadEnglishVocabulary(permissions = {}) {
     this._englishVocabulary = null
     const { studentId, subject } = this.data
     if (subject !== 'english' || typeof cloud.getEnglishVocabularySummary !== 'function') return
     try {
       this._englishVocabulary = await cloud.getEnglishVocabularySummary(studentId)
+      await this.autoSeedEnglishVocabularyIfNeeded(permissions)
     } catch (error) {
       console.warn('英语词库摘要读取失败，继续展示学科工作台', error && error.message ? error.message : error)
+    }
+  },
+
+  async autoSeedEnglishVocabularyIfNeeded(permissions = {}) {
+    const summary = this._englishVocabulary && this._englishVocabulary.summary || {}
+    const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
+    if (!canWrite || Number(summary.totalWords) > 0) return
+    if (this._englishAutoSeedAttempted || this._importingEnglishVocabulary) return
+    if (typeof cloud.seedEnglishPersonalVocabulary !== 'function') return
+
+    this._englishAutoSeedAttempted = true
+    this._importingEnglishVocabulary = true
+    try {
+      await cloud.seedEnglishPersonalVocabulary(this.data.studentId)
+      this._englishVocabulary = await cloud.getEnglishVocabularySummary(this.data.studentId)
+    } catch (error) {
+      console.warn('英语个人词库自动导入失败', error && error.message ? error.message : error)
+    } finally {
+      this._importingEnglishVocabulary = false
     }
   },
 
@@ -345,6 +366,7 @@ Page({
     wx.showLoading({ title: '正在导入词库' })
     try {
       const result = await cloud.seedEnglishPersonalVocabulary(this.data.studentId)
+      this._englishAutoSeedAttempted = true
       await this.loadProfile()
       const imported = Number(result.importedWordCount) || 0
       wx.hideLoading()
@@ -355,7 +377,8 @@ Page({
     } catch (error) {
       console.error('导入英语个人词库失败', error)
       wx.hideLoading()
-      wx.showToast({ title: '导入失败，请重试', icon: 'none' })
+      const message = error && error.message ? error.message : '导入失败，请重试'
+      wx.showToast({ title: message.slice(0, 18), icon: 'none' })
     } finally {
       this._importingEnglishVocabulary = false
     }

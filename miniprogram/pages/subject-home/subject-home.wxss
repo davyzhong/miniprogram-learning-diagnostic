@@ -1,45 +1,12 @@
 .page {
   min-height: 100vh;
   background: #f4f7fa;
+  padding-top: 24rpx;
   padding-bottom: 48rpx;
 }
 
-.top-bar {
-  background: #1f4f82;
-  padding: 42rpx 28rpx 34rpx;
-  color: #fff;
-  display: flex;
-  align-items: center;
-}
-
-.page-chinese .top-bar { background: #276749; }
-.page-english .top-bar { background: #9c4f24; }
-
-.back {
-  width: 72rpx;
-  height: 72rpx;
-  display: flex;
-  align-items: center;
-  font-size: 48rpx;
-}
-
-.top-info { flex: 1; min-width: 0; }
-
-.subject-label {
-  display: block;
-  font-size: 34rpx;
-  font-weight: 700;
-}
-
-.student-name {
-  display: block;
-  font-size: 24rpx;
-  opacity: .82;
-  margin-top: 4rpx;
-}
-
 .workbench-card {
-  margin: 24rpx 28rpx 22rpx;
+  margin: 0 28rpx 22rpx;
   padding: 28rpx;
   border-radius: 18rpx;
   background: linear-gradient(135deg, #ffffff 0%, #edf7ff 100%);

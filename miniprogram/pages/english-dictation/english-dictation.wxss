@@ -149,7 +149,7 @@
 
 .nav-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1.2fr;
   gap: 18rpx;
 }
 
@@ -159,6 +159,12 @@
   color: #25364a;
   background: #fff;
   font-weight: 700;
+}
+
+.voice-next-btn {
+  border-color: #fed7aa;
+  color: #9c4f24;
+  background: #fff7ed;
 }
 
 .primary-btn {

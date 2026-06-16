@@ -785,15 +785,11 @@ test('English subject home imports Zhong Qingyu personal vocabulary seed when em
   })
 
   await page.loadProfile()
-  assert.equal(page.data.primaryTask.actionType, 'importVocabulary')
-  assert.ok(page.data.tools.some(item => item.key === 'importVocabulary'))
-
-  await page.importEnglishVocabulary()
 
   assert.deepEqual(calls, [['seed', 'student-1']])
   assert.equal(page.data.englishVocabularyStats.totalWords, 505)
   assert.equal(page.data.primaryTask.actionType, 'englishPractice')
-  assert.equal(wx.calls.find(call => call.name === 'showToast').payload.title, '已导入505词')
+  assert.ok(page.data.tools.every(item => item.key !== 'importVocabulary'))
 })
 
 test('subject home shows learning workflow tools for co-parent access', async () => {
@@ -1014,11 +1010,62 @@ test('English practice page submits AI recognition attempts and requeues wrong w
   assert.equal(submitted[0].targetWord, 'science')
   assert.equal(submitted[0].recognizedText, 'siense')
   assert.equal(submitted[0].dimension, 'familiarity')
+  assert.ok(submitted[0].durationMs > 0)
   assert.equal(page.data.lastResult.status, 'incorrect')
   assert.equal(page.data.lastAnsweredItem.word, 'science')
   assert.equal(page.data.queue.length, 2)
   assert.equal(page.data.currentIndex, 1)
   assert.equal(page.data.currentItem.retryCount, 1)
+})
+
+test('English practice page cleans voice and prompt audio resources', async () => {
+  let stopCount = 0
+  const manager = {
+    onStop: () => {},
+    onError: () => {},
+    start: () => {},
+    stop: () => { stopCount += 1 }
+  }
+  const audio = {
+    src: '',
+    play: () => {},
+    stop: () => { audio.stopped = true },
+    destroy: () => { audio.destroyed = true }
+  }
+  const wx = createWxMock({
+    createInnerAudioContext: () => audio
+  })
+  const cloud = {
+    generateEnglishRecognitionSession: async () => ({
+      sessionId: 'session-1',
+      functionType: 'familiarity',
+      wordItems: [{
+        queueKey: 'word-1:0',
+        wordId: 'word-1',
+        word: 'science',
+        meanings: ['科学'],
+        promptType: 'chinese'
+      }],
+      patternItems: []
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    wx,
+    requirePlugin: () => ({
+      getRecordRecognitionManager: () => manager,
+      textToSpeech: options => options.success({ filename: '/tmp/prompt.mp3' })
+    }),
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({ studentId: 'student-1' })
+  page.startRecord()
+  page.onPlayPromptTap()
+  page.onUnload()
+
+  assert.equal(stopCount, 1)
+  assert.equal(audio.stopped, true)
+  assert.equal(audio.destroyed, true)
 })
 
 test('English dictation page creates a paper session and uploads answer photos', async () => {
@@ -1086,11 +1133,63 @@ test('English dictation page creates a paper session and uploads answer photos',
   assert.equal(uploaded.length, 2)
   assert.equal(uploaded[0].studentId, 'student-1')
   assert.equal(submitted[0].sessionId, 'paper-session-1')
+  assert.ok(submitted[0].durationMs > 0)
   assert.deepEqual(JSON.parse(JSON.stringify(submitted[0].photoFileIds)), ['cloud://dictation-1.jpg', 'cloud://dictation-2.jpg'])
   assert.equal(analyzed[0].sessionId, 'paper-session-1')
   assert.equal(page.data.analysisStatus, 'completed')
   assert.equal(page.data.dictationResults.length, 2)
   assert.equal(page.data.uploadedPhotoCount, 2)
+})
+
+test('English dictation page supports optional voice next command and cleans resources', async () => {
+  let stopCount = 0
+  let onStopHandler = null
+  const manager = {
+    onStop: handler => { onStopHandler = handler },
+    onError: () => {},
+    start: () => {},
+    stop: () => { stopCount += 1 }
+  }
+  const audio = {
+    src: '',
+    play: () => {},
+    stop: () => { audio.stopped = true },
+    destroy: () => { audio.destroyed = true }
+  }
+  const wx = createWxMock({
+    createInnerAudioContext: () => audio
+  })
+  const cloud = {
+    generateEnglishPaperDictationSession: async () => ({
+      sessionId: 'paper-session-1',
+      functionType: 'spelling',
+      wordItems: [
+        { queueKey: 'word-1:0', wordId: 'word-1', word: 'science', meanings: ['科学'], promptType: 'chinese' },
+        { queueKey: 'word-2:0', wordId: 'word-2', word: 'museum', meanings: ['博物馆'], promptType: 'english' }
+      ]
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/english-dictation/english-dictation.js', {
+    wx,
+    requirePlugin: () => ({
+      getRecordRecognitionManager: () => manager,
+      textToSpeech: options => options.success({ filename: '/tmp/prompt.mp3' })
+    }),
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({ studentId: 'student-1' })
+  page.onPlayPromptTap()
+  page.onVoiceNextTap()
+  onStopHandler({ result: '好了，下一个' })
+
+  assert.equal(page.data.currentIndex, 1)
+  assert.equal(page.data.recordingCommand, false)
+
+  page.onUnload()
+  assert.equal(stopCount, 1)
+  assert.equal(audio.stopped, true)
+  assert.equal(audio.destroyed, true)
 })
 
 test('upload selection warns about duplicate filenames but keeps the images', () => {

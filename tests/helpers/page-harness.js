@@ -65,6 +65,7 @@ function loadPage(relativePath, options = {}) {
     clearTimeout,
     wx,
     Page: config => { definition = config },
+    requirePlugin: options.requirePlugin,
     require: request => {
       if (options.modules && Object.prototype.hasOwnProperty.call(options.modules, request)) {
         return options.modules[request]

@@ -37,11 +37,12 @@
     <view class="nav-row">
       <button class="secondary-btn" bindtap="onPreviousTap" disabled="{{currentIndex === 0}}">上一个</button>
       <button class="secondary-btn" bindtap="onNextTap" disabled="{{currentIndex + 1 >= queue.length}}">下一个</button>
+      <button class="secondary-btn voice-next-btn" bindtap="onVoiceNextTap">{{recordingCommand ? '停止语音' : '说“下一个”'}}</button>
     </view>
 
     <view class="upload-card">
       <text class="upload-title">完成后上传听写纸</text>
-      <text class="upload-desc">上传后会先保存为本次听写证据，下一阶段会接入 OCR 判定拼写结果。</text>
+      <text class="upload-desc">上传后会进行 AI 批改，并把逐词拼写结果写入本次听写记录。</text>
       <button class="primary-btn" loading="{{uploading}}" bindtap="onChoosePhotoTap">拍照上传</button>
       <text class="upload-status" wx:if="{{uploadedPhotoCount > 0}}">已上传 {{uploadedPhotoCount}} 张 · {{analysisStatus}}</text>
     </view>

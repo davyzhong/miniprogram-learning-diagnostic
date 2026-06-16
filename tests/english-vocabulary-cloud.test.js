@@ -185,6 +185,7 @@ test('seeding Zhong Qingyu PEP vocabulary writes the personal word library once'
   })
   assert.equal(science.overallMastery, 'untested')
   assert.equal(db.dump('englishImportBatches')[0].sourceType, 'pep-vocabulary-seed')
+  assert.equal(db.dump('englishImportBatches')[0].candidateWords.length, 0)
 })
 
 test('English vocabulary summary and dictation session use confirmed personal word library', async () => {
@@ -544,4 +545,100 @@ test('analyzing English dictation photos updates only spelling progress from con
   assert.equal(session.status, 'completed')
   assert.equal(session.analysisStatus, 'completed')
   assert.equal(session.dictationResults.length, 3)
+})
+
+test('English dictation photo analysis deterministically rechecks AI verdicts', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [
+      {
+        _id: 'word-1',
+        studentId: 'student-1',
+        word: 'science',
+        familiarity: { status: 'mastered', correctCount: 4, wrongCount: 0, lastTestedAt: '2026-06-15', nextReviewAt: '', lastDirection: 'cn2en' },
+        spelling: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '' }
+      },
+      {
+        _id: 'word-2',
+        studentId: 'student-1',
+        word: 'museum',
+        familiarity: { status: 'mastered', correctCount: 4, wrongCount: 0, lastTestedAt: '2026-06-15', nextReviewAt: '', lastDirection: 'cn2en' },
+        spelling: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '' }
+      },
+      {
+        _id: 'word-3',
+        studentId: 'student-1',
+        word: 'library',
+        familiarity: { status: 'mastered', correctCount: 4, wrongCount: 0, lastTestedAt: '2026-06-15', nextReviewAt: '', lastDirection: 'cn2en' },
+        spelling: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '' }
+      }
+    ],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      functionType: 'spelling',
+      status: 'submitted',
+      analysisStatus: 'pending_analysis',
+      photoFileIds: ['cloud://dictation-1'],
+      wordItems: [
+        { queueKey: 'word-1:0:0', wordId: 'word-1', word: 'science' },
+        { queueKey: 'word-2:1:0', wordId: 'word-2', word: 'museum' },
+        { queueKey: 'word-3:2:0', wordId: 'word-3', word: 'library' }
+      ]
+    }]
+  })
+  const handler = loadEnglishVocabulary(db, 'owner-1', {
+    cloudOptions: {
+      getTempFileURL: async ({ fileList }) => ({
+        fileList: fileList.map(fileID => ({ fileID, tempFileURL: `https://temp/${fileID}.jpg` }))
+      })
+    },
+    tcb: createTcbMock(JSON.stringify({
+      results: [
+        { wordId: 'word-1', targetWord: 'science', recognizedText: 'science', verdict: 'incorrect', reason: 'AI 误判为错' },
+        { wordId: 'word-2', targetWord: 'museum', recognizedText: 'musem', verdict: 'correct', reason: 'AI 误判为对' },
+        { wordId: 'word-3', targetWord: 'library', recognizedText: '', verdict: 'correct', reason: '空白误判' }
+      ]
+    }))
+  })
+
+  const result = await handler.main({
+    action: 'analyzeDictationPhoto',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    reviewedAt: '2026-06-16T09:00:00+08:00'
+  })
+
+  assert.deepEqual(result.results.map(item => item.verdict), ['correct', 'incorrect', 'unclear'])
+  const words = db.dump('studentEnglishWords')
+  assert.equal(words.find(item => item._id === 'word-1').spelling.status, 'reviewing')
+  assert.equal(words.find(item => item._id === 'word-2').spelling.status, 'needs_practice')
+  assert.equal(words.find(item => item._id === 'word-3').spelling.status, 'untested')
+})
+
+test('submitting English dictation photos records elapsed duration', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      functionType: 'spelling',
+      status: 'in_progress',
+      analysisStatus: 'waiting_upload',
+      photoFileIds: [],
+      wordItems: []
+    }]
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'submitDictationPhoto',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    photoFileIds: ['cloud://photo-1'],
+    durationMs: 123456
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(db.dump('englishPracticeSessions')[0].durationMs, 123456)
 })

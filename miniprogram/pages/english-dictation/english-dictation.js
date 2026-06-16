@@ -32,6 +32,8 @@ Page({
     uploadedPhotoCount: 0,
     analysisStatus: '',
     dictationResults: [],
+    voiceReady: false,
+    recordingCommand: false,
     voiceUnavailableText: ''
   },
 
@@ -47,14 +49,30 @@ Page({
 
   initVoice() {
     if (typeof requirePlugin !== 'function') {
-      this.setData({ voiceUnavailableText: '当前环境暂不支持语音播放，可直接看提示词。' })
+      this.setData({ voiceReady: false, voiceUnavailableText: '当前环境暂不支持语音播放，可直接看提示词。' })
       return
     }
     try {
-      this._voicePlugin = requirePlugin('WechatSI')
-      this.setData({ voiceUnavailableText: '' })
+      const plugin = requirePlugin('WechatSI')
+      const manager = plugin && plugin.getRecordRecognitionManager ? plugin.getRecordRecognitionManager() : null
+      if (manager) {
+        manager.onStop(res => {
+          this.setData({ recordingCommand: false })
+          this.handleVoiceNextCommand(res && (res.result || res.text || ''))
+        })
+        manager.onError(() => {
+          this.setData({ recordingCommand: false })
+          wx.showToast({ title: '没有听清，可以直接点下一个', icon: 'none' })
+        })
+        this._voiceManager = manager
+      }
+      this._voicePlugin = plugin
+      this.setData({
+        voiceReady: Boolean(manager),
+        voiceUnavailableText: manager ? '' : '语音“下一个”暂不可用，可以直接点击下一个。'
+      })
     } catch (error) {
-      this.setData({ voiceUnavailableText: '语音插件暂不可用，请确认小程序后台已添加同声传译插件。' })
+      this.setData({ voiceReady: false, voiceUnavailableText: '语音插件暂不可用，请确认小程序后台已添加同声传译插件。' })
     }
   },
 
@@ -76,6 +94,7 @@ Page({
         currentItem: queue[0] || null,
         error: queue.length > 0 ? '' : '还没有可听写单词，请先导入钟青羽的个人英语词库。'
       })
+      this._sessionStartedAt = Date.now()
     } catch (error) {
       this.setData({
         loading: false,
@@ -110,6 +129,7 @@ Page({
       wx.showToast({ title: '请按提示完成听写', icon: 'none' })
       return
     }
+    this.stopPromptAudio()
     const content = current.promptType === 'english' ? current.word : current.meaningText
     this._voicePlugin.textToSpeech({
       lang: current.promptType === 'english' ? 'en_US' : 'zh_CN',
@@ -119,10 +139,45 @@ Page({
         if (!res || !res.filename) return
         const audio = wx.createInnerAudioContext()
         audio.src = res.filename
+        this._promptAudio = audio
         audio.play()
       },
       fail: () => wx.showToast({ title: '播放失败，请直接看提示', icon: 'none' })
     })
+  },
+
+  onVoiceNextTap() {
+    if (!this._voiceManager) {
+      wx.showToast({ title: '可以直接点击下一个', icon: 'none' })
+      return
+    }
+    if (this.data.recordingCommand) {
+      this.stopVoiceCommand()
+    } else {
+      this.startVoiceCommand()
+    }
+  },
+
+  startVoiceCommand() {
+    if (!this._voiceManager) return
+    this._voiceCommandStarted = true
+    this.setData({ recordingCommand: true })
+    this._voiceManager.start({ lang: 'zh_CN' })
+  },
+
+  stopVoiceCommand() {
+    if (!this._voiceManager) return
+    this._voiceManager.stop()
+    this._voiceCommandStarted = false
+  },
+
+  handleVoiceNextCommand(text = '') {
+    const command = String(text || '').trim()
+    if (/下一个|下一题|好了|好啦|完成|next/i.test(command)) {
+      this.onNextTap()
+    } else if (command) {
+      wx.showToast({ title: '没有听到“下一个”', icon: 'none' })
+    }
   },
 
   async onChoosePhotoTap() {
@@ -156,7 +211,8 @@ Page({
       const result = await cloud.submitEnglishDictationPhoto({
         studentId: this.data.studentId,
         sessionId: this.data.sessionId,
-        photoFileIds
+        photoFileIds,
+        durationMs: Math.max(1, Date.now() - (this._sessionStartedAt || Date.now()))
       })
       this.setData({
         analysisStatus: result.analysisStatus || 'pending_analysis',
@@ -180,5 +236,30 @@ Page({
         error: error && error.message ? error.message : '上传失败，请重试'
       })
     }
+  },
+
+  stopPromptAudio() {
+    const audio = this._promptAudio
+    if (!audio) return
+    if (typeof audio.stop === 'function') audio.stop()
+    if (typeof audio.destroy === 'function') audio.destroy()
+    this._promptAudio = null
+  },
+
+  cleanupVoice() {
+    if (this._voiceCommandStarted && this._voiceManager && typeof this._voiceManager.stop === 'function') {
+      this._voiceManager.stop()
+      this._voiceCommandStarted = false
+    }
+    this.stopPromptAudio()
+    if (this.data.recordingCommand) this.setData({ recordingCommand: false })
+  },
+
+  onHide() {
+    this.cleanupVoice()
+  },
+
+  onUnload() {
+    this.cleanupVoice()
   }
 })

@@ -99,18 +99,29 @@ function hasEnglishVocabulary(options = {}) {
   return options.subject === 'english' && summary && Number(summary.totalWords) > 0
 }
 
+function toSafeCount(value) {
+  const count = Number(value)
+  return Number.isFinite(count) ? count : 0
+}
+
 function buildEnglishPrimaryTask(options = {}, permissions = {}) {
   const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
   const summary = options.englishVocabulary && options.englishVocabulary.summary || {}
-  const totalWords = Number(summary.totalWords) || 0
-  const todayCount = Math.min(20, (
-    Number(summary.dueReviewCount) +
-    Number(summary.needsPracticeCount) +
-    Number(summary.untestedCount) +
-    Number(summary.reviewingCount) ||
-    totalWords ||
-    0
-  ))
+  const familiarity = summary.familiarity || {}
+  const spelling = summary.spelling || {}
+  const totalWords = toSafeCount(summary.totalWords)
+  const scheduledCount = (
+    toSafeCount(familiarity.dueReviewCount) +
+    toSafeCount(familiarity.needsPracticeCount) +
+    toSafeCount(spelling.dueReviewCount) +
+    toSafeCount(spelling.needsPracticeCount)
+  )
+  const newWordCount = Math.max(
+    toSafeCount(summary.untestedCount),
+    toSafeCount(familiarity.untestedCount),
+    toSafeCount(spelling.untestedCount)
+  )
+  const todayCount = Math.min(20, scheduledCount + newWordCount || totalWords || 0)
   if (!canWrite) {
     return {
       title: '当前可查看',
@@ -121,10 +132,10 @@ function buildEnglishPrimaryTask(options = {}, permissions = {}) {
   }
   if (totalWords === 0) {
     return {
-      title: '先准备个人词库',
-      summary: '个人词库还没有单词。导入钟青羽的 PEP 三年级到六年级个人单词表后，就可以从这里开始 20 词听写。',
-      actionText: '导入个人词库',
-      actionType: 'importVocabulary'
+      title: '个人词库准备中',
+      summary: '系统会自动导入钟青羽的 PEP 三年级到六年级个人单词表。完成后，这里会直接进入单词熟悉度和纸面听写。',
+      actionText: '查看学习记录',
+      actionType: 'history'
     }
   }
   return {
@@ -152,32 +163,41 @@ function buildEnglishVocabularyStats(vocabulary = {}) {
   const spelling = summary.spelling || {}
   const overall = summary.overall || {}
   return {
-    totalWords: Number(summary.totalWords) || 0,
-    needsPracticeCount: Number(summary.needsPracticeCount) || 0,
-    reviewingCount: Number(summary.reviewingCount) || 0,
-    masteredCount: Number(summary.masteredCount) || 0,
-    untestedCount: Number(summary.untestedCount) || 0,
-    dueReviewCount: Number(summary.dueReviewCount) || 0,
-    familiarityMasteredCount: Number(familiarity.masteredCount) || Number(summary.masteredCount) || 0,
-    familiarityNeedsPracticeCount: Number(familiarity.needsPracticeCount) || Number(summary.needsPracticeCount) || 0,
-    familiarityDueReviewCount: Number(familiarity.dueReviewCount) || Number(summary.dueReviewCount) || 0,
-    spellingNeedsPracticeCount: Number(spelling.needsPracticeCount) || 0,
-    spellingDueReviewCount: Number(spelling.dueReviewCount) || 0,
-    overallMasteredCount: Number(overall.masteredCount) || Number(summary.masteredCount) || 0,
-    overallPartialCount: Number(overall.partialCount) || 0,
-    patternCount: Number(safeVocabulary.patternCount) || 0,
+    totalWords: toSafeCount(summary.totalWords),
+    needsPracticeCount: toSafeCount(summary.needsPracticeCount),
+    reviewingCount: toSafeCount(summary.reviewingCount),
+    masteredCount: toSafeCount(summary.masteredCount),
+    untestedCount: toSafeCount(summary.untestedCount),
+    dueReviewCount: toSafeCount(summary.dueReviewCount),
+    familiarityMasteredCount: toSafeCount(familiarity.masteredCount) || toSafeCount(summary.masteredCount),
+    familiarityNeedsPracticeCount: toSafeCount(familiarity.needsPracticeCount) || toSafeCount(summary.needsPracticeCount),
+    familiarityDueReviewCount: toSafeCount(familiarity.dueReviewCount) || toSafeCount(summary.dueReviewCount),
+    familiarityUntestedCount: toSafeCount(familiarity.untestedCount),
+    familiarityReviewingCount: toSafeCount(familiarity.reviewingCount),
+    spellingNeedsPracticeCount: toSafeCount(spelling.needsPracticeCount),
+    spellingDueReviewCount: toSafeCount(spelling.dueReviewCount),
+    spellingUntestedCount: toSafeCount(spelling.untestedCount),
+    spellingReviewingCount: toSafeCount(spelling.reviewingCount),
+    overallMasteredCount: toSafeCount(overall.masteredCount) || toSafeCount(summary.masteredCount),
+    overallPartialCount: toSafeCount(overall.partialCount),
+    patternCount: toSafeCount(safeVocabulary.patternCount),
     weakWords: safeVocabulary.weakWords || []
   }
 }
 
 function buildEnglishQuickStats(stats) {
-  const todayCount = Math.min(20, (
+  const scheduledCount = (
     stats.familiarityDueReviewCount +
     stats.spellingDueReviewCount +
     stats.familiarityNeedsPracticeCount +
-    stats.spellingNeedsPracticeCount +
-    stats.untestedCount
-  ))
+    stats.spellingNeedsPracticeCount
+  )
+  const newWordCount = Math.max(
+    stats.untestedCount,
+    stats.familiarityUntestedCount,
+    stats.spellingUntestedCount
+  )
+  const todayCount = Math.min(20, scheduledCount + newWordCount)
   return [
     { key: 'today', label: '今日待练', value: todayCount || 0 },
     { key: 'familiarity', label: '已熟悉', value: stats.familiarityMasteredCount },
@@ -190,13 +210,6 @@ function buildTools(latestReport, permissions = {}, options = {}) {
   const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
   if (options.subject === 'english') {
     return [
-      canWrite && !hasEnglishVocabulary(options) ? {
-        key: 'importVocabulary',
-        title: '导入词库',
-        desc: 'PEP 3-6 年级个人词表',
-        icon: '↓',
-        actionType: 'importVocabulary'
-      } : null,
       canWrite ? {
         key: 'englishPractice',
         title: '单词熟悉度',
@@ -217,7 +230,14 @@ function buildTools(latestReport, permissions = {}, options = {}) {
         desc: '听写、词库和掌握变化',
         icon: '▧',
         actionType: 'history'
-      }
+      },
+      canWrite && !hasEnglishVocabulary(options) ? {
+        key: 'importVocabulary',
+        title: '词库维护',
+        desc: '自动导入异常时使用',
+        icon: '↓',
+        actionType: 'importVocabulary'
+      } : null
     ].filter(Boolean)
   }
   return [
