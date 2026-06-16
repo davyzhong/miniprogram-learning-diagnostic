@@ -177,6 +177,11 @@ function normalizeSpokenText(value) {
     .replace(/[^a-z]+/g, '')
 }
 
+function normalizeChineseAnswer(value) {
+  return cleanText(value, 200)
+    .replace(/[，。！？、,.!?\s]+/g, '')
+}
+
 function levenshteinDistance(a = '', b = '') {
   const rows = a.length + 1
   const cols = b.length + 1
@@ -237,6 +242,45 @@ function judgeSpokenWord({ targetWord = '', recognizedText = '' } = {}) {
     confidence,
     reason: '识别文本与目标单词拼写不同'
   }
+}
+
+function judgeMeaningAnswer({ meanings = [], cnSynonyms = [], recognizedText = '' } = {}) {
+  const normalizedText = normalizeChineseAnswer(recognizedText)
+  const accepted = uniqueList([...(meanings || []), ...(cnSynonyms || [])])
+    .map(normalizeChineseAnswer)
+    .filter(Boolean)
+  if (!normalizedText) {
+    return {
+      status: 'unclear',
+      normalizedText,
+      accepted,
+      confidence: 0,
+      reason: '没有识别到可判断的中文回答'
+    }
+  }
+  const matched = accepted.find(item => normalizedText === item || normalizedText.includes(item) || item.includes(normalizedText))
+  if (matched) {
+    return {
+      status: 'correct',
+      normalizedText,
+      accepted,
+      confidence: 1,
+      reason: '识别文本与目标释义一致'
+    }
+  }
+  return {
+    status: 'incorrect',
+    normalizedText,
+    accepted,
+    confidence: 0,
+    reason: '识别文本与目标释义不同'
+  }
+}
+
+function judgeRecognitionAnswer({ direction = 'cn2en', targetWord = '', meanings = [], cnSynonyms = [], recognizedText = '' } = {}) {
+  return direction === 'en2cn'
+    ? judgeMeaningAnswer({ meanings, cnSynonyms, recognizedText })
+    : judgeSpokenWord({ targetWord, recognizedText })
 }
 
 function uniqueList(values) {
@@ -516,6 +560,33 @@ function buildDictationItems(words = [], options = {}) {
   }))
 }
 
+function buildRecognitionItems(words = [], options = {}) {
+  const limit = Math.min(30, Math.max(1, Number(options.limit) || 20))
+  const directionOption = cleanText(options.direction, 20) || 'mixed'
+  return selectWordsForDimension(words, {
+    ...options,
+    dimension: 'familiarity',
+    limit
+  }).map((item, index) => {
+    const direction = directionOption === 'cn2en' || directionOption === 'en2cn'
+      ? directionOption
+      : (index % 2 === 0 ? 'cn2en' : 'en2cn')
+    return {
+      queueKey: `${item._id || item.word}:${index}:0`,
+      wordId: item._id || '',
+      word: item.word || '',
+      meanings: item.meanings || [],
+      cnSynonyms: item.cnSynonyms || [],
+      unit: item.unit || '',
+      familiarityStatus: item.familiarity && item.familiarity.status || 'untested',
+      spellingStatus: item.spelling && item.spelling.status || 'untested',
+      promptType: direction === 'en2cn' ? 'english' : 'chinese',
+      direction,
+      retryCount: 0
+    }
+  })
+}
+
 function applyWordDictationAttempt(word = {}, attempt = {}) {
   const status = attempt.status || (attempt.judgment && attempt.judgment.status)
   if (status === 'unclear') return { ...word }
@@ -541,7 +612,10 @@ module.exports = {
   buildVocabularySummary,
   selectPracticeItems,
   buildDictationItems,
+  buildRecognitionItems,
   judgeSpokenWord,
+  judgeMeaningAnswer,
+  judgeRecognitionAnswer,
   dateOnly,
   addDays
 }

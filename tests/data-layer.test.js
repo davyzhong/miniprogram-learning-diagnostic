@@ -138,9 +138,7 @@ test('ensureSubjectProfile returns the existing profile without creating a dupli
   assert.equal(db.dump('subjectProfiles').length, 1)
 })
 
-test('ensureSubjectProfile documents concurrent duplicate creation race', async () => {
-  // Current implementation uses check-then-act and does not guard against concurrent calls.
-  // This test records the known behaviour so future refactors either keep it or deliberately fix it.
+test('ensureSubjectProfile coalesces concurrent creation for the same student and subject', async () => {
   const db = createDatabase({ subjectProfiles: [] })
   const cloud = loadCloudUtil({ cloud: { database: () => db } })
 
@@ -150,9 +148,8 @@ test('ensureSubjectProfile documents concurrent duplicate creation race', async 
   ])
 
   const stored = db.dump('subjectProfiles')
-  // Both callers observed no existing profile, so both added one — documenting the race.
-  assert.equal(stored.length, 2)
-  assert.notEqual(first._id, second._id)
+  assert.equal(stored.length, 1)
+  assert.equal(first._id, second._id)
 })
 
 test('uploadPhoto builds a cloud path that preserves the original extension', async () => {
@@ -170,4 +167,39 @@ test('uploadPhoto builds a cloud path that preserves the original extension', as
   const fileID = await cloud.uploadPhoto('/tmp/paper.JPG', 'student-1', 'batch-1')
   assert.match(fileID, /^cloud:\/\/photos\/student-1\/batch-1\/\d+\.JPG$/)
   assert.equal(uploads[0].filePath, '/tmp/paper.JPG')
+})
+
+test('English vocabulary helpers call englishVocabulary cloud function actions', async () => {
+  const calls = []
+  const cloud = loadCloudUtil({
+    cloud: {
+      database: () => createDatabase(),
+      callFunction: async payload => {
+        calls.push(payload)
+        return { result: { success: true, action: payload.data.action } }
+      }
+    }
+  })
+
+  assert.equal((await cloud.getEnglishVocabularySummary('student-1')).action, 'getVocabularySummary')
+  assert.equal((await cloud.createEnglishImportBatch({ studentId: 'student-1' })).action, 'createImportBatch')
+  assert.equal((await cloud.confirmEnglishImportBatch('student-1', 'batch-1')).action, 'confirmImportBatch')
+  assert.equal((await cloud.seedEnglishPersonalVocabulary('student-1')).action, 'seedPersonalVocabulary')
+  assert.equal((await cloud.generateEnglishRecognitionSession({ studentId: 'student-1' })).action, 'generateRecognitionSession')
+  assert.equal((await cloud.submitEnglishRecognitionAttempt({ studentId: 'student-1', sessionId: 'session-1' })).action, 'submitRecognitionAttempt')
+  assert.equal((await cloud.generateEnglishPracticeSession({ studentId: 'student-1' })).action, 'generatePracticeSession')
+  assert.equal((await cloud.submitEnglishDictationAttempt({ studentId: 'student-1', sessionId: 'session-1' })).action, 'submitDictationAttempt')
+  assert.equal((await cloud.submitEnglishPracticeResult({ studentId: 'student-1', sessionId: 'session-1' })).action, 'submitPracticeResult')
+
+  assert.deepEqual(calls.map(call => `${call.name}:${call.data.action}`), [
+    'englishVocabulary:getVocabularySummary',
+    'englishVocabulary:createImportBatch',
+    'englishVocabulary:confirmImportBatch',
+    'englishVocabulary:seedPersonalVocabulary',
+    'englishVocabulary:generateRecognitionSession',
+    'englishVocabulary:submitRecognitionAttempt',
+    'englishVocabulary:generatePracticeSession',
+    'englishVocabulary:submitDictationAttempt',
+    'englishVocabulary:submitPracticeResult'
+  ])
 })

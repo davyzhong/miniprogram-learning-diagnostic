@@ -6,11 +6,14 @@ const {
   normalizeImportCandidates,
   applyWordReviewResult,
   applyWordDictationAttempt,
+  applyWordDimensionAttempt,
   buildVocabularySummary,
   buildDualVocabularySummary,
   selectPracticeItems,
   buildDictationItems,
+  buildRecognitionItems,
   judgeSpokenWord,
+  judgeRecognitionAnswer,
   dateOnly
 } = require('../_shared/english-vocabulary')
 
@@ -28,6 +31,8 @@ const ACTIONS = new Set([
   'seedPersonalVocabulary',
   'getVocabularySummary',
   'listWords',
+  'generateRecognitionSession',
+  'submitRecognitionAttempt',
   'generatePracticeSession',
   'submitDictationAttempt',
   'submitPracticeResult'
@@ -422,6 +427,106 @@ async function generatePracticeSession(event, openId) {
   return ok({ sessionId: res._id, wordItems, patternItems: [] })
 }
 
+async function generateRecognitionSession(event, openId) {
+  const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
+  const wordItems = buildRecognitionItems(words, {
+    today: event.today,
+    direction: event.direction || 'mixed',
+    limit: Math.min(40, Math.max(1, Number(event.wordLimit) || 20))
+  })
+
+  const res = await addDocument('englishPracticeSessions', {
+    _openid: openId,
+    studentId: event.studentId,
+    subject: 'english',
+    functionType: 'familiarity',
+    type: 'word-familiarity',
+    direction: cleanText(event.direction, 20) || 'mixed',
+    wordLimit: wordItems.length,
+    status: 'in_progress',
+    wordItems,
+    patternItems: [],
+    attempts: [],
+    createdAt: nowDate(),
+    updatedAt: nowDate()
+  })
+  return ok({ sessionId: res._id, wordItems, patternItems: [] })
+}
+
+function findSessionItem(session, event) {
+  const items = session.wordItems || []
+  return items.find(item => (
+    (event.queueKey && item.queueKey === event.queueKey) ||
+    (event.wordId && item.wordId === event.wordId)
+  )) || null
+}
+
+async function submitRecognitionAttempt(event) {
+  const session = await getDocument('englishPracticeSessions', event.sessionId)
+  if (!session || session.studentId !== event.studentId) return fail('熟悉度练习记录不存在')
+  const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
+  const word = words.find(item => item._id === event.wordId)
+  if (!word) return fail('单词不存在')
+  const sessionItem = findSessionItem(session, event)
+  if (!sessionItem) return fail('练习题目不存在')
+
+  const direction = cleanText(event.direction || sessionItem.direction, 20) || 'cn2en'
+  const judgment = judgeRecognitionAnswer({
+    direction,
+    targetWord: event.targetWord || word.word,
+    meanings: word.meanings || [],
+    cnSynonyms: word.cnSynonyms || [],
+    recognizedText: event.recognizedText
+  })
+  const reviewedAt = event.reviewedAt || new Date()
+  const attempt = {
+    queueKey: cleanText(event.queueKey || sessionItem.queueKey, 120),
+    wordId: word._id,
+    targetWord: word.word,
+    promptType: cleanText(event.promptType || sessionItem.promptType, 20),
+    direction,
+    recognizedText: cleanText(event.recognizedText, 200),
+    audioFileID: cleanText(event.audioFileID, 240),
+    durationMs: Math.max(0, Number(event.durationMs) || 0),
+    judgment,
+    retryCount: Number(event.retryCount) || 0,
+    reviewedAt: dateOnly(reviewedAt),
+    createdAt: nowDate()
+  }
+
+  if (judgment.status !== 'unclear') {
+    const updated = applyWordDimensionAttempt(word, 'familiarity', {
+      judgment,
+      reviewedAt,
+      direction
+    })
+    await updateDocument('studentEnglishWords', word._id, {
+      familiarity: updated.familiarity,
+      spelling: updated.spelling,
+      overallMastery: updated.overallMastery,
+      masteryStatus: updated.familiarity.status,
+      correctCount: updated.familiarity.correctCount,
+      wrongCount: updated.familiarity.wrongCount,
+      lastReviewedAt: updated.familiarity.lastTestedAt,
+      nextReviewAt: updated.familiarity.nextReviewAt,
+      updatedAt: nowDate()
+    })
+  }
+
+  const attempts = [...(session.attempts || []), attempt]
+  await updateDocument('englishPracticeSessions', event.sessionId, {
+    status: 'in_progress',
+    attempts,
+    updatedAt: nowDate()
+  })
+
+  return ok({
+    judgment,
+    shouldRepeat: judgment.status !== 'correct',
+    attempt
+  })
+}
+
 async function submitDictationAttempt(event) {
   const session = await getDocument('englishPracticeSessions', event.sessionId)
   if (!session || session.studentId !== event.studentId) return fail('听写记录不存在')
@@ -525,6 +630,8 @@ exports.main = async (event = {}) => {
     if (action === 'seedPersonalVocabulary') return seedPersonalVocabulary(event, auth.openId)
     if (action === 'getVocabularySummary') return getVocabularySummaryAction(event)
     if (action === 'listWords') return listWords(event)
+    if (action === 'generateRecognitionSession') return generateRecognitionSession(event, auth.openId)
+    if (action === 'submitRecognitionAttempt') return submitRecognitionAttempt(event)
     if (action === 'generatePracticeSession') return generatePracticeSession(event, auth.openId)
     if (action === 'submitDictationAttempt') return submitDictationAttempt(event)
     if (action === 'submitPracticeResult') return submitPracticeResult(event)
