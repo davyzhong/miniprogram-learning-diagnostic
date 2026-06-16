@@ -464,6 +464,63 @@ test('generatePaper asks verification papers to include core and extension quest
   assert.match(prompt, /2 道迁移延展题/)
 })
 
+test('generatePaper accepts fine math bottleneck ids and resolves candidate names', async () => {
+  let prompt = ''
+  const questions = Array.from({ length: 5 }, (_, index) => ({
+    index: index + 1,
+    content: `小数乘法复测题 ${index + 1}`,
+    answer: String(index + 1),
+    points: 10,
+    lpCode: 'BN-DEC-MUL-POINT-COUNT',
+    lpName: '小数乘法中小数位数累计规则不稳'
+  }))
+  const aiApp = {
+    ai: () => ({
+      createModel: () => ({
+        generateText: async ({ messages }) => {
+          prompt = messages[0].content
+          return { text: JSON.stringify({ title: '数学细卡点验证试卷', questions }) }
+        }
+      })
+    })
+  }
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      currentBottlenecks: [{
+        lpCode: 'LP-001',
+        lpName: '计算基础',
+        candidateBottlenecks: [{
+          bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+          title: '小数乘法中小数位数累计规则不稳'
+        }]
+      }]
+    }],
+    papers: []
+  })
+  const handler = loadModule('cloudfunctions/generatePaper/index.js', {
+    'wx-server-sdk': createCloudMock({ db }),
+    '@cloudbase/node-sdk': { init: () => aiApp },
+    './pdf-renderer': { generatePDF: async () => ({ buffer: Buffer.from('pdf'), studentPages: 1, answerPages: 1, totalPages: 2 }) }
+  })
+
+  const result = await handler.main({
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'verification',
+    targets: ['BN-DEC-MUL-POINT-COUNT']
+  })
+  const paper = db.dump('papers')[0]
+
+  assert.equal(result.success, true)
+  assert.match(prompt, /BN-DEC-MUL-POINT-COUNT：小数乘法中小数位数累计规则不稳/)
+  assert.deepEqual(paper.bottleneckTargets, ['BN-DEC-MUL-POINT-COUNT'])
+  assert.deepEqual(paper.bottleneckSummaries, ['小数乘法中小数位数累计规则不稳'])
+})
+
 test('generatePaper uses chinese concrete review items before generic bottleneck drills', async () => {
   let prompt = ''
   const questions = Array.from({ length: 5 }, (_, index) => ({

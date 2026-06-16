@@ -31,6 +31,22 @@ function cleanPromptText(value, maxLength = 30) {
     .slice(0, maxLength);
 }
 
+function isValidTargetCode(value) {
+  return /^(LP|BN|CHI)-[A-Za-z0-9_-]{1,80}$/.test(String(value || ''));
+}
+
+function normalizeTargetCodes(targets = []) {
+  const result = [];
+  const seen = new Set();
+  for (const value of targets || []) {
+    const code = cleanPromptText(value, 100);
+    if (!code || seen.has(code)) continue;
+    seen.add(code);
+    result.push(code);
+  }
+  return result;
+}
+
 function formatLocalDate(date = new Date()) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -75,7 +91,7 @@ function normalizeQuestionsData(data, expectedCount) {
       content: cleanPromptText(question?.content, 500),
       answer: cleanPromptText(question?.answer, 300),
       points: Number(question?.points) || 10,
-      lpCode: cleanPromptText(question?.lpCode, 30),
+      lpCode: cleanPromptText(question?.lpCode, 100),
       lpName: cleanPromptText(question?.lpName, 80),
       reviewItemId: cleanPromptText(question?.reviewItemId, 100),
       itemType: cleanPromptText(question?.itemType, 40),
@@ -107,8 +123,52 @@ function buildBottleneckSummaries(questions, targets = []) {
   }
 
   const targetNames = (targets || []).map(code => byCode[code]).filter(Boolean);
-  const source = targetNames.length > 0 ? targetNames : (questions || []);
-  return uniqueBottleneckSummaries(source).map(summarizeBottleneckName);
+  if (targetNames.length > 0) {
+    return Array.from(new Set(targetNames.map(name => cleanPromptText(name, 100)).filter(Boolean)));
+  }
+
+  return uniqueBottleneckSummaries(questions || []).map(summarizeBottleneckName);
+}
+
+function addTargetName(targetMap, code, name) {
+  const key = cleanPromptText(code, 100);
+  const value = cleanPromptText(name, 100);
+  if (!key || !value || targetMap[key]) return;
+  targetMap[key] = value;
+}
+
+function buildTargetNameMap(profile = {}) {
+  const targetMap = {};
+  const bottlenecks = [
+    ...(profile.pendingBottlenecks || []),
+    ...(profile.currentBottlenecks || []),
+  ];
+
+  for (const item of bottlenecks) {
+    addTargetName(targetMap, item.lpCode, item.lpName || item.title || item.name);
+    for (const candidate of item.candidateBottlenecks || []) {
+      addTargetName(
+        targetMap,
+        candidate.bottleneckId || candidate.id,
+        candidate.title || candidate.name || candidate.lpName
+      );
+    }
+  }
+
+  for (const item of profile.chineseReviewItems || []) {
+    addTargetName(
+      targetMap,
+      item.itemId || item.id,
+      item.targetText || item.expectedAnswer || item.sourceContext
+    );
+    addTargetName(
+      targetMap,
+      item.relatedLpCode || item.lpCode,
+      item.relatedLpName || item.lpName || '语文具体错项'
+    );
+  }
+
+  return targetMap;
 }
 
 async function generateQuestionsWithAI(student, subject, type, targets, paperKey, questionCount, selectedGrade) {
@@ -129,14 +189,7 @@ async function generateQuestionsWithAI(student, subject, type, targets, paperKey
       .where({ studentId: student._id })
       .get();
     const profile = profileRes.data.find(item => item.subject === subject);
-    const pending = [
-      ...(profile?.pendingBottlenecks || []),
-      ...(profile?.currentBottlenecks || []),
-    ];
-    const targetMap = {};
-    for (const p of pending) {
-      targetMap[p.lpCode] = cleanPromptText(p.lpName, 80);
-    }
+    const targetMap = buildTargetNameMap(profile || {});
     targetDesc = targets.map(t => `${t}：${targetMap[t] || '未知卡点'}`).join('；');
     if (subject === 'chinese') {
       chineseReviewTargets = selectChineseReviewTargets(profile || {}, targets, expectedCount);
@@ -159,7 +212,7 @@ ${chineseReviewPromptBlock}
 3. 每道题目包含：题目内容、参考答案、知识点说明
 4. ${chineseReviewTargets.length > 0 ? '语文错项复测卷中，优先覆盖上方 targetText；仍保持 3 道核心复测题和 2 道迁移延展题。' : '验证试卷中，每个卡点需要包含 3 道核心验证题和 2 道迁移延展题'}
 5. 核心验证题直接验证该卡点；迁移延展题要围绕相邻知识、综合应用或易混场景，用来观察是否存在新的相关学习卡点
-6. 验证试卷题目的 lpCode 仍填写对应目标卡点代码，lpName 写清楚可读的卡点名称；如果题目对应语文错项，请额外返回 reviewItemId、targetText、verificationMethod
+6. 验证试卷题目的 lpCode 填写对应目标卡点代码（可能是 LP-* 或 BN-*），lpName 写清楚可读的卡点名称；如果题目对应语文错项，lpCode 填写 relatedLpCode，并额外返回 reviewItemId、targetText、verificationMethod
 7. 返回严格 JSON 格式（不要加\`\`\`json\`\`\`包裹）
 
 ## 输出格式
@@ -220,10 +273,14 @@ exports.main = async (event) => {
   if (!SUBJECTS.has(subject) || !TYPES.has(type)) {
     return { success: false, error: '学科或试卷类型无效' };
   }
-  if (!Array.isArray(targets) || targets.length > 5 || targets.some(code => !/^LP-[A-Z0-9-]{1,24}$/.test(code))) {
+  const targetCodes = Array.isArray(targets) ? normalizeTargetCodes(targets) : [];
+  const hasInvalidTargets = !Array.isArray(targets)
+    || targetCodes.length > 5
+    || targetCodes.some(code => !isValidTargetCode(code));
+  if (hasInvalidTargets) {
     return { success: false, error: '学习卡点参数无效' };
   }
-  if (type === 'verification' && targets.length === 0) {
+  if (type === 'verification' && targetCodes.length === 0) {
     return { success: false, error: '验证试卷至少需要一个学习卡点' };
   }
   if (type === 'default-diagnosis' && ![1, 2, 3, 4, 5, 6].includes(Number(grade) || 0)) {
@@ -249,12 +306,12 @@ exports.main = async (event) => {
       student,
       subject,
       type,
-      targets,
+      targetCodes,
       paperKey,
       normalizedQuestionCount,
       type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0
     );
-    const bottleneckSummaries = buildBottleneckSummaries(questionsData.questions, targets);
+    const bottleneckSummaries = buildBottleneckSummaries(questionsData.questions, targetCodes);
     const paperCodes = await createPaperCodes(studentId, subject, normalizedPaperDate);
 
     // 2. 生成 PDF
@@ -308,7 +365,7 @@ exports.main = async (event) => {
         grade: type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0,
         paperKey: cleanPromptText(paperKey, 20),
         ...paperCodes,
-        bottleneckTargets: targets,
+        bottleneckTargets: targetCodes,
         bottleneckSummaries,
         chineseReviewTargets: questionsData.chineseReviewTargets || [],
         questions: questionsData.questions || [],
