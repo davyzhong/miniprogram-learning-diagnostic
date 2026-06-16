@@ -1519,7 +1519,7 @@ test('verification page expands math bottlenecks into fine-grained candidates', 
   assert.match(page.data.selectedSummary, /除数是小数的除法中/)
 })
 
-test('verification page caps report-selected fine math targets and sends fine target ids', async () => {
+test('verification page plans all report-selected fine math targets and sends fine target ids', async () => {
   let request = null
   const candidates = Array.from({ length: 7 }, (_, index) => ({
     bottleneckId: `BN-FINE-${index + 1}`,
@@ -1555,10 +1555,15 @@ test('verification page caps report-selected fine math targets and sends fine ta
   await page.loadPendingBottlenecks()
 
   assert.equal(page.data.bottlenecks.length, 7)
-  assert.equal(page.data.selectedCount, 5)
+  assert.equal(page.data.selectedCount, 7)
   assert.deepEqual(
     JSON.parse(JSON.stringify(page.data.bottlenecks.filter(item => item.selected).map(item => item.bottleneckId))),
-    ['BN-FINE-1', 'BN-FINE-2', 'BN-FINE-3', 'BN-FINE-4', 'BN-FINE-5']
+    ['BN-FINE-1', 'BN-FINE-2', 'BN-FINE-3', 'BN-FINE-4', 'BN-FINE-5', 'BN-FINE-6', 'BN-FINE-7']
+  )
+  assert.equal(page.data.paperConfig.taskPageCount, 3)
+  assert.deepEqual(
+    JSON.parse(JSON.stringify(page.data.paperConfig.taskPages.map(item => item.targetCount))),
+    [3, 3, 1]
   )
 
   await page.onGenerate()
@@ -1568,9 +1573,11 @@ test('verification page caps report-selected fine math targets and sends fine ta
     'BN-FINE-2',
     'BN-FINE-3',
     'BN-FINE-4',
-    'BN-FINE-5'
+    'BN-FINE-5',
+    'BN-FINE-6',
+    'BN-FINE-7'
   ])
-  assert.equal(request.questionCount, 25)
+  assert.equal(request.questionCount, 35)
 })
 
 test('verification page uses Chinese concrete review items as selectable targets', async () => {
@@ -2432,22 +2439,106 @@ test('learning records render English sessions from shared timeline', async () =
 })
 
 test('learning records can load more timeline records by increasing the limit', async () => {
-  const limits = []
+  const requests = []
   const cloud = {
     getLearningTimeline: async params => {
-      limits.push(params.limit)
+      requests.push(params)
+      const start = params.cursor === 'cursor-page-2' ? 20 : 0
       return {
         reports: Array.from({ length: params.limit }, (_, index) => ({
+          _id: `report-${start + index + 1}`,
+          subject: 'math',
+          type: 'diagnosis',
+          status: 'completed',
+          createdAt: `2026-06-${String(10 + Math.floor((start + index) / 5)).padStart(2, '0')}T10:00:00Z`,
+          summary: `第 ${start + index + 1} 条记录`
+        })),
+        papers: [],
+        englishSessions: [],
+        nextCursor: params.cursor ? '' : 'cursor-page-2',
+        hasMore: !params.cursor
+      }
+    },
+    getTempFileURLs: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', studentName: '钟青羽' })
+
+  await page.loadHistory()
+  assert.deepEqual(JSON.parse(JSON.stringify(requests[0])), { studentId: 'student-1', limit: 20 })
+  assert.equal(page.data.hasMoreRecords, true)
+  assert.equal(page.data.nextCursor, 'cursor-page-2')
+
+  await page.onLoadMoreRecords()
+
+  assert.deepEqual(JSON.parse(JSON.stringify(requests[1])), {
+    studentId: 'student-1',
+    limit: 20,
+    cursor: 'cursor-page-2'
+  })
+  assert.equal(page.data.timelineLimit, 20)
+  assert.equal(page.data.hasMoreRecords, false)
+  assert.equal(page.data.days.flatMap(day => day.events).length, 40)
+})
+
+test('learning records use lightweight summaries from timeline without full report payloads', async () => {
+  const cloud = {
+    getLearningTimeline: async () => ({
+      reports: [{
+        _id: 'report-summary',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        createdAt: '2026-06-11T10:00:00Z',
+        summary: '数学计算卡点',
+        bottleneckSummaries: ['计算基础'],
+        imageFileCount: 18,
+        errorCount: 12
+      }],
+      papers: [],
+      englishSessions: [],
+      hasMore: false
+    }),
+    getTempFileURLs: async () => {
+      throw new Error('summary records should not request image URLs')
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', studentName: '钟青羽' })
+
+  await page.loadHistory()
+
+  const event = page.data.days[0].events[0]
+  assert.equal(event.title, '数学诊断报告')
+  assert.ok(event.chips.includes('计算基础'))
+  assert.ok(event.chips.includes('18张照片'))
+  assert.equal(event.foldedEvidence.length, 0)
+})
+
+test('learning records can load more timeline records by increasing the limit legacy fallback', async () => {
+  const limits = []
+  const cloud = {
+    getLearningTimeline: null,
+    getReports: async (studentId, subject, limit) => {
+      limits.push(limit)
+      return Array.from({ length: limit }, (_, index) => ({
           _id: `report-${index + 1}`,
           subject: 'math',
           type: 'diagnosis',
           status: 'completed',
           createdAt: `2026-06-${String(10 + Math.floor(index / 5)).padStart(2, '0')}T10:00:00Z`,
           summary: `第 ${index + 1} 条记录`
-        })),
-        papers: [],
-        englishSessions: []
-      }
+        }))
     },
     getTempFileURLs: async () => []
   }

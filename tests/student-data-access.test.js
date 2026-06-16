@@ -104,7 +104,8 @@ test('viewer can read subject dashboard, report detail, paper detail and timelin
 
   const timeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1' })
   assert.equal(timeline.success, true)
-  assert.deepEqual(JSON.parse(JSON.stringify(timeline.items.map(item => item.id))), ['report-report-2', 'paper-paper-1', 'report-report-1', 'upload-cloud://photo-1'])
+  assert.deepEqual(JSON.parse(JSON.stringify(timeline.items.map(item => item.id))), ['report-report-2', 'paper-paper-1', 'report-report-1'])
+  assert.equal(timeline.reports.find(item => item._id === 'report-1').imageFileCount, 1)
   assert.equal(timeline.items.find(item => item.type === 'paper').bottleneckSummary, '审题理解')
   assert.equal(timeline.items.find(item => item.type === 'paper').paperDisplayCode, '数学-20260613-01')
 })
@@ -167,6 +168,42 @@ test('learning timeline respects the requested lightweight limit', async () => {
   assert.equal(timeline.success, true)
   assert.equal(timeline.limit, 20)
   assert.equal(timeline.reports.length, 20)
+})
+
+test('learning timeline returns cursor paged lightweight records', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentMembers: [{ _id: 'member-1', studentId: 'student-1', ownerOpenId: 'owner-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }],
+    reports: Array.from({ length: 25 }, (_, index) => ({
+      _id: `report-${index + 1}`,
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      summary: `第 ${index + 1} 份报告`,
+      bottlenecks: [{ lpName: '计算基础', errorCount: 2 }],
+      imageFiles: [{ fileID: `cloud://photo-${index + 1}`, ocrSummary: '很长的 OCR 内容不应出现在列表摘要里' }],
+      createdAt: `2026-06-${String(30 - index).padStart(2, '0')}T10:00:00Z`
+    })),
+    papers: [],
+    englishPracticeSessions: []
+  })
+  const handler = loadStudentData(db, 'viewer-1')
+
+  const first = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1', limit: 10 })
+  const second = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1', limit: 10, cursor: first.nextCursor })
+
+  assert.equal(first.success, true)
+  assert.equal(first.reports.length, 10)
+  assert.equal(first.hasMore, true)
+  assert.ok(first.nextCursor)
+  assert.equal(first.reports[0]._id, 'report-1')
+  assert.equal(first.reports[0].imageFileCount, 1)
+  assert.deepEqual(JSON.parse(JSON.stringify(first.reports[0].bottleneckSummaries)), ['计算基础'])
+  assert.equal(first.reports[0].imageFiles, undefined)
+  assert.equal(second.reports[0]._id, 'report-11')
+  assert.notEqual(second.reports[0]._id, first.reports[0]._id)
 })
 
 test('timeline includes English vocabulary sessions as learning records', async () => {

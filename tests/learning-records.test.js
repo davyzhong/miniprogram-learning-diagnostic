@@ -288,6 +288,38 @@ test('verification paper event follows the latest linked feedback report lifecyc
   assert.equal(paperEvent.foldedEvidence.length, 2)
 })
 
+test('verification paper timeline event shows task-pack page progress chips', () => {
+  const reports = [{
+    _id: 'report-pack',
+    type: 'verification',
+    status: 'completed',
+    subject: 'math',
+    paperId: 'paper-pack',
+    createdAt: '2026-06-12T10:00:00+08:00',
+    verificationPageCodes: ['MATH-V-20260616-01-P02'],
+    imageFiles: []
+  }]
+  const papers = [{
+    _id: 'paper-pack',
+    type: 'verification',
+    subject: 'math',
+    generatedAt: '2026-06-12T09:00:00+08:00',
+    verificationPack: {
+      pages: [
+        { pageCode: 'MATH-V-20260616-01-P01' },
+        { pageCode: 'MATH-V-20260616-01-P02' },
+        { pageCode: 'MATH-V-20260616-01-P03' }
+      ]
+    }
+  }]
+
+  const { events } = buildTimelineEvents(reports, papers, new Map(), 'math', '数学')
+  const paperEvent = events.find(event => event.kind === 'verification-paper')
+
+  assert.ok(paperEvent.chips.includes('任务包3页'))
+  assert.ok(paperEvent.chips.includes('已回传1页'))
+})
+
 test('photo evidence summaries hide unreliable AI-inferred grade labels', () => {
   const reports = [{
     _id: 'report-grade',

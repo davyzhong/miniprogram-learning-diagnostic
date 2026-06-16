@@ -10,6 +10,19 @@
     <view class="section-title">试卷配置</view>
     <text class="scope-text">{{paperConfig.scopeText}}</text>
     <text class="strategy-text">{{paperConfig.strategyText}}</text>
+    <view class="task-pack" wx:if="{{paperConfig.taskPages.length > 0}}">
+      <view class="task-pack-head">
+        <text class="task-pack-title">任务包预览</text>
+        <text class="task-pack-meta">{{paperConfig.taskPageCount}} 个任务页，可批量打印，做完任意页后按页面编号拍照回传。</text>
+      </view>
+      <view class="task-page" wx:for="{{paperConfig.taskPages}}" wx:key="pageIndex">
+        <view class="task-page-title">
+          <text>{{item.title}}</text>
+          <text class="task-page-count">{{item.targetCount}} 个{{paperConfig.targetUnitLabel || '目标'}} · {{item.questionCount}} 题</text>
+        </view>
+        <text class="task-page-scope">{{item.scopeText}}</text>
+      </view>
+    </view>
     <view class="preview-stats">
       <view class="preview-stat">
         <text class="preview-num">{{selectedCount}}</text>
@@ -30,7 +43,7 @@
     </view>
   </view>
 
-  <view class="section-title range-title">出题范围（{{selectedCount}}/5）</view>
+  <view class="section-title range-title">出题范围（{{selectedCount}}/{{paperConfig.maxTargets || 60}}）</view>
   <view class="bottleneck-list">
     <view
       class="bottleneck-item {{item.selected ? 'selected' : ''}}"

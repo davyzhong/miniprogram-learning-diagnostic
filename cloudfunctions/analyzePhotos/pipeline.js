@@ -171,7 +171,7 @@ function buildImageFiles({ fileIDs = [], initialImageFiles = [], markedPages = [
     const initial = initialImageFiles.find(item => item.fileID === fileID) || {};
     const page = pageByFileID.get(fileID) || {};
     const failed = failedFiles.get(fileID);
-    return {
+    const imageFile = {
       fileID,
       fileName: initial.fileName || `照片${index + 1}`,
       fileSize: Number(initial.fileSize) || 0,
@@ -183,6 +183,10 @@ function buildImageFiles({ fileIDs = [], initialImageFiles = [], markedPages = [
       analysisStatus: failed ? 'failed' : (page.fileID ? 'completed' : ''),
       analysisError: failed ? failed.error : '',
     };
+    if (page.pageCode) {
+      imageFile.pageCode = page.pageCode;
+    }
+    return imageFile;
   });
 }
 

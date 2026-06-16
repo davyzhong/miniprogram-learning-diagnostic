@@ -165,9 +165,11 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
   const isVerification = report.type === 'verification'
   const eventTime = report.evidenceTime || report.createdAt
   const subject = report.subject || fallbackSubject
-  const photoCount = photos.length
+  const photoCount = photos.length || Number(report.imageFileCount) || 0
   const duplicateCount = photos.filter(photo => photo.isDuplicate).length
-  const bottleneckText = bottleneckListText(report.bottlenecks || [])
+  const bottleneckText = report.bottleneckSummary
+    || (Array.isArray(report.bottleneckSummaries) ? report.bottleneckSummaries.filter(Boolean).slice(0, 3).join('、') : '')
+    || bottleneckListText(report.bottlenecks || [])
   const evidence = report.verificationEvidence || []
   const improvedCount = evidence.filter(item => item.complete && item.allCorrect).length
   const linkedPaper = report.paperId && options.paperById ? options.paperById.get(report.paperId) : null
@@ -193,7 +195,7 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
   const chips = [
     isVerification && paperCode ? `关联 ${paperCode}` : '',
     dateTimeChip('证据时间', eventTime),
-    photoCount > 0 ? `${photoCount} 张照片` : '',
+    photoCount > 0 ? `${photoCount}张照片` : '',
     isVerification && improvedCount > 0 ? `${improvedCount} 个已改善` : '',
     !isVerification && report.totalErrors ? `${report.totalErrors} 道相关错题` : '',
     bottleneckText
@@ -242,6 +244,23 @@ function paperFeedbackStatus(report) {
   return '反馈分析中'
 }
 
+function taskPackProgressChips(paper = {}, latestFeedback = null) {
+  const pages = paper.verificationPack && Array.isArray(paper.verificationPack.pages)
+    ? paper.verificationPack.pages
+    : []
+  if (pages.length === 0) return []
+  const returnedCodes = new Set([
+    ...(latestFeedback && Array.isArray(latestFeedback.verificationPageCodes) ? latestFeedback.verificationPageCodes : []),
+    ...(latestFeedback && Array.isArray(latestFeedback.verificationPageEvidence)
+      ? latestFeedback.verificationPageEvidence.map(item => item && item.pageCode).filter(Boolean)
+      : [])
+  ])
+  return [
+    `任务包${pages.length}页`,
+    returnedCodes.size > 0 ? `已回传${returnedCodes.size}页` : ''
+  ].filter(Boolean)
+}
+
 function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedReports = [], options = {}) {
   const eventTime = paper.generatedAt || paper.createdAt
   const display = buildPaperDisplay(paper, subjectName, options)
@@ -268,7 +287,7 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     subject,
     filter: 'active'
   })
-  const chips = display.chips
+  const chips = display.chips.concat(taskPackProgressChips(paper, latestFeedback))
 
   return {
     id: paper._id,
@@ -299,7 +318,7 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     chips,
     chipItems: chips.map(text => ({
       text,
-      url: text.includes('题') || text.includes('卷') || text.includes('答案') || text.includes('试卷日期')
+      url: text.includes('题') || text.includes('卷') || text.includes('答案') || text.includes('试卷日期') || text.includes('任务包') || text.includes('回传')
         ? paperUrl
         : bottleneckUrl
     }))

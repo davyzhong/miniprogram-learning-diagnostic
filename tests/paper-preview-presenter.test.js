@@ -123,6 +123,39 @@ test('paper preview lifecycle sends completed feedback to the report', () => {
   assert.deepEqual(state.lifecycleSteps.map(step => step.status), ['completed', 'completed', 'completed'])
 })
 
+test('paper preview exposes verification task-pack page progress', () => {
+  const paper = {
+    ...basePaper(),
+    verificationPack: {
+      totalTargets: 7,
+      pages: [
+        { pageCode: 'MATH-V-20260616-01-P01', targets: [{ displayName: '细分卡点 1' }, { displayName: '细分卡点 2' }] },
+        { pageCode: 'MATH-V-20260616-01-P02', targets: [{ displayName: '细分卡点 3' }] },
+        { pageCode: 'MATH-V-20260616-01-P03', targets: [{ displayName: '细分卡点 4' }] }
+      ]
+    }
+  }
+  const state = buildPaperPreviewState({
+    paper,
+    detail: {
+      student: { name: '钟青羽' },
+      latestVerificationReport: {
+        _id: 'report-pack',
+        status: 'completed',
+        verificationPageCodes: ['MATH-V-20260616-01-P02'],
+        verificationEvidence: []
+      }
+    },
+    subjectName: '数学',
+    pdfDownloaded: true
+  })
+
+  assert.equal(state.taskPack.hasTaskPack, true)
+  assert.equal(state.taskPack.progressText, '已回传 1/3 页')
+  assert.deepEqual(state.taskPackPages.map(page => page.status), ['pending', 'completed', 'pending'])
+  assert.equal(state.taskPackPages[0].targetText, '细分卡点 1、细分卡点 2')
+})
+
 // ── Page-level helper (migrated from page-flows.test.js) ──
 
 test('paper preview formats default paper names without repeating the grade key', () => {

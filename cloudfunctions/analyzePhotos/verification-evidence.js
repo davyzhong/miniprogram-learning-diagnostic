@@ -1,4 +1,8 @@
 function buildVerificationPlan(paper = {}) {
+  if (paper.verificationPack && Array.isArray(paper.verificationPack.pages)) {
+    return buildPageAwareVerificationPlan(paper)
+  }
+
   const counts = new Map()
   const chineseReviewCounts = new Map()
   for (const question of paper.questions || []) {
@@ -32,20 +36,67 @@ function buildVerificationPlan(paper = {}) {
   })
 }
 
+function questionTargetId(question = {}) {
+  return question.targetId || question.lpCode || question.reviewItemId || ''
+}
+
+function buildQuestionIndex(questions = []) {
+  const byTarget = new Map()
+  for (const question of questions || []) {
+    const targetId = questionTargetId(question)
+    if (!targetId) continue
+    if (!byTarget.has(targetId)) byTarget.set(targetId, [])
+    byTarget.get(targetId).push(question)
+  }
+  return byTarget
+}
+
+function buildPageAwareVerificationPlan(paper = {}) {
+  const byTarget = buildQuestionIndex(paper.questions || [])
+  const result = []
+  for (const page of paper.verificationPack.pages || []) {
+    for (const target of page.targets || []) {
+      const targetId = target.targetId || target.lpCode || ''
+      if (!targetId) continue
+      const questions = byTarget.get(targetId) || []
+      result.push({
+        lpCode: targetId,
+        targetId,
+        targetType: target.targetType || '',
+        displayName: target.displayName || target.title || targetId,
+        legacyLpCode: target.legacyLpCode || target.lpCode || '',
+        pageCode: page.pageCode || '',
+        expectedQuestionCount: questions.length,
+        questionIds: questions.map(question => question.questionId).filter(Boolean)
+      })
+    }
+  }
+  return result
+}
+
 function aggregateVerificationEvidence(plan = [], pages = []) {
-  const totals = new Map(plan.map(item => [item.lpCode, {
-    lpCode: item.lpCode,
-    expectedQuestionCount: Number(item.expectedQuestionCount) || 0,
-    attemptedQuestionCount: 0,
-    incorrectQuestionCount: 0,
-    blankQuestionCount: 0,
-    unclearQuestionCount: 0,
-    missingQuestionCount: 0
-  }]))
+  const totals = new Map(plan.map(item => {
+    const total = {
+      lpCode: item.lpCode,
+      expectedQuestionCount: Number(item.expectedQuestionCount) || 0,
+      attemptedQuestionCount: 0,
+      incorrectQuestionCount: 0,
+      blankQuestionCount: 0,
+      unclearQuestionCount: 0,
+      missingQuestionCount: 0
+    }
+    if (item.targetId) total.targetId = item.targetId
+    if (item.targetType) total.targetType = item.targetType
+    if (item.displayName) total.displayName = item.displayName
+    if (item.legacyLpCode) total.legacyLpCode = item.legacyLpCode
+    if (item.pageCode) total.pageCode = item.pageCode
+    if (Array.isArray(item.questionIds)) total.questionIds = item.questionIds
+    return [item.lpCode, total]
+  }))
 
   for (const page of pages) {
     for (const evidence of page.verificationEvidence || []) {
-      const total = totals.get(evidence.lpCode)
+      const total = totals.get(evidence.targetId || evidence.lpCode)
       if (!total) continue
       total.attemptedQuestionCount += Math.max(0, Number(evidence.attemptedQuestionCount) || 0)
       total.incorrectQuestionCount += Math.max(0, Number(evidence.incorrectQuestionCount) || 0)

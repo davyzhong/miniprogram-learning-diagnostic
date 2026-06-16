@@ -23,6 +23,52 @@ test('builds expected verification counts from the generated paper', () => {
   ])
 })
 
+test('builds page-aware verification plan from verificationPack pages', () => {
+  const plan = buildVerificationPlan({
+    verificationPack: {
+      pages: [{
+        pageCode: 'MATH-V-20260616-01-P01',
+        targets: [{
+          targetId: 'BN-FINE-1',
+          targetType: 'fine_bottleneck',
+          displayName: '小数点定位不稳',
+          legacyLpCode: 'LP-001'
+        }, {
+          targetId: 'BN-FINE-2',
+          targetType: 'fine_bottleneck',
+          displayName: '分数通分不稳',
+          legacyLpCode: 'LP-002'
+        }]
+      }]
+    },
+    questions: [
+      { questionId: 'Q1', pageCode: 'MATH-V-20260616-01-P01', targetId: 'BN-FINE-1', lpCode: 'BN-FINE-1' },
+      { questionId: 'Q2', pageCode: 'MATH-V-20260616-01-P01', targetId: 'BN-FINE-1', lpCode: 'BN-FINE-1' },
+      { questionId: 'Q3', pageCode: 'MATH-V-20260616-01-P01', targetId: 'BN-FINE-2', lpCode: 'BN-FINE-2' }
+    ]
+  })
+
+  assert.deepEqual(plan, [{
+    lpCode: 'BN-FINE-1',
+    targetId: 'BN-FINE-1',
+    targetType: 'fine_bottleneck',
+    displayName: '小数点定位不稳',
+    legacyLpCode: 'LP-001',
+    pageCode: 'MATH-V-20260616-01-P01',
+    expectedQuestionCount: 2,
+    questionIds: ['Q1', 'Q2']
+  }, {
+    lpCode: 'BN-FINE-2',
+    targetId: 'BN-FINE-2',
+    targetType: 'fine_bottleneck',
+    displayName: '分数通分不稳',
+    legacyLpCode: 'LP-002',
+    pageCode: 'MATH-V-20260616-01-P01',
+    expectedQuestionCount: 1,
+    questionIds: ['Q3']
+  }])
+})
+
 test('only passes a verification target when every expected answer is visible and correct', () => {
   const plan = [{ lpCode: 'LP-001', expectedQuestionCount: 3 }]
 

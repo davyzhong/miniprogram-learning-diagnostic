@@ -479,6 +479,8 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     comparisonSummary = buildComparisonSummary(merged.bottlenecks);
     merged.verificationEvidence = verificationEvidence;
     merged.chineseReviewEvidence = aggregateChineseReviewEvidence(verificationPaper.plan, uniquePages);
+    merged.verificationPageEvidence = buildVerificationPageEvidence(uniquePages);
+    merged.verificationPageCodes = merged.verificationPageEvidence.map(item => item.pageCode);
   } else {
     merged.bottlenecks = merged.bottlenecks.map(item => ({ ...item, status: 'found' }));
   }
@@ -525,6 +527,62 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
   };
 }
 
+function buildVerificationPageEvidence(pages = []) {
+  const byPageCode = new Map();
+  for (const page of pages || []) {
+    const evidenceItems = Array.isArray(page.verificationEvidence) ? page.verificationEvidence : [];
+    const pageCodeFromPage = page.pageCode || '';
+    if (pageCodeFromPage && !byPageCode.has(pageCodeFromPage)) {
+      byPageCode.set(pageCodeFromPage, {
+        pageCode: pageCodeFromPage,
+        fileIDs: new Set(),
+        targetIds: new Set(),
+        attemptedQuestionCount: 0,
+        incorrectQuestionCount: 0,
+        blankQuestionCount: 0,
+        unclearQuestionCount: 0,
+        missingQuestionCount: 0,
+      });
+    }
+
+    for (const evidence of evidenceItems) {
+      const pageCode = evidence.pageCode || pageCodeFromPage;
+      if (!pageCode) continue;
+      if (!byPageCode.has(pageCode)) {
+        byPageCode.set(pageCode, {
+          pageCode,
+          fileIDs: new Set(),
+          targetIds: new Set(),
+          attemptedQuestionCount: 0,
+          incorrectQuestionCount: 0,
+          blankQuestionCount: 0,
+          unclearQuestionCount: 0,
+          missingQuestionCount: 0,
+        });
+      }
+      const total = byPageCode.get(pageCode);
+      if (page.fileID) total.fileIDs.add(page.fileID);
+      const targetId = evidence.targetId || evidence.lpCode || '';
+      if (targetId) total.targetIds.add(targetId);
+      total.attemptedQuestionCount += Math.max(0, Number(evidence.attemptedQuestionCount) || 0);
+      total.incorrectQuestionCount += Math.max(0, Number(evidence.incorrectQuestionCount) || 0);
+      total.blankQuestionCount += Math.max(0, Number(evidence.blankQuestionCount) || 0);
+      total.unclearQuestionCount += Math.max(0, Number(evidence.unclearQuestionCount) || 0);
+      total.missingQuestionCount += Math.max(0, Number(evidence.missingQuestionCount) || 0);
+    }
+
+    if (pageCodeFromPage && page.fileID) {
+      byPageCode.get(pageCodeFromPage).fileIDs.add(page.fileID);
+    }
+  }
+
+  return Array.from(byPageCode.values()).map(item => ({
+    ...item,
+    fileIDs: Array.from(item.fileIDs),
+    targetIds: Array.from(item.targetIds),
+  }));
+}
+
 async function writeCompletedAnalysis({ reportId, studentId, subject, merged, quality, imageFiles, previousReport, comparisonSummary, verificationTargets, profile, profileSummary, partialSuccess, analysisWarning, failedBatches, failedImageFiles }) {
   await db.collection('reports').doc(reportId).update({
     data: {
@@ -541,6 +599,8 @@ async function writeCompletedAnalysis({ reportId, studentId, subject, merged, qu
       verificationTargets,
       verificationEvidence: merged.verificationEvidence || [],
       chineseReviewEvidence: merged.chineseReviewEvidence || [],
+      verificationPageCodes: merged.verificationPageCodes || [],
+      verificationPageEvidence: merged.verificationPageEvidence || [],
       quality,
       isEffective: profileSummary.isEffective,
       changeSummary: profileSummary.changeSummary,

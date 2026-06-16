@@ -66,6 +66,29 @@ test('cloud function wrapper annotates aggregate timeout errors with function an
   }
 })
 
+test('cloud function wrapper records duration and payload size metrics', async () => {
+  const cloud = loadCloudUtil({
+    cloud: {
+      database: () => createDatabase(),
+      callFunction: async () => ({ result: { success: true, ok: true } })
+    }
+  })
+  cloud.clearPerformanceMetrics()
+
+  const result = await cloud.callFunction('studentData', { action: 'getLearningTimeline', studentId: 'student-1' })
+  const metrics = cloud.getPerformanceMetrics()
+
+  assert.equal(result.ok, true)
+  const durationMetric = metrics.find(item => item.name === 'cloud.callFunction.duration')
+  assert.ok(durationMetric)
+  assert.equal(durationMetric.dimensions.functionName, 'studentData')
+  assert.equal(durationMetric.dimensions.action, 'getLearningTimeline')
+  assert.equal(durationMetric.dimensions.success, true)
+  assert.ok(durationMetric.value >= 0)
+  assert.ok(metrics.some(item => item.name === 'cloud.callFunction.payloadBytes'))
+  assert.ok(metrics.some(item => item.name === 'cloud.callFunction.resultBytes'))
+})
+
 test('temporary cloud URLs are deduplicated and fetched in platform-sized batches', async () => {
   const db = createDatabase()
   const batches = []

@@ -35,6 +35,17 @@ async function previewStaleRecordsIfPossible(studentId, subject) {
   }
 }
 
+function mergeEvents(existing = [], incoming = []) {
+  const seen = new Set()
+  return [...existing, ...incoming].filter(item => {
+    const key = item && (item.id || item.reportId || item.paperId || item.sessionId)
+    if (!key) return true
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
 Page({
   data: {
     studentId: '',
@@ -52,6 +63,7 @@ Page({
     cleanup: EMPTY_CLEANUP,
     cleaningStaleRecords: false,
     timelineLimit: INITIAL_TIMELINE_LIMIT,
+    nextCursor: '',
     hasMoreRecords: false,
     loadingMoreRecords: false,
     permissions: {},
@@ -69,6 +81,7 @@ Page({
       subject,
       activeSubject: normalizeSubject(subject),
       timelineLimit: INITIAL_TIMELINE_LIMIT,
+      nextCursor: '',
       subjectName,
       studentName,
       titleText: buildTitleText(studentName)
@@ -104,28 +117,41 @@ Page({
       const fallbackSubjectName = this.data.subjectName || subjectNameOf(activeSubject)
       const titleText = buildTitleText(this.data.studentName)
       const timelineLimit = Math.max(INITIAL_TIMELINE_LIMIT, Number(this.data.timelineLimit) || INITIAL_TIMELINE_LIMIT)
+      const cursor = options.cursor || ''
       let reports = []
       let papers = []
       let englishSessions = []
       let permissions = {}
+      let hasMoreRecords = false
+      let nextCursor = ''
+      let usedSharedTimeline = false
 
       try {
         if (typeof cloud.getLearningTimeline === 'function') {
-          const timeline = await cloud.getLearningTimeline({ studentId: this.data.studentId, limit: timelineLimit })
+          const timelineParams = {
+            studentId: this.data.studentId,
+            limit: options.append ? INITIAL_TIMELINE_LIMIT : timelineLimit
+          }
+          if (cursor) timelineParams.cursor = cursor
+          const timeline = await cloud.getLearningTimeline(timelineParams)
           reports = timeline.reports || []
           papers = timeline.papers || []
           englishSessions = timeline.englishSessions || []
           permissions = timeline.permissions || {}
+          hasMoreRecords = Boolean(timeline.hasMore)
+          nextCursor = timeline.nextCursor || ''
+          usedSharedTimeline = true
         }
       } catch (error) {
         console.warn('共享学习记录不可用，回退到旧记录读取', error && error.message ? error.message : error)
       }
 
-      if (!reports.length && !papers.length && !englishSessions.length) {
+      if (!usedSharedTimeline && !reports.length && !papers.length && !englishSessions.length) {
         reports = await cloud.getReports(this.data.studentId, undefined, timelineLimit)
         papers = typeof cloud.getPapers === 'function'
           ? await cloud.getPapers({ studentId: this.data.studentId })
           : []
+        hasMoreRecords = reports.length >= timelineLimit || papers.length >= timelineLimit || englishSessions.length >= timelineLimit
       }
 
       const fileIDs = collectFileIDs(reports, englishSessions)
@@ -147,13 +173,22 @@ Page({
         fallbackSubjectName,
         englishSessions
       )
+      const allEvents = options.append
+        ? mergeEvents(this.data.allEvents || [], events)
+        : events
+      const allStatusItems = options.append
+        ? mergeEvents(this.data.allStatusItems || [], statusItems)
+        : statusItems
 
       this.setData({
         titleText,
         permissions,
         timelineLimit,
-        hasMoreRecords: reports.length >= timelineLimit || papers.length >= timelineLimit || englishSessions.length >= timelineLimit,
-        ...buildHistoryState(events, activeSubject, statusItems, { cleanupPreview: null, permissions }),
+        nextCursor,
+        hasMoreRecords: usedSharedTimeline
+          ? hasMoreRecords
+          : (reports.length >= timelineLimit || papers.length >= timelineLimit || englishSessions.length >= timelineLimit),
+        ...buildHistoryState(allEvents, activeSubject, allStatusItems, { cleanupPreview: null, permissions }),
         loading: false
       })
       if (!options.skipCleanupPreview) {
@@ -171,12 +206,20 @@ Page({
 
   async onLoadMoreRecords() {
     if (this.data.loading || this.data.loadingMoreRecords || !this.data.hasMoreRecords) return
-    this.setData({
-      loadingMoreRecords: true,
-      timelineLimit: (Number(this.data.timelineLimit) || INITIAL_TIMELINE_LIMIT) + TIMELINE_LIMIT_STEP
-    })
+    const hasCursor = Boolean(this.data.nextCursor)
+    this.setData(hasCursor
+      ? { loadingMoreRecords: true }
+      : {
+        loadingMoreRecords: true,
+        timelineLimit: (Number(this.data.timelineLimit) || INITIAL_TIMELINE_LIMIT) + TIMELINE_LIMIT_STEP
+      })
     try {
-      await this.loadHistory({ keepVisible: true, skipCleanupPreview: true })
+      await this.loadHistory({
+        keepVisible: true,
+        skipCleanupPreview: true,
+        append: hasCursor,
+        cursor: hasCursor ? this.data.nextCursor : ''
+      })
     } finally {
       this.setData({ loadingMoreRecords: false })
     }

@@ -521,6 +521,108 @@ test('generatePaper accepts fine math bottleneck ids and resolves candidate name
   assert.deepEqual(paper.bottleneckSummaries, ['小数乘法中小数位数累计规则不稳'])
 })
 
+test('generatePaper stores verificationPack for many fine bottlenecks', async () => {
+  let prompt = ''
+  const targets = Array.from({ length: 8 }, (_, index) => `BN-FINE-${index + 1}`)
+  const questions = targets.flatMap((targetId, targetIndex) => (
+    Array.from({ length: 5 }, (_, questionIndex) => ({
+      index: targetIndex * 5 + questionIndex + 1,
+      content: `细卡点 ${targetIndex + 1} 复测题 ${questionIndex + 1}`,
+      answer: String(questionIndex + 1),
+      points: 10,
+      lpCode: targetId,
+      lpName: `细分卡点 ${targetIndex + 1}`
+    }))
+  ))
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      currentBottlenecks: targets.map((targetId, index) => ({
+        lpCode: `LP-${String(index + 1).padStart(3, '0')}`,
+        lpName: `粗卡点 ${index + 1}`,
+        candidateBottlenecks: [{
+          bottleneckId: targetId,
+          title: `细分卡点 ${index + 1}`,
+          weight: 100 - index
+        }]
+      }))
+    }],
+    papers: []
+  })
+  const aiApp = {
+    ai: () => ({
+      createModel: () => ({
+        generateText: async ({ messages }) => {
+          prompt = messages[0].content
+          return { text: JSON.stringify({ title: '数学任务包验证试卷', questions }) }
+        }
+      })
+    })
+  }
+  let pdfOptions = null
+  const handler = loadModule('cloudfunctions/generatePaper/index.js', {
+    'wx-server-sdk': createCloudMock({ db }),
+    '@cloudbase/node-sdk': { init: () => aiApp },
+    './pdf-renderer': {
+      generatePDF: async (...args) => {
+        pdfOptions = args[3]
+        return {
+          buffer: Buffer.from('pdf'),
+          studentPages: 3,
+          answerPages: 2,
+          totalPages: 5,
+          studentPageCodes: [
+            'MATH-V-20260616-01-P01',
+            'MATH-V-20260616-01-P02',
+            'MATH-V-20260616-01-P03'
+          ],
+          studentPageMetadata: [
+            { pageNumber: 1, pageCode: 'MATH-V-20260616-01-P01', questionIds: Array.from({ length: 15 }, (_, index) => `Q-${index + 1}`) },
+            { pageNumber: 2, pageCode: 'MATH-V-20260616-01-P02', questionIds: Array.from({ length: 15 }, (_, index) => `Q-${index + 16}`) },
+            { pageNumber: 3, pageCode: 'MATH-V-20260616-01-P03', questionIds: Array.from({ length: 10 }, (_, index) => `Q-${index + 31}`) }
+          ]
+        }
+      }
+    }
+  })
+
+  const result = await handler.main({
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'verification',
+    targets,
+    paperDate: '2026-06-16'
+  })
+  const paper = db.dump('papers')[0]
+
+  assert.equal(result.success, true)
+  assert.match(prompt, /BN-FINE-8：细分卡点 8/)
+  assert.equal(pdfOptions.verificationPack.totalTargets, 8)
+  assert.deepEqual(paper.bottleneckTargets, targets)
+  assert.equal(paper.verificationPack.totalTargets, 8)
+  assert.equal(paper.verificationPack.totalQuestions, 40)
+  assert.equal(paper.verificationPack.pages.length, 3)
+  assert.deepEqual(paper.verificationPack.pages.map(page => page.pageCode), [
+    'MATH-V-20260616-01-P01',
+    'MATH-V-20260616-01-P02',
+    'MATH-V-20260616-01-P03'
+  ])
+  assert.deepEqual(paper.verificationPack.pages.map(page => page.questionIds.length), [15, 15, 10])
+  assert.equal(paper.questions[0].pageCode, 'MATH-V-20260616-01-P01')
+  assert.equal(paper.questions[0].targetId, 'BN-FINE-1')
+  assert.equal(paper.questions[0].targetType, 'fine_bottleneck')
+  assert.equal(paper.questions[3].questionRole, 'transfer')
+  assert.deepEqual(paper.studentPageCodes, [
+    'MATH-V-20260616-01-P01',
+    'MATH-V-20260616-01-P02',
+    'MATH-V-20260616-01-P03'
+  ])
+  assert.equal(paper.studentPageMetadata.length, 3)
+})
+
 test('generatePaper uses chinese concrete review items before generic bottleneck drills', async () => {
   let prompt = ''
   const questions = Array.from({ length: 5 }, (_, index) => ({
@@ -1320,6 +1422,107 @@ test('analyzePhotos only marks a verification target improved from complete corr
   assert.equal(profile.currentBottlenecks[0].status, 'improved')
 })
 
+test('analyzePhotos stores page-level evidence for verification task packs', async () => {
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-pack-verify',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'verification',
+      mode: 'verification',
+      status: 'analyzing',
+      paperId: 'paper-pack',
+      imageFileIds: ['cloud://page-2'],
+      imageFiles: [{ fileID: 'cloud://page-2', fileName: '第2页.jpg' }]
+    }],
+    papers: [{
+      _id: 'paper-pack',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'verification',
+      bottleneckTargets: ['BN-FINE-4'],
+      verificationPack: {
+        pages: [{
+          pageCode: 'MATH-V-20260616-01-P02',
+          targets: [{
+            targetId: 'BN-FINE-4',
+            targetType: 'fine_bottleneck',
+            displayName: '分数通分不稳',
+            legacyLpCode: 'LP-002'
+          }]
+        }]
+      },
+      questions: Array.from({ length: 5 }, (_, index) => ({
+        questionId: `MATH-V-20260616-01-P02-Q0${index + 1}`,
+        pageCode: 'MATH-V-20260616-01-P02',
+        targetId: 'BN-FINE-4',
+        lpCode: 'BN-FINE-4'
+      }))
+    }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      currentBottlenecks: [{
+        lpCode: 'BN-FINE-4',
+        lpName: '分数通分不稳',
+        status: 'needs_verification'
+      }]
+    }],
+    analysisTasks: []
+  })
+  const cloud = createCloudMock({
+    db,
+    callFunction: async payload => ({
+      result: {
+        success: true,
+        data: {
+          pageResults: [{
+            fileID: payload.data.fileIDs[0],
+            imageIndex: 1,
+            pageCode: 'MATH-V-20260616-01-P02',
+            ocrSummary: '页面编号 MATH-V-20260616-01-P02，五道题均已作答',
+            totalErrors: 0,
+            bottlenecks: [],
+            errorDetails: [],
+            verificationEvidence: [{
+              lpCode: 'BN-FINE-4',
+              targetId: 'BN-FINE-4',
+              pageCode: 'MATH-V-20260616-01-P02',
+              attemptedQuestionCount: 5,
+              incorrectQuestionCount: 0
+            }]
+          }]
+        }
+      }
+    })
+  })
+  const handler = loadModule('cloudfunctions/analyzePhotos/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({ reportId: 'report-pack-verify' })
+  const report = db.dump('reports').find(item => item._id === 'report-pack-verify')
+  const analyzeBatchCall = cloud.calls.find(call => call.name === 'callFunction')
+
+  assert.equal(result.success, true)
+  assert.equal(analyzeBatchCall.payload.data.verificationPlan[0].pageCode, 'MATH-V-20260616-01-P02')
+  assert.deepEqual(report.verificationPageCodes, ['MATH-V-20260616-01-P02'])
+  assert.deepEqual(report.verificationPageEvidence, [{
+    pageCode: 'MATH-V-20260616-01-P02',
+    fileIDs: ['cloud://page-2'],
+    targetIds: ['BN-FINE-4'],
+    attemptedQuestionCount: 5,
+    incorrectQuestionCount: 0,
+    blankQuestionCount: 0,
+    unclearQuestionCount: 0,
+    missingQuestionCount: 0
+  }])
+  assert.equal(report.imageFiles[0].pageCode, 'MATH-V-20260616-01-P02')
+})
+
 test('analyzePhotos fails a verification report that has no valid verification targets', async () => {
   const db = createDatabase({
     reports: [{
@@ -1557,6 +1760,87 @@ test('analyzeBatch asks chinese diagnosis to output concrete error items', async
   assert.match(prompt, /记忆型错项/)
 })
 
+test('analyzeBatch accepts task-pack verification plan and asks AI to return page codes', async () => {
+  let prompt = ''
+  const db = createDatabase({
+    reports: [{
+      _id: 'report-math-pack',
+      _openid: 'owner-1',
+      imageFileIds: ['cloud://photo-1']
+    }],
+    analysisTasks: [{
+      _id: 'task-math-pack',
+      reportId: 'report-math-pack',
+      status: 'processing',
+      _openid: 'owner-1',
+      fileIDs: ['cloud://photo-1']
+    }]
+  })
+  const cloud = createCloudMock({
+    db,
+    getTempFileURL: async () => ({
+      fileList: [{ fileID: 'cloud://photo-1', tempFileURL: 'https://temp/photo-1' }]
+    })
+  })
+  const handler = loadModule('cloudfunctions/analyzeBatch/index.js', {
+    'wx-server-sdk': cloud,
+    '@cloudbase/node-sdk': {
+      SYMBOL_CURRENT_ENV: 'test',
+      init: () => ({
+        ai: () => ({
+          createModel: () => ({
+            generateText: async request => {
+              prompt = request.messages[0].content[0].text
+              return {
+                text: JSON.stringify({
+                  pageResults: [{
+                    imageIndex: 1,
+                    pageCode: 'MATH-V-20260616-01-P02',
+                    ocrSummary: '任务包第 2 页',
+                    summary: '验证题均正确',
+                    bottlenecks: [],
+                    errorDetails: [],
+                    verificationEvidence: [{
+                      lpCode: 'BN-FINE-4',
+                      targetId: 'BN-FINE-4',
+                      pageCode: 'MATH-V-20260616-01-P02',
+                      attemptedQuestionCount: 5,
+                      incorrectQuestionCount: 0
+                    }]
+                  }]
+                })
+              }
+            }
+          })
+        })
+      })
+    }
+  })
+
+  const result = await handler.main({
+    reportId: 'report-math-pack',
+    taskId: 'task-math-pack',
+    fileIDs: ['cloud://photo-1'],
+    subject: 'math',
+    verificationPlan: Array.from({ length: 8 }, (_, index) => ({
+      lpCode: `BN-FINE-${index + 1}`,
+      targetId: `BN-FINE-${index + 1}`,
+      targetType: 'fine_bottleneck',
+      displayName: `细分卡点 ${index + 1}`,
+      pageCode: `MATH-V-20260616-01-P${String(Math.floor(index / 3) + 1).padStart(2, '0')}`,
+      expectedQuestionCount: 5,
+      questionIds: [`Q${index + 1}`]
+    }))
+  })
+
+  assert.equal(result.success, true)
+  assert.match(prompt, /页面编号/)
+  assert.match(prompt, /pageCode/)
+  assert.match(prompt, /MATH-V-20260616-01-P02/)
+  assert.equal(result.data.pageResults[0].pageCode, 'MATH-V-20260616-01-P02')
+  assert.equal(result.data.pageResults[0].verificationEvidence[0].targetId, 'BN-FINE-4')
+})
+
 test('generatePaper uses the grade selected for a default diagnostic paper', async () => {
   let prompt = ''
   const questions = Array.from({ length: 6 }, (_, index) => ({
@@ -1629,7 +1913,7 @@ test('generatePaper validates default grades and verification target limits befo
     studentId: 'student-1',
     subject: 'math',
     type: 'verification',
-    targets: ['LP-001', 'LP-002', 'LP-003', 'LP-004', 'LP-005', 'LP-006']
+    targets: Array.from({ length: 61 }, (_, index) => `LP-${String(index + 1).padStart(3, '0')}`)
   })).error, '学习卡点参数无效')
   assert.equal(initCalls, 1)
   assert.equal(db.dump('papers').length, 0)

@@ -215,6 +215,66 @@ function buildFeedback(report, context = {}) {
   }
 }
 
+function pageCodeSetFromReport(report) {
+  const codes = new Set()
+  for (const code of report && Array.isArray(report.verificationPageCodes) ? report.verificationPageCodes : []) {
+    if (code) codes.add(code)
+  }
+  for (const item of report && Array.isArray(report.verificationPageEvidence) ? report.verificationPageEvidence : []) {
+    if (item && item.pageCode) codes.add(item.pageCode)
+  }
+  return codes
+}
+
+function targetTextOf(targets = []) {
+  return (targets || [])
+    .map(target => target.displayName || target.title || target.targetId || target.lpCode)
+    .filter(Boolean)
+    .join('、')
+}
+
+function buildTaskPackView(paper = {}, report = null) {
+  const pages = paper.verificationPack && Array.isArray(paper.verificationPack.pages)
+    ? paper.verificationPack.pages
+    : []
+  if (pages.length === 0) {
+    return {
+      taskPack: {
+        hasTaskPack: false,
+        totalPages: 0,
+        completedPages: 0,
+        pendingPages: 0,
+        progressText: ''
+      },
+      taskPackPages: []
+    }
+  }
+
+  const completedCodes = pageCodeSetFromReport(report)
+  const taskPackPages = pages.map((page, index) => {
+    const completed = completedCodes.has(page.pageCode)
+    return {
+      pageIndex: page.pageIndex || index + 1,
+      pageCode: page.pageCode || '',
+      targetCount: Array.isArray(page.targets) ? page.targets.length : (Array.isArray(page.targetIds) ? page.targetIds.length : 0),
+      targetText: targetTextOf(page.targets || []),
+      status: completed ? 'completed' : 'pending',
+      statusText: completed ? '已回传' : '待回传'
+    }
+  })
+  const completedPages = taskPackPages.filter(page => page.status === 'completed').length
+  return {
+    taskPack: {
+      hasTaskPack: true,
+      totalPages: taskPackPages.length,
+      completedPages,
+      pendingPages: Math.max(0, taskPackPages.length - completedPages),
+      progressText: `已回传 ${completedPages}/${taskPackPages.length} 页`
+    },
+    taskPackPages
+  }
+}
+
 function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentName = '', pdfDownloaded = false } = {}) {
   const p = paper || detail.paper || {}
   const isVerification = p.type === 'verification'
@@ -238,6 +298,7 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
     ...context
   })
   const feedback = buildFeedback(latestReport, context)
+  const taskPackView = buildTaskPackView(p, latestReport)
   const reportUrl = latestReport && latestReport._id
     ? buildTraceableUrl({ type: 'report-detail', id: latestReport._id })
     : ''
@@ -284,6 +345,7 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
     lifecycleSteps: buildLifecycleSteps(workbenchStatus.status),
     ...primaryAction,
     feedback,
+    ...taskPackView,
     pdfReady: !!p.pdfFileId,
     pdfDownloaded,
     uploadBtnText: primaryAction.primaryActionText || `作答完成，${isVerification ? '上传验证' : '上传答题'}`
@@ -301,5 +363,6 @@ module.exports = {
   buildLifecycleSteps,
   buildPrimaryAction,
   buildFeedback,
+  buildTaskPackView,
   buildPaperPreviewState
 }

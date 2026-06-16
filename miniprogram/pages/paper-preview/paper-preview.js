@@ -62,6 +62,14 @@ Page({
       chips: [],
       chipItems: []
     },
+    taskPack: {
+      hasTaskPack: false,
+      totalPages: 0,
+      completedPages: 0,
+      pendingPages: 0,
+      progressText: ''
+    },
+    taskPackPages: [],
 
     pdfReady: false,
     pdfDownloaded: false,

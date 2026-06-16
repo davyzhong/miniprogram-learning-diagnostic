@@ -189,8 +189,10 @@ MVP 数学卡点当前包含：
 | `errorDetails` | Array\<Object\> | 是 | `[]` | 错题详情列表 | 见下方子结构 |
 | `previousReportId` | String | 否 | `''` | 对比的上一份已完成报告 ID（验证模式） | `"665a1b2c..."` |
 | `comparisonSummary` | String | 是 | `''` | 与上次报告的对比总结 | `"2 个学习卡点已改善，1 个仍需继续验证..."` |
-| `verificationTargets` | Array\<String\> | 是 | `[]` | 本次验证试卷的目标卡点编码 | `["LP-001"]` |
+| `verificationTargets` | Array\<String\> | 是 | `[]` | 本次验证试卷的目标卡点编码，兼容 LP/BN/CHI 目标 | `["BN-FINE-4"]` |
 | `verificationEvidence` | Array\<Object\> | 是 | `[]` | 按目标卡点汇总的验证作答证据；只有完整且全对才确认改善 | 见下方子结构 |
+| `verificationPageCodes` | Array\<String\> | 否 | `[]` | 本次作答照片中识别到的验证任务页编号 | `["MATH-V-20260616-01-P02"]` |
+| `verificationPageEvidence` | Array\<Object\> | 否 | `[]` | 按页面编号汇总的验证证据，用于追踪任务包哪几页已回传 | 见下方子结构 |
 | `quality` | Object | 是 | 规则计算 | 报告证据质量，决定是否可作为强结论更新长期档案 | 见下方子结构 |
 | `isEffective` | Boolean | 是 | `false` | 是否允许参与综合诊断和最近变化 | `true` |
 | `changeSummary` | String | 是 | `''` | 面向家长的一句话变化描述 | `"发现分数运算卡点"` |
@@ -210,6 +212,7 @@ MVP 数学卡点当前包含：
 | `fileSize` | Number | 文件大小（字节） | `1048576` |
 | `uploadedAt` | Date | 该照片上传到系统的时间；分析完成后继续保留 | `ISODate("2026-06-13T10:00:00Z")` |
 | `ocrSummary` | String | AI 返回的 OCR 摘要（≤1000 字），用于去重指纹 | `"第3题：1/2+1/3=..."` |
+| `pageCode` | String | 验证任务页编号，只有验证卷作答照片识别到页面编号时有值 | `"MATH-V-20260616-01-P02"` |
 | `contentFingerprint` | String | 归一化后的内容指纹 | `"第3题1213"` |
 | `isDuplicate` | Boolean | 是否与历史或本次其他照片重复 | `false` |
 | `duplicateOf` | String | 首次出现该指纹的 fileID（重复时有值） | `""` |
@@ -248,7 +251,13 @@ MVP 数学卡点当前包含：
 
 | 字段名 | 类型 | 描述 | 示例值 |
 |--------|------|------|--------|
-| `lpCode` | String | 验证目标卡点编码 | `"LP-001"` |
+| `lpCode` | String | 验证目标卡点编码；细卡点验证时可为 `BN-*` | `"BN-FINE-4"` |
+| `targetId` | String | 细卡点、知识节点或语文具体错项 ID；旧数据可能为空 | `"BN-FINE-4"` |
+| `targetType` | String | 目标类型：`fine_bottleneck` \| `knowledge_node` \| `chinese_error_item` \| `legacy_bottleneck` | `"fine_bottleneck"` |
+| `displayName` | String | 家长可读目标名称 | `"分数通分不稳"` |
+| `legacyLpCode` | String | 兼容旧粗卡点的父级 LP 编码 | `"LP-002"` |
+| `pageCode` | String | 该目标所在验证任务页编号 | `"MATH-V-20260616-01-P02"` |
+| `questionIds` | Array\<String\> | 该目标对应的题目 ID 列表 | `["MATH-V-20260616-01-P02-Q01"]` |
 | `expectedQuestionCount` | Number | 验证试卷中该卡点的预期题数；当前验证卷默认每卡点 5 题 | `5` |
 | `attemptedQuestionCount` | Number | OCR 明确识别到已经作答的题数 | `3` |
 | `incorrectQuestionCount` | Number | 已识别作答中的错题数 | `0` |
@@ -261,6 +270,19 @@ MVP 数学卡点当前包含：
 | `evidenceReason` | String | 面向家长展示的证据说明 | `"5 道验证题均清晰作答且全部正确"` |
 
 > 改善判定规则：只有 `evidenceStatus === 'passed'` 的学习卡点，才允许进入 `improved`。空白、模糊、缺失或 AI 未返回证据，均不能判定为已改善。
+
+#### verificationPageEvidence 子结构
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `pageCode` | String | 验证任务页编号 | `"MATH-V-20260616-01-P02"` |
+| `fileIDs` | Array\<String\> | 回传该页的照片 fileID 列表 | `["cloud://page-2.jpg"]` |
+| `targetIds` | Array\<String\> | 该页形成证据的目标 ID | `["BN-FINE-4"]` |
+| `attemptedQuestionCount` | Number | 本页清晰作答且可判断对错的题数 | `5` |
+| `incorrectQuestionCount` | Number | 本页明确答错题数 | `0` |
+| `blankQuestionCount` | Number | 本页空白题数 | `0` |
+| `unclearQuestionCount` | Number | 本页模糊或无法判断题数 | `0` |
+| `missingQuestionCount` | Number | 本页未形成有效证据题数 | `0` |
 
 #### quality 子结构
 
@@ -377,8 +399,9 @@ MVP 数学卡点当前包含：
 | `type` | String | 是 | — | 试卷类型：`'verification'` \| `'default-diagnosis'` | `"verification"` |
 | `grade` | Number | 是 | — | 适用年级 | `3` |
 | `paperKey` | String | 是 | `''` | 套题标识（默认试卷用，如 `'grade3_a'`；验证试卷为空串，≤20 字） | `"grade3_a"` |
-| `bottleneckTargets` | Array\<String\> | 是 | `[]` | 覆盖的 LP 编号列表（验证试卷用，最多 5 个） | `["LP-002", "LP-003"]` |
+| `bottleneckTargets` | Array\<String\> | 是 | `[]` | 覆盖的验证目标编码，兼容 LP/BN/CHI；任务包模式最多 60 个 | `["BN-FINE-1", "BN-FINE-2"]` |
 | `bottleneckSummaries` | Array\<String\> | 否 | `[]` | 面向家长和学生展示的卡点短名称 | `["分数运算", "审题理解"]` |
+| `verificationPack` | Object | 否 | `null` | 验证任务包元数据，记录目标分页、页面编号和题目归属 | 见下方子结构 |
 | `questions` | Array\<Object\> | 是 | — | 题目列表 | 见下方子结构 |
 | `pdfFileId` | String | 是 | — | 生成的 PDF 云存储 fileID | `"cloud://xxx/paper.pdf"` |
 | `paperDate` | String | 是 | 生成当天 | 试卷日期，打印卷和答案页会醒目显示 | `"2026-06-13"` |
@@ -386,9 +409,24 @@ MVP 数学卡点当前包含：
 | `studentPages` | Number | 否 | 计算值 | 学生作答页数 | `1` |
 | `answerPages` | Number | 否 | 计算值 | 参考答案页数 | `1` |
 | `totalPages` | Number | 是 | 计算值 | PDF 总页数，包含学生卷和答案页 | `2` |
+| `studentPageCodes` | Array\<String\> | 否 | `[]` | PDF 学生作答页中打印出的页面编号 | `["MATH-V-20260616-01-P01"]` |
+| `studentPageMetadata` | Array\<Object\> | 否 | `[]` | 学生作答页编号与题目 ID 的对应关系 | `[{ "pageCode": "MATH-V-...", "questionIds": [...] }]` |
 | `createdAt` | Date | 是 | new Date() | 创建时间 | `ISODate("2025-06-01T09:00:00Z")` |
 
-> 验证试卷的题量规则：`questions.length = bottleneckTargets.length × 5`。每个学习卡点包含 3 道核心验证题和 2 道迁移延展题；默认诊断试卷仍使用 `questionCount` 参数（6-20，默认 12）。
+> 验证试卷的题量规则：`questions.length = bottleneckTargets.length × 5`。每个学习目标包含 3 道核心验证题和 2 道迁移延展题；大量细卡点通过 `verificationPack.pages` 分页打印和回传，默认诊断试卷仍使用 `questionCount` 参数（6-20，默认 12）。
+
+#### verificationPack 子结构
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `packId` | String | 任务包 ID | `"VPK-MATH-20260616-01"` |
+| `mode` | String | 任务包模式，当前为 `task_pack` | `"task_pack"` |
+| `scheduleStrategy` | String | 目标排序与分页策略 | `"weight_desc_paginated"` |
+| `totalTargets` | Number | 任务包总目标数 | `33` |
+| `totalQuestions` | Number | 总题数 | `165` |
+| `totalStudentPages` | Number | 计划学生任务页数 | `11` |
+| `completedStudentPages` | Number | 已回传学生任务页数，生成时为 0，展示时可由报告派生 | `0` |
+| `pages` | Array\<Object\> | 任务页列表，每页包含 `pageCode`、`targetIds`、`targets`、`questionIds` | `[{ "pageCode": "MATH-V-20260616-01-P01" }]` |
 
 > 试卷生命周期不新增数据库字段，由前端根据 `papers`、关联的最新 `reports(type='verification')` 和本机 PDF 下载标记派生：`generated`（已生成待下载）、`downloaded`（已下载待作答）、`analyzing`（作答已上传，反馈分析中）、`failed`（反馈失败，可重新上传）、`completed`（验证反馈已完成）。学习记录中同一份试卷优先展示最新一次验证反馈状态。
 
@@ -402,6 +440,11 @@ MVP 数学卡点当前包含：
 | `points` | Number | 分值 | `10` |
 | `lpCode` | String | 关联卡点编码（≤30 字） | `"LP-002"` |
 | `lpName` | String | 卡点名称（≤80 字） | `"分数运算错误"` |
+| `questionId` | String | 任务包题目 ID | `"MATH-V-20260616-01-P02-Q01"` |
+| `pageCode` | String | 题目所在任务页编号 | `"MATH-V-20260616-01-P02"` |
+| `targetId` | String | 题目直接验证的目标 ID | `"BN-FINE-4"` |
+| `targetType` | String | 目标类型 | `"fine_bottleneck"` |
+| `questionRole` | String | 题目角色：`core` \| `transfer` | `"core"` |
 
 **代码来源**：`generatePaper/index.js` 创建；preview 模式下不落库
 
@@ -569,7 +612,7 @@ MVP 数学卡点当前包含：
 | subject 枚举 | uploadAndAnalyze, analyzeBatch, generatePaper | 仅限 `math/chinese/english` |
 | mode 枚举 | uploadAndAnalyze | 仅限 `diagnosis/verification/paper/default-paper` |
 | type 枚举 | generatePaper | 仅限 `verification/default-diagnosis` |
-| targets 格式 | generatePaper | 正则 `/^LP-[A-Z0-9-]{1,24}$/`，最多 5 个 |
+| targets 格式 | generatePaper | 验证卷兼容 `LP-*` 粗卡点、`BN-*` 细卡点、`CHI-*` 语文错项目标，任务包模式最多 60 个；默认诊断卷不使用 targets |
 | grade 范围 | generatePaper | default-diagnosis 模式要求 1-6 |
 | questionCount 范围 | generatePaper | 6-20，默认 12 |
 | paperId 关联校验 | uploadAndAnalyze | paper.studentId === studentId，type 与 mode 匹配 |

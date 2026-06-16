@@ -7,7 +7,13 @@ function clone(value) {
 }
 
 function matches(document, filter) {
-  return Object.entries(filter || {}).every(([key, value]) => document[key] === value)
+  return Object.entries(filter || {}).every(([key, value]) => {
+    if (value && value.__queryOp === 'lt') return document[key] < value.value
+    if (value && value.__queryOp === 'lte') return document[key] <= value.value
+    if (value && value.__queryOp === 'gt') return document[key] > value.value
+    if (value && value.__queryOp === 'gte') return document[key] >= value.value
+    return document[key] === value
+  })
 }
 
 function createDatabase(initial = {}, options = {}) {
@@ -99,7 +105,11 @@ function createDatabase(initial = {}, options = {}) {
       return { errMsg: 'collection.create:ok' }
     },
     command: {
-      inc: value => ({ __operation: 'inc', value })
+      inc: value => ({ __operation: 'inc', value }),
+      lt: value => ({ __queryOp: 'lt', value }),
+      lte: value => ({ __queryOp: 'lte', value }),
+      gt: value => ({ __queryOp: 'gt', value }),
+      gte: value => ({ __queryOp: 'gte', value })
     },
     serverDate: () => new Date('2026-06-11T12:00:00+08:00'),
     dump: name => clone(getItems(name))

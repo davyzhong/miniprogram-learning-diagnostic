@@ -59,6 +59,39 @@ test('normalizes verification evidence counts without trusting completion flags'
   }])
 })
 
+test('preserves verification page code and fine target id from AI output', () => {
+  const result = normalizePageResults({
+    pageResults: [{
+      imageIndex: 1,
+      pageCode: 'MATH-V-20260616-01-P02',
+      bottlenecks: [],
+      errorDetails: [],
+      verificationEvidence: [{
+        lpCode: 'BN-FINE-4',
+        targetId: 'BN-FINE-4',
+        pageCode: 'MATH-V-20260616-01-P02',
+        attemptedQuestionCount: 5,
+        incorrectQuestionCount: 0,
+        blankQuestionCount: 0,
+        unclearQuestionCount: 0,
+        missingQuestionCount: 0
+      }]
+    }]
+  }, 1)
+
+  assert.equal(result.pageResults[0].pageCode, 'MATH-V-20260616-01-P02')
+  assert.deepEqual(result.pageResults[0].verificationEvidence, [{
+    lpCode: 'BN-FINE-4',
+    targetId: 'BN-FINE-4',
+    pageCode: 'MATH-V-20260616-01-P02',
+    attemptedQuestionCount: 5,
+    incorrectQuestionCount: 0,
+    blankQuestionCount: 0,
+    unclearQuestionCount: 0,
+    missingQuestionCount: 0
+  }])
+})
+
 test('preserves math learning map v2 fields from AI bottleneck output', () => {
   const result = normalizePageResults({
     pageResults: [{
