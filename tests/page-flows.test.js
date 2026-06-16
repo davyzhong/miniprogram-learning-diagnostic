@@ -2796,6 +2796,61 @@ test('report uses detail pending count without loading the full subject dashboar
   assert.equal(dashboardCalls, 0)
 })
 
+test('report keeps heavy source fields off page data and expands source evidence on demand', async () => {
+  const cloud = {
+    getReportDetail: async () => ({
+      permissions: { canView: true },
+      pendingCount: 1,
+      report: {
+        _id: 'report-heavy',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        totalErrors: 12,
+        createdAt: '2026-06-14T14:53:53.804Z',
+        imageFiles: Array.from({ length: 10 }, (_, index) => ({
+          fileID: `cloud://photo-${index + 1}`,
+          fileName: `第${index + 1}页.jpg`,
+          ocrSummary: `第 ${index + 1} 页很长的 OCR 摘要`
+        })),
+        bottlenecks: [{ lpCode: 'LP-001', lpName: '计算基础', errorCount: 12 }],
+        errorDetails: Array.from({ length: 25 }, (_, index) => ({
+          questionContent: `错题 ${index + 1}`,
+          sourceImageIndex: index + 1
+        }))
+      }
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '2026年6月14日 22:53' },
+      './report-presenter': require('../miniprogram/pages/report/report-presenter')
+    }
+  })
+
+  await page.loadReport('report-heavy')
+
+  assert.equal(page.data.report._id, 'report-heavy')
+  assert.equal(page.data.report.imageFiles, undefined)
+  assert.equal(page.data.report.errorDetails, undefined)
+  assert.equal(page.data.sourceEvidenceItems.length, 3)
+  assert.equal(page.data.hiddenSourceEvidenceCount, 7)
+  assert.equal(page.data.errorDetailList.length, 20)
+  assert.equal(page.data.hiddenErrorDetailCount, 5)
+
+  page.onExpandSourceEvidence()
+
+  assert.equal(page.data.sourceEvidenceItems.length, 10)
+  assert.equal(page.data.hasMoreSourceEvidence, false)
+
+  page.onExpandErrorDetails()
+
+  assert.equal(page.data.errorDetailList.length, 25)
+  assert.equal(page.data.hasMoreErrorDetails, false)
+})
+
 test('report page submits parent feedback and marks the target as submitted', async () => {
   let feedbackPayload = null
   const cloud = {

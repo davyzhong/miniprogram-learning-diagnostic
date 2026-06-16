@@ -259,6 +259,28 @@ test('report view limits source evidence on first paint and exposes hidden count
   assert.equal(expanded.hiddenSourceEvidenceCount, 0)
 })
 
+test('report view limits error details on first paint and exposes hidden count', () => {
+  const report = {
+    _id: 'report-errors',
+    subject: 'math',
+    type: 'diagnosis',
+    errorDetails: Array.from({ length: 45 }, (_, index) => ({
+      questionContent: `错题 ${index + 1}`,
+      sourceImageIndex: 1
+    }))
+  }
+  const view = buildReportView(report)
+
+  assert.equal(view.hasErrorDetails, true)
+  assert.equal(view.errorDetailList.length, 20)
+  assert.equal(view.hasMoreErrorDetails, true)
+  assert.equal(view.hiddenErrorDetailCount, 25)
+
+  const expanded = buildReportView(report, { errorDetailLimit: Infinity })
+  assert.equal(expanded.errorDetailList.length, 45)
+  assert.equal(expanded.hasMoreErrorDetails, false)
+})
+
 test('report view exposes quality labels and reasons', () => {
   const view = buildReportView({
     type: 'diagnosis',

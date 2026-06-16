@@ -40,6 +40,27 @@ function pendingCountFromProfile(profile) {
   return (profile.pendingBottlenecks || []).length
 }
 
+function compactReportForData(report = {}) {
+  const {
+    imageFiles,
+    imageFileIds,
+    errorDetails,
+    pageResults,
+    rawPages,
+    aiRaw,
+    ...rest
+  } = report || {}
+  const imageFileCount = Array.isArray(imageFiles)
+    ? imageFiles.length
+    : (Array.isArray(imageFileIds) ? imageFileIds.length : Number(report.imageFileCount) || 0)
+  const errorDetailCount = Array.isArray(errorDetails) ? errorDetails.length : Number(report.errorDetailCount) || 0
+  return {
+    ...rest,
+    imageFileCount,
+    errorDetailCount
+  }
+}
+
 Page({
   data: {
     reportId: '',
@@ -141,6 +162,7 @@ Page({
         ...report,
         linkedPaper: detail.linkedPaper || detail.paper || report.linkedPaper
       }
+      this._fullReport = reportWithContext
       const feedbackItems = await this.loadFeedbackItems(id, detail)
       const feedbackByTarget = this.buildFeedbackMap(feedbackItems)
       const dateText = formatChineseDateTime(report.createdAt)
@@ -164,7 +186,7 @@ Page({
       }
 
       this.setData({
-        report: reportWithContext,
+        report: compactReportForData(reportWithContext),
         dateText: dateText,
         pendingCount: pendingCount,
         permissions,
@@ -192,6 +214,26 @@ Page({
     }
   },
 
+  onExpandSourceEvidence() {
+    if (!this._fullReport) return
+    const expandedView = buildReportView(this._fullReport, { sourceEvidenceLimit: Infinity })
+    this.setData({
+      sourceEvidenceItems: expandedView.sourceEvidenceItems,
+      hiddenSourceEvidenceCount: 0,
+      hasMoreSourceEvidence: false
+    })
+  },
+
+  onExpandErrorDetails() {
+    if (!this._fullReport) return
+    const expandedView = buildReportView(this._fullReport, { errorDetailLimit: Infinity })
+    this.setData({
+      errorDetailList: expandedView.errorDetailList,
+      hiddenErrorDetailCount: 0,
+      hasMoreErrorDetails: false
+    })
+  },
+
   // ========== 展开/收起错题详情 ==========
   onToggleError(e) {
     var idx = e.currentTarget.dataset.index
@@ -205,7 +247,7 @@ Page({
   // ========== 生成验证试卷 ==========
   onGenerateVerification() {
     if (!this.data.canGeneratePaper) return
-    var report = this.data.report
+    var report = this._fullReport || this.data.report
     var studentId = report.studentId
     var subject = report.subject
     var subjectName = getSubjectName(subject)
