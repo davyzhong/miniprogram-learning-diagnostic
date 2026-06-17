@@ -78,6 +78,20 @@ CloudBase (serverless, 12 cloud functions)
 - **Never use `Intl` API in miniprogram code** — WeChat iOS/macOS runtime does not support it. Use `getUTC*` methods with manual timezone offset instead (see `beijingParts` in `miniprogram/utils/util.js`).
 - **LLM cloud functions need frontend `timeout: 60000`** — `wx.cloud.callFunction` defaults to 20s, but `generatePaper` / `generateReportPDF` / LLM-backed actions need up to 60s. See `callGeneratePaper` in `cloud.js`.
 
+## GitHub sync workflow
+
+When the user asks to sync / pull / align with GitHub, **GitHub is the source of truth — make local match it exactly.** Default flow (do not ask each step, but stop and confirm before any irreversible delete per the red lines):
+
+1. `git fetch --all --prune` — pull all remote refs, drop stale branches.
+2. Check `git status`: if there are local commits, uncommitted changes, or untracked files, **surface them before doing anything.** Distinguish two cases:
+   - Local commits that are already in `origin/main` (already merged upstream) → safe to discard.
+   - Local commits NOT in `origin/main` (genuine divergent work) → **stop and ask** before overwriting.
+3. Check every local branch with `git rev-list --count main..<branch>`: if `0` commits ahead of main, it is fully merged and deletable; if `>0`, **stop and ask.**
+4. Switch to `main` and fast-forward: `git checkout main && git merge --ff-only origin/main`. If ff-only fails (local main has diverged), **stop and ask** — never force-push or reset without confirmation.
+5. Delete fully-merged local branches (`git branch -d`); `git worktree remove` any stale worktrees first if a branch is checked out there.
+6. Clean leftover untracked junk that is redundant vs `origin/main` (old `_shared/` copies, `*.backup/`, scratch scripts already removed upstream). **Verify each item is redundant before removing** (e.g. content already in `origin/main`, or file already deleted upstream). Per red lines: confirm with the user before deleting anything you did not create in this session.
+7. End state: `git status` shows `working tree clean`, `git branch` shows only active branches, no stale stash, local `main` == `origin/main`.
+
 ## Known gaps
 
 - `analyzePhotos/sendNotification()` is a no-op; the WeChat subscribe-message template has not been applied for, so users get no push on completion (rely on polling + manual retry).
