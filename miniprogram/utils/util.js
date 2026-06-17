@@ -7,25 +7,56 @@ const {
   getCategoryName
 } = require('./bottleneck-name')
 
+// 北京时间（UTC+8）日期组件提取。
+// 使用 Intl API 按固定时区解析，避免依赖运行环境的系统时区（小程序、CI、本地均可获得一致结果）。
+const BEIJING_TZ = 'Asia/Shanghai'
+const beijingParts = (date) => {
+  const value = typeof date === 'string' ? new Date(date) : date
+  if (!value || Number.isNaN(value.getTime())) return null
+  const formatted = new Intl.DateTimeFormat('en-US', {
+    timeZone: BEIJING_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(value)
+  const map = {}
+  for (const part of formatted) {
+    if (part.type !== 'literal') map[part.type] = part.value
+  }
+  // hour12: false 下 "24" 会被部分运行时返回，归一为 "00"
+  if (map.hour === '24') map.hour = '00'
+  return {
+    year: Number(map.year),
+    month: Number(map.month),
+    day: Number(map.day),
+    hour: Number(map.hour),
+    minute: Number(map.minute)
+  }
+}
+
 /**
  * 格式化日期
  */
 function formatDate(date) {
-  if (typeof date === 'string') date = new Date(date)
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+  const p = beijingParts(date)
+  if (!p) return ''
+  const m = String(p.month).padStart(2, '0')
+  const d = String(p.day).padStart(2, '0')
+  return `${p.year}-${m}-${d}`
 }
 
 /**
  * 格式化日期时间
  */
 function formatDateTime(date) {
-  if (typeof date === 'string') date = new Date(date)
-  const d = formatDate(date)
-  const h = String(date.getHours()).padStart(2, '0')
-  const min = String(date.getMinutes()).padStart(2, '0')
+  const p = beijingParts(date)
+  if (!p) return ''
+  const d = `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`
+  const h = String(p.hour).padStart(2, '0')
+  const min = String(p.minute).padStart(2, '0')
   return `${d} ${h}:${min}`
 }
 
@@ -38,14 +69,16 @@ function formatRelativeTime(date, now = new Date()) {
   if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`
   if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`
   if (diff < 172800) return '昨天'
-  return `${value.getMonth() + 1}月${value.getDate()}日`
+  const p = beijingParts(value) || {}
+  return `${p.month || ''}月${p.day || ''}日`
 }
 
 function formatChineseDateTime(date) {
   if (!date) return ''
-  const value = new Date(date)
-  const minutes = String(value.getMinutes()).padStart(2, '0')
-  return `${value.getFullYear()}年${value.getMonth() + 1}月${value.getDate()}日 ${value.getHours()}:${minutes}`
+  const p = beijingParts(date)
+  if (!p) return ''
+  const minutes = String(p.minute).padStart(2, '0')
+  return `${p.year}年${p.month}月${p.day}日 ${p.hour}:${minutes}`
 }
 
 /**

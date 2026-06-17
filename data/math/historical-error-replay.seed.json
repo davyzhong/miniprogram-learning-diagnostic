@@ -1,9 +1,9 @@
 {
   "version": "0.1.0",
-  "updatedAt": "2026-06-16",
+  "updatedAt": "2026-06-17",
   "studentName": "钟青羽",
   "subject": "math",
-  "purpose": "把历史错题回放到知识节点和细颗粒度卡点，用于验证新体系是否比旧粗卡点更可操作。",
+  "purpose": "把历史错题回放到知识节点和细颗粒度卡点，用于验证新体系是否比旧粗卡点更可操作。v0.3.1 扩充至第二版报告细卡点。",
   "sourceDocs": [
     "数学试卷分析/Learning_Diagnostic_MVP_诊断报告.md",
     "数学试卷分析/钟青羽_学习卡点诊断报告_第二版.md"
@@ -17,12 +17,20 @@
       "correctAnswer": "26.86",
       "legacyLpCode": "LP-FD",
       "legacyLpName": "分数/小数基础计算",
-      "nodeIds": ["MATH-NUM-DEC-MUL-POINT", "MATH-META-ESTIMATION-CHECK"],
-      "candidateBottlenecks": ["BN-DEC-MUL-POINT-COUNT", "BN-DEC-MUL-POINT-ESTIMATE"],
+      "nodeIds": [
+        "MATH-NUM-DEC-MUL-POINT",
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "candidateBottlenecks": [
+        "BN-DEC-MUL-POINT-COUNT",
+        "BN-DEC-MUL-POINT-ESTIMATE"
+      ],
       "primaryBottleneckId": "BN-DEC-MUL-POINT-COUNT",
       "whyMorePrecise": "不是泛泛计算错误，整数乘法数字序列基本正确，核心是小数点定位和数量级检查。",
       "microValidationNeeded": true,
-      "nextAction": "先做 3 道小数点定位微验证，再看小数乘法资源。"
+      "nextAction": "先做 3 道小数点定位微验证，再看小数乘法资源。",
+      "validationDimension": "CONVERT",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-002",
@@ -32,12 +40,20 @@
       "correctAnswer": "5204",
       "legacyLpCode": "LP-OP",
       "legacyLpName": "运算顺序与优先级",
-      "nodeIds": ["MATH-NUM-INT-DIV-LONG", "MATH-META-ESTIMATION-CHECK"],
-      "candidateBottlenecks": ["BN-INT-DIV-DIVISOR-SIMPLIFY", "BN-META-INVERSE-CHECK-MISSING"],
+      "nodeIds": [
+        "MATH-NUM-INT-DIV-LONG",
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "candidateBottlenecks": [
+        "BN-INT-DIV-DIVISOR-SIMPLIFY",
+        "BN-META-INVERSE-CHECK-MISSING"
+      ],
       "primaryBottleneckId": "BN-INT-DIV-DIVISOR-SIMPLIFY",
       "whyMorePrecise": "运算顺序本身正确，真正失败点是 8008 ÷ 26 的长除法子程序。",
       "microValidationNeeded": true,
-      "nextAction": "用两位数除法微验证确认是否仍把除数简化。"
+      "nextAction": "用两位数除法微验证确认是否仍把除数简化。",
+      "validationDimension": "EXEC",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-003",
@@ -47,12 +63,21 @@
       "correctAnswer": "48/7",
       "legacyLpCode": "LP-FD",
       "legacyLpName": "分数运算错误",
-      "nodeIds": ["MATH-NUM-FRACTION-DIV-RECIPROCAL", "MATH-META-ESTIMATION-CHECK"],
-      "candidateBottlenecks": ["BN-FRACTION-DIV-RECIPROCAL-MISSING", "BN-FRACTION-DIV-CONCEPT-JUMPS", "BN-META-INVERSE-CHECK-MISSING"],
+      "nodeIds": [
+        "MATH-NUM-FRACTION-DIV-RECIPROCAL",
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "candidateBottlenecks": [
+        "BN-FRACTION-DIV-RECIPROCAL-MISSING",
+        "BN-FRACTION-DIV-CONCEPT-JUMPS",
+        "BN-META-INVERSE-CHECK-MISSING"
+      ],
       "primaryBottleneckId": "BN-FRACTION-DIV-RECIPROCAL-MISSING",
       "whyMorePrecise": "需要区分是倒数规则没触发，还是分数除法大小直觉不足。",
       "microValidationNeeded": true,
-      "nextAction": "先用整数除以真分数的微验证确认规则和大小直觉。"
+      "nextAction": "先用整数除以真分数的微验证确认规则和大小直觉。",
+      "validationDimension": "CONVERT",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-004",
@@ -62,12 +87,20 @@
       "correctAnswer": "4/135",
       "legacyLpCode": "LP-FD",
       "legacyLpName": "分数运算错误",
-      "nodeIds": ["MATH-NUM-FRACTION-ADD-COMMON-DENOM", "MATH-NUM-FRACTION-MUL-SIMPLIFY"],
-      "candidateBottlenecks": ["BN-FRACTION-ADD-DENOM-MISMATCH", "BN-FRACTION-MUL-SIMPLIFY-DIRECTION"],
+      "nodeIds": [
+        "MATH-NUM-FRACTION-ADD-COMMON-DENOM",
+        "MATH-NUM-FRACTION-MUL-SIMPLIFY"
+      ],
+      "candidateBottlenecks": [
+        "BN-FRACTION-ADD-DENOM-MISMATCH",
+        "BN-FRACTION-MUL-SIMPLIFY-DIRECTION"
+      ],
       "primaryBottleneckId": "BN-FRACTION-MUL-SIMPLIFY-DIRECTION",
       "whyMorePrecise": "括号内通分和后续约分都可能出错，需要拆开微验证。",
       "microValidationNeeded": true,
-      "nextAction": "分两组题分别验证通分和约分方向。"
+      "nextAction": "分两组题分别验证通分和约分方向。",
+      "validationDimension": "TRACK",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-005",
@@ -77,12 +110,20 @@
       "correctAnswer": "3/8",
       "legacyLpCode": "LP-FD",
       "legacyLpName": "分数/小数基础计算",
-      "nodeIds": ["MATH-NUM-FRACTION-DECIMAL-CONVERT", "MATH-NUM-FRACTION-ADD-COMMON-DENOM"],
-      "candidateBottlenecks": ["BN-FRACTION-DECIMAL-MIXED-LOAD", "BN-FRACTION-ADD-DENOM-MISMATCH"],
+      "nodeIds": [
+        "MATH-NUM-FRACTION-DECIMAL-CONVERT",
+        "MATH-NUM-FRACTION-ADD-COMMON-DENOM"
+      ],
+      "candidateBottlenecks": [
+        "BN-FRACTION-DECIMAL-MIXED-LOAD",
+        "BN-FRACTION-ADD-DENOM-MISMATCH"
+      ],
       "primaryBottleneckId": "BN-FRACTION-DECIMAL-MIXED-LOAD",
       "whyMorePrecise": "不是单一分数错误，而是分数小数混合导致认知负荷上升。",
       "microValidationNeeded": true,
-      "nextAction": "验证是否能先统一形式，再做通分。"
+      "nextAction": "验证是否能先统一形式，再做通分。",
+      "validationDimension": "CONVERT",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-006",
@@ -92,12 +133,20 @@
       "correctAnswer": "1:3",
       "legacyLpCode": "LP-RP",
       "legacyLpName": "比例与比值概念",
-      "nodeIds": ["MATH-MOD-RATIO-PROPERTY", "MATH-MOD-RATIO-MEANING"],
-      "candidateBottlenecks": ["BN-RATIO-CROSS-MULTIPLY-DIRECTION", "BN-RATIO-MEANING-ORDER"],
+      "nodeIds": [
+        "MATH-MOD-RATIO-PROPERTY",
+        "MATH-MOD-RATIO-MEANING"
+      ],
+      "candidateBottlenecks": [
+        "BN-RATIO-CROSS-MULTIPLY-DIRECTION",
+        "BN-RATIO-MEANING-ORDER"
+      ],
       "primaryBottleneckId": "BN-RATIO-CROSS-MULTIPLY-DIRECTION",
       "whyMorePrecise": "需要定位到交叉相乘方向，而不是笼统说比例不会。",
       "microValidationNeeded": true,
-      "nextAction": "用字母比例和具体数代入双验证。"
+      "nextAction": "用字母比例和具体数代入双验证。",
+      "validationDimension": "BASE",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-007",
@@ -107,12 +156,20 @@
       "correctAnswer": "49.7368... 万，若按优惠 5% 应为 47.25 ÷ 0.95",
       "legacyLpCode": "LP-PT",
       "legacyLpName": "百分比应用",
-      "nodeIds": ["MATH-MOD-PERCENT-BASE", "MATH-MOD-PERCENT-DISCOUNT"],
-      "candidateBottlenecks": ["BN-PERCENT-BASE-WHOLE-MISSING", "BN-PERCENT-DISCOUNT-DIRECTION"],
+      "nodeIds": [
+        "MATH-MOD-PERCENT-BASE",
+        "MATH-MOD-PERCENT-DISCOUNT"
+      ],
+      "candidateBottlenecks": [
+        "BN-PERCENT-BASE-WHOLE-MISSING",
+        "BN-PERCENT-DISCOUNT-DIRECTION"
+      ],
       "primaryBottleneckId": "BN-PERCENT-BASE-WHOLE-MISSING",
       "whyMorePrecise": "核心不是算术，而是谁是 100% 以及现价与原价的关系。",
       "microValidationNeeded": true,
-      "nextAction": "混合已知原价和已知现价题，要求先圈单位 1。"
+      "nextAction": "混合已知原价和已知现价题，要求先圈单位 1。",
+      "validationDimension": "BASE",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-008",
@@ -122,12 +179,19 @@
       "correctAnswer": "1200 吨",
       "legacyLpCode": "LP-RP",
       "legacyLpName": "比例应用题",
-      "nodeIds": ["MATH-MOD-RATIO-PART-WHOLE", "MATH-MOD-EQUATION-WORD-PROBLEM"],
-      "candidateBottlenecks": ["BN-RATIO-PART-WHOLE-REFERENCE"],
+      "nodeIds": [
+        "MATH-MOD-RATIO-PART-WHOLE",
+        "MATH-MOD-EQUATION-WORD-PROBLEM"
+      ],
+      "candidateBottlenecks": [
+        "BN-RATIO-PART-WHOLE-REFERENCE"
+      ],
       "primaryBottleneckId": "BN-RATIO-PART-WHOLE-REFERENCE",
       "whyMorePrecise": "5/8 的整体是剩余+已运，不是总量的直接剩余比例。",
       "microValidationNeeded": true,
-      "nextAction": "先用线段图微验证部分:部分和部分:整体。"
+      "nextAction": "先用线段图微验证部分:部分和部分:整体。",
+      "validationDimension": "BASE",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-009",
@@ -137,12 +201,20 @@
       "correctAnswer": "81π ≈ 254.34 m²",
       "legacyLpCode": "LP-UN",
       "legacyLpName": "单位与量纲",
-      "nodeIds": ["MATH-GEO-CIRCLE-AREA", "MATH-MEASURE-UNIT-AREA-VOLUME"],
-      "candidateBottlenecks": ["BN-CIRCLE-AREA-EXTRA-R", "BN-UNIT-AREA-VOLUME-DIMENSION"],
+      "nodeIds": [
+        "MATH-GEO-CIRCLE-AREA",
+        "MATH-MEASURE-UNIT-AREA-VOLUME"
+      ],
+      "candidateBottlenecks": [
+        "BN-CIRCLE-AREA-EXTRA-R",
+        "BN-UNIT-AREA-VOLUME-DIMENSION"
+      ],
       "primaryBottleneckId": "BN-CIRCLE-AREA-EXTRA-R",
       "whyMorePrecise": "同时包含公式串扰和单位量纲问题，主卡点是面积公式多乘半径。",
       "microValidationNeeded": true,
-      "nextAction": "圆面积 vs 圆柱体积混合判断，只判断目标量和公式。"
+      "nextAction": "圆面积 vs 圆柱体积混合判断，只判断目标量和公式。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-010",
@@ -152,12 +224,18 @@
       "correctAnswer": "x = 14 cm",
       "legacyLpCode": "LP-UN",
       "legacyLpName": "单位换算错误",
-      "nodeIds": ["MATH-MEASURE-UNIT-LENGTH"],
-      "candidateBottlenecks": ["BN-UNIT-LENGTH-CM-DM-M"],
+      "nodeIds": [
+        "MATH-MEASURE-UNIT-LENGTH"
+      ],
+      "candidateBottlenecks": [
+        "BN-UNIT-LENGTH-CM-DM-M"
+      ],
       "primaryBottleneckId": "BN-UNIT-LENGTH-CM-DM-M",
       "whyMorePrecise": "不是不会换算，而是题干与图示单位不一致时没有第一步统一单位。",
       "microValidationNeeded": true,
-      "nextAction": "给图表单位和题干单位不同的微验证题。"
+      "nextAction": "给图表单位和题干单位不同的微验证题。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-011",
@@ -167,12 +245,18 @@
       "correctAnswer": "1680π cm³",
       "legacyLpCode": "LP-GEO",
       "legacyLpName": "空间与几何",
-      "nodeIds": ["MATH-GEO-ROTATION-SOLID"],
-      "candidateBottlenecks": ["BN-CYLINDER-VOLUME-FORMULA-MIX"],
+      "nodeIds": [
+        "MATH-GEO-ROTATION-SOLID"
+      ],
+      "candidateBottlenecks": [
+        "BN-CYLINDER-VOLUME-FORMULA-MIX"
+      ],
       "primaryBottleneckId": "BN-CYLINDER-VOLUME-FORMULA-MIX",
       "whyMorePrecise": "当前卡点库先用圆柱/圆锥公式混用承接，后续需新增旋转体形状识别卡点。",
       "microValidationNeeded": true,
-      "nextAction": "暂列为卡点库扩展候选，先验证是否把所有旋转体当简单圆柱/圆锥。"
+      "nextAction": "暂列为卡点库扩展候选，先验证是否把所有旋转体当简单圆柱/圆锥。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-012",
@@ -182,12 +266,18 @@
       "correctAnswer": "81π",
       "legacyLpCode": "LP-GEO",
       "legacyLpName": "空间与几何",
-      "nodeIds": ["MATH-GEO-SOLID-SURFACE-ENUM"],
-      "candidateBottlenecks": ["BN-SOLID-SURFACE-EXPOSED-FACES-OMIT"],
+      "nodeIds": [
+        "MATH-GEO-SOLID-SURFACE-ENUM"
+      ],
+      "candidateBottlenecks": [
+        "BN-SOLID-SURFACE-EXPOSED-FACES-OMIT"
+      ],
       "primaryBottleneckId": "BN-SOLID-SURFACE-EXPOSED-FACES-OMIT",
       "whyMorePrecise": "缺的是系统枚举暴露面，不只是几何公式记忆。",
       "microValidationNeeded": true,
-      "nextAction": "用简单切割和挖空题训练增减面枚举表。"
+      "nextAction": "用简单切割和挖空题训练增减面枚举表。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-013",
@@ -197,12 +287,19 @@
       "correctAnswer": "6 cm²",
       "legacyLpCode": "LP-GEO",
       "legacyLpName": "空间与几何",
-      "nodeIds": ["MATH-GEO-TRIANGLE-AREA", "MATH-GEO-TRANSFORM-AREA-INVARIANT"],
-      "candidateBottlenecks": ["BN-META-ESTIMATION-MISSING"],
+      "nodeIds": [
+        "MATH-GEO-TRIANGLE-AREA",
+        "MATH-GEO-TRANSFORM-AREA-INVARIANT"
+      ],
+      "candidateBottlenecks": [
+        "BN-META-ESTIMATION-MISSING"
+      ],
       "primaryBottleneckId": "BN-META-ESTIMATION-MISSING",
       "whyMorePrecise": "需要后续新增平移不变性和三角形面积除以 2 的细卡点；当前先标为卡点库扩展候选。",
       "microValidationNeeded": true,
-      "nextAction": "补充图形变换类卡点后重新标注。"
+      "nextAction": "补充图形变换类卡点后重新标注。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-014",
@@ -212,12 +309,18 @@
       "correctAnswer": "17.4cm",
       "legacyLpCode": "LP-MOD",
       "legacyLpName": "应用题建模",
-      "nodeIds": ["MATH-MOD-UNIFORM-CHANGE"],
-      "candidateBottlenecks": ["BN-UNIFORM-CHANGE-INTERVAL-DIFF"],
+      "nodeIds": [
+        "MATH-MOD-UNIFORM-CHANGE"
+      ],
+      "candidateBottlenecks": [
+        "BN-UNIFORM-CHANGE-INTERVAL-DIFF"
+      ],
       "primaryBottleneckId": "BN-UNIFORM-CHANGE-INTERVAL-DIFF",
       "whyMorePrecise": "真正问题是相邻两时刻差值已经是一小时变化量，不应再除以 2。",
       "microValidationNeeded": true,
-      "nextAction": "用时间轴微验证单位变化量。"
+      "nextAction": "用时间轴微验证单位变化量。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-015",
@@ -227,12 +330,19 @@
       "correctAnswer": "约 32.1 km/h",
       "legacyLpCode": "LP-MOD",
       "legacyLpName": "图表数据读取与单位换算",
-      "nodeIds": ["MATH-STAT-COORDINATE-READING", "MATH-MOD-RATE-DISTANCE-TIME"],
-      "candidateBottlenecks": ["BN-UNIT-LENGTH-CM-DM-M"],
+      "nodeIds": [
+        "MATH-STAT-COORDINATE-READING",
+        "MATH-MOD-RATE-DISTANCE-TIME"
+      ],
+      "candidateBottlenecks": [
+        "BN-UNIT-LENGTH-CM-DM-M"
+      ],
       "primaryBottleneckId": "BN-UNIT-LENGTH-CM-DM-M",
       "whyMorePrecise": "当前卡点库需扩展图表读取和速度单位换算细卡点；先记录为单位转换断裂。",
       "microValidationNeeded": true,
-      "nextAction": "补充图表和速度单位卡点后重标。"
+      "nextAction": "补充图表和速度单位卡点后重标。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-016",
@@ -242,12 +352,18 @@
       "correctAnswer": "0.75cm",
       "legacyLpCode": "LP-MOD",
       "legacyLpName": "比例尺",
-      "nodeIds": ["MATH-MOD-RATIO-SCALE"],
-      "candidateBottlenecks": ["BN-SCALE-DOUBLE-CONVERSION"],
+      "nodeIds": [
+        "MATH-MOD-RATIO-SCALE"
+      ],
+      "candidateBottlenecks": [
+        "BN-SCALE-DOUBLE-CONVERSION"
+      ],
       "primaryBottleneckId": "BN-SCALE-DOUBLE-CONVERSION",
       "whyMorePrecise": "需要实际距离作为中转，而不是直接在两个比例尺之间凭感觉换。",
       "microValidationNeeded": true,
-      "nextAction": "强制三栏表：旧图上距离、实际距离、新图上距离。"
+      "nextAction": "强制三栏表：旧图上距离、实际距离、新图上距离。",
+      "validationDimension": "BASE",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-017",
@@ -257,12 +373,20 @@
       "correctAnswer": "5712",
       "legacyLpCode": "LP-PRE",
       "legacyLpName": "计算精度与验算习惯",
-      "nodeIds": ["MATH-NUM-INT-MUL-PARTIAL", "MATH-META-ESTIMATION-CHECK"],
-      "candidateBottlenecks": ["BN-INT-MUL-PARTIAL-OMIT", "BN-META-INVERSE-CHECK-MISSING"],
+      "nodeIds": [
+        "MATH-NUM-INT-MUL-PARTIAL",
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "candidateBottlenecks": [
+        "BN-INT-MUL-PARTIAL-OMIT",
+        "BN-META-INVERSE-CHECK-MISSING"
+      ],
       "primaryBottleneckId": "BN-INT-MUL-PARTIAL-OMIT",
       "whyMorePrecise": "不是随机粗心，漏掉了 28 × 4 这个部分积。",
       "microValidationNeeded": true,
-      "nextAction": "用含 0 三位数乘法验证部分积追踪。"
+      "nextAction": "用含 0 三位数乘法验证部分积追踪。",
+      "validationDimension": "EXEC",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-018",
@@ -272,12 +396,18 @@
       "correctAnswer": "2020 又 1999/2020",
       "legacyLpCode": "LP-PRE",
       "legacyLpName": "巧算中数字对应出错",
-      "nodeIds": ["MATH-META-ESTIMATION-CHECK"],
-      "candidateBottlenecks": ["BN-META-INVERSE-CHECK-MISSING"],
+      "nodeIds": [
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "candidateBottlenecks": [
+        "BN-META-INVERSE-CHECK-MISSING"
+      ],
       "primaryBottleneckId": "BN-META-INVERSE-CHECK-MISSING",
       "whyMorePrecise": "模式识别是对的，执行时数字对应和回代检查不足。",
       "microValidationNeeded": true,
-      "nextAction": "用巧算题要求每一步回代检查数字对应。"
+      "nextAction": "用巧算题要求每一步回代检查数字对应。",
+      "validationDimension": "CHECK",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-019",
@@ -287,12 +417,19 @@
       "correctAnswer": "应通过估算或逆运算发现不合理",
       "legacyLpCode": "LP-PRE",
       "legacyLpName": "缺乏验算习惯",
-      "nodeIds": ["MATH-META-ESTIMATION-CHECK"],
-      "candidateBottlenecks": ["BN-META-ESTIMATION-MISSING", "BN-META-INVERSE-CHECK-MISSING"],
+      "nodeIds": [
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "candidateBottlenecks": [
+        "BN-META-ESTIMATION-MISSING",
+        "BN-META-INVERSE-CHECK-MISSING"
+      ],
       "primaryBottleneckId": "BN-META-ESTIMATION-MISSING",
       "whyMorePrecise": "这是跨题型的元认知卡点，应作为优先级最高的通用修复项。",
       "microValidationNeeded": true,
-      "nextAction": "给 5 道含明显错误答案的题，只训练发现不合理。"
+      "nextAction": "给 5 道含明显错误答案的题，只训练发现不合理。",
+      "validationDimension": "CHECK",
+      "evidenceType": "hard_question"
     },
     {
       "errorId": "ERR-202606-LD-020",
@@ -302,12 +439,471 @@
       "correctAnswer": "应先设未知量并建立等量关系",
       "legacyLpCode": "LP-MOD",
       "legacyLpName": "应用题建模",
-      "nodeIds": ["MATH-MOD-EQUATION-WORD-PROBLEM"],
-      "candidateBottlenecks": ["BN-RATIO-PART-WHOLE-REFERENCE"],
+      "nodeIds": [
+        "MATH-MOD-EQUATION-WORD-PROBLEM"
+      ],
+      "candidateBottlenecks": [
+        "BN-RATIO-PART-WHOLE-REFERENCE"
+      ],
       "primaryBottleneckId": "BN-RATIO-PART-WHOLE-REFERENCE",
       "whyMorePrecise": "方程建模是后续需扩展卡点，当前先从比例参照系入手降低认知负荷。",
       "microValidationNeeded": true,
-      "nextAction": "补充方程建模细卡点后重新回放复杂应用题。"
+      "nextAction": "补充方程建模细卡点后重新回放复杂应用题。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-021",
+      "source": "应用题专项练习（第二版）",
+      "question": "初赛12000名，高年级组占15/16，中年级组占1/2，求中年级参赛人数",
+      "studentAnswer": "12000×(15/16+1/2)=12750",
+      "correctAnswer": "12000×(15/16-1/2)=5250（名）",
+      "legacyLpCode": "LP-FD-05",
+      "legacyLpName": "分数加减法方向判断错误",
+      "nodeIds": [
+        "MATH-NUM-FRACTION-MEANING",
+        "MATH-APP-FRACTION-WORD"
+      ],
+      "candidateBottlenecks": [
+        "BN-FRACTION-ADD-DENOM-MISMATCH"
+      ],
+      "primaryBottleneckId": "BN-FRACTION-ADD-DENOM-MISMATCH",
+      "whyMorePrecise": "不是通分错误，而是看到两个分数就习惯性做加法，未画线段图理清部分与整体关系。",
+      "microValidationNeeded": true,
+      "nextAction": "用线段图验证部分:整体关系，区分加法与减法的适用场景。",
+      "validationDimension": "BASE",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-022",
+      "source": "期中自主综合测试（提优卷）",
+      "question": "判断 4/9+4/5+1/9+1/5 的简便计算",
+      "studentAnswer": "凑整得12/9",
+      "correctAnswer": "(4/9+1/9)+(4/5+1/5)=5/9+1=14/9",
+      "legacyLpCode": "LP-FD-06",
+      "legacyLpName": "凑整法执行后合并出错",
+      "nodeIds": [
+        "MATH-NUM-FRACTION-ADD-COMMON-DENOM"
+      ],
+      "candidateBottlenecks": [
+        "BN-FRACTION-ADD-DENOM-MISMATCH"
+      ],
+      "primaryBottleneckId": "BN-FRACTION-ADD-DENOM-MISMATCH",
+      "whyMorePrecise": "凑整配对策略正确，但5/9+1的合并出错，方法对了执行层断裂。",
+      "microValidationNeeded": true,
+      "nextAction": "同分母合并后化简专项验证，强调整数与分数相加。",
+      "validationDimension": "EXEC",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-023",
+      "source": "育才中学入学考",
+      "question": "9/15=( )/25=6/( )=( )/3/5 连续等值变换",
+      "studentAnswer": "填7,8,3等（部分正确）",
+      "correctAnswer": "9/15=15/25=6/10=3/5",
+      "legacyLpCode": "LP-FD-07",
+      "legacyLpName": "分数等值连续变换中某环节算错",
+      "nodeIds": [
+        "MATH-NUM-FRACTION-MEANING"
+      ],
+      "candidateBottlenecks": [
+        "BN-FRACTION-MUL-SIMPLIFY-DIRECTION"
+      ],
+      "primaryBottleneckId": "BN-FRACTION-MUL-SIMPLIFY-DIRECTION",
+      "whyMorePrecise": "连续等值变换时分子分母同乘同除操作不熟练，连续变换中算错某环节。",
+      "microValidationNeeded": true,
+      "nextAction": "连续等值变换专项，要求每步写出分子分母的变化。",
+      "validationDimension": "TRACK",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-024",
+      "source": "应用题专项练习（第二版）",
+      "question": "U盘下载前3分钟下了20%，照此速度剩余需多少分钟",
+      "studentAnswer": "0.8×3=2.4分钟",
+      "correctAnswer": "3÷20%×80%=12分钟",
+      "legacyLpCode": "LP-RP-04",
+      "legacyLpName": "正反比例关系混淆——乘法替代比例推理",
+      "nodeIds": [
+        "MATH-MOD-DIRECT-INVERSE",
+        "MATH-MOD-RATE-DISTANCE-TIME"
+      ],
+      "candidateBottlenecks": [
+        "BN-RATIO-PROPORTION-EXHAUSTIVE"
+      ],
+      "primaryBottleneckId": "BN-RATIO-PROPORTION-EXHAUSTIVE",
+      "whyMorePrecise": "未建立已完成量-时间的正比例框架，看到百分比就做乘法，未判断数量关系方向。",
+      "microValidationNeeded": true,
+      "nextAction": "正反比例判断专项，先列比例式再计算。",
+      "validationDimension": "BASE",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-025",
+      "source": "期中自主综合测试（提优卷）",
+      "question": "男女比例题，总人数150人",
+      "studentAnswer": "75（平均分）",
+      "correctAnswer": "按给定比例计算",
+      "legacyLpCode": "LP-RP-05",
+      "legacyLpName": "比例应用题不按比例计算",
+      "nodeIds": [
+        "MATH-MOD-RATIO-PART-WHOLE"
+      ],
+      "candidateBottlenecks": [
+        "BN-RATIO-PART-WHOLE-REFERENCE"
+      ],
+      "primaryBottleneckId": "BN-RATIO-PART-WHOLE-REFERENCE",
+      "whyMorePrecise": "遇到比例题未仔细审题直接平分，未按题目给定的比例关系计算。",
+      "microValidationNeeded": true,
+      "nextAction": "比例应用题审题专项，强制写对象表再列式。",
+      "validationDimension": "BASE",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-026",
+      "source": "圆的综合练习",
+      "question": "判断：任何圆的周长总是它直径的π倍",
+      "studentAnswer": "判为错",
+      "correctAnswer": "正确（C=πd对所有圆成立）",
+      "legacyLpCode": "LP-GEO-04",
+      "legacyLpName": "圆的周长与直径/半径对应关系混淆",
+      "nodeIds": [
+        "MATH-GEO-CIRCLE-CIRCUMFERENCE"
+      ],
+      "candidateBottlenecks": [
+        "BN-CIRCLE-CIRCUMFERENCE-AREA-MIX"
+      ],
+      "primaryBottleneckId": "BN-CIRCLE-CIRCUMFERENCE-AREA-MIX",
+      "whyMorePrecise": "对C=πd与C=2πr的对应关系记忆不牢，周长面积概念混淆。",
+      "microValidationNeeded": true,
+      "nextAction": "圆周长公式专项，对比C=πd与C=2πr的使用场景。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-027",
+      "source": "圆的综合练习",
+      "question": "圆半径3dm，半径增加1dm，面积增加多少",
+      "studentAnswer": "3.14dm²（=π×1²）",
+      "correctAnswer": "π(4²-3²)=7π≈21.98dm²",
+      "legacyLpCode": "LP-GEO-05",
+      "legacyLpName": "面积增量≠增量半径对应的小圆面积",
+      "nodeIds": [
+        "MATH-GEO-CIRCLE-AREA"
+      ],
+      "candidateBottlenecks": [
+        "BN-CIRCLE-AREA-EXTRA-R"
+      ],
+      "primaryBottleneckId": "BN-CIRCLE-AREA-EXTRA-R",
+      "whyMorePrecise": "增量思维缺失，面积增量应用大面积减小面积，却用线性直觉π(Δr)²替代。",
+      "microValidationNeeded": true,
+      "nextAction": "面积增量专项，用R²-r²而非(Δr)²，覆盖圆/正方形/长方形。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-028",
+      "source": "分类整合提优训练",
+      "question": "半径8cm的圆剪拼长方形，长方形周长比圆周长多多少",
+      "studentAnswer": "25.12",
+      "correctAnswer": "16cm（=2r）",
+      "legacyLpCode": "LP-GEO-06",
+      "legacyLpName": "圆拼长方形后周长差理解",
+      "nodeIds": [
+        "MATH-GEO-CIRCLE-CIRCUMFERENCE",
+        "MATH-GEO-CIRCLE-AREA"
+      ],
+      "candidateBottlenecks": [
+        "BN-CIRCLE-CIRCUMFERENCE-AREA-MIX"
+      ],
+      "primaryBottleneckId": "BN-CIRCLE-CIRCUMFERENCE-AREA-MIX",
+      "whyMorePrecise": "算出了πr=25.12（长方形的长）就停，未继续求周长差。做到一半把中间结果当最终答案。",
+      "microValidationNeeded": true,
+      "nextAction": "多步骤几何题专项，做完回读题目确认问的是什么。",
+      "validationDimension": "CHECK",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-029",
+      "source": "综合练习卷",
+      "question": "平行四边形底12cm高6cm斜边9cm，求周长",
+      "studentAnswer": "(12+6)×2=40cm",
+      "correctAnswer": "(12+9)×2=42cm",
+      "legacyLpCode": "LP-GEO-07",
+      "legacyLpName": "平行四边形的高与边混淆",
+      "nodeIds": [
+        "MATH-GEO-AREA-PARALLELOGRAM"
+      ],
+      "candidateBottlenecks": [
+        "BN-CIRCLE-AREA-EXTRA-R"
+      ],
+      "primaryBottleneckId": "BN-CIRCLE-AREA-EXTRA-R",
+      "whyMorePrecise": "把高当邻边代入周长公式，未区分周长（用边）和面积（用底高）。",
+      "microValidationNeeded": true,
+      "nextAction": "周长与面积公式适用专项，先判断目标量再选公式。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-030",
+      "source": "绿育华分班考",
+      "question": "木头锯成4段用12分钟，锯成8段要几分钟",
+      "studentAnswer": "26分钟",
+      "correctAnswer": "28分钟",
+      "legacyLpCode": "LP-MOD-04",
+      "legacyLpName": "植树/间隔问题核心关系未掌握",
+      "nodeIds": [
+        "MATH-APP-PLANT"
+      ],
+      "candidateBottlenecks": [
+        "BN-RATIO-PART-WHOLE-REFERENCE"
+      ],
+      "primaryBottleneckId": "BN-RATIO-PART-WHOLE-REFERENCE",
+      "whyMorePrecise": "未掌握段数=切割次数+1，用12÷4×8的错误路径，未建立段数-1=切数关系。",
+      "microValidationNeeded": true,
+      "nextAction": "间隔问题变体专项（锯木/排队/路灯/楼层/敲钟）。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-031",
+      "source": "建兰中学入学考",
+      "question": "每3个空瓶换1瓶汽水，买6瓶最多喝几瓶",
+      "studentAnswer": "8瓶",
+      "correctAnswer": "9瓶",
+      "legacyLpCode": "LP-MOD-05",
+      "legacyLpName": "换汽水问题——借瓶策略缺失",
+      "nodeIds": [
+        "MATH-APP-CHICKEN-RABBIT"
+      ],
+      "candidateBottlenecks": [
+        "BN-RATIO-PART-WHOLE-REFERENCE"
+      ],
+      "primaryBottleneckId": "BN-RATIO-PART-WHOLE-REFERENCE",
+      "whyMorePrecise": "不是不会做，而是没见过借瓶凑齐再归还的经典思路，奥数题型经验不足。",
+      "microValidationNeeded": true,
+      "nextAction": "经典奥数策略专项（借瓶/假设法/抬腿法）。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-032",
+      "source": "综合应用练习卷",
+      "question": "100cm木棒左起每6cm标点、右起每5cm标点，切开1cm短棒几根",
+      "studentAnswer": "24根",
+      "correctAnswer": "7根",
+      "legacyLpCode": "LP-MOD-06",
+      "legacyLpName": "切小棒问题——周期性分析缺失",
+      "nodeIds": [
+        "MATH-APP-PLANT"
+      ],
+      "candidateBottlenecks": [
+        "BN-RATIO-PROPORTION-EXHAUSTIVE"
+      ],
+      "primaryBottleneckId": "BN-RATIO-PROPORTION-EXHAUSTIVE",
+      "whyMorePrecise": "把段数问题误当点数问题，用容斥方法求点数而非分析lcm周期内的间距模式。",
+      "microValidationNeeded": true,
+      "nextAction": "周期性问题专项，区分段的长度与点的位置。",
+      "validationDimension": "TRACK",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-033",
+      "source": "综合练习卷",
+      "question": "从家到学校1/3路程骑车2/3步行；返回时前3/8时间走路后5/8骑车",
+      "studentAnswer": "答案不完整（s=7/s=976）",
+      "correctAnswer": "需正确建立等量关系",
+      "legacyLpCode": "LP-MOD-07",
+      "legacyLpName": "分段行程问题建模失败",
+      "nodeIds": [
+        "MATH-APP-TRAVEL",
+        "MATH-ALG-EQUATION-WORD"
+      ],
+      "candidateBottlenecks": [
+        "BN-RATIO-PART-WHOLE-REFERENCE"
+      ],
+      "primaryBottleneckId": "BN-RATIO-PART-WHOLE-REFERENCE",
+      "whyMorePrecise": "按路程分段与按时间分段两种建模方式混淆，等量关系建立失败。",
+      "microValidationNeeded": true,
+      "nextAction": "分段建模专项，区分按路程分段与按时间分段。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-034",
+      "source": "Batch 7试卷",
+      "question": "两根铁棒插入水中，水上部分比例为某值，求水深",
+      "studentAnswer": "按份分配",
+      "correctAnswer": "利用两根铁棒水下深度相等建立方程",
+      "legacyLpCode": "LP-MOD-08",
+      "legacyLpName": "铁棒入水问题——隐含等量关系未提取",
+      "nodeIds": [
+        "MATH-ALG-EQUATION-WORD",
+        "MATH-MOD-EQUATION-WORD-PROBLEM"
+      ],
+      "candidateBottlenecks": [
+        "BN-RATIO-PART-WHOLE-REFERENCE"
+      ],
+      "primaryBottleneckId": "BN-RATIO-PART-WHOLE-REFERENCE",
+      "whyMorePrecise": "忽略了水下深度相等这个隐含条件，直接分数按份分配，未从情境提取等量关系。",
+      "microValidationNeeded": true,
+      "nextAction": "隐含等量关系提取专项，从物理情境找方程。",
+      "validationDimension": "MODEL",
+      "evidenceType": "report_inference"
+    },
+    {
+      "errorId": "ERR-202606-LD-035",
+      "source": "多份试卷（Batch4/7）",
+      "question": "改对为错：原始答案正确，因自我怀疑涂改成错误",
+      "studentAnswer": "7改1；-59改-63等",
+      "correctAnswer": "原始答案即正确",
+      "legacyLpCode": "LP-PRE-04",
+      "legacyLpName": "改对为错——自我怀疑的系统性模式",
+      "nodeIds": [
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "candidateBottlenecks": [
+        "BN-META-INVERSE-CHECK-MISSING",
+        "BN-META-ESTIMATION-MISSING"
+      ],
+      "primaryBottleneckId": "BN-META-INVERSE-CHECK-MISSING",
+      "whyMorePrecise": "非粗心而是心理模式：完成计算后缺验算确认环节，不确定感驱动下改对为错。",
+      "microValidationNeeded": true,
+      "nextAction": "验算确认流程专项，涂改前必须用逆运算证明原答案错误。",
+      "validationDimension": "CHECK",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-036",
+      "source": "谢老师试卷/建兰入学考/综合卷（8+例）",
+      "question": "过程全对最后一步出错（如17/13写成5/13，x=37写成3）",
+      "studentAnswer": "x=5/13（应为17/13）；答案写3（应为37）",
+      "correctAnswer": "x=17/13；x=37",
+      "legacyLpCode": "LP-PRE-05",
+      "legacyLpName": "会做但做错——过程正确最后一步出错",
+      "nodeIds": [
+        "MATH-META-ESTIMATION-CHECK",
+        "MATH-ALG-EQUATION-ONE-STEP"
+      ],
+      "candidateBottlenecks": [
+        "BN-META-ESTIMATION-MISSING",
+        "BN-META-INVERSE-CHECK-MISSING"
+      ],
+      "primaryBottleneckId": "BN-META-ESTIMATION-MISSING",
+      "whyMorePrecise": "计算注意力在接近完成时衰减，认知资源消耗后最后一步注意力下降，非知识缺陷。",
+      "microValidationNeeded": true,
+      "nextAction": "答案合理性检验专项，代回原式验证，估数量级。",
+      "validationDimension": "CHECK",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-037",
+      "source": "建兰中学入学考",
+      "question": "AB延长1倍到D，AC延长2倍到E，求三角形ADE面积是ABC几倍",
+      "studentAnswer": "5倍",
+      "correctAnswer": "6倍",
+      "legacyLpCode": "LP-LANG-01",
+      "legacyLpName": "延长n倍的语文理解偏差",
+      "nodeIds": [
+        "MATH-GEO-TRIANGLE-AREA",
+        "MATH-GEO-TRANSFORM-AREA-INVARIANT"
+      ],
+      "candidateBottlenecks": [
+        "BN-AXIS-FOLD-MIDPOINT-DIRECTION"
+      ],
+      "primaryBottleneckId": "BN-AXIS-FOLD-MIDPOINT-DIRECTION",
+      "whyMorePrecise": "延长1倍=总长2倍（AD=2AB），理解为延长到1倍导致倍率全少1，是数学语言理解问题。",
+      "microValidationNeeded": true,
+      "nextAction": "数学语言转换专项，延长/增加到/增加了/缩小到等关键词。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-038",
+      "source": "圆综合练习/分类提优（3+例）",
+      "question": "做到一半就停（算出中间结果当最终答案）",
+      "studentAnswer": "πr=25.12就停；阴影周长多乘2",
+      "correctAnswer": "需继续求周长差/正确周长",
+      "legacyLpCode": "LP-LANG-02",
+      "legacyLpName": "审题不完整——做到一半就停",
+      "nodeIds": [
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "candidateBottlenecks": [
+        "BN-META-ESTIMATION-MISSING"
+      ],
+      "primaryBottleneckId": "BN-META-ESTIMATION-MISSING",
+      "whyMorePrecise": "解题后未回读题目确认问的是什么，把中间结果误当最终答案。",
+      "microValidationNeeded": true,
+      "nextAction": "解题后回读专项，划出题目关键词确认所求。",
+      "validationDimension": "CHECK",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-039",
+      "source": "育才中学入学考",
+      "question": "1000米增加1/100，判断1000又1/100米是否正确",
+      "studentAnswer": "判为对",
+      "correctAnswer": "错（1000×(1+1/100)=1010米）",
+      "legacyLpCode": "LP-LANG-03",
+      "legacyLpName": "分率与具体数量混淆",
+      "nodeIds": [
+        "MATH-NUM-FRACTION-MEANING",
+        "MATH-APP-FRACTION-WORD"
+      ],
+      "candidateBottlenecks": [
+        "BN-FRACTION-DECIMAL-MIXED-LOAD"
+      ],
+      "primaryBottleneckId": "BN-FRACTION-DECIMAL-MIXED-LOAD",
+      "whyMorePrecise": "增加1/100是增加原量的1/100即10米，不是数值后附加分数，分率与具体量混淆。",
+      "microValidationNeeded": true,
+      "nextAction": "分率vs具体量专项，区分增加的比例与增加的量。",
+      "validationDimension": "CONVERT",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-040",
+      "source": "数轴专题练习",
+      "question": "A=-10,B=4，折叠使AB重合，原点O与数几重合",
+      "studentAnswer": "6",
+      "correctAnswer": "-6",
+      "legacyLpCode": "LP-AXIS-01",
+      "legacyLpName": "数轴折叠——关于中点对称方向判断错误",
+      "nodeIds": [
+        "MATH-NUM-NEGATIVE-RECOGNITION",
+        "MATH-GEO-AXIS-SYM"
+      ],
+      "candidateBottlenecks": [
+        "BN-AXIS-FOLD-MIDPOINT-DIRECTION"
+      ],
+      "primaryBottleneckId": "BN-AXIS-FOLD-MIDPOINT-DIRECTION",
+      "whyMorePrecise": "中点-3算对，但对称方向判断反，应从中点向左走3到-6却向右走到6。",
+      "microValidationNeeded": true,
+      "nextAction": "数轴折叠对称专项，强调关于中点的方向。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
+    },
+    {
+      "errorId": "ERR-202606-LD-041",
+      "source": "谢老师数学试卷",
+      "question": "A在-4处D在10处同时向右移，A速4单位/秒D速a，a=2,t=6时求A'D'距离",
+      "studentAnswer": "2",
+      "correctAnswer": "4",
+      "legacyLpCode": "LP-AXIS-02",
+      "legacyLpName": "数轴动点距离——方向参数理解偏差",
+      "nodeIds": [
+        "MATH-NUM-NEGATIVE-RECOGNITION",
+        "MATH-MOD-RATE-DISTANCE-TIME"
+      ],
+      "candidateBottlenecks": [
+        "BN-AXIS-FOLD-MIDPOINT-DIRECTION"
+      ],
+      "primaryBottleneckId": "BN-AXIS-FOLD-MIDPOINT-DIRECTION",
+      "whyMorePrecise": "对D的运动方向或初始位置理解有偏差，动点距离参数化建模不熟。",
+      "microValidationNeeded": true,
+      "nextAction": "数轴动点专项，参数化位置函数再求距离。",
+      "validationDimension": "MODEL",
+      "evidenceType": "hard_question"
     }
   ],
   "boundaryChecks": [

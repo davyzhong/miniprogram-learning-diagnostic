@@ -1481,6 +1481,66 @@ module.exports = {
         "逆运算",
         "草稿组织"
       ]
+    },
+    {
+      "bottleneckId": "BN-AXIS-FOLD-MIDPOINT-DIRECTION",
+      "legacyLpCode": "LP-AXIS / LP-LANG",
+      "subject": "math",
+      "title": "数轴折叠与延长语义中的方向/倍数判断错误",
+      "nodeId": "MATH-GEO-AXIS-SYM",
+      "priority": "medium",
+      "repairCost": "medium",
+      "impact": "medium",
+      "categoryPath": [
+        "图形与几何",
+        "图形运动",
+        "对称与方向"
+      ],
+      "symptomPatterns": [
+        "数轴折叠使A(-10)与B(4)重合，求原点对称点，答6（应为-6）",
+        "AB延长1倍到D，理解为AD=AB（应为AD=2AB），导致倍率全少1",
+        "对称方向判断反：应从中点向左走，却向右走"
+      ],
+      "rootCauseSignals": [
+        "中点能算对，但对称方向判断反",
+        "把'延长n倍=总长(n+1)倍'误解为'延长到n倍'",
+        "几何对称与代数方向感的转换不熟练"
+      ],
+      "microValidationRules": [
+        "给3道数轴折叠题，要求先标中点再标对称点，画出方向箭头。",
+        "给5道含'延长/增加到/增加了'关键词的题，只要求写出数量关系式。",
+        "要求用具体数值代入验证倍数关系（如AB=3，延长1倍后AD应=6）。"
+      ],
+      "repairStrategy": [
+        "先画中点，再用箭头标对称方向",
+        "区分'延长n倍'(总长n+1倍)与'延长到n倍'(总长n倍)",
+        "用具体数字代入验证，不依赖抽象倍率"
+      ],
+      "masteryEvidence": [
+        "数轴折叠对称方向3题全对",
+        "'延长'类语义题关系式全对",
+        "72小时后倍数判断稳定"
+      ],
+      "sourceEvidence": [
+        "ERR-037: AB延长1倍求面积倍数，答5倍（应为6倍）",
+        "ERR-040: 数轴折叠原点对称，答6（应为-6）",
+        "ERR-041: 数轴动点距离，答2（应为4）"
+      ],
+      "categoryId": "MATH-CAT-GEO-TRANSFORM",
+      "categoryTitle": "图形变换",
+      "familyId": "MATH-FAM-AXIS-SYM",
+      "familyTitle": "数轴与对称",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "方向标注",
+        "中点先行",
+        "语义对照"
+      ]
     }
   ]
 }
