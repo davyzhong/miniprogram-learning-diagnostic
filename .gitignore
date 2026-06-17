@@ -1,5 +1,7 @@
 # Node modules - cloud functions
 cloudfunctions/**/node_modules/
+# Root node_modules (dev tooling only, e.g. miniprogram-automator)
+node_modules/
 
 # WeChat DevTools private config (contains personal settings, not for version control)
 project.private.config.json

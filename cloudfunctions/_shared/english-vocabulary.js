@@ -20,17 +20,24 @@ function normalizeUnit(value) {
   return match ? `Unit ${match[1]}` : text
 }
 
+// 项目面向中国家庭,所有"日期"按北京时间(+08:00)切分,避免时区穿越
+const PROJECT_TIMEZONE_OFFSET_MS = 8 * 60 * 60 * 1000
+
 function dateOnly(value) {
   const date = value ? new Date(value) : new Date()
   if (Number.isNaN(date.getTime())) return ''
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+  // 把 UTC 毫秒数加 8 小时再取 UTC 年月日,等价于按 +08:00 切分日历日
+  const shifted = new Date(date.getTime() + PROJECT_TIMEZONE_OFFSET_MS)
+  const year = shifted.getUTCFullYear()
+  const month = String(shifted.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(shifted.getUTCDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
 
 function addDays(dateText, days) {
-  const base = dateText ? new Date(`${dateText}T00:00:00+08:00`) : new Date()
+  if (!dateText) return dateOnly(new Date(Date.now() + days * 24 * 60 * 60 * 1000))
+  // dateText 形如 YYYY-MM-DD,按北京时区 0 点解析后加 days
+  const base = new Date(`${dateText}T00:00:00+08:00`)
   base.setDate(base.getDate() + days)
   return dateOnly(base)
 }
