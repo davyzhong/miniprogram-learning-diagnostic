@@ -158,6 +158,19 @@ test('reportFeedback cloud function reuses shared access helpers', () => {
   assert.match(source, /getLearningResourceAccess\(db, report, openId\)/)
 })
 
+test('cloud client exposes learning resource methods', () => {
+  const source = read('miniprogram/utils/cloud.js')
+  for (const wrapper of [
+    'generateLearningResourcePack',
+    'getLearningResourcePack',
+    'completeLearningResourcePack',
+    'scheduleResourcePackVerification'
+  ]) {
+    assert.match(source, new RegExp(`async function ${wrapper}\\b`), `${wrapper} should be implemented`)
+    assert.match(source, new RegExp(`${wrapper},`), `${wrapper} should be exported`)
+  }
+})
+
 // ── Shared modules & display helpers ──
 
 test('user-facing bottleneck labels do not render LP codes as primary text', () => {

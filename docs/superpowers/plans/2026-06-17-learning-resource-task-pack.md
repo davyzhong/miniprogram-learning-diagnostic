@@ -596,6 +596,7 @@ git commit -m "feat: add learning resource cloud function"
 **Files:**
 - Modify: `miniprogram/utils/cloud.js`
 - Modify: `tests/contracts.test.js`
+- Modify: `tests/deployment-readiness.test.js`
 
 **Interfaces:**
 - Produces:
@@ -604,7 +605,7 @@ git commit -m "feat: add learning resource cloud function"
   - `cloud.completeLearningResourcePack(payload)`
   - `cloud.scheduleResourcePackVerification(packId)`
 
-- [ ] **Step 1: Add failing contract test**
+- [x] **Step 1: Add failing contract test**
 
 Add to `tests/contracts.test.js`:
 
@@ -618,7 +619,7 @@ test('cloud client exposes learning resource methods', () => {
 })
 ```
 
-- [ ] **Step 2: Run RED test**
+- [x] **Step 2: Run RED test**
 
 Run:
 
@@ -628,7 +629,7 @@ node --test tests/contracts.test.js
 
 Expected: fail because the methods do not exist.
 
-- [ ] **Step 3: Implement client methods**
+- [x] **Step 3: Implement client methods**
 
 In `miniprogram/utils/cloud.js`, add wrappers using the existing `callFunction` helper style:
 
@@ -664,7 +665,7 @@ function scheduleResourcePackVerification(packId) {
 
 Export all four functions in the existing `module.exports`.
 
-- [ ] **Step 4: Run contract test**
+- [x] **Step 4: Run contract test**
 
 Run:
 
@@ -674,7 +675,7 @@ node --test tests/contracts.test.js
 
 Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
