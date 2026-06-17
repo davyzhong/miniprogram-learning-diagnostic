@@ -334,6 +334,14 @@ async function getPaperDetail(paperId) {
   return callFunction('studentData', { action: 'getPaperDetail', paperId })
 }
 
+/**
+ * 查询当前激活的验证卷状态（自动生成场景）
+ * @returns { paper: object|null, status: 'ready'|'generating'|'failed'|'none' }
+ */
+async function getActiveVerificationPaper(studentId, subject) {
+  return callFunction('studentData', { action: 'getActiveVerificationPaper', studentId, subject })
+}
+
 async function createReportFeedback(payload) {
   return callFunction('reportFeedback', { action: 'createFeedback', ...payload })
 }
@@ -447,6 +455,7 @@ module.exports = {
   cleanupStaleLearningRecords,
   getReportDetail,
   getPaperDetail,
+  getActiveVerificationPaper,
   createReportFeedback,
   getReportFeedback,
   generateLearningResourcePack,

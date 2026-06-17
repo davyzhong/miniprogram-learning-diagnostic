@@ -276,9 +276,30 @@ Page({
     this.navigateToVerification()
   },
 
-  navigateToVerification(targetCode = '') {
+  async navigateToVerification(targetCode = '') {
     if (!this.data.canWriteActions) return
     const { studentId, subject, subjectName, studentName } = this.data
+    // 状态分流：查是否有自动生成的验证卷
+    wx.showLoading({ title: '查看验证卷…' })
+    let status = 'none'
+    let paperId = ''
+    try {
+      const result = await cloud.getActiveVerificationPaper(studentId, subject)
+      status = result.status || 'none'
+      paperId = result.paper && result.paper._id ? result.paper._id : ''
+    } catch (e) {
+      status = 'none'
+    }
+    wx.hideLoading()
+
+    if (status === 'ready' && paperId) {
+      wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${paperId}` })
+      return
+    }
+    if (status === 'generating') {
+      wx.showToast({ title: '验证卷生成中，请稍候', icon: 'none', duration: 2500 })
+      return
+    }
     const targetParam = targetCode ? `&targetCode=${encodeURIComponent(targetCode)}` : ''
     wx.navigateTo({
       url: `/pages/generate-verification/generate-verification?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}${targetParam}`

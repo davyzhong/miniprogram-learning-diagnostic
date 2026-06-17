@@ -14,6 +14,7 @@ const {
   mergeBatchResults,
   buildImageFiles,
 } = require('./pipeline');
+const { triggerAutoVerificationPaper } = require('./auto-verification');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -747,6 +748,21 @@ exports.main = async (event) => {
     });
 
     await markAnalysisTaskCompleted(taskId, artifacts);
+
+    // 诊断报告完成后，自动触发验证卷生成（fire-and-forget，失败不影响主流程）
+    if (mode !== 'verification' && artifacts.profileSummary && artifacts.profileSummary.isEffective) {
+      const pendingCount = (artifacts.profile && artifacts.profile.pendingBottlenecks || []).length;
+      if (pendingCount > 0) {
+        const currentOpenId = cloud.getWXContext().OPENID;
+        triggerAutoVerificationPaper(cloud, db, {
+          reportId,
+          studentId,
+          subject,
+          profile: artifacts.profile,
+          openId: currentOpenId,
+        }).catch(err => console.warn('[auto-verification] 异常:', err.message));
+      }
+    }
 
     sendNotification(studentId, reportId, subject).catch(err => console.error('推送异常：', err));
 

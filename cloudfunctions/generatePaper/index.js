@@ -309,6 +309,7 @@ exports.main = async (event) => {
     grade = 0,
     paperDate = '',
     targetPlan = {},
+    _autoPaperId = '',
   } = event;
 
   if (!studentId) {
@@ -432,33 +433,44 @@ exports.main = async (event) => {
       };
     }
 
-    // 4. 创建 papers 集合记录
-    const paperRes = await db.collection('papers').add({
-      data: {
-        _openid: currentOpenId,
-        studentId,
-        subject,
-        type,
-        grade: type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0,
-        paperKey: cleanPromptText(paperKey, 20),
-        ...paperCodes,
-        bottleneckTargets: targetCodes,
-        bottleneckSummaries,
-        chineseReviewTargets: questionsData.chineseReviewTargets || [],
-        verificationPack: questionsData.verificationPack || null,
-        questions: questionsData.questions || [],
-        pdfFileId,
-        paperDate: normalizedPaperDate,
-        generatedAt: new Date(),
-        ...pageInfo,
-        createdAt: new Date(),
-      },
-    });
+    // 4. 创建或更新 papers 记录
+    const paperData = {
+      _openid: currentOpenId,
+      studentId,
+      subject,
+      type,
+      grade: type === 'default-diagnosis' ? Number(grade) : Number(student.grade) || Number(grade) || 0,
+      paperKey: cleanPromptText(paperKey, 20),
+      ...paperCodes,
+      bottleneckTargets: targetCodes,
+      bottleneckSummaries,
+      chineseReviewTargets: questionsData.chineseReviewTargets || [],
+      verificationPack: questionsData.verificationPack || null,
+      questions: questionsData.questions || [],
+      pdfFileId,
+      paperDate: normalizedPaperDate,
+      generatedAt: new Date(),
+      ...pageInfo,
+      generationStatus: 'ready',
+    };
 
-    console.log('试卷生成完成：', paperRes._id);
+    let paperId;
+    if (_autoPaperId) {
+      // 自动生成模式：更新已创建的 generating 记录
+      await db.collection('papers').doc(_autoPaperId).update({ data: paperData });
+      paperId = _autoPaperId;
+    } else {
+      // 手动生成模式：新建记录
+      const paperRes = await db.collection('papers').add({
+        data: { ...paperData, createdAt: new Date() },
+      });
+      paperId = paperRes._id;
+    }
+
+    console.log('试卷生成完成：', paperId);
     return {
       success: true,
-      paperId: paperRes._id,
+      paperId,
       pdfFileId,
       title: questionsData.title,
       questionCount: (questionsData.questions || []).length,

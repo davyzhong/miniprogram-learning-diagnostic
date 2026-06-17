@@ -142,10 +142,12 @@ test('learning profile home loads the active student summary', async () => {
     modules: {
       '../../utils/cloud': cloud,
       '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
-    }
+    },
+    wx: createWxMock({ cloud: { callFunction: async () => ({ result: { success: true, status: 'none', paper: null } }) } })
   })
 
   await page.loadStudents()
+  page._cloud = cloud  // 供 shared-navigation 的 navigateToVerificationByStatus 使用
   assert.equal(page.data.homeMode, 'single-profile')
   assert.equal(page.data.home.studentName, '钟青羽')
   assert.match(page.data.home.priorityHighlights[0].title, /数学/)
@@ -155,7 +157,7 @@ test('learning profile home loads the active student summary', async () => {
 
   page.onViewAllBottlenecks()
   page.onBottleneckTap({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
-  page.onBottleneckAction({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
+  await page.onBottleneckAction({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
   const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
   assert.match(urls[0], /pages\/bottleneck-center\/bottleneck-center/)
   assert.match(urls[1], /pages\/bottleneck-detail\/bottleneck-detail/)
@@ -259,7 +261,7 @@ test('learning profile home shows a message when parent management has no active
 })
 
 test('learning profile home uses shared access and lets co-parents operate learning workflows', async () => {
-  const wx = createWxMock()
+  const wx = createWxMock({ cloud: { callFunction: async () => ({ result: { success: true, status: 'none', paper: null } }) } })
   const cloud = {
     getAccessibleStudents: async () => [{
       _id: 'student-1',
@@ -290,12 +292,13 @@ test('learning profile home uses shared access and lets co-parents operate learn
   })
 
   await page.loadStudents()
+  page._cloud = cloud  // 供 shared-navigation 的 navigateToVerificationByStatus 使用
   assert.equal(page.data.homeMode, 'single-profile')
   assert.equal(page.data.permissions.canUpload, true)
   assert.equal(page.data.permissions.canManageParents, false)
   assert.equal(page.data.home.nextAction.primaryText, '生成纸面验证卷')
 
-  page.onPrimaryAction()
+  await page.onPrimaryAction()
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
 })
 

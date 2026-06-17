@@ -298,9 +298,29 @@ Page({
     }
   },
 
-  onGenerateVerification() {
+  async onGenerateVerification() {
+    const { studentId, subject, subjectName, studentName, lpCode } = this.data
+    // 状态分流
+    wx.showLoading({ title: '查看验证卷…' })
+    let status = 'none'
+    let paperId = ''
+    try {
+      const result = await cloud.getActiveVerificationPaper(studentId, subject)
+      status = result.status || 'none'
+      paperId = result.paper && result.paper._id ? result.paper._id : ''
+    } catch (e) { status = 'none' }
+    wx.hideLoading()
+
+    if (status === 'ready' && paperId) {
+      wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${paperId}` })
+      return
+    }
+    if (status === 'generating') {
+      wx.showToast({ title: '验证卷生成中，请稍候', icon: 'none', duration: 2500 })
+      return
+    }
     wx.navigateTo({
-      url: `/pages/generate-verification/generate-verification?studentId=${this.data.studentId}&subject=${this.data.subject}&subjectName=${encodeURIComponent(this.data.subjectName)}&studentName=${encodeURIComponent(this.data.studentName || '')}&targetCode=${encodeURIComponent(this.data.lpCode)}`
+      url: `/pages/generate-verification/generate-verification?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName || '')}&targetCode=${encodeURIComponent(lpCode)}`
     })
   },
 
