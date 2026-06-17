@@ -200,7 +200,7 @@ function buildEnglishPrimaryTask(options = {}, permissions = {}) {
     toSafeCount(familiarity.untestedCount),
     toSafeCount(spelling.untestedCount)
   )
-  const todayCount = Math.min(20, scheduledCount + newWordCount || totalWords || 0)
+  const todayCount = Math.min(20, (scheduledCount + newWordCount) || totalWords || 0)
   if (!canWrite) {
     return {
       title: '当前可查看',

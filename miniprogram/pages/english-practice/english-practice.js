@@ -133,6 +133,8 @@ Page({
   },
 
   onRecordTap() {
+    // 提交判定期间禁止录音，避免并发导致 _answerStartedAt 被覆盖、currentItem 错位
+    if (this.data.submitting) return
     if (this.data.recording) {
       this.stopRecord()
     } else {
@@ -151,7 +153,15 @@ Page({
   },
 
   getRecognitionLang(item = {}) {
-    return item.promptType === 'english' ? 'zh_CN' : 'en_US'
+    // 防御：promptType 正常由后端下发。缺失时根据 direction 推导，避免误选 ASR 语言。
+    // cn2en（听中文说英文）→ 孩子说英文 → en_US；en2cn → 孩子说中文 → zh_CN
+    if (item.promptType === 'english') return 'zh_CN'
+    if (item.promptType === 'chinese') return 'en_US'
+    // promptType 缺失：用 direction 兜底
+    if (item.direction === 'cn2en') return 'en_US'
+    if (item.direction === 'en2cn') return 'zh_CN'
+    console.warn('[english-practice] promptType 和 direction 均缺失，默认 en_US', item)
+    return 'en_US'
   },
 
   stopRecord() {
@@ -212,11 +222,17 @@ Page({
 
   async onFinishTap() {
     if (!this.data.sessionId) return
-    await cloud.submitEnglishPracticeResult({
-      studentId: this.data.studentId,
-      sessionId: this.data.sessionId,
-      wordResults: []
-    })
+    try {
+      await cloud.submitEnglishPracticeResult({
+        studentId: this.data.studentId,
+        sessionId: this.data.sessionId,
+        wordResults: []
+      })
+    } catch (error) {
+      // 提交失败时提示用户，避免静默丢失本次会话结算
+      wx.showToast({ title: '提交失败，请稍后重试', icon: 'none' })
+      return
+    }
     wx.navigateBack({ delta: 1 })
   },
 
