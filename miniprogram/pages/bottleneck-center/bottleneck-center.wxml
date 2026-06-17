@@ -77,13 +77,23 @@
             <text class="chip" wx:if="{{item.weightText}}">{{item.weightText}}</text>
           </view>
         </view>
-        <view
-          class="card-action"
-          catchtap="onGenerateForBottleneck"
-          data-subject="{{item.subject}}"
-          data-lp-code="{{item.lpCode}}"
-          data-bottleneck-id="{{item.bottleneckId}}"
-        >验证</view>
+        <view class="card-actions">
+          <view
+            class="card-action learn"
+            catchtap="onOpenLearningResource"
+            data-subject="{{item.subject}}"
+            data-lp-code="{{item.lpCode}}"
+            data-bottleneck-id="{{item.bottleneckId}}"
+            data-view-id="{{item.viewId}}"
+          >学一下</view>
+          <view
+            class="card-action verify"
+            catchtap="onGenerateForBottleneck"
+            data-subject="{{item.subject}}"
+            data-lp-code="{{item.lpCode}}"
+            data-bottleneck-id="{{item.bottleneckId}}"
+          >验证</view>
+        </view>
       </view>
     </view>
 

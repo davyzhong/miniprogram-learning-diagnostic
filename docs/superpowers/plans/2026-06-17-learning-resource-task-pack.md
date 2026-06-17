@@ -939,7 +939,7 @@ git commit -m "feat: add learning resource task pack page"
 - Produces:
   - User can tap `学一下` and land on `/pages/learning-resource/learning-resource?packId=...`.
 
-- [ ] **Step 1: Add page-flow test**
+- [x] **Step 1: Add page-flow test**
 
 Add to `tests/page-flows.test.js`:
 
@@ -951,7 +951,7 @@ test('bottleneck detail exposes learning task pack before verification', () => {
 })
 ```
 
-- [ ] **Step 2: Run RED test**
+- [x] **Step 2: Run RED test**
 
 Run:
 
@@ -961,7 +961,7 @@ node --test tests/page-flows.test.js
 
 Expected: fail because the new action is not present.
 
-- [ ] **Step 3: Implement detail-page action**
+- [x] **Step 3: Implement detail-page action**
 
 In `bottleneck-detail.js`, add:
 
@@ -1021,13 +1021,13 @@ Add WXSS:
 .learning-desc { display: block; margin-top: 8rpx; color: #7b4b19; font-size: 25rpx; line-height: 1.5; }
 ```
 
-- [ ] **Step 4: Add center-card action**
+- [x] **Step 4: Add center-card action**
 
 In `bottleneck-center.wxml`, add `学一下` as the primary learning action and keep `验证` as the secondary action for cards that need validation.
 
 In `bottleneck-center.js`, add a route method equivalent to `onOpenLearningResource`, using the tapped card data.
 
-- [ ] **Step 5: Run tests and preview**
+- [x] **Step 5: Run tests and preview**
 
 Run:
 
@@ -1039,7 +1039,7 @@ npm run verify
 
 Expected: test suite passes; page preview builds.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run:
 
