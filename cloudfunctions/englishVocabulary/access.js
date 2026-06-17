@@ -72,6 +72,10 @@ function canReadLearning(access) {
   return Boolean(access && access.allowed);
 }
 
+// 设计决策（2026-06-17）：当前 canOperateLearning 与 canReadLearning 等价，
+// 即任何被邀请的 active member（含 role='viewer'）均可执行学习写操作。
+// 这是有意为之：本产品定位为家庭/个人工具，信任被邀请的家庭成员。
+// 若未来转向多租户/机构场景，应在此区分 viewer（只读）与 co-parent（可写）。
 function canOperateLearning(access) {
   return Boolean(access && access.allowed);
 }

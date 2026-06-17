@@ -259,7 +259,8 @@ test('uploadAndAnalyze fires analyzePhotos without awaiting', () => {
   const entrypoint = read('cloudfunctions/uploadAndAnalyze/index.js')
   assert.match(entrypoint, /cloud\.callFunction\(\{\s*name:\s*'analyzePhotos'/s)
   assert.doesNotMatch(entrypoint, /const analyzeRes = await cloud\.callFunction/)
-  assert.match(entrypoint, /\.catch\(err\s*=>/)
+  // 契约意图：必须有 catch 错误处理（兼容 async/非 async 两种签名）
+  assert.match(entrypoint, /\.catch\((?:async\s+)?\(?\s*err\s*\)?\s*=>/)
 })
 
 test('analyzeBatch prompt uses shared bottleneck names instead of drifted inline labels', () => {
