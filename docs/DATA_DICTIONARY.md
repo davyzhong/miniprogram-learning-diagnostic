@@ -603,6 +603,7 @@ MVP 数学卡点当前包含：
 | `englishImportBatches` | `studentId`, `status`, `createdAt` | 升序, 升序, 降序 | 英语候选词库导入和确认 |
 | `studentEnglishWords` | `studentId`, `masteryStatus`, `nextReviewAt` | 升序, 升序, 升序 | 英语听写抽取待练、错词和待复测词 |
 | `englishPracticeSessions` | `studentId`, `createdAt` | 升序, 降序 | 英语听写历史记录 |
+| `learningResourcePacks` | `studentId`, `subject`, `updatedAt` | 升序, 升序, 降序 | 学习卡点任务包列表和学习记录时间线 |
 
 ### 索引设计要点
 
@@ -644,6 +645,7 @@ MVP 数学卡点当前包含：
 | `generatePaper` | 通过共享 access helper 校验当前 OPENID 是否可为对应学生生成试卷 |
 | `generateReportPDF` | 通过共享 access helper 校验当前 OPENID 是否可读取并生成对应报告 PDF |
 | `englishVocabulary` | 通过共享 access helper 校验 owner/viewer 是否可读取词库或写入听写记录 |
+| `learningResource` | 通过共享 access helper 校验 owner/viewer 是否可生成、读取和更新学习任务包 |
 
 ### 参数校验
 
@@ -664,3 +666,32 @@ MVP 数学卡点当前包含：
 | 内置词库导入 | englishVocabulary.seedPersonalVocabulary | 仅接收 `studentId`；固定使用项目内置钟青羽 PEP 个人词库 |
 | dictation judgment 枚举 | englishVocabulary.submitDictationAttempt | 仅返回 `correct/incorrect/unclear`，由云函数根据识别文本判定 |
 | dictation OCR 判定枚举 | englishVocabulary.analyzeDictationPhoto | 仅接收 AI 输出中的 `correct/incorrect/unclear`；缺失或非法值归一为 `unclear` |
+
+---
+
+## learningResourcePacks
+
+`learningResourcePacks` 保存从数学学习卡点生成的小程序内学习任务包。它不是外部链接收藏夹，而是孩子可以直接打开完成的结构化学习材料。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `_id` | String | 任务包 ID |
+| `_openid` | String | 创建者 OPENID |
+| `studentId` | String | 学生 ID |
+| `subject` | String | 第一版固定为 `math` |
+| `sourceType` | String | 第一版固定为 `bottleneck` |
+| `sourceReportId` | String | 来源报告 ID，可为空 |
+| `lpCode` | String | 兼容旧粗卡点代码 |
+| `bottleneckId` | String | 细颗粒度卡点 ID |
+| `targetId` | String | 当前任务包绑定的目标 ID |
+| `title` | String | 家长和孩子可读的任务包标题 |
+| `status` | String | `ready / completed / archived` |
+| `estimatedMinutes` | Number | 建议学习时长，第一版通常为 8 |
+| `blocks` | Array | 子模块：`summary / concept / worked_example / common_mistake / practice` |
+| `practiceItems` | Array | 3 道以内即时练习题 |
+| `externalResources` | Array | 家长参考资源，孩子不直接进入平台信息流 |
+| `progress` | Object | 完成时间和轻量练习结果 |
+| `verificationScheduled` | Boolean | 是否已加入后续验证 |
+| `verificationScheduledAt` | Date | 加入验证时间 |
+| `createdAt` | Date | 创建时间 |
+| `updatedAt` | Date | 更新时间 |

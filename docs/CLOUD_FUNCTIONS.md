@@ -1173,6 +1173,29 @@ wx.cloud.callFunction({
 
 ---
 
+## learningResource
+
+**位置**：`cloudfunctions/learningResource/index.js`
+
+**用途**：围绕数学学习卡点生成小程序内学习任务包，并记录完成学习、加入验证等轻量状态。第一版只支持 `subject === 'math'`，外部资源链接仅作为家长参考，孩子主入口是任务包内的微讲解、例题拆解、易错对比和 3 道练习。
+
+### Actions
+
+| action | 入参 | 出参 | 说明 |
+| --- | --- | --- | --- |
+| `generatePack` | `studentId`, `subject`, `target`, `resources?`, `sourceReportId?` | `{ success, packId, pack }` | 根据一个学习卡点生成 `learningResourcePacks` 记录 |
+| `getPack` | `packId` | `{ success, pack }` | 读取已有学习任务包 |
+| `completePack` | `packId`, `practiceResult?` | `{ success, completedAt }` | 标记任务包已完成，保存轻量练习结果 |
+| `scheduleVerification` | `packId` | `{ success, scheduledAt }` | 标记该任务包目标已加入后续验证 |
+
+### 权限
+
+- `generatePack` 使用 `getStudentAccess + canOperateLearning` 校验当前 OPENID 是否可操作对应学生。
+- `getPack / completePack / scheduleVerification` 使用 `getLearningResourceAccess` 校验当前用户是否可读或可操作该任务包。
+- 非成员不能生成、读取或更新学习任务包。
+
+---
+
 ## 辅助模块
 
 以下模块不是独立云函数，而是被主云函数 require 的本地工具模块。它们不对外暴露 API，但承载了关键业务逻辑。

@@ -373,7 +373,7 @@ git commit -m "feat: add learning resource pack generator"
   - `completePack({ packId, practiceResult })`
   - `scheduleVerification({ packId })`
 
-- [ ] **Step 1: Write failing cloud tests**
+- [x] **Step 1: Write failing cloud tests**
 
 Add `tests/learning-resource-cloud.test.js`:
 
@@ -417,7 +417,7 @@ test('learningResource generatePack stores a ready math pack', async () => {
 })
 ```
 
-- [ ] **Step 2: Run RED test**
+- [x] **Step 2: Run RED test**
 
 Run:
 
@@ -427,7 +427,7 @@ node --test tests/learning-resource-cloud.test.js
 
 Expected: fail because `cloudfunctions/learningResource/index.js` does not exist.
 
-- [ ] **Step 3: Implement cloud function**
+- [x] **Step 3: Implement cloud function**
 
 Create `cloudfunctions/learningResource/package.json`:
 
@@ -547,7 +547,7 @@ exports.main = main
 module.exports = { main }
 ```
 
-- [ ] **Step 4: Run cloud test**
+- [x] **Step 4: Run cloud test**
 
 Run:
 
@@ -557,7 +557,7 @@ node --test tests/learning-resource-cloud.test.js
 
 Expected: pass.
 
-- [ ] **Step 5: Update docs**
+- [x] **Step 5: Update docs**
 
 Add to `docs/CLOUD_FUNCTIONS.md`:
 
@@ -580,7 +580,7 @@ Add to `docs/DATA_DICTIONARY.md`:
 Stores child-facing learning task packs generated from math bottlenecks. External resource links are parent reference only; the child-facing material is stored in `blocks`.
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 Run:
 
