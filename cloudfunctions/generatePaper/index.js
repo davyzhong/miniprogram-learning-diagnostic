@@ -17,10 +17,11 @@ cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const TYPES = new Set(['verification', 'default-diagnosis']);
-const VERIFICATION_CORE_QUESTION_COUNT = 2;
+const VERIFICATION_CORE_QUESTION_COUNT = 1;
 const VERIFICATION_EXTENSION_QUESTION_COUNT = 1;
 const VERIFICATION_QUESTIONS_PER_TARGET = VERIFICATION_CORE_QUESTION_COUNT + VERIFICATION_EXTENSION_QUESTION_COUNT;
-const VERIFICATION_TASK_PACK_TARGET_LIMIT = 8;
+const VERIFICATION_TASK_PACK_TARGET_LIMIT = 10;
+const MAX_TOTAL_VERIFICATION_QUESTIONS = 20;
 
 // 初始化 CloudBase AI SDK
 const app = tcb.init({
@@ -177,6 +178,41 @@ function buildTargetNameMap(profile = {}) {
   return targetMap;
 }
 
+/**
+ * 构建含 taxonomy 微验证规则的卡点描述，喂给 LLM。
+ * 对每个 BN 细卡点，附加 symptomPatterns（第1条）和 microValidationRules（第1条）。
+ * 如果 taxonomy 里找不到该 BN，降级为简单的 "code：名称"。
+ */
+function buildTargetDescWithRules(targets, targetMap, subject) {
+  // 加载 taxonomy（数学学科才用）
+  let taxonomyMap = null;
+  if (subject === 'math') {
+    try {
+      const taxonomy = require('./math-bottleneck-hierarchy');
+      // taxonomy 内部已加载 bottleneckSeed，用 bottleneckOf 查询
+      const seed = require('../../data/math/bottleneck-taxonomy-v2.seed.json');
+      taxonomyMap = {};
+      for (const bn of (seed.bottlenecks || [])) {
+        taxonomyMap[bn.bottleneckId] = bn;
+      }
+    } catch (e) {
+      taxonomyMap = null;
+    }
+  }
+
+  return targets.map((code, i) => {
+    const name = targetMap[code] || '未知卡点';
+    const bn = taxonomyMap && taxonomyMap[code];
+    if (bn) {
+      const symptom = (bn.symptomPatterns || [])[0] || '';
+      const rule = (bn.microValidationRules || [])[0] || '';
+      const severityTag = bn.priority === 'high' ? '[高]' : bn.priority === 'low' ? '[低]' : '[中]';
+      return `${i + 1}. ${severityTag} ${code}（${name}）\n   症状：${symptom}\n   验证：${rule}`;
+    }
+    return `${i + 1}. ${code}（${name}）`;
+  }).join('\n\n');
+}
+
 function findParentLpCode(profile = {}, targetId) {
   const bottlenecks = [
     ...(profile.pendingBottlenecks || []),
@@ -239,7 +275,10 @@ async function generateQuestionsWithAI(student, subject, type, targets, paperKey
   // 获取学生信息（用于个性化）
   const studentName = cleanPromptText(student.name, 30);
   const grade = Number(selectedGrade) || Number(student.grade) || 0;
-  const expectedCount = type === 'verification' ? targets.length * VERIFICATION_QUESTIONS_PER_TARGET : questionCount;
+  const rawExpected = targets.length * VERIFICATION_QUESTIONS_PER_TARGET;
+  const expectedCount = type === 'verification'
+    ? Math.min(rawExpected, MAX_TOTAL_VERIFICATION_QUESTIONS)
+    : questionCount;
 
   const subjectName = getSubjectName(subject, '数学');
   const typeName = type === 'verification' ? '验证试卷（针对已知卡点）' : '默认诊断试卷（全面诊断）';
@@ -254,7 +293,8 @@ async function generateQuestionsWithAI(student, subject, type, targets, paperKey
       .get();
     const profile = profileRes.data.find(item => item.subject === subject);
     const targetMap = buildTargetNameMap(profile || {});
-    targetDesc = targets.map(t => `${t}：${targetMap[t] || '未知卡点'}`).join('；');
+    // 构建含 taxonomy 微验证规则的卡点描述
+    targetDesc = buildTargetDescWithRules(targets, targetMap, subject);
     if (subject === 'chinese') {
       chineseReviewTargets = selectChineseReviewTargets(profile || {}, targets, expectedCount);
     }
@@ -264,17 +304,19 @@ async function generateQuestionsWithAI(student, subject, type, targets, paperKey
   const prompt = `你是${subjectName}老师，生成${typeName}。学生信息仅用于调整难度。
 
 学生：${studentName || '同学'}，${grade || '未知'}年级
-${targetDesc ? `验证卡点：${targetDesc}` : ''}
+${targetDesc ? `本次验证覆盖以下学习卡点，共出 ${expectedCount} 题：\n${targetDesc}` : ''}
 ${chineseReviewPromptBlock}
 
 要求：
-1. 生成 ${expectedCount} 道题（验证卷每卡点${VERIFICATION_QUESTIONS_PER_TARGET}题：${VERIFICATION_CORE_QUESTION_COUNT}核心+${VERIFICATION_EXTENSION_QUESTION_COUNT}延展）
-2. 难度匹配${grade || '该'}年级
-3. lpCode填对应卡点代码，lpName写卡点名称；语文错项额外填reviewItemId/targetText/verificationMethod
-4. 直接返回JSON，不要\`\`\`json包裹
+1. 每个卡点出 ${VERIFICATION_QUESTIONS_PER_TARGET} 题：${VERIFICATION_CORE_QUESTION_COUNT}核心+${VERIFICATION_EXTENSION_QUESTION_COUNT}延展
+2. 核心题直接复现该卡点的典型错误场景
+3. 延展题变换情境（不同数字/不同表述），观察是否稳定
+4. 难度匹配${grade || '该'}年级
+5. lpCode填对应卡点代码，lpName写卡点名称；语文错项额外填reviewItemId/targetText/verificationMethod
+6. 直接返回JSON，不要\`\`\`json包裹
 
 输出：
-{"title":"标题","questions":[{"index":1,"content":"题目","answer":"答案","points":10,"lpCode":"LP-001","lpName":"卡点名","reviewItemId":"","targetText":"","verificationMethod":""}]}
+{"title":"标题","questions":[{"index":1,"content":"题目","answer":"答案","points":5,"lpCode":"BN-...","lpName":"卡点名","reviewItemId":"","targetText":"","verificationMethod":""}]}
 
 开始生成：`;
 

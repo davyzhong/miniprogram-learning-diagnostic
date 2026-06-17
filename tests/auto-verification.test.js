@@ -6,45 +6,84 @@ const {
   loadModule
 } = require('./helpers/cloud-function-harness')
 
-const { extractPendingTargets, supersedeOldPapers } = require('../cloudfunctions/analyzePhotos/auto-verification')
+const { extractFineBottlenecks, extractPendingTargets, supersedeOldPapers } = require('../cloudfunctions/analyzePhotos/auto-verification')
 
-// ========== extractPendingTargets 单元测试 ==========
+// ========== extractFineBottlenecks 单元测试 ==========
 
-test('extractPendingTargets 从 profile 提取卡点代码', () => {
+test('extractFineBottlenecks 展开粗卡点的 candidateBottlenecks', () => {
   const profile = {
     pendingBottlenecks: [
-      { lpCode: 'LP-001', lpName: '计算错误' },
-      { lpCode: 'LP-008', lpName: '审题理解', candidateBottlenecks: [{ bottleneckId: 'BN-FINE-1' }] },
+      { lpCode: 'LP-FD', lpName: '分数小数', severity: 'high', candidateBottlenecks: [
+        { bottleneckId: 'BN-FD-1', title: '通分错误', evidenceStrength: 'high' },
+        { bottleneckId: 'BN-FD-2', title: '小数点错误', evidenceStrength: 'medium' },
+      ]},
+      { lpCode: 'LP-RP', lpName: '比例', severity: 'medium', candidateBottlenecks: [
+        { bottleneckId: 'BN-RP-1', title: '交叉相乘', evidenceStrength: 'high' },
+      ]},
+    ],
+  }
+  const fine = extractFineBottlenecks(profile)
+  assert.equal(fine.length, 3)
+  // 按 severity 排序：LP-FD(high) 的两个 BN 在前，LP-RP(medium) 在后
+  assert.deepEqual(fine.map(f => f.bottleneckId), ['BN-FD-1', 'BN-FD-2', 'BN-RP-1'])
+  assert.equal(fine[0].severity, 'high')  // high 排前面
+})
+
+test('extractFineBottlenecks 去重', () => {
+  const profile = {
+    pendingBottlenecks: [
+      { lpCode: 'LP-FD', lpName: '分数', severity: 'high', candidateBottlenecks: [
+        { bottleneckId: 'BN-1', title: '卡点1' },
+      ]},
+      { lpCode: 'LP-RP', lpName: '比例', severity: 'medium', candidateBottlenecks: [
+        { bottleneckId: 'BN-1', title: '卡点1' }, // 重复
+        { bottleneckId: 'BN-2', title: '卡点2' },
+      ]},
+    ],
+  }
+  const fine = extractFineBottlenecks(profile)
+  assert.equal(fine.length, 2) // BN-1 去重
+})
+
+test('extractFineBottlenecks 空 profile 返回空数组', () => {
+  assert.deepEqual(extractFineBottlenecks({}), [])
+  assert.deepEqual(extractFineBottlenecks({ pendingBottlenecks: [] }), [])
+  assert.deepEqual(extractFineBottlenecks(null), [])
+})
+
+test('extractFineBottlenecks 限制最多10个', () => {
+  const profile = {
+    pendingBottlenecks: [{
+      lpCode: 'LP-FD', severity: 'high',
+      candidateBottlenecks: Array.from({ length: 15 }, (_, i) => ({ bottleneckId: `BN-${i}`, title: `卡点${i}` })),
+    }],
+  }
+  const fine = extractFineBottlenecks(profile)
+  assert.equal(fine.length, 10)
+})
+
+test('extractFineBottlenecks 无 candidateBottlenecks 时用粗卡点 fallback', () => {
+  const profile = {
+    pendingBottlenecks: [
+      { lpCode: 'LP-FD', lpName: '分数小数', severity: 'high' },
+    ],
+  }
+  const fine = extractFineBottlenecks(profile)
+  assert.equal(fine.length, 1)
+  assert.equal(fine[0].bottleneckId, 'LP-FD')
+  assert.equal(fine[0].coarse, true)
+})
+
+test('extractPendingTargets 返回 bottleneckId 数组', () => {
+  const profile = {
+    pendingBottlenecks: [
+      { lpCode: 'LP-FD', severity: 'high', candidateBottlenecks: [
+        { bottleneckId: 'BN-1', title: '卡点1' },
+      ]},
     ],
   }
   const targets = extractPendingTargets(profile)
-  assert.deepEqual(targets, ['LP-001', 'LP-008', 'BN-FINE-1'])
-})
-
-test('extractPendingTargets 去重', () => {
-  const profile = {
-    pendingBottlenecks: [
-      { lpCode: 'LP-001' },
-      { lpCode: 'LP-001' }, // 重复
-      { lpCode: 'LP-002', candidateBottlenecks: [{ bottleneckId: 'LP-001' }] }, // 重复
-    ],
-  }
-  const targets = extractPendingTargets(profile)
-  assert.deepEqual(targets, ['LP-001', 'LP-002'])
-})
-
-test('extractPendingTargets 空返回空数组', () => {
-  assert.deepEqual(extractPendingTargets({}), [])
-  assert.deepEqual(extractPendingTargets({ pendingBottlenecks: [] }), [])
-  assert.deepEqual(extractPendingTargets(null), [])
-})
-
-test('extractPendingTargets 限制最多8个', () => {
-  const profile = {
-    pendingBottlenecks: Array.from({ length: 12 }, (_, i) => ({ lpCode: `LP-${String(i + 1).padStart(3, '0')}` })),
-  }
-  const targets = extractPendingTargets(profile)
-  assert.equal(targets.length, 8)
+  assert.deepEqual(targets, ['BN-1'])
 })
 
 // ========== supersedeOldPapers 单元测试 ==========

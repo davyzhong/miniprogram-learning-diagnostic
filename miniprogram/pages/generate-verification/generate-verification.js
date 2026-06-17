@@ -3,12 +3,13 @@ const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
 const { buildBottleneckViews, profileBottlenecks } = require('../../utils/bottleneck-view')
 const { groupBottlenecksByHierarchy } = require('../../utils/math-bottleneck-hierarchy')
-const MAX_SELECTED_BOTTLENECKS = 60
+const MAX_SELECTED_BOTTLENECKS = 10
 const MATH_TARGETS_PER_TASK_PAGE = 3
 const CHINESE_TARGETS_PER_TASK_PAGE = 8
-const CORE_QUESTIONS_PER_BOTTLENECK = 3
-const EXTENSION_QUESTIONS_PER_BOTTLENECK = 2
+const CORE_QUESTIONS_PER_BOTTLENECK = 1
+const EXTENSION_QUESTIONS_PER_BOTTLENECK = 1
 const QUESTIONS_PER_BOTTLENECK = CORE_QUESTIONS_PER_BOTTLENECK + EXTENSION_QUESTIONS_PER_BOTTLENECK
+const MAX_TOTAL_QUESTIONS = 20
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
 const CHINESE_REVIEW_TYPE_LABELS = {
   character: '汉字',

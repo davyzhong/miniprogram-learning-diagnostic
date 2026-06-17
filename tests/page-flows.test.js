@@ -1403,9 +1403,9 @@ test('verification page selects all available bottlenecks by default', async () 
   await page.loadPendingBottlenecks()
   assert.equal(page.data.selectedCount, 2)
   assert.ok(page.data.bottlenecks.every(item => item.selected))
-  assert.equal(page.data.paperConfig.questionCount, 10)
+  assert.equal(page.data.paperConfig.questionCount, 4)
   assert.equal(page.data.paperConfig.pages, 1)
-  assert.equal(page.data.paperConfig.strategyText, '每个卡点 3 道核心题 + 2 道迁移题')
+  assert.equal(page.data.paperConfig.strategyText, '每个卡点 1 道核心题 + 1 道迁移题')
 })
 
 test('verification page focuses the workbench target code when provided', async () => {
@@ -1435,7 +1435,7 @@ test('verification page focuses the workbench target code when provided', async 
   assert.equal(page.data.selectedCount, 1)
   assert.equal(page.data.selectedSummary, '审题理解')
   assert.equal(page.data.paperConfig.scopeText, '审题理解')
-  assert.equal(page.data.paperConfig.questionCount, 5)
+  assert.equal(page.data.paperConfig.questionCount, 2)
 })
 
 test('verification page uses current bottlenecks with shared priority sorting', async () => {
@@ -1592,7 +1592,7 @@ test('verification page plans all report-selected fine math targets and sends fi
     'BN-FINE-6',
     'BN-FINE-7'
   ])
-  assert.equal(request.questionCount, 35)
+  assert.equal(request.questionCount, 14)
 })
 
 test('verification page uses Chinese concrete review items as selectable targets', async () => {
@@ -1676,7 +1676,7 @@ test('verification paper generation sends only selected bottlenecks and opens th
 
   await page.onGenerate()
   assert.deepEqual(JSON.parse(JSON.stringify(request.targets)), ['LP-001'])
-  assert.equal(request.questionCount, 5)
+  assert.equal(request.questionCount, 2)
   assert.equal(request.type, 'verification')
   assert.equal(request.preview, false)
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paperId=paper-1/)
