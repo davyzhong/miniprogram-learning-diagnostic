@@ -104,6 +104,11 @@ function normalizeTarget(target, index) {
       targetId
     ),
     legacyLpCode,
+    nodeId: firstNonEmpty(source.nodeId, source.knowledgeNodeId),
+    categoryId: firstNonEmpty(source.categoryId),
+    categoryTitle: firstNonEmpty(source.categoryTitle),
+    familyId: firstNonEmpty(source.familyId),
+    familyTitle: firstNonEmpty(source.familyTitle),
     weight: normalizeWeight(source.weight ?? source.priorityScore ?? source.evidenceStrength),
     source
   }
@@ -128,8 +133,10 @@ function buildVerificationPack({
   paperCode = '',
   paperDate,
   targets = [],
+  targetPlan = {},
   options = {}
 } = {}) {
+  const safeTargetPlan = targetPlan && typeof targetPlan === 'object' ? targetPlan : {}
   const normalizedTargets = targets
     .map((target, index) => ({
       ...normalizeTarget(target, index),
@@ -145,20 +152,56 @@ function buildVerificationPack({
   const sequence = sequenceFromPaperCode(paperCode)
   const subjectCode = subjectCodeOf(subject)
   const targetsPerPage = targetsPerPageFor(subject, normalizedTargets, options)
-  const pages = []
+  const targetById = new Map(normalizedTargets.map(target => [target.targetId, target]))
+  let pages = []
 
-  for (let start = 0; start < normalizedTargets.length; start += targetsPerPage) {
-    const pageTargets = normalizedTargets.slice(start, start + targetsPerPage)
-    const pageIndex = pages.length + 1
-    const pageCode = pageCodeOf({ subject, paperDate, sequence, pageIndex })
-    pages.push({
-      pageIndex,
-      pageCode,
-      status: 'pending',
-      targetIds: pageTargets.map(target => target.targetId),
-      targets: pageTargets,
-      questionIds: []
-    })
+  if (Array.isArray(safeTargetPlan.pages) && safeTargetPlan.pages.length > 0) {
+    pages = safeTargetPlan.pages
+      .map((planPage = {}, index) => {
+        const targetIds = (planPage.targetIds || [])
+          .map(value => String(value || '').trim())
+          .filter(Boolean)
+        const pageTargets = targetIds.map(id => targetById.get(id)).filter(Boolean)
+        const pageIndex = index + 1
+        const pageCode = firstNonEmpty(
+          planPage.pageCode,
+          pageCodeOf({ subject, paperDate, sequence, pageIndex })
+        )
+        return {
+          pageIndex,
+          pageCode,
+          status: 'pending',
+          pageType: firstNonEmpty(planPage.pageType, pageTargets.length > 1 ? 'same_family' : 'micro_confirm'),
+          categoryId: firstNonEmpty(planPage.categoryId),
+          categoryTitle: firstNonEmpty(planPage.categoryTitle),
+          familyIds: Array.isArray(planPage.familyIds) ? planPage.familyIds.filter(Boolean) : [],
+          familyTitle: firstNonEmpty(planPage.familyTitle),
+          nodeIds: Array.isArray(planPage.nodeIds) ? planPage.nodeIds.filter(Boolean) : [],
+          targetSummary: firstNonEmpty(planPage.targetSummary, (planPage.targetNames || []).join('、')),
+          targetNames: Array.isArray(planPage.targetNames) ? planPage.targetNames.filter(Boolean) : pageTargets.map(target => target.displayName),
+          targetIds,
+          targets: pageTargets,
+          questionIds: []
+        }
+      })
+      .filter(page => page.targetIds.length > 0)
+  }
+
+  if (pages.length === 0) {
+    for (let start = 0; start < normalizedTargets.length; start += targetsPerPage) {
+      const pageTargets = normalizedTargets.slice(start, start + targetsPerPage)
+      const pageIndex = pages.length + 1
+      const pageCode = pageCodeOf({ subject, paperDate, sequence, pageIndex })
+      pages.push({
+        pageIndex,
+        pageCode,
+        status: 'pending',
+        pageType: pageTargets.length > 1 ? 'mixed_review' : 'micro_confirm',
+        targetIds: pageTargets.map(target => target.targetId),
+        targets: pageTargets,
+        questionIds: []
+      })
+    }
   }
 
   return {
@@ -172,6 +215,7 @@ function buildVerificationPack({
     totalTargets: normalizedTargets.length,
     targetsPerPage,
     totalStudentPages: pages.length,
+    scheduleStrategy: firstNonEmpty(safeTargetPlan.strategy, options.scheduleStrategy, pages.length > 0 ? 'weight_desc_paginated' : ''),
     targets: normalizedTargets,
     pages
   }

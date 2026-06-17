@@ -53,6 +53,49 @@ test('buildVerificationPack uses larger concrete-review pages for chinese item t
   assert.equal(pack.pages[1].pageCode, 'CHI-V-20260616-02-P02')
 })
 
+test('buildVerificationPack preserves hierarchy scheduled pages', () => {
+  const pack = buildVerificationPack({
+    subject: 'math',
+    paperCode: 'MATH-20260617-01',
+    paperDate: '2026-06-17',
+    targets: [
+      {
+        targetId: 'BN-DEC-MUL-POINT-COUNT',
+        displayName: '小数乘法中积的小数位数判断错误',
+        nodeId: 'MATH-NUM-DEC-MUL-POINT',
+        weight: 90
+      },
+      {
+        targetId: 'BN-DEC-MUL-POINT-ESTIMATE',
+        displayName: '小数乘法后缺少数量级估算检查',
+        nodeId: 'MATH-NUM-DEC-MUL-POINT',
+        weight: 80
+      }
+    ],
+    targetPlan: {
+      strategy: 'hierarchy_pages_v1',
+      pages: [{
+        pageType: 'same_family',
+        categoryId: 'MATH-CAT-CALC-RULE',
+        categoryTitle: '计算规则',
+        familyIds: ['MATH-FAM-DECIMAL-POINT'],
+        familyTitle: '小数点定位与移动',
+        nodeIds: ['MATH-NUM-DEC-MUL-POINT'],
+        targetIds: ['BN-DEC-MUL-POINT-COUNT', 'BN-DEC-MUL-POINT-ESTIMATE'],
+        targetNames: ['小数乘法中积的小数位数判断错误', '小数乘法后缺少数量级估算检查']
+      }]
+    }
+  })
+
+  assert.equal(pack.scheduleStrategy, 'hierarchy_pages_v1')
+  assert.equal(pack.pages.length, 1)
+  assert.equal(pack.pages[0].pageType, 'same_family')
+  assert.equal(pack.pages[0].categoryTitle, '计算规则')
+  assert.deepEqual(pack.pages[0].familyIds, ['MATH-FAM-DECIMAL-POINT'])
+  assert.deepEqual(pack.pages[0].nodeIds, ['MATH-NUM-DEC-MUL-POINT'])
+  assert.deepEqual(pack.pages[0].targetIds, ['BN-DEC-MUL-POINT-COUNT', 'BN-DEC-MUL-POINT-ESTIMATE'])
+})
+
 test('decorateQuestionsWithPack adds stable page and target metadata to generated questions', () => {
   const pack = buildVerificationPack({
     subject: 'math',
