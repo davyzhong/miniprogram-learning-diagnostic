@@ -20,6 +20,7 @@ Page({
   async onLoad(options = {}) {
     const studentId = options.studentId || ''
     this.setData({ studentId })
+    this._cloud = cloud
     await this.loadProfile()
   },
 

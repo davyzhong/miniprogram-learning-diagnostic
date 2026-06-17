@@ -92,6 +92,58 @@ const sharedNavigation = {
     })
   },
 
+  /**
+   * 验证卷状态分流导航（自动生成场景）
+   * 查 paper 状态：ready→预览、generating→提示、failed/none→生成页
+   * 若 getActiveVerificationPaper 不可用（旧环境），降级到直接跳生成页。
+   */
+  async navigateToVerificationByStatus(studentId, subject, subjectName, studentName, targetCode = '') {
+    if (!studentId) {
+      wx.showToast({ title: '缺少孩子档案信息', icon: 'none' })
+      return
+    }
+    const studentNameEncoded = encodeURIComponent(studentName || '')
+    const subjectNameEncoded = encodeURIComponent(subjectName || getSubjectName(subject, '数学'))
+    const targetParam = targetCode ? `&targetCode=${encodeURIComponent(targetCode)}` : ''
+
+    // 优先用页面挂载的 cloud（测试时可注入 mock），否则延迟 require
+    let cloudModule = this._cloud || null
+    if (!cloudModule) {
+      try { cloudModule = require('./cloud') } catch (e) { cloudModule = null }
+    }
+    if (!cloudModule || typeof cloudModule.getActiveVerificationPaper !== 'function') {
+      wx.navigateTo({
+        url: `/pages/generate-verification/generate-verification?studentId=${studentId}&subject=${subject}&subjectName=${subjectNameEncoded}&studentName=${studentNameEncoded}${targetParam}`
+      })
+      return
+    }
+
+    wx.showLoading({ title: '查看验证卷…' })
+    let status = 'none'
+    let paperId = ''
+    try {
+      const result = await cloudModule.getActiveVerificationPaper(studentId, subject)
+      status = result.status || 'none'
+      paperId = result.paper && result.paper._id ? result.paper._id : ''
+    } catch (e) {
+      status = 'none'
+    }
+    wx.hideLoading()
+
+    if (status === 'ready' && paperId) {
+      wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${paperId}` })
+      return
+    }
+    if (status === 'generating') {
+      wx.showToast({ title: '验证卷生成中，请稍候', icon: 'none', duration: 2500 })
+      return
+    }
+    // failed 或 none：跳生成页（手动生成/重试）
+    wx.navigateTo({
+      url: `/pages/generate-verification/generate-verification?studentId=${studentId}&subject=${subject}&subjectName=${subjectNameEncoded}&studentName=${studentNameEncoded}${targetParam}`
+    })
+  },
+
   onBottleneckTap(e) {
     const { subject = 'math', lpCode = '' } = e.currentTarget.dataset
     const student = getStudent(this)
@@ -113,9 +165,7 @@ const sharedNavigation = {
     const student = getStudent(this)
     const studentId = getStudentId(this)
     const subjectName = getSubjectName(subject, '数学')
-    wx.navigateTo({
-      url: `/pages/generate-verification/generate-verification?studentId=${student._id || studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}&targetCode=${encodeURIComponent(lpCode)}`
-    })
+    this.navigateToVerificationByStatus(student._id || studentId, subject, subjectName, student.name || '', lpCode)
   },
 
   onRecordTap(e) {
@@ -149,9 +199,7 @@ const sharedNavigation = {
       return
     }
     if (home.nextAction && home.nextAction.primaryText === '生成纸面验证卷') {
-      wx.navigateTo({
-        url: `/pages/generate-verification/generate-verification?studentId=${student._id || studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}`
-      })
+      this.navigateToVerificationByStatus(student._id || studentId, subject, subjectName, student.name || '')
       return
     }
     wx.navigateTo({

@@ -254,15 +254,14 @@ Page({
     })
   },
 
-  // ========== 生成纸面验证卷 ==========
-  onGenerateVerification() {
+  // ========== 生成/查看纸面验证卷（自动生成状态分流） ==========
+  async onGenerateVerification() {
     if (!this.data.canGeneratePaper) return
     var report = this._fullReport || this.data.report
     var studentId = report.studentId
     var subject = report.subject
     var subjectName = getSubjectName(subject)
 
-    // 获取卡点列表，传给验证试卷生成页
     var bottleneckCodes = (report.bottlenecks || [])
       .map(function(b) { return b.lpCode })
     var chineseReviewItemIds = report.subject === 'chinese'
@@ -270,6 +269,28 @@ Page({
       : []
     var bottlenecks = bottleneckCodes.concat(chineseReviewItemIds).join(',')
 
+    // 状态分流：查是否有自动生成的验证卷
+    wx.showLoading({ title: '查看验证卷…' })
+    var status = 'none'
+    var paperId = ''
+    try {
+      var result = await cloud.getActiveVerificationPaper(studentId, subject)
+      status = result.status || 'none'
+      paperId = result.paper && result.paper._id ? result.paper._id : ''
+    } catch (e) {
+      status = 'none'
+    }
+    wx.hideLoading()
+
+    if (status === 'ready' && paperId) {
+      wx.navigateTo({ url: '/pages/paper-preview/paper-preview?paperId=' + paperId })
+      return
+    }
+    if (status === 'generating') {
+      wx.showToast({ title: '验证卷生成中，请稍候', icon: 'none', duration: 2500 })
+      return
+    }
+    // failed 或 none：跳生成页
     wx.navigateTo({
       url: '/pages/generate-verification/generate-verification?studentId=' + studentId + '&subject=' + subject + '&subjectName=' + encodeURIComponent(subjectName) + '&bottlenecks=' + encodeURIComponent(bottlenecks)
     })

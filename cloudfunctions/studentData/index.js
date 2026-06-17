@@ -14,6 +14,7 @@ const ACTIONS = new Set([
   'getLearningTimeline',
   'getReportDetail',
   'getPaperDetail',
+  'getActiveVerificationPaper',
   'cleanupStaleLearningRecords',
 ]);
 
@@ -631,6 +632,31 @@ async function getPaperDetail(openId, paperId) {
   });
 }
 
+async function getActiveVerificationPaper(openId, studentId, subject) {
+  if (!studentId) return failure('缺少 studentId');
+  const access = await getAccess(studentId, openId);
+  if (!access.allowed) return failure('无权访问该学生');
+
+  // 查最近 5 份验证卷，按优先级返回状态
+  const res = await db.collection('papers')
+    .where({ studentId, subject, type: 'verification' })
+    .orderBy('createdAt', 'desc')
+    .limit(5)
+    .get();
+  const papers = res.data || [];
+
+  const ready = papers.find(p => p.generationStatus === 'ready' || (!p.generationStatus && p.pdfFileId));
+  if (ready) return withAccess(access, { paper: ready, status: 'ready' });
+
+  const generating = papers.find(p => p.generationStatus === 'generating');
+  if (generating) return withAccess(access, { paper: generating, status: 'generating' });
+
+  const failed = papers.find(p => p.generationStatus === 'failed');
+  if (failed) return withAccess(access, { paper: failed, status: 'failed' });
+
+  return withAccess(access, { paper: null, status: 'none' });
+}
+
 exports.main = async (event = {}) => {
   const wxContext = cloud.getWXContext();
   const openId = wxContext.OPENID;
@@ -664,6 +690,9 @@ exports.main = async (event = {}) => {
     }
     if (action === 'getPaperDetail') {
       return getPaperDetail(openId, event.paperId);
+    }
+    if (action === 'getActiveVerificationPaper') {
+      return getActiveVerificationPaper(openId, event.studentId, event.subject);
     }
     if (action === 'cleanupStaleLearningRecords') {
       return cleanupStaleLearningRecords(openId, event.studentId, event.subject, event.dryRun === true);

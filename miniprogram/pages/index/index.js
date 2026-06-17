@@ -44,6 +44,7 @@ Page({
   ...sharedNavigation,
 
   onShow() {
+    this._cloud = cloud
     return this.loadStudents()
   },
 
