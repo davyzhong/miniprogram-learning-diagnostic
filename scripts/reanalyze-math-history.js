@@ -3,7 +3,8 @@ const crypto = require('node:crypto')
 
 const { rebuildProfileFromReports } = require('./backfill-math-learning-map')
 
-const REANALYSIS_VERSION = 'math-full-reanalysis-v2.1'
+const REANALYSIS_VERSION = 'math-full-reanalysis-v2.2-hierarchy'
+const LEARNING_MAP_VERSION = 'math-learning-map-v2.2-hierarchy'
 
 function parseArgs(argv) {
   const args = {
@@ -144,12 +145,17 @@ function buildReplacementReport(source = {}, options = {}) {
     updatedAt: now,
     reanalysis: {
       version: REANALYSIS_VERSION,
+      learningMapVersion: LEARNING_MAP_VERSION,
       batchId,
       sourceReportId: source._id,
       sourceReportCreatedAt: source.createdAt || '',
       startedAt: now,
       status: 'started',
-      replacementForLegacyReport: true
+      replacementForLegacyReport: true,
+      bottleneckHierarchy: {
+        enabled: true,
+        levels: ['category', 'family', 'fineBottleneck']
+      }
     },
     originalReportId: source._id
   }
@@ -410,6 +416,7 @@ if (require.main === module) {
 
 module.exports = {
   REANALYSIS_VERSION,
+  LEARNING_MAP_VERSION,
   imageFileIdsOf,
   isReanalysisCandidate,
   selectReanalysisCandidates,

@@ -12,6 +12,10 @@ const {
   activeMathReportsForProfile
 } = require('../scripts/reanalyze-math-history')
 
+const {
+  enrichReports
+} = require('../scripts/backfill-math-learning-map')
+
 test('collects image ids from both imageFileIds and imageFiles', () => {
   assert.deepEqual(imageFileIdsOf({
     imageFileIds: ['cloud://a', 'cloud://b'],
@@ -60,6 +64,9 @@ test('builds replacement reports that keep image evidence but reset legacy analy
   assert.deepEqual(replacement.bottlenecks, [])
   assert.deepEqual(replacement.errorDetails, [])
   assert.equal(replacement.reanalysis.sourceReportId, 'old-report')
+  assert.equal(replacement.reanalysis.version, 'math-full-reanalysis-v2.2-hierarchy')
+  assert.equal(replacement.reanalysis.learningMapVersion, 'math-learning-map-v2.2-hierarchy')
+  assert.equal(replacement.reanalysis.bottleneckHierarchy.enabled, true)
   assert.equal(replacement.originalReportId, 'old-report')
 })
 
@@ -101,4 +108,34 @@ test('finalize pairs only completed replacements and rebuilds profile from activ
 
   const active = activeMathReportsForProfile(reports, new Set(['old-1']))
   assert.deepEqual(active.map(item => item._id), ['old-2', 'new-1'])
+})
+
+test('math learning-map backfill reports hierarchy coverage in dry-run output', () => {
+  const result = enrichReports([{
+    _id: 'legacy-decimal',
+    studentId: 'student-1',
+    subject: 'math',
+    status: 'completed',
+    bottlenecks: [{
+      lpCode: 'LP-003',
+      lpName: '百分数与小数互化不熟',
+      severity: 'high',
+      rootCause: '小数乘法中小数点定位不稳定'
+    }],
+    errorDetails: [{
+      lpCode: 'LP-003',
+      questionContent: '8.5 × 3.16',
+      studentAnswer: '2.186',
+      correctAnswer: '26.86'
+    }]
+  }], { now: new Date('2026-06-17T00:00:00.000Z') })
+
+  assert.equal(result.stats.scannedCount, 1)
+  assert.equal(result.stats.changedCount, 1)
+  assert.equal(result.stats.version, 'math-learning-map-v2.2-hierarchy')
+  assert.ok(result.stats.hierarchyBackfilledCount >= 1)
+  assert.equal(result.stats.missingHierarchyCount, 0)
+  assert.equal(result.reportPreview.bottlenecks[0].candidateBottlenecks[0].categoryId, 'MATH-CAT-CALC-RULE')
+  assert.equal(result.reportPreview.bottlenecks[0].candidateBottlenecks[0].categoryTitle, '计算规则')
+  assert.equal(result.reportPreview.bottlenecks[0].candidateBottlenecks[0].familyTitle, '小数点定位与移动')
 })

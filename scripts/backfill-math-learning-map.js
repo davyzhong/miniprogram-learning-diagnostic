@@ -64,10 +64,40 @@ function summaryFor(enriched) {
     lpCode: item.lpCode,
     lpName: item.lpName,
     nodeIds: item.nodeIds || [],
+    candidateBottlenecks: (item.candidateBottlenecks || []).map(candidate => ({
+      bottleneckId: candidate.bottleneckId,
+      title: candidate.title,
+      categoryId: candidate.categoryId || '',
+      categoryTitle: candidate.categoryTitle || '',
+      familyId: candidate.familyId || '',
+      familyTitle: candidate.familyTitle || ''
+    })),
     candidateBottleneckIds: (item.candidateBottlenecks || []).map(candidate => candidate.bottleneckId),
     recommendedResourceIds: item.recommendedResourceIds || [],
     evidenceStrength: item.evidenceStrength || ''
   }))
+}
+
+function hasHierarchyCandidate(bottleneck = {}) {
+  return (bottleneck.candidateBottlenecks || []).some(candidate => (
+    candidate
+    && candidate.bottleneckId
+    && candidate.categoryId
+    && candidate.categoryTitle
+    && candidate.familyId
+    && candidate.familyTitle
+  ))
+}
+
+function countHierarchyBackfilled(bottlenecks = []) {
+  return bottlenecks.filter(hasHierarchyCandidate).length
+}
+
+function countMissingHierarchy(bottlenecks = []) {
+  return bottlenecks.filter(item => (
+    ((item.candidateBottlenecks || []).length > 0 || (item.nodeIds || []).length > 0)
+    && !hasHierarchyCandidate(item)
+  )).length
 }
 
 function enrichReports(reports = [], options = {}) {
@@ -76,6 +106,9 @@ function enrichReports(reports = [], options = {}) {
   const previews = []
   let changedCount = 0
   let enrichedBottleneckCount = 0
+  let hierarchyBackfilledCount = 0
+  let missingHierarchyCount = 0
+  let reportPreview = null
 
   for (const report of reports) {
     if (report.subject && report.subject !== 'math') {
@@ -86,6 +119,11 @@ function enrichReports(reports = [], options = {}) {
     enrichedReports.push(result.report)
     if (result.changed) changedCount += 1
     enrichedBottleneckCount += result.enrichedCount
+    hierarchyBackfilledCount += countHierarchyBackfilled(result.report.bottlenecks || [])
+    missingHierarchyCount += countMissingHierarchy(result.report.bottlenecks || [])
+    if (!reportPreview && countHierarchyBackfilled(result.report.bottlenecks || []) > 0) {
+      reportPreview = result.report
+    }
     if (previews.length < 5 && result.enrichedCount > 0) {
       previews.push({
         reportId: report._id || report.id || '',
@@ -97,12 +135,17 @@ function enrichReports(reports = [], options = {}) {
   return {
     reports: enrichedReports,
     stats: {
+      scannedCount: reports.length,
+      changedCount,
       scannedReports: reports.length,
       changedReports: changedCount,
       enrichedBottlenecks: enrichedBottleneckCount,
+      hierarchyBackfilledCount,
+      missingHierarchyCount,
       version: BACKFILL_VERSION
     },
-    previews
+    previews,
+    reportPreview
   }
 }
 
@@ -288,6 +331,7 @@ async function runCloudMode(args) {
     updatedReports,
     updatedProfiles: profileResult.updated,
     reportPreviews: enriched.previews,
+    reportPreview: enriched.reportPreview,
     profilePreviews: profileResult.previews
   }
 }
@@ -306,6 +350,7 @@ async function main() {
       mode: 'local',
       ...enriched.stats,
       previews: enriched.previews,
+      reportPreview: enriched.reportPreview,
       reports: enriched.reports
     }
     if (args.output) writeLocalOutput(args.output, payload)
@@ -327,5 +372,7 @@ if (require.main === module) {
 module.exports = {
   enrichReports,
   rebuildProfileFromReports,
-  pendingAndImprovedFrom
+  pendingAndImprovedFrom,
+  countHierarchyBackfilled,
+  countMissingHierarchy
 }
