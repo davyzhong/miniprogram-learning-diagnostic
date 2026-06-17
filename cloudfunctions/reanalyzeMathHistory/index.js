@@ -4,7 +4,8 @@ cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const VERSION = 'math-full-reanalysis-v2.1'
+const VERSION = 'math-full-reanalysis-v2.2-hierarchy'
+const LEARNING_MAP_VERSION = 'math-learning-map-v2.2-hierarchy'
 const SUBJECT = 'math'
 
 function now() {
@@ -100,12 +101,17 @@ function buildReplacementReport(source = {}, batchId) {
     originalReportId: source._id,
     reanalysis: {
       version: VERSION,
+      learningMapVersion: LEARNING_MAP_VERSION,
       batchId,
       sourceReportId: source._id,
       sourceReportCreatedAt: source.createdAt || '',
       startedAt,
       status: 'created',
-      replacementForLegacyReport: true
+      replacementForLegacyReport: true,
+      bottleneckHierarchy: {
+        enabled: true,
+        levels: ['category', 'family', 'fineBottleneck']
+      }
     }
   }
   Object.keys(replacement).forEach(key => {
@@ -230,13 +236,18 @@ function buildAggregateReport(studentId, reports = [], batchId) {
     updatedAt: createdAt,
     reanalysis: {
       version: VERSION,
+      learningMapVersion: LEARNING_MAP_VERSION,
       batchId,
       sourceReportIds: reports.map(report => report._id),
       sourceReportCount: reports.length,
       imageCount: imageFiles.length,
       startedAt: createdAt,
       status: 'aggregate_created',
-      aggregateCurrentSnapshot: true
+      aggregateCurrentSnapshot: true,
+      bottleneckHierarchy: {
+        enabled: true,
+        levels: ['category', 'family', 'fineBottleneck']
+      }
     }
   }
 }
@@ -417,6 +428,7 @@ async function status(event = {}) {
     analyzedImageCount: (report.imageFiles || []).filter(file => file.analysisStatus === 'completed').length,
     failedImageCount: (report.failedImageFiles || []).length,
     summary: report.summary || report.error || '',
+    learningMapBackfill: report.learningMapBackfill || null,
     reanalysis: report.reanalysis || null,
     task: task ? {
       taskId: task._id,
