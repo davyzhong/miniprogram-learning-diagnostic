@@ -70,6 +70,9 @@ Page({
     // 预计算字段（WXML 不支持复杂表达式）
     bottleneckCount: 0,
     hasBottlenecks: false,
+    hasBottleneckGroups: false,
+    bottleneckGroups: [],
+    showFlatBottleneckList: false,
     bottleneckList: [],       // 带 barWidth、severityText 的列表
     hasErrorDetails: false,
     errorDetailList: [],      // 带 expanded、displayIndex 的列表
@@ -317,6 +320,10 @@ Page({
       return
     }
     wx.showToast({ title: '当前环境不支持复制链接', icon: 'none' })
+  },
+
+  onCopyResourceUrl(e) {
+    this.onLearningResourceTap(e)
   },
 
   onReportExplanationAction() {

@@ -74,7 +74,34 @@
       </view>
     </view>
 
-    <view class="card" wx:if="{{hasBottlenecks}}">
+    <view class="card bottleneck-group-card" wx:if="{{hasBottleneckGroups}}">
+      <view class="section-heading"><view class="heading-icon">⌁</view><text>发现的学习卡点</text></view>
+      <view class="bottleneck-group" wx:for="{{bottleneckGroups}}" wx:for-item="group" wx:key="categoryId">
+        <view class="bottleneck-group-head">
+          <text class="bottleneck-group-title">{{group.title}}</text>
+          <text class="bottleneck-group-count">{{group.summaryText}}</text>
+        </view>
+        <view class="bottleneck-family" wx:for="{{group.families}}" wx:for-item="family" wx:key="familyId">
+          <view class="bottleneck-family-head">
+            <text class="bottleneck-family-title">{{family.title}}</text>
+            <text class="bottleneck-family-count">{{family.summaryText}}</text>
+          </view>
+          <view class="bottleneck-mini-item" wx:for="{{family.items}}" wx:for-item="item" wx:key="viewId" bindtap="onTraceableUrlTap" data-url="{{item.detailUrl}}">
+            <view class="status-dot status-dot-{{item.statusClass}}"></view>
+            <view class="bottleneck-mini-copy">
+              <view class="bottleneck-mini-title-row">
+                <text class="bottleneck-mini-title">{{item.displayName}}</text>
+                <text class="status-label status-label-{{item.statusClass}}">{{item.statusText}}</text>
+              </view>
+              <text class="bottleneck-mini-meta">{{item.evidenceText || item.metaText}}</text>
+              <text class="feedback-link" catchtap="onOpenFeedback" data-target-type="bottleneck" data-target-id="{{item.bottleneckId || item.lpCode}}" data-type="wrong_bottleneck">反馈这个卡点</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="card" wx:if="{{showFlatBottleneckList}}">
       <view class="section-heading"><view class="heading-icon">⌁</view><text>发现的学习卡点</text></view>
       <view class="bottleneck-item" wx:for="{{bottleneckList}}" wx:key="viewId" bindtap="onTraceableUrlTap" data-url="{{item.detailUrl}}">
         <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
