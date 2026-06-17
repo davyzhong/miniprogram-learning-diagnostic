@@ -187,13 +187,17 @@ Page({
   },
 
   async uploadDictationPhotos(tempFiles = []) {
-    this.setData({ uploading: true, error: '' })
+    this.setData({ uploading: true, error: '', uploadProgress: '' })
     try {
       const batchId = `english-dictation-${this.data.sessionId}`
       const photoFileIds = []
-      for (const file of tempFiles) {
+      const total = tempFiles.length
+      for (let i = 0; i < tempFiles.length; i++) {
+        const file = tempFiles[i]
         const filePath = file.tempFilePath || file.path || ''
         if (!filePath) continue
+        // 进度文案：让用户知道上传在进行，避免长时间无反馈
+        this.setData({ uploadProgress: `正在上传 ${i + 1}/${total}` })
         const fileId = await cloud.uploadPhoto(filePath, this.data.studentId, batchId)
         if (fileId) photoFileIds.push(fileId)
       }
@@ -218,11 +222,12 @@ Page({
           resultSummary: summarizeDictationResults(analysis.results || [])
         })
       }
-      this.setData({ uploading: false })
+      this.setData({ uploading: false, uploadProgress: '' })
       wx.showToast({ title: '已上传听写纸', icon: 'success' })
     } catch (error) {
       this.setData({
         uploading: false,
+        uploadProgress: '',
         error: error && error.message ? error.message : '上传失败，请重试'
       })
     }

@@ -44,6 +44,7 @@
       <text class="upload-title">完成后上传听写纸</text>
       <text class="upload-desc">上传后会进行 AI 批改，并把逐词拼写结果写入本次听写记录。</text>
       <button class="primary-btn" loading="{{uploading}}" bindtap="onChoosePhotoTap">拍照上传</button>
+      <text class="upload-progress" wx:if="{{uploadProgress}}">{{uploadProgress}}</text>
       <text class="upload-status" wx:if="{{uploadedPhotoCount > 0}}">
         <block wx:if="{{analysisStatus === 'completed'}}">已批改</block>
         <block wx:elif="{{analysisStatus}}">批改中</block>

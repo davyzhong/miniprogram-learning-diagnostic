@@ -58,6 +58,7 @@
       </text>
       <text class="result-desc">{{lastResult.reason}}</text>
       <text class="answer-line">目标单词：{{lastAnsweredItem ? lastAnsweredItem.word : ''}}</text>
+      <text class="result-hint" wx:if="{{lastResult.shouldRepeat}}">本题稍后会在本轮末尾再次出现</text>
     </view>
   </view>
 </view>
