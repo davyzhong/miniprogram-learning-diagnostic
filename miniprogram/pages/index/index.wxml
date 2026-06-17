@@ -99,7 +99,13 @@
     </view>
 
     <block wx:if="{{homeMode === 'single-profile'}}">
-    <view class="hero-card">
+    <view
+      class="hero-card"
+      bindtap="onStudentTap"
+      data-id="{{home.studentId}}"
+      data-name="{{home.studentName}}"
+      data-grade="{{home.gradeText}}"
+    >
       <image class="hero-image" src="/assets/images/math-diagnostic-guide.jpg" mode="aspectFill"></image>
       <view class="hero-copy">
         <view class="student-line">
@@ -108,6 +114,7 @@
             <text class="student-name">{{home.studentName}}</text>
             <text class="student-meta">{{home.gradeText}}<text wx:if="{{home.gradeText}}"> · </text>最近更新：{{home.recentUpdateText}}</text>
           </view>
+          <text class="hero-action">查看档案 ›</text>
         </view>
         <text class="section-kicker">当前综合摘要</text>
         <text class="hero-title">{{home.headline}}</text>

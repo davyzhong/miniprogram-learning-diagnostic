@@ -351,6 +351,15 @@
   min-width: 0;
 }
 
+.hero-action {
+  margin-left: auto;
+  color: #2563eb;
+  font-size: 22rpx;
+  font-weight: 800;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .student-name {
   display: block;
   color: #173f6b;
