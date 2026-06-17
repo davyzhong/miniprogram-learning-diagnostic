@@ -5,7 +5,7 @@ const {
   getLearningResourceAccess,
   canReadLearning,
   canOperateLearning
-} = require('../_shared/access')
+} = require('./_shared/access')
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()

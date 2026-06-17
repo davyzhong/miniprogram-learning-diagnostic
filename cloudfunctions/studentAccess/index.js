@@ -1,6 +1,6 @@
 const cloud = require('wx-server-sdk');
 const crypto = require('node:crypto');
-const { permissionsForRole, canManageFamily } = require('../_shared/access');
+const { permissionsForRole, canManageFamily } = require('./_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
