@@ -69,10 +69,20 @@ async function generatePack(event, openId) {
   if (subject !== 'math') throw new Error('第一版学习任务包仅支持数学')
   await assertStudentOperate(studentId, openId)
 
+  // 安全校验：如果传了 sourceReportId，必须确认该报告确实属于当前 studentId，
+  // 防止伪造任务包与报告的血缘关联
+  const sourceReportId = cleanText(event.sourceReportId, 80)
+  if (sourceReportId) {
+    const reportRes = await db.collection('reports').doc(sourceReportId).get()
+    const sourceReport = reportRes.data
+    if (!sourceReport) throw new Error('关联的分析报告不存在')
+    if (sourceReport.studentId !== studentId) throw new Error('关联报告归属与当前学生不匹配')
+  }
+
   const draft = buildResourcePackDraft({
     studentId,
     subject,
-    sourceReportId: cleanText(event.sourceReportId, 80),
+    sourceReportId,
     target: event.target || {},
     resources: event.resources || []
   })
