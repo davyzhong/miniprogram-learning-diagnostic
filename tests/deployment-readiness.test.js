@@ -31,7 +31,8 @@ const REQUIRED_CLOUD_FUNCTIONS = [
   'studentData',
   'studentAccess',
   'reportFeedback',
-  'englishVocabulary'
+  'englishVocabulary',
+  'learningResource'
 ]
 
 test('deployable cloud functions have required manifests and timeout configs', () => {
