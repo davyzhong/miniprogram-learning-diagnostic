@@ -148,7 +148,7 @@ const sharedNavigation = {
       this.onViewAllRecords()
       return
     }
-    if (home.nextAction && home.nextAction.primaryText === '生成验证试卷') {
+    if (home.nextAction && home.nextAction.primaryText === '生成纸面验证卷') {
       wx.navigateTo({
         url: `/pages/generate-verification/generate-verification?studentId=${student._id || studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}`
       })

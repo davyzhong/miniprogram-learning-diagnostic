@@ -205,7 +205,7 @@
       </view>
     </view>
 
-    <view class="primary-action" wx:if="{{showNextStep && canGeneratePaper}}" bindtap="onGenerateVerification"><text>＋</text><text>生成验证试卷</text></view>
+    <view class="primary-action" wx:if="{{showNextStep && canGeneratePaper}}" bindtap="onGenerateVerification"><text>＋</text><text>生成纸面验证卷</text></view>
     <view class="bottom-actions">
       <button class="btn-secondary action-btn" bindtap="onShare">分享</button>
       <button class="btn-secondary action-btn" bindtap="onDownloadPDF" disabled="{{generatingPdf}}">{{generatingPdf ? '生成中...' : '下载 PDF'}}</button>

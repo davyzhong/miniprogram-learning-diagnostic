@@ -134,7 +134,7 @@ test('learning profile home summarizes a math-only diagnosis', () => {
   assert.equal(view.recentRecords[0].title, '数学诊断报告')
   assert.equal(view.recentRecords[0].summary, '今天 · 发现 2 条学习观察')
   assert.equal(view.recentRecords[0].metaText, '关注 计算基础、审题理解 · 诊断结果')
-  assert.equal(view.nextAction.primaryText, '生成验证试卷')
+  assert.equal(view.nextAction.primaryText, '生成纸面验证卷')
   assert.deepEqual(view.subjects.map(item => [item.name, item.statusText]), [
     ['数学', '已有观察'],
     ['语文', '待采样'],
@@ -245,7 +245,7 @@ test('learning profile home surfaces priority bottlenecks below the primary repo
 
   assert.equal(view.priorityBottlenecks.length, 2)
   assert.equal(view.priorityBottlenecks[0].displayName, '计算基础')
-  assert.equal(view.priorityBottlenecks[0].actionText, '生成验证卷')
+  assert.equal(view.priorityBottlenecks[0].actionText, '生成纸面验证卷')
   assert.equal(view.priorityBottlenecks[0].subjectName, '数学')
   assert.equal(view.bottleneckStats.activeCount, 1)
   assert.equal(view.bottleneckStats.improvedCount, 1)

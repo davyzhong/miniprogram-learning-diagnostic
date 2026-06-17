@@ -323,7 +323,7 @@ test('diagnosis report builds parent-facing explanation with evidence uncertaint
   assert.match(view.explanationEvidence, /2 个学习卡点/)
   assert.match(view.explanationUncertainty, /样本不足/)
   assert.match(view.explanationUncertainty, /部分照片较模糊/)
-  assert.equal(view.explanationActionText, '生成验证试卷')
+  assert.equal(view.explanationActionText, '生成纸面验证卷')
   assert.equal(view.explanationActionType, 'generate-verification')
 })
 

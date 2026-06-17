@@ -184,7 +184,7 @@ function buildDiagnosisExplanation(report, context = {}) {
       : (hasChineseErrorItems
         ? '语文记忆型错项已单独列出，验证卷会优先复测这些字词、诗句或积累项。'
         : '暂未发现明确学习卡点，建议继续积累样本。')),
-    explanationActionText: bottleneckCount > 0 || hasChineseErrorItems ? '生成验证试卷' : '继续拍照诊断',
+    explanationActionText: bottleneckCount > 0 || hasChineseErrorItems ? '生成纸面验证卷' : '继续拍照诊断',
     explanationActionType: bottleneckCount > 0 || hasChineseErrorItems ? 'generate-verification' : 'upload-diagnosis',
     explanationActionUrl: bottleneckCount > 0 || hasChineseErrorItems
       ? buildTraceableUrl({

@@ -28,7 +28,7 @@ const SUBJECT_FILTERS = [
 
 const GLOBAL_EMPTY_STATE = {
   emptyTitle: '暂无学习记录',
-  emptyDesc: '完成一次诊断或生成验证试卷后，记录会按天显示在这里。'
+  emptyDesc: '完成一次诊断、学习任务包或纸面验证卷后，记录会按天显示在这里。'
 }
 
 const FILTER_EMPTY_STATE = {
@@ -296,7 +296,7 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     displayLevel: 'main',
     icon: '卷',
     url: paperUrl,
-    title: `生成${subjectName}验证试卷`,
+    title: `生成${subjectName}纸面验证卷`,
     timeText: timeText(eventTime),
     createdAt: eventTime,
     summary: bottleneckText

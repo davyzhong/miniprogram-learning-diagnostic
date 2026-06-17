@@ -150,7 +150,7 @@ function buildNextAction(student, profiles, papers) {
   const activeSubject = SUBJECTS.find(key => activeBottlenecks(profiles.find(profile => profile.subject === key) || {}).length > 0) || 'math'
   return {
     title: '下一步',
-    summary: '上传试卷或生成验证卷，继续补充学习证据。',
+    summary: '上传试卷或生成纸面验证卷，继续补充学习证据。',
     actionText: '进入学科',
     url: buildTraceableUrl({
       type: 'subject-home',
