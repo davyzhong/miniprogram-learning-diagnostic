@@ -1,0 +1,42 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="loading">正在整理学习任务...</view>
+
+  <view wx:elif="{{errorText}}" class="empty">
+    <text>{{errorText}}</text>
+  </view>
+
+  <view wx:else>
+    <view class="hero">
+      <text class="kicker">学习任务包</text>
+      <text class="title">{{view.title}}</text>
+      <text class="meta">{{view.timeText}} · {{view.practiceCount}} 道练习</text>
+    </view>
+
+    <view class="block block-{{item.type}}" wx:for="{{view.blocks}}" wx:key="title">
+      <text class="block-title">{{item.title}}</text>
+      <text class="block-body" wx:if="{{item.body}}">{{item.body}}</text>
+
+      <view wx:if="{{item.steps}}" class="step-list">
+        <text class="step" wx:for="{{item.steps}}" wx:for-item="step" wx:key="*this">{{step}}</text>
+      </view>
+
+      <view wx:if="{{item.questions}}" class="practice-list">
+        <view class="practice-row" wx:for="{{item.questions}}" wx:for-item="question" wx:key="question">
+          <text class="practice-question">{{question.question}}</text>
+          <text class="practice-answer">答案：{{question.answer}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="parent-ref" wx:if="{{view.parentResourceText}}">
+      <text>{{view.parentResourceText}}，由家长打开参考，不建议孩子直接浏览外部信息流。</text>
+    </view>
+
+    <view class="actions">
+      <button class="secondary" bindtap="onScheduleTap">加入下次验证</button>
+      <button class="primary" bindtap="onCompleteTap" disabled="{{view.completed}}">
+        {{view.completed ? '已完成' : '完成学习'}}
+      </button>
+    </view>
+  </view>
+</view>
