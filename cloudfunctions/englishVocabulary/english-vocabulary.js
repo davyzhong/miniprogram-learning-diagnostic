@@ -20,18 +20,37 @@ function normalizeUnit(value) {
   return match ? `Unit ${match[1]}` : text
 }
 
-function dateOnly(value) {
+// 北京时间（UTC+8）日期组件提取。
+// 使用 Intl API 按固定时区解析，避免依赖运行环境的系统时区（云函数 CI、本地均可获得一致结果）。
+function beijingDateParts(value) {
   const date = value ? new Date(value) : new Date()
-  if (Number.isNaN(date.getTime())) return ''
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
+  if (Number.isNaN(date.getTime())) return null
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date)
+  const map = {}
+  for (const part of parts) {
+    if (part.type !== 'literal') map[part.type] = part.value
+  }
+  return { year: Number(map.year), month: Number(map.month), day: Number(map.day) }
+}
+
+function dateOnly(value) {
+  const p = beijingDateParts(value)
+  if (!p) return ''
+  const month = String(p.month).padStart(2, '0')
+  const day = String(p.day).padStart(2, '0')
+  return `${p.year}-${month}-${day}`
 }
 
 function addDays(dateText, days) {
-  const base = dateText ? new Date(`${dateText}T00:00:00+08:00`) : new Date()
-  base.setDate(base.getDate() + days)
+  // 按北京时间日历日推进；空值从当前北京日期起算
+  const baseText = dateText || dateOnly(new Date())
+  const base = new Date(`${baseText}T00:00:00+08:00`)
+  base.setUTCDate(base.getUTCDate() + days)
   return dateOnly(base)
 }
 

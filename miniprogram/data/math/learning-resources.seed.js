@@ -1,6 +1,6 @@
 module.exports = {
   "version": "0.1.0",
-  "updatedAt": "2026-06-16",
+  "updatedAt": "2026-06-17",
   "subject": "math",
   "resourcePolicy": "高质量讲法优先：Khan Academy、YouTube 等资源如果在某个知识点上讲法清楚、结构严谨、置信度高，可以作为高质量锚点来源；同一知识点尽量补充 B站、小红书、公众号等国内资源，方便国内网络环境下使用、中文复述和孩子定向观看。官方资源作为准确性校验和备用。只保存链接、摘要、评价和适用场景，不搬运正文或视频。",
   "selectionPolicy": {
@@ -1019,6 +1019,89 @@ module.exports = {
       "recommendationLevel": "C",
       "reviewStatus": "candidate_from_search",
       "notes": "备用候选。"
+    },
+    {
+      "resourceId": "RES-KHAN-FRAC-DEC-PERCENT-001",
+      "subject": "math",
+      "nodeId": "MATH-NUM-FRACTION-DECIMAL-CONVERT",
+      "bottleneckIds": [
+        "BN-FRACTION-DECIMAL-MIXED-LOAD",
+        "BN-DEC-MUL-POINT-COUNT"
+      ],
+      "platform": "Khan Academy",
+      "title": "将百分比转换为小数和分数示例（同一个数的三种表示）",
+      "url": "https://zh.khanacademy.org/math/zh-grade-6/x4e42ea45ef356e08:zh-hans-v2-bai-fen-shu-1/x4e42ea45ef356e08:zh-hans-v2-bai-fen-shu-hu-hua/v/representing-a-number-as-a-decimal-percent-and-fraction",
+      "type": "video",
+      "teachingStyle": [
+        "概念严谨",
+        "同一数的三种表征对比",
+        "准确性校验"
+      ],
+      "duration": "约 5-8 分钟",
+      "targetGradeRange": [
+        6,
+        7
+      ],
+      "summary": "以同一个数（如 18%）为例，同时化为小数和最简分数，直接呈现分数/小数/百分数三种表征的等价关系，适合作为跨表征切换的概念锚点。",
+      "strengths": [
+        "同时讲三种互化，正好命中跨表征切换卡点",
+        "Khan 六年级百分数单元，年级匹配",
+        "概念严谨，可作家长备课和讲法校验基准"
+      ],
+      "risks": [
+        "中文版翻译偶有生硬，家长需先看",
+        "建议家长转述后让孩子复述，不直接让孩子自学"
+      ],
+      "parentRating": null,
+      "childFeedback": {
+        "watchedAt": null,
+        "understood": null,
+        "selfExplanation": ""
+      },
+      "recommendationLevel": "B",
+      "reviewStatus": "candidate_from_search",
+      "notes": "检索日期 2026-06-17。Khan 中文版六年级百分数单元，与证据表 ERR-001/003/005 的 CONVERT 维度高度相关。优先给家长作为概念锚点，再转化为孩子可接受的中文讲法。"
+    },
+    {
+      "resourceId": "RES-BILI-FRAC-DEC-PERCENT-001",
+      "subject": "math",
+      "nodeId": "MATH-NUM-FRACTION-DECIMAL-CONVERT",
+      "bottleneckIds": [
+        "BN-FRACTION-DECIMAL-MIXED-LOAD"
+      ],
+      "platform": "B站",
+      "title": "小学数学人教版同步精讲：六年级上册第15讲 百分数小数分数的互化",
+      "url": "https://www.bilibili.com/video/BV1G64y1Y7K2",
+      "type": "video",
+      "teachingStyle": [
+        "人教版同步",
+        "步骤拆解",
+        "易错点提示"
+      ],
+      "duration": "待家长确认",
+      "targetGradeRange": [
+        6,
+        6
+      ],
+      "summary": "人教版六年级上册同步精讲，专门讲百分数、小数、分数三者互化的规则和步骤，与教材进度一致。",
+      "strengths": [
+        "与人教版教材同步，讲法与课堂一致",
+        "中文讲解，孩子进入门槛低",
+        "专题聚焦互化，不发散"
+      ],
+      "risks": [
+        "需家长先试看讲解准确性",
+        "不要让孩子进入 B站推荐流，家长打开指定链接"
+      ],
+      "parentRating": null,
+      "childFeedback": {
+        "watchedAt": null,
+        "understood": null,
+        "selfExplanation": ""
+      },
+      "recommendationLevel": "B",
+      "reviewStatus": "candidate_from_search",
+      "notes": "检索日期 2026-06-17。B站人教版同步精讲第15讲，对应 ERR-001/003/005 的 CONVERT 维度。作为国内可访问的定向观看资源。"
     }
   ]
 }
