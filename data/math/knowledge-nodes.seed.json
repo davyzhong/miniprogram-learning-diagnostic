@@ -190,7 +190,7 @@
       "priority": "high",
       "prerequisites": [
         "MATH-NUM-FRACTION-MEANING",
-        "MATH-NUM-MULTIPLE-LCM"
+        "MATH-NUM-INT-GCD-LCM"
       ],
       "successors": [
         "MATH-NUM-FRACTION-MIXED-OPS"
@@ -226,7 +226,7 @@
       "priority": "high",
       "prerequisites": [
         "MATH-NUM-FRACTION-MEANING",
-        "MATH-NUM-FACTOR-GCD"
+        "MATH-NUM-INT-GCD-LCM"
       ],
       "successors": [
         "MATH-NUM-FRACTION-MIXED-OPS"
@@ -631,7 +631,7 @@
       ],
       "priority": "medium",
       "prerequisites": [
-        "MATH-GEO-RECTANGLE-AREA"
+        "MATH-GEO-AREA-RECTANGLE"
       ],
       "successors": [
         "MATH-GEO-TRANSFORM-AREA-INVARIANT"
@@ -693,7 +693,7 @@
       ],
       "priority": "medium",
       "prerequisites": [
-        "MATH-GEO-CIRCLE-RADIUS-DIAMETER"
+        "MATH-GEO-CIRCLE-AREA"
       ],
       "successors": [
         "MATH-GEO-CIRCLE-AREA"
@@ -1966,7 +1966,9 @@
         "判断轴对称图形",
         "画对称轴"
       ],
-      "commonBottlenecks": ["BN-AXIS-FOLD-MIDPOINT-DIRECTION"],
+      "commonBottlenecks": [
+        "BN-AXIS-FOLD-MIDPOINT-DIRECTION"
+      ],
       "masteryCriteria": {
         "immediatePractice": "能判断常见轴对称图形。",
         "transferPractice": "能画对称轴。",

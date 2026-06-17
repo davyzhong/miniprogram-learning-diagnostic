@@ -1,3 +1,4 @@
+// 自动同步的 seed 数据
 module.exports = {
   "version": "0.1.0",
   "updatedAt": "2026-06-17",

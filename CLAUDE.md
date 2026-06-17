@@ -14,16 +14,22 @@ There is no CLI build for the mini program itself — compilation, preview, and 
 
 Node.js tasks run from the repo root:
 
-| Action | Command |
-|--------|---------|
-| Full test suite | `npm test` |
-| Tests with coverage | `npm run test:coverage` |
-| Run **one** test file | `node --test tests/<file>.test.js` |
-| JS syntax check (121 files) | `npm run check` |
-| Full verify (tests + syntax) | `npm run verify` |
-| Real-image e2e (not in `npm test`) | `npm run test:e2e-real-image` |
-| Pre-deployment readiness | `npm run check:deployment` |
-| Full pre-release gate | `npm run release:check` (deployment + verify + coverage) |
+| Action | Command | Layer |
+|--------|---------|-------|
+| Full test suite | `npm test` | L2 |
+| Tests with coverage | `npm run test:coverage` | L2 |
+| Run **one** test file | `node --test tests/<file>.test.js` | L2 |
+| JS syntax check (121 files) | `npm run check` | L1 |
+| Full verify (tests + syntax) | `npm run verify` | L1+L2 |
+| Real-image e2e (not in `npm test`) | `npm run test:e2e-real-image` | L3 |
+| Pre-deployment readiness | `npm run check:deployment` | L1 |
+| Full pre-release gate | `npm run release:check` (deployment + verify + coverage) | L1+L2 |
+| DevTools environment doctor | `npm run test:e2e:doctor` | L3 |
+| 17-page + 6-scenario full E2E | `npm run test:e2e:fullpage` | L3 |
+| Data-driven E2E scenarios | `npm run test:e2e:data-driven` | L3 |
+| All E2E + aggregated report | `npm run test:e2e:all` | L3 |
+| English module E2E | `npm run test:devtools-english` | L3 |
+| Parent/timeline E2E | `npm run test:devtools-parent-timeline` | L3 |
 
 The `tests/` directory currently holds 44 `.test.js` files; `npm test` enumerates 35 of them explicitly (no glob), so any new test file must be added to both `test` and `test:coverage` scripts in `package.json`. Tests use the Node.js built-in runner (`node --test`), no external framework. Run `npm run verify` after any change; run `npm run release:check` before tagging a release.
 
@@ -80,4 +86,5 @@ CloudBase (serverless, 12 cloud functions)
 - `PRD.md` — product requirements (v2.9)
 - `PROJECT_PLAN.md` — architecture, data models, progress tracker
 - `SETUP.md` — deployment (env, DB setup, font upload)
-- `docs/ARCHITECTURE.md`, `docs/CLOUD_FUNCTIONS.md`, `docs/DATA_DICTIONARY.md`, `docs/TESTING.md`, `docs/TROUBLESHOOTING.md`, `docs/TEST_MATRIX.md`
+- `docs/ARCHITECTURE.md`, `docs/CLOUD_FUNCTIONS.md`, `docs/DATA_DICTIONARY.md`, `docs/TESTING.md`, `docs/TROUBLESHOOTING.md`, `docs/TEST_MATRIX.md`, `docs/TEST_FRAMEWORK_DESIGN.md`
+- `.claude/skills/test-framework/skill.md` — 三层测试框架 skill（测试分层、命令、写测试模式、harness 用法）

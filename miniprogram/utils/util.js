@@ -8,32 +8,19 @@ const {
 } = require('./bottleneck-name')
 
 // 北京时间（UTC+8）日期组件提取。
-// 使用 Intl API 按固定时区解析，避免依赖运行环境的系统时区（小程序、CI、本地均可获得一致结果）。
-const BEIJING_TZ = 'Asia/Shanghai'
+// 纯数学计算 UTC+8 偏移，不依赖 Intl API（微信 iOS/Mac 运行时不支持 Intl）。
+const BEIJING_OFFSET_MS = 8 * 60 * 60 * 1000
 const beijingParts = (date) => {
   const value = typeof date === 'string' ? new Date(date) : date
   if (!value || Number.isNaN(value.getTime())) return null
-  const formatted = new Intl.DateTimeFormat('en-US', {
-    timeZone: BEIJING_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  }).formatToParts(value)
-  const map = {}
-  for (const part of formatted) {
-    if (part.type !== 'literal') map[part.type] = part.value
-  }
-  // hour12: false 下 "24" 会被部分运行时返回，归一为 "00"
-  if (map.hour === '24') map.hour = '00'
+  // 加 8 小时偏移后用 getUTC* 取分量，等价于北京时区的本地时间
+  const shifted = new Date(value.getTime() + BEIJING_OFFSET_MS)
   return {
-    year: Number(map.year),
-    month: Number(map.month),
-    day: Number(map.day),
-    hour: Number(map.hour),
-    minute: Number(map.minute)
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth() + 1,
+    day: shifted.getUTCDate(),
+    hour: shifted.getUTCHours(),
+    minute: shifted.getUTCMinutes()
   }
 }
 
