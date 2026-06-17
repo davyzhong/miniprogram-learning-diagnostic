@@ -9,7 +9,7 @@
   </view>
 
   <view class="state-card" wx:if="{{loading}}">
-    <text class="state-title">正在准备听写</text>
+    <text class="state-title">正在准备单词熟悉度练习</text>
     <text class="state-desc">优先抽取薄弱词、待复测词和未测词。</text>
   </view>
 

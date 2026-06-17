@@ -69,10 +69,12 @@ function groupBottlenecksByHierarchy(items = []) {
     }
 
     const category = categoryMap.get(categoryKey)
-    let family = category.families.find(value => value.familyId === familyKey)
+    // find 比较时用 familyKey（空 familyId 统一为 'UNKNOWN'），
+    // 避免多个空 familyId 的 item 各自创建独立 family
+    let family = category.families.find(value => (value.familyId || 'UNKNOWN') === familyKey)
     if (!family) {
       family = {
-        familyId: item.familyId,
+        familyId: item.familyId || familyKey,
         familyTitle: item.familyTitle,
         itemCount: 0,
         items: []
