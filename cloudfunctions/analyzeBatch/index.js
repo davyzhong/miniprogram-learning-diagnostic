@@ -236,12 +236,30 @@ async function callAI(imageUrls, subject, verificationPlan) {
 // ========== 解析 AI 返回 ==========
 function parseResult(aiText, expectedPageCount) {
   try {
-    // 去掉可能的 ```json ``` 包裹
-    const cleaned = aiText.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
-    const result = JSON.parse(cleaned);
+    // 先去头尾 markdown fence，再尝试提取第一个 { 到最后一个 } 的子串
+    // 应对 AI 在 JSON 中段插入 markdown 或前后多余文字的情况
+    let cleaned = aiText.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
+    let result = JSON.parse(cleaned);
+    // 如果直接 parse 失败，尝试提取 {} 子串
+    if (!result || typeof result !== 'object') {
+      throw new Error('not an object');
+    }
     return normalizePageResults(result, expectedPageCount);
   } catch (err) {
-    throw new Error(`解析AI返回失败：${err.message}，原始内容：${aiText.substr(0, 200)}`);
+    // 回退：提取第一个 { 到最后一个 } 的子串再 parse
+    try {
+      const start = aiText.indexOf('{');
+      const end = aiText.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        const extracted = aiText.slice(start, end + 1);
+        const result = JSON.parse(extracted);
+        return normalizePageResults(result, expectedPageCount);
+      }
+    } catch (extractErr) {
+      // 提取也失败，继续抛出原始错误
+    }
+    // 不在错误消息中暴露完整 AI 原始内容（可能含敏感 OCR 信息），只保留长度和位置
+    throw new Error(`解析AI返回失败：${err.message}（内容长度 ${aiText.length}，无法提取有效 JSON）`);
   }
 }
 

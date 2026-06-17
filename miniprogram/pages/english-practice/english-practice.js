@@ -202,7 +202,8 @@ Page({
       this.setData({
         submitting: false,
         queue,
-        lastResult: response.judgment || null,
+        // 把 shouldRepeat 带入 lastResult，让 UI 能显示"本题稍后再测"即时反馈
+        lastResult: response.judgment ? { ...response.judgment, shouldRepeat: Boolean(response.shouldRepeat) } : null,
         lastAnsweredItem: current,
         currentIndex: nextIndex,
         currentItem: queue[nextIndex] || null,
