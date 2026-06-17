@@ -67,6 +67,21 @@ async function authorize(studentId, write = false) {
   return { access, openId, allowed }
 }
 
+// IDOR 防御：用资源自身存储的 studentId 反查权限，而非信任调用方传入的 studentId。
+// 防止攻击者传自己的 studentId（通过入口 authorize）+ 别人的 sessionId/batchId 越权读写。
+// 返回 { allowed, openId }；allowed=false 时附带 error。
+async function authorizeResourceOwner(resourceStudentId, claimedStudentId, write = false) {
+  if (!resourceStudentId) return { allowed: false, error: '资源缺少 studentId，拒绝访问' }
+  // 资源的 studentId 必须与调用方声称的一致，否则说明 sessionId/batchId 与 studentId 不匹配
+  if (claimedStudentId && resourceStudentId !== claimedStudentId) {
+    return { allowed: false, error: '资源归属与请求不匹配' }
+  }
+  const openId = cloud.getWXContext().OPENID
+  const access = await getStudentAccess(db, resourceStudentId, openId)
+  const allowed = write ? canOperateLearning(access) : canReadLearning(access)
+  return { allowed, openId, error: allowed ? '' : '无权操作该资源' }
+}
+
 async function getCollectionData(name, filter = {}) {
   try {
     const res = await db.collection(name).where(filter).get()
@@ -342,7 +357,10 @@ async function upsertPatterns(studentId, openId, candidates) {
 
 async function confirmImportBatch(event, openId) {
   const batch = await getDocument('englishImportBatches', event.batchId)
-  if (!batch || batch.studentId !== event.studentId) return fail('导入批次不存在')
+  if (!batch) return fail('导入批次不存在')
+  // IDOR 防御：用 batch 自身的 studentId 反查权限，不信任 event.studentId
+  const ownerAuth = await authorizeResourceOwner(batch.studentId, event.studentId, true)
+  if (!ownerAuth.allowed) return fail(ownerAuth.error)
   if (batch.status !== 'pending_review') return fail('导入批次状态无效')
 
   const importedWordCount = await upsertWords(event.studentId, openId, batch.candidateWords || [])
@@ -538,7 +556,10 @@ async function generatePaperDictationSession(event, openId) {
 
 async function submitDictationPhoto(event) {
   const session = await getDocument('englishPracticeSessions', event.sessionId)
-  if (!session || session.studentId !== event.studentId) return fail('纸面听写记录不存在')
+  if (!session) return fail('纸面听写记录不存在')
+  // IDOR 防御：用 session 自身的 studentId 反查权限
+  const ownerAuth = await authorizeResourceOwner(session.studentId, event.studentId, true)
+  if (!ownerAuth.allowed) return fail(ownerAuth.error)
   if (session.functionType !== 'spelling') return fail('听写记录类型不匹配')
   const incoming = Array.isArray(event.photoFileIds) ? event.photoFileIds : []
   const photoFileIds = incoming
@@ -599,7 +620,10 @@ function normalizeDictationOcrResults(rawResults = [], wordItems = []) {
 
 async function analyzeDictationPhoto(event) {
   const session = await getDocument('englishPracticeSessions', event.sessionId)
-  if (!session || session.studentId !== event.studentId) return fail('纸面听写记录不存在')
+  if (!session) return fail('纸面听写记录不存在')
+  // IDOR 防御：用 session 自身的 studentId 反查权限
+  const ownerAuth = await authorizeResourceOwner(session.studentId, event.studentId, true)
+  if (!ownerAuth.allowed) return fail(ownerAuth.error)
   if (session.functionType !== 'spelling') return fail('听写记录类型不匹配')
   const photoFileIds = (session.photoFileIds || [])
     .map(item => cleanText(item, 240))
@@ -656,8 +680,9 @@ ${JSON.stringify(candidates)}
   const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
   const byId = new Map(words.map(item => [item._id, item]))
   const reviewedAt = event.reviewedAt || new Date()
-  let updatedWordCount = 0
 
+  // 性能优化：并发写库（替代串行 for await），避免 40 词 × 数百毫秒逼近云函数超时
+  const updateJobs = []
   for (const item of results) {
     const word = byId.get(item.wordId)
     if (!word || item.verdict === 'unclear') continue
@@ -665,14 +690,15 @@ ${JSON.stringify(candidates)}
       judgment: { status: item.verdict },
       reviewedAt
     })
-    await updateDocument('studentEnglishWords', word._id, {
+    updateJobs.push(updateDocument('studentEnglishWords', word._id, {
       familiarity: updated.familiarity,
       spelling: updated.spelling,
       overallMastery: updated.overallMastery,
       updatedAt: nowDate()
-    })
-    updatedWordCount += 1
+    }))
   }
+  const settled = await Promise.all(updateJobs)
+  const updatedWordCount = settled.filter(result => result).length
   if (updatedWordCount > 0) {
     await markVocabularySummaryDirty(event.studentId)
   }
@@ -702,7 +728,10 @@ function findSessionItem(session, event) {
 
 async function submitRecognitionAttempt(event) {
   const session = await getDocument('englishPracticeSessions', event.sessionId)
-  if (!session || session.studentId !== event.studentId) return fail('熟悉度练习记录不存在')
+  if (!session) return fail('熟悉度练习记录不存在')
+  // IDOR 防御：用 session 自身的 studentId 反查权限
+  const ownerAuth = await authorizeResourceOwner(session.studentId, event.studentId, true)
+  if (!ownerAuth.allowed) return fail(ownerAuth.error)
   const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
   const word = words.find(item => item._id === event.wordId)
   if (!word) return fail('单词不存在')
@@ -769,7 +798,10 @@ async function submitRecognitionAttempt(event) {
 
 async function submitDictationAttempt(event) {
   const session = await getDocument('englishPracticeSessions', event.sessionId)
-  if (!session || session.studentId !== event.studentId) return fail('听写记录不存在')
+  if (!session) return fail('听写记录不存在')
+  // IDOR 防御：用 session 自身的 studentId 反查权限
+  const ownerAuth = await authorizeResourceOwner(session.studentId, event.studentId, true)
+  if (!ownerAuth.allowed) return fail(ownerAuth.error)
   const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
   const word = words.find(item => item._id === event.wordId)
   if (!word) return fail('单词不存在')
@@ -824,10 +856,14 @@ async function submitDictationAttempt(event) {
 
 async function submitPracticeResult(event) {
   const session = await getDocument('englishPracticeSessions', event.sessionId)
-  if (!session || session.studentId !== event.studentId) return fail('练习记录不存在')
+  if (!session) return fail('练习记录不存在')
+  // IDOR 防御：用 session 自身的 studentId 反查权限
+  const ownerAuth = await authorizeResourceOwner(session.studentId, event.studentId, true)
+  if (!ownerAuth.allowed) return fail(ownerAuth.error)
   const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
   const byId = new Map(words.map(item => [item._id, item]))
-  let updatedWordCount = 0
+  // 性能优化：并发写库（替代串行 for await）
+  const updateJobs = []
   for (const result of event.wordResults || []) {
     const word = byId.get(result.wordId)
     if (!word) continue
@@ -835,16 +871,17 @@ async function submitPracticeResult(event) {
       correct: result.correct === true,
       reviewedAt: event.reviewedAt || new Date()
     })
-    await updateDocument('studentEnglishWords', word._id, {
+    updateJobs.push(updateDocument('studentEnglishWords', word._id, {
       masteryStatus: updated.masteryStatus,
       correctCount: updated.correctCount,
       wrongCount: updated.wrongCount,
       lastReviewedAt: updated.lastReviewedAt,
       nextReviewAt: updated.nextReviewAt,
       updatedAt: nowDate()
-    })
-    updatedWordCount += 1
+    }))
   }
+  const settled = await Promise.all(updateJobs)
+  const updatedWordCount = settled.filter(result => result).length
   if (updatedWordCount > 0) {
     await markVocabularySummaryDirty(event.studentId)
   }

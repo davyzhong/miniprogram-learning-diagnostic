@@ -93,7 +93,7 @@ test('math workbench expands coarse bottlenecks into fine-grained candidate bott
   assert.equal(view.persistingCount, 2)
 })
 
-test('math workbench exposes task queue grouped by category and family', () => {
+test('math workbench exposes flat task queue with bottleneck items', () => {
   const view = buildSubjectHomeView({
     subject: 'math',
     subjectName: '数学',
@@ -115,14 +115,10 @@ test('math workbench exposes task queue grouped by category and family', () => {
     }]
   }, [], relative, { subject: 'math', subjectName: '数学' })
 
-  assert.equal(view.hasTaskQueueGroups, true)
-  assert.equal(view.taskQueueGroups[0].categoryTitle, '计算规则')
-  assert.equal(view.taskQueueGroups[0].summaryText, '2 个细分卡点')
-  assert.equal(view.taskQueueGroups[0].families[0].familyTitle, '小数点定位与移动')
-  assert.deepEqual(view.taskQueueGroups[0].families[0].items.map(item => item.displayName), [
-    '小数乘法中积的小数位数判断错误',
-    '小数乘法后缺少数量级估算检查'
-  ])
+  // taskQueueGroups 已移除（WXML 未消费，属死代码）；验证扁平 taskQueue 仍正常工作
+  assert.ok(Array.isArray(view.taskQueue))
+  assert.ok(view.taskQueue.length >= 1)
+  assert.ok(view.pendingTaskCount >= 1)
 })
 
 test('Chinese workbench prioritizes concrete review items over coarse bottlenecks', () => {

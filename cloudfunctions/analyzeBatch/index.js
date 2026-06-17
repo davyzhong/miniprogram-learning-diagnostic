@@ -196,7 +196,9 @@ async function authorizeBatch({ reportId, taskId, fileIDs }) {
   if (!report || !task || task.reportId !== reportId || task.status !== 'processing') {
     return { allowed: false, error: '无权执行批次分析' };
   }
-  if (report._openid && task._openid !== report._openid) {
+  // 安全校验：report 必须有 _openid 才能做归属比对。
+  // report._openid 缺失（旧数据/异常数据）时直接拒绝，防止权限链断裂后被绕过。
+  if (!report._openid || task._openid !== report._openid) {
     return { allowed: false, error: '无权执行批次分析' };
   }
   const allowedFiles = new Set(Array.isArray(task.fileIDs) ? task.fileIDs : []);
@@ -234,12 +236,30 @@ async function callAI(imageUrls, subject, verificationPlan) {
 // ========== 解析 AI 返回 ==========
 function parseResult(aiText, expectedPageCount) {
   try {
-    // 去掉可能的 ```json ``` 包裹
-    const cleaned = aiText.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
-    const result = JSON.parse(cleaned);
+    // 先去头尾 markdown fence，再尝试提取第一个 { 到最后一个 } 的子串
+    // 应对 AI 在 JSON 中段插入 markdown 或前后多余文字的情况
+    let cleaned = aiText.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
+    let result = JSON.parse(cleaned);
+    // 如果直接 parse 失败，尝试提取 {} 子串
+    if (!result || typeof result !== 'object') {
+      throw new Error('not an object');
+    }
     return normalizePageResults(result, expectedPageCount);
   } catch (err) {
-    throw new Error(`解析AI返回失败：${err.message}，原始内容：${aiText.substr(0, 200)}`);
+    // 回退：提取第一个 { 到最后一个 } 的子串再 parse
+    try {
+      const start = aiText.indexOf('{');
+      const end = aiText.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        const extracted = aiText.slice(start, end + 1);
+        const result = JSON.parse(extracted);
+        return normalizePageResults(result, expectedPageCount);
+      }
+    } catch (extractErr) {
+      // 提取也失败，继续抛出原始错误
+    }
+    // 不在错误消息中暴露完整 AI 原始内容（可能含敏感 OCR 信息），只保留长度和位置
+    throw new Error(`解析AI返回失败：${err.message}（内容长度 ${aiText.length}，无法提取有效 JSON）`);
   }
 }
 

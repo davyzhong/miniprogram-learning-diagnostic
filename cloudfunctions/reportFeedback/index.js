@@ -23,6 +23,10 @@ const TARGET_TYPES = new Set([
   'photo'
 ])
 
+// targetId 格式白名单：约束常见 ID 前缀，防止注入任意字符串
+// 允许：LP-/BN-/CHI-/MATH-/REPORT-/PHOTO-/ERR- 前缀 ID、纯数字（errorDetail 索引）、cloud:// fileID
+const TARGET_ID_PATTERN = /^(LP-|BN-|CHI-|MATH-|REPORT-|PHOTO-|ERR-)[\w-]{0,80}$|^\d{1,4}$|^cloud:\/\/[\w./-]{1,200}$/
+
 function cleanText(value, maxLength) {
   return String(value || '').trim().slice(0, maxLength)
 }
@@ -74,6 +78,11 @@ async function createFeedback(event, openId) {
   if (!FEEDBACK_TYPES.has(type)) throw new Error('反馈类型无效')
   if (!TARGET_TYPES.has(targetType)) throw new Error('反馈对象无效')
   if (!reason) throw new Error('请填写反馈原因')
+  // targetId 格式校验：非空时必须匹配白名单前缀，防止注入
+  const rawTargetId = cleanText(event.targetId, 120)
+  if (rawTargetId && !TARGET_ID_PATTERN.test(rawTargetId)) {
+    throw new Error('反馈对象 ID 格式无效')
+  }
 
   const now = new Date()
   const data = {
@@ -83,7 +92,7 @@ async function createFeedback(event, openId) {
     subject: report.subject || '',
     type,
     targetType,
-    targetId: cleanText(event.targetId, 120),
+    targetId: rawTargetId,
     reason,
     note: cleanText(event.note, 500),
     status: 'submitted',

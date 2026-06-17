@@ -125,7 +125,22 @@ exports.main = async (event, context) => {
     cloud.callFunction({
       name: 'analyzePhotos',
       data: { reportId },
-    }).catch(err => console.error('[uploadAndAnalyze] analyzePhotos 启动失败:', err.message));
+    }).catch(async (err) => {
+      console.error('[uploadAndAnalyze] analyzePhotos 启动失败:', err.message);
+      // 标记报告为 failed，让前端轮询能感知并暴露重试入口，避免用户永久卡在"分析中"
+      try {
+        await db.collection('reports').doc(reportId).update({
+          data: {
+            status: 'failed',
+            analysisError: '分析启动失败，请重试',
+            analysisErrorMessage: String(err.message || '').slice(0, 200),
+            updatedAt: new Date(),
+          },
+        });
+      } catch (updateErr) {
+        console.error('[uploadAndAnalyze] 标记报告失败状态也出错:', updateErr.message);
+      }
+    });
 
     return {
       success: true,

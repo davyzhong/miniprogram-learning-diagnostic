@@ -1,7 +1,6 @@
 // 小学数学学习卡点粗类与卡点家族治理库（前端版）。
 // 内容与仓库根 data/math/bottleneck-categories.seed.json 保持一致；
 // 这里改用 module.exports，符合 miniprogram/data 下 *.seed.js 的前端加载约定。
-// 修改任一份时请同步另一份。
 module.exports = {
   "version": "0.1.0",
   "updatedAt": "2026-06-17",
@@ -91,6 +90,18 @@ module.exports = {
       "resourceRole": "优先选择流程卡、检查清单和错题复盘示范资源。",
       "defaultPageType": "mixed_review",
       "displayOrder": 70
+    },
+    {
+      "categoryId": "MATH-CAT-GEO-TRANSFORM",
+      "title": "图形变换",
+      "shortTitle": "图形变换",
+      "description": "对称、平移、旋转、折叠等图形变换中的方向与数量判断不稳。",
+      "diagnosticRole": "用于识别图形运动中的方向感、对称判断和倍数语义问题。",
+      "displayRole": "帮助家长看到孩子是否在图形变换的方向和数量关系上出错。",
+      "verificationRole": "适合加入方向标注、中点先行和语义对照专项题。",
+      "resourceRole": "优先选择方向标注、动态演示和语义对照类资源。",
+      "defaultPageType": "same_family",
+      "displayOrder": 45
     }
   ],
   "families": [
@@ -98,153 +109,274 @@ module.exports = {
       "familyId": "MATH-FAM-INT-PARTIAL",
       "categoryId": "MATH-CAT-CALC-RULE",
       "title": "整数乘法部分积",
-      "nodeIds": ["MATH-NUM-INT-MUL-PARTIAL"],
+      "nodeIds": [
+        "MATH-NUM-INT-MUL-PARTIAL"
+      ],
       "verificationTemplate": "要求写出拆分、部分积和合并过程。",
-      "resourceStyleHints": ["步骤拆解", "部分积标记", "错例对比"]
+      "resourceStyleHints": [
+        "步骤拆解",
+        "部分积标记",
+        "错例对比"
+      ]
     },
     {
       "familyId": "MATH-FAM-LONG-DIVISION",
       "categoryId": "MATH-CAT-CALC-RULE",
       "title": "长除法试商与商位",
-      "nodeIds": ["MATH-NUM-INT-DIV-LONG"],
+      "nodeIds": [
+        "MATH-NUM-INT-DIV-LONG"
+      ],
       "verificationTemplate": "要求先估商范围，再写竖式并乘回验商。",
-      "resourceStyleHints": ["竖式步骤", "试商", "回验"]
+      "resourceStyleHints": [
+        "竖式步骤",
+        "试商",
+        "回验"
+      ]
     },
     {
       "familyId": "MATH-FAM-DECIMAL-PLACE-VALUE",
       "categoryId": "MATH-CAT-NUMBER-SENSE",
       "title": "小数位值与数量级",
-      "nodeIds": ["MATH-NUM-DEC-PLACE-VALUE"],
+      "nodeIds": [
+        "MATH-NUM-DEC-PLACE-VALUE"
+      ],
       "verificationTemplate": "要求说明小数接近几，并判断答案数量级。",
-      "resourceStyleHints": ["位值表", "估算", "数量级判断"]
+      "resourceStyleHints": [
+        "位值表",
+        "估算",
+        "数量级判断"
+      ]
     },
     {
       "familyId": "MATH-FAM-DECIMAL-POINT",
       "categoryId": "MATH-CAT-CALC-RULE",
       "title": "小数点定位与移动",
-      "nodeIds": ["MATH-NUM-DEC-MUL-POINT", "MATH-NUM-DEC-DIV-POINT", "MATH-NUM-DEC-DIV-QUOTIENT"],
+      "nodeIds": [
+        "MATH-NUM-DEC-MUL-POINT",
+        "MATH-NUM-DEC-DIV-POINT",
+        "MATH-NUM-DEC-DIV-QUOTIENT"
+      ],
       "verificationTemplate": "先估算数量级，再计算，再解释小数点为什么在这里。",
-      "resourceStyleHints": ["步骤拆解", "数量级估算", "错例对比"]
+      "resourceStyleHints": [
+        "步骤拆解",
+        "数量级估算",
+        "错例对比"
+      ]
     },
     {
       "familyId": "MATH-FAM-FRACTION-COMMON-DENOM",
       "categoryId": "MATH-CAT-CALC-RULE",
       "title": "异分母通分",
-      "nodeIds": ["MATH-NUM-FRACTION-ADD-COMMON-DENOM"],
+      "nodeIds": [
+        "MATH-NUM-FRACTION-ADD-COMMON-DENOM"
+      ],
       "verificationTemplate": "要求写出公分母、分子同步变化和最终加减。",
-      "resourceStyleHints": ["分数条", "通分步骤", "单位一致"]
+      "resourceStyleHints": [
+        "分数条",
+        "通分步骤",
+        "单位一致"
+      ]
     },
     {
       "familyId": "MATH-FAM-FRACTION-SIMPLIFY",
       "categoryId": "MATH-CAT-CALC-RULE",
       "title": "分数约分与结果大小",
-      "nodeIds": ["MATH-NUM-FRACTION-MUL-SIMPLIFY"],
+      "nodeIds": [
+        "MATH-NUM-FRACTION-MUL-SIMPLIFY"
+      ],
       "verificationTemplate": "要求标出约分对象，并判断结果大小是否合理。",
-      "resourceStyleHints": ["约分对象", "大小估计", "错例对比"]
+      "resourceStyleHints": [
+        "约分对象",
+        "大小估计",
+        "错例对比"
+      ]
     },
     {
       "familyId": "MATH-FAM-FRACTION-DIVISION",
       "categoryId": "MATH-CAT-CALC-RULE",
       "title": "分数除法与倒数",
-      "nodeIds": ["MATH-NUM-FRACTION-DIV-RECIPROCAL"],
+      "nodeIds": [
+        "MATH-NUM-FRACTION-DIV-RECIPROCAL"
+      ],
       "verificationTemplate": "要求解释除以分数表示包含几个，再改写为乘倒数。",
-      "resourceStyleHints": ["数轴直观", "倒数规则", "包含除"]
+      "resourceStyleHints": [
+        "数轴直观",
+        "倒数规则",
+        "包含除"
+      ]
     },
     {
       "familyId": "MATH-FAM-FRACTION-DECIMAL-CONVERT",
       "categoryId": "MATH-CAT-CALC-RULE",
       "title": "分数小数形式统一",
-      "nodeIds": ["MATH-NUM-FRACTION-DECIMAL-CONVERT"],
+      "nodeIds": [
+        "MATH-NUM-FRACTION-DECIMAL-CONVERT"
+      ],
       "verificationTemplate": "要求先选择统一形式，再保留中间过程。",
-      "resourceStyleHints": ["形式统一", "无限小数", "混合运算"]
+      "resourceStyleHints": [
+        "形式统一",
+        "无限小数",
+        "混合运算"
+      ]
     },
     {
       "familyId": "MATH-FAM-PERCENT-BASE",
       "categoryId": "MATH-CAT-MODEL",
       "title": "百分数单位 1",
-      "nodeIds": ["MATH-MOD-PERCENT-BASE", "MATH-MOD-PERCENT-DISCOUNT"],
+      "nodeIds": [
+        "MATH-MOD-PERCENT-BASE",
+        "MATH-MOD-PERCENT-DISCOUNT"
+      ],
       "verificationTemplate": "要求圈出谁是单位 1，并写出原价、现价或变化量关系。",
-      "resourceStyleHints": ["单位1", "线段图", "关系句"]
+      "resourceStyleHints": [
+        "单位1",
+        "线段图",
+        "关系句"
+      ]
     },
     {
       "familyId": "MATH-FAM-PIECEWISE",
       "categoryId": "MATH-CAT-MODEL",
       "title": "分段关系与税率",
-      "nodeIds": ["MATH-MOD-TAX-PIECEWISE"],
+      "nodeIds": [
+        "MATH-MOD-TAX-PIECEWISE"
+      ],
       "verificationTemplate": "要求逐段列出基数、税率和对应金额。",
-      "resourceStyleHints": ["分段表格", "区间边界", "应用建模"]
+      "resourceStyleHints": [
+        "分段表格",
+        "区间边界",
+        "应用建模"
+      ]
     },
     {
       "familyId": "MATH-FAM-RATIO-MEANING",
       "categoryId": "MATH-CAT-MODEL",
       "title": "比的意义与参照系",
-      "nodeIds": ["MATH-MOD-RATIO-MEANING", "MATH-MOD-RATIO-PART-WHOLE"],
+      "nodeIds": [
+        "MATH-MOD-RATIO-MEANING",
+        "MATH-MOD-RATIO-PART-WHOLE"
+      ],
       "verificationTemplate": "要求写清比的前项后项分别指谁，以及是部分比部分还是部分比整体。",
-      "resourceStyleHints": ["线段图", "对象顺序", "参照系"]
+      "resourceStyleHints": [
+        "线段图",
+        "对象顺序",
+        "参照系"
+      ]
     },
     {
       "familyId": "MATH-FAM-RATIO-PROPERTY",
       "categoryId": "MATH-CAT-MODEL",
       "title": "比例性质与穷尽判断",
-      "nodeIds": ["MATH-MOD-RATIO-PROPERTY"],
+      "nodeIds": [
+        "MATH-MOD-RATIO-PROPERTY"
+      ],
       "verificationTemplate": "要求写出内项外项、交叉相乘，并穷尽可能排列。",
-      "resourceStyleHints": ["比例性质", "穷尽检查", "错例对比"]
+      "resourceStyleHints": [
+        "比例性质",
+        "穷尽检查",
+        "错例对比"
+      ]
     },
     {
       "familyId": "MATH-FAM-SCALE",
       "categoryId": "MATH-CAT-MODEL",
       "title": "比例尺与实际距离",
-      "nodeIds": ["MATH-MOD-RATIO-SCALE"],
+      "nodeIds": [
+        "MATH-MOD-RATIO-SCALE"
+      ],
       "verificationTemplate": "要求先建立图上距离、实际距离和比例尺的中转框架。",
-      "resourceStyleHints": ["三量关系", "单位统一", "步骤框架"]
+      "resourceStyleHints": [
+        "三量关系",
+        "单位统一",
+        "步骤框架"
+      ]
     },
     {
       "familyId": "MATH-FAM-UNIT-CONVERT",
       "categoryId": "MATH-CAT-MEASURE",
       "title": "单位统一与量纲判断",
-      "nodeIds": ["MATH-MEASURE-UNIT-LENGTH", "MATH-MEASURE-UNIT-AREA-VOLUME"],
+      "nodeIds": [
+        "MATH-MEASURE-UNIT-LENGTH",
+        "MATH-MEASURE-UNIT-AREA-VOLUME"
+      ],
       "verificationTemplate": "要求先统一单位，再判断长度、面积、体积对应几次进率。",
-      "resourceStyleHints": ["进率表", "量纲对比", "真实场景"]
+      "resourceStyleHints": [
+        "进率表",
+        "量纲对比",
+        "真实场景"
+      ]
     },
     {
       "familyId": "MATH-FAM-CIRCLE-FORMULA",
       "categoryId": "MATH-CAT-GEOMETRY",
       "title": "圆周长与圆面积公式边界",
-      "nodeIds": ["MATH-GEO-CIRCLE-AREA", "MATH-GEO-CIRCLE-CIRCUMFERENCE"],
+      "nodeIds": [
+        "MATH-GEO-CIRCLE-AREA",
+        "MATH-GEO-CIRCLE-CIRCUMFERENCE"
+      ],
       "verificationTemplate": "要求先判断目标量是周长还是面积，再写公式和单位。",
-      "resourceStyleHints": ["公式边界", "图示推导", "单位辨析"]
+      "resourceStyleHints": [
+        "公式边界",
+        "图示推导",
+        "单位辨析"
+      ]
     },
     {
       "familyId": "MATH-FAM-SOLID-GEOMETRY",
       "categoryId": "MATH-CAT-GEOMETRY",
       "title": "立体图形体积与表面积",
-      "nodeIds": ["MATH-GEO-CYLINDER-VOLUME", "MATH-GEO-SOLID-SURFACE-ENUM"],
+      "nodeIds": [
+        "MATH-GEO-CYLINDER-VOLUME",
+        "MATH-GEO-SOLID-SURFACE-ENUM"
+      ],
       "verificationTemplate": "要求区分体积和表面积，并枚举实际暴露的面。",
-      "resourceStyleHints": ["动态演示", "暴露面枚举", "公式边界"]
+      "resourceStyleHints": [
+        "动态演示",
+        "暴露面枚举",
+        "公式边界"
+      ]
     },
     {
       "familyId": "MATH-FAM-UNIFORM-CHANGE",
       "categoryId": "MATH-CAT-MODEL",
       "title": "匀速变化与单位变化量",
-      "nodeIds": ["MATH-MOD-UNIFORM-CHANGE"],
+      "nodeIds": [
+        "MATH-MOD-UNIFORM-CHANGE"
+      ],
       "verificationTemplate": "要求明确相邻时刻差值、单位时间变化量和总变化量。",
-      "resourceStyleHints": ["表格", "差值", "变化关系"]
+      "resourceStyleHints": [
+        "表格",
+        "差值",
+        "变化关系"
+      ]
     },
     {
       "familyId": "MATH-FAM-ESTIMATION-CHECK",
       "categoryId": "MATH-CAT-META",
       "title": "估算与结果合理性检查",
-      "nodeIds": ["MATH-META-ESTIMATION-CHECK"],
+      "nodeIds": [
+        "MATH-META-ESTIMATION-CHECK"
+      ],
       "verificationTemplate": "要求每题先写估算范围，再用结果回看是否合理。",
-      "resourceStyleHints": ["估算流程", "检查清单", "数量级"]
+      "resourceStyleHints": [
+        "估算流程",
+        "检查清单",
+        "数量级"
+      ]
     },
     {
       "familyId": "MATH-FAM-INVERSE-CHECK",
       "categoryId": "MATH-CAT-META",
       "title": "逆运算回代验算",
-      "nodeIds": ["MATH-META-ESTIMATION-CHECK"],
+      "nodeIds": [
+        "MATH-META-ESTIMATION-CHECK"
+      ],
       "verificationTemplate": "要求用逆运算或回代验证答案。",
-      "resourceStyleHints": ["回代", "逆运算", "草稿组织"]
+      "resourceStyleHints": [
+        "回代",
+        "逆运算",
+        "草稿组织"
+      ]
     },
     {
       "familyId": "MATH-FAM-READING-CONDITION",
@@ -252,7 +384,25 @@ module.exports = {
       "title": "条件提取与问法识别",
       "nodeIds": [],
       "verificationTemplate": "要求圈出已知条件、问题目标和关键词。",
-      "resourceStyleHints": ["读题拆解", "关键词", "关系句"]
+      "resourceStyleHints": [
+        "读题拆解",
+        "关键词",
+        "关系句"
+      ]
+    },
+    {
+      "familyId": "MATH-FAM-AXIS-SYM",
+      "categoryId": "MATH-CAT-GEO-TRANSFORM",
+      "title": "数轴与对称",
+      "nodeIds": [
+        "MATH-GEO-AXIS-SYM"
+      ],
+      "verificationTemplate": "先标中点，再用箭头标对称方向，最后代入数值验证倍数。",
+      "resourceStyleHints": [
+        "方向标注",
+        "中点先行",
+        "语义对照"
+      ]
     }
   ]
 }
