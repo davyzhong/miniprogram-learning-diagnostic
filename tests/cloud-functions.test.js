@@ -305,13 +305,13 @@ test('getAnalysisProgress returns the newest task and rejects other owners', asy
 })
 
 test('generatePaper stores and returns printable PDF page metadata', async () => {
-  const questions = Array.from({ length: 6 }, (_, index) => ({
+  const questions = Array.from({ length: 4 }, (_, index) => ({
     index: index + 1,
     content: `计算题 ${index + 1}`,
     answer: String(index + 1),
     points: 10,
-    lpCode: index < 3 ? 'LP-001' : 'LP-008',
-    lpName: index < 3 ? '计算错误' : '审题错误'
+    lpCode: index < 2 ? 'LP-001' : 'LP-008',
+    lpName: index < 2 ? '计算错误' : '审题错误'
   }))
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
@@ -353,7 +353,7 @@ test('generatePaper stores and returns printable PDF page metadata', async () =>
   const paper = db.dump('papers')[0]
 
   assert.equal(result.success, true)
-  assert.equal(result.questionCount, 6)
+  assert.equal(result.questionCount, 4)
   assert.equal(result.studentPages, 1)
   assert.equal(result.answerPages, 1)
   assert.equal(result.totalPages, 2)
@@ -409,15 +409,15 @@ test('generatePaper filters incomplete AI questions before trimming to expected 
   const paper = db.dump('papers')[0]
 
   assert.equal(result.success, true)
-  assert.equal(result.questionCount, 6)
-  assert.equal(paper.questions.length, 6)
+  assert.equal(result.questionCount, 4)
+  assert.equal(paper.questions.length, 4)
   assert.equal(paper.questions.some(question => question.content === '计算题 3'), false)
-  assert.equal(paper.questions.at(-1).content, '计算题 7')
+  assert.equal(paper.questions.at(-1).content, '计算题 5')
 })
 
 test('generatePaper asks verification papers to include core and extension questions', async () => {
   let prompt = ''
-  const questions = Array.from({ length: 3 }, (_, index) => ({
+  const questions = Array.from({ length: 2 }, (_, index) => ({
     index: index + 1,
     content: `计算题 ${index + 1}`,
     answer: String(index + 1),
@@ -459,8 +459,8 @@ test('generatePaper asks verification papers to include core and extension quest
   })
 
   assert.equal(result.success, true)
-  assert.match(prompt, /每卡点3题/)
-  assert.match(prompt, /2核心/)
+  assert.match(prompt, /每个卡点出 2 题/)
+  assert.match(prompt, /1核心/)
   assert.match(prompt, /1延展/)
 })
 
@@ -516,7 +516,7 @@ test('generatePaper accepts fine math bottleneck ids and resolves candidate name
   const paper = db.dump('papers')[0]
 
   assert.equal(result.success, true)
-  assert.match(prompt, /BN-DEC-MUL-POINT-COUNT：小数乘法中小数位数累计规则不稳/)
+  assert.match(prompt, /BN-DEC-MUL-POINT-COUNT/)
   assert.deepEqual(paper.bottleneckTargets, ['BN-DEC-MUL-POINT-COUNT'])
   assert.deepEqual(paper.bottleneckSummaries, ['小数乘法中小数位数累计规则不稳'])
 })
@@ -525,8 +525,8 @@ test('generatePaper stores verificationPack for many fine bottlenecks', async ()
   let prompt = ''
   const targets = Array.from({ length: 8 }, (_, index) => `BN-FINE-${index + 1}`)
   const questions = targets.flatMap((targetId, targetIndex) => (
-    Array.from({ length: 3 }, (_, questionIndex) => ({
-      index: targetIndex * 3 + questionIndex + 1,
+    Array.from({ length: 2 }, (_, questionIndex) => ({
+      index: targetIndex * 2 + questionIndex + 1,
       content: `细卡点 ${targetIndex + 1} 复测题 ${questionIndex + 1}`,
       answer: String(questionIndex + 1),
       points: 10,
@@ -597,23 +597,23 @@ test('generatePaper stores verificationPack for many fine bottlenecks', async ()
   const paper = db.dump('papers')[0]
 
   assert.equal(result.success, true)
-  assert.match(prompt, /BN-FINE-8：细分卡点 8/)
+  assert.match(prompt, /BN-FINE-8/)
   assert.equal(pdfOptions.verificationPack.totalTargets, 8)
   assert.deepEqual(paper.bottleneckTargets, targets)
   assert.equal(paper.verificationPack.totalTargets, 8)
-  assert.equal(paper.verificationPack.totalQuestions, 24)
+  assert.equal(paper.verificationPack.totalQuestions, 16)
   assert.equal(paper.verificationPack.pages.length, 3)
   assert.deepEqual(paper.verificationPack.pages.map(page => page.pageCode), [
     'MATH-V-20260616-01-P01',
     'MATH-V-20260616-01-P02',
     'MATH-V-20260616-01-P03'
   ])
-  // verificationPack 按 target 分页（3+3+2），PDF 渲染的 studentPageCodes 是独立的
-  assert.deepEqual(paper.verificationPack.pages.map(page => page.questionIds.length), [9, 9, 6])
+  // verificationPack 按 target 分页（3+3+2），每卡点 2 题
+  assert.deepEqual(paper.verificationPack.pages.map(page => page.questionIds.length), [6, 6, 4])
   assert.equal(paper.questions[0].pageCode, 'MATH-V-20260616-01-P01')
   assert.equal(paper.questions[0].targetId, 'BN-FINE-1')
   assert.equal(paper.questions[0].targetType, 'fine_bottleneck')
-  assert.equal(paper.questions[2].questionRole, 'transfer')
+  assert.equal(paper.questions[1].questionRole, 'transfer')
   assert.deepEqual(paper.studentPageCodes, [
     'MATH-V-20260616-01-P01',
     'MATH-V-20260616-01-P02'
@@ -1874,7 +1874,7 @@ test('generatePaper uses the grade selected for a default diagnostic paper', asy
     type: 'default-diagnosis',
     grade: 3,
     paperKey: 'grade3_a',
-    questionCount: 6
+    questionCount: 4
   })
 
   assert.equal(result.success, true)

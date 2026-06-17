@@ -10,30 +10,65 @@
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 10000; // 10秒后重试
 
+const SEVERITY_RANK = { high: 3, medium: 2, low: 1 };
+const MAX_FINE_BOTTLENECKS = 10; // 最多 10 个细卡点 → 20 题
+
 /**
- * 从 profile 提取待验证的卡点代码列表
+ * 从 profile 展开细卡点（BN-*），按 severity 排序后截取。
+ *
+ * 改前：优先取粗卡点 lpCode → 每个出 3 题 → 9 题
+ * 改后：展开 candidateBottlenecks 为 BN 细卡点 → 每个出 2 题 → 动态题量
+ *
+ * 返回格式：[{ bottleneckId, title, severity, lpCode（父级粗卡点） }]
  */
-function extractPendingTargets(profile) {
+function extractFineBottlenecks(profile) {
   const pending = (profile && profile.pendingBottlenecks) || [];
-  const targets = [];
   const seen = new Set();
+  const fineList = [];
+
   for (const item of pending) {
-    const code = item.lpCode || item.bottleneckId || item.id;
-    if (code && !seen.has(code)) {
-      seen.add(code);
-      targets.push(code);
-    }
-    // 细卡点候选也加入
-    for (const cand of item.candidateBottlenecks || []) {
-      const candCode = cand.bottleneckId || cand.id;
-      if (candCode && !seen.has(candCode)) {
-        seen.add(candCode);
-        targets.push(candCode);
+    const parentLpCode = item.lpCode || '';
+    const severity = item.severity || 'medium';
+    const candidates = item.candidateBottlenecks || [];
+
+    if (candidates.length > 0) {
+      // 有细卡点：展开每个 candidateBottleneck
+      for (const cand of candidates) {
+        const bnId = cand.bottleneckId || cand.id;
+        if (!bnId || seen.has(bnId)) continue;
+        seen.add(bnId);
+        fineList.push({
+          bottleneckId: bnId,
+          title: cand.title || cand.lpName || '未知卡点',
+          severity,
+          lpCode: parentLpCode,
+        });
+      }
+    } else {
+      // 无细卡点：用粗卡点作 fallback（标注 coarse）
+      const code = parentLpCode || item.bottleneckId || item.id;
+      if (code && !seen.has(code)) {
+        seen.add(code);
+        fineList.push({
+          bottleneckId: code,
+          title: item.lpName || '未知卡点',
+          severity,
+          lpCode: parentLpCode,
+          coarse: true,
+        });
       }
     }
   }
-  // 限制在 VERIFICATION_TASK_PACK_TARGET_LIMIT 内
-  return targets.slice(0, 8);
+
+  // 按 severity 排序（stable sort 保持原始顺序），截取上限
+  fineList.sort((a, b) => (SEVERITY_RANK[b.severity] || 2) - (SEVERITY_RANK[a.severity] || 2)
+    || fineList.indexOf(a) - fineList.indexOf(b));
+  return fineList.slice(0, MAX_FINE_BOTTLENECKS);
+}
+
+// 保留旧函数名兼容（内部调用改为 extractFineBottlenecks）
+function extractPendingTargets(profile) {
+  return extractFineBottlenecks(profile).map(item => item.bottleneckId);
 }
 
 /**
@@ -194,6 +229,7 @@ async function triggerAutoVerificationPaper(cloud, db, { reportId, studentId, su
 
 module.exports = {
   triggerAutoVerificationPaper,
+  extractFineBottlenecks,
   extractPendingTargets,
   supersedeOldPapers,
 };
