@@ -399,6 +399,45 @@ function buildEnglishSessionEvent(session = {}, subjectName = '英语', urlByFil
   }
 }
 
+function resourcePackTimeOf(pack = {}) {
+  return pack.completedAt || pack.scheduledVerificationAt || pack.updatedAt || pack.createdAt || ''
+}
+
+function buildLearningResourceEvent(pack = {}, subjectName = '') {
+  const eventTime = resourcePackTimeOf(pack)
+  const title = pack.title || (pack.target && pack.target.title) || '未命名卡点'
+  const completed = pack.status === 'completed'
+  const scheduled = Boolean(pack.scheduledVerificationAt)
+  const chips = [
+    pack.estimatedMinutes ? `约 ${pack.estimatedMinutes} 分钟` : '',
+    scheduled ? '已加入验证' : '',
+    subjectName
+  ].filter(Boolean)
+
+  return {
+    id: pack._id,
+    subject: pack.subject || '',
+    kind: 'learning-resource',
+    displayLevel: 'main',
+    icon: '学',
+    url: `/pages/learning-resource/learning-resource?packId=${encodeURIComponent(pack._id || '')}`,
+    title: `学习任务包：${title}`,
+    timeText: timeText(eventTime),
+    createdAt: eventTime,
+    summary: completed ? '已完成学习' : '待完成学习',
+    actionText: '查看任务包',
+    packId: pack._id,
+    photos: [],
+    foldedEvidence: [],
+    photoCount: 0,
+    duplicateCount: 0,
+    statusText: completed ? '已完成' : '待完成',
+    statusUrl: '',
+    chips,
+    chipItems: chips.map(text => ({ text, url: '' }))
+  }
+}
+
 function groupEventsByDay(events, statusItems = []) {
   const byDay = new Map()
   function ensureDay(value) {
@@ -566,7 +605,7 @@ function withAttachedPhotos(report, photosByReportId) {
   }
 }
 
-function buildTimelineEvents(reports, papers, urlByFileID, activeSubject, fallbackSubjectName, englishSessions = []) {
+function buildTimelineEvents(reports, papers, urlByFileID, activeSubject, fallbackSubjectName, englishSessions = [], learningResourcePacks = []) {
   const visibleReports = (reports || []).filter(report => isVisibleTimelineReport(report))
   const paperById = buildPaperLookup(papers)
   const paperCodeById = buildPaperCodeById(papers, fallbackSubjectName)
@@ -603,6 +642,11 @@ function buildTimelineEvents(reports, papers, urlByFileID, activeSubject, fallba
   ;(englishSessions || [])
     .forEach(session => {
       events.push(buildEnglishSessionEvent(session, recordSubjectName({ subject: 'english' }, '英语'), urlByFileID))
+    })
+
+  ;(learningResourcePacks || [])
+    .forEach(pack => {
+      events.push(buildLearningResourceEvent(pack, recordSubjectName(pack, fallbackSubjectName)))
     })
 
   events.sort((a, b) => toDate(b.createdAt) - toDate(a.createdAt))

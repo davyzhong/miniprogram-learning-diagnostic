@@ -121,6 +121,7 @@ Page({
       let reports = []
       let papers = []
       let englishSessions = []
+      let learningResourcePacks = []
       let permissions = {}
       let hasMoreRecords = false
       let nextCursor = ''
@@ -137,6 +138,7 @@ Page({
           reports = timeline.reports || []
           papers = timeline.papers || []
           englishSessions = timeline.englishSessions || []
+          learningResourcePacks = timeline.learningResourcePacks || []
           permissions = timeline.permissions || {}
           hasMoreRecords = Boolean(timeline.hasMore)
           nextCursor = timeline.nextCursor || ''
@@ -146,12 +148,12 @@ Page({
         console.warn('共享学习记录不可用，回退到旧记录读取', error && error.message ? error.message : error)
       }
 
-      if (!usedSharedTimeline && !reports.length && !papers.length && !englishSessions.length) {
+      if (!usedSharedTimeline && !reports.length && !papers.length && !englishSessions.length && !learningResourcePacks.length) {
         reports = await cloud.getReports(this.data.studentId, undefined, timelineLimit)
         papers = typeof cloud.getPapers === 'function'
           ? await cloud.getPapers({ studentId: this.data.studentId })
           : []
-        hasMoreRecords = reports.length >= timelineLimit || papers.length >= timelineLimit || englishSessions.length >= timelineLimit
+        hasMoreRecords = reports.length >= timelineLimit || papers.length >= timelineLimit || englishSessions.length >= timelineLimit || learningResourcePacks.length >= timelineLimit
       }
 
       const fileIDs = collectFileIDs(reports, englishSessions)
@@ -171,7 +173,8 @@ Page({
         urlByFileID,
         activeSubject,
         fallbackSubjectName,
-        englishSessions
+        englishSessions,
+        learningResourcePacks
       )
       const allEvents = options.append
         ? mergeEvents(this.data.allEvents || [], events)
@@ -187,7 +190,7 @@ Page({
         nextCursor,
         hasMoreRecords: usedSharedTimeline
           ? hasMoreRecords
-          : (reports.length >= timelineLimit || papers.length >= timelineLimit || englishSessions.length >= timelineLimit),
+          : (reports.length >= timelineLimit || papers.length >= timelineLimit || englishSessions.length >= timelineLimit || learningResourcePacks.length >= timelineLimit),
         ...buildHistoryState(allEvents, activeSubject, allStatusItems, { cleanupPreview: null, permissions }),
         loading: false
       })

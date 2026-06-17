@@ -125,6 +125,22 @@ async function getEnglishSessions(studentId, subject, limit = 50, cursor = '') {
   }));
 }
 
+function resourceCursorFilter(cursor) {
+  return cursor ? { updatedAt: db.command.lt(cursor) } : {};
+}
+
+async function getLearningResourcePacks(studentId, subject, limit = 50, cursor = '') {
+  const filter = subject
+    ? { studentId, subject, ...resourceCursorFilter(cursor) }
+    : { studentId, ...resourceCursorFilter(cursor) };
+  const res = await db.collection('learningResourcePacks')
+    .where(filter)
+    .orderBy('updatedAt', 'desc')
+    .limit(limit)
+    .get();
+  return res.data || [];
+}
+
 function bottleneckSummaryFrom(items = []) {
   const names = items
     .map(item => item && (item.summary || item.name || item.title || item.lpName || item.label))
@@ -236,8 +252,28 @@ function summarizeEnglishSessionForTimeline(session = {}) {
   };
 }
 
+function summarizeLearningResourcePackForTimeline(pack = {}) {
+  return {
+    _id: pack._id,
+    studentId: pack.studentId || '',
+    subject: pack.subject || '',
+    title: pack.title || '',
+    status: pack.status || '',
+    target: pack.target || null,
+    estimatedMinutes: Number(pack.estimatedMinutes) || 0,
+    completedAt: pack.completedAt || '',
+    scheduledVerificationAt: pack.scheduledVerificationAt || '',
+    createdAt: pack.createdAt || '',
+    updatedAt: pack.updatedAt || pack.createdAt || '',
+  };
+}
+
 function sessionTimeOf(session = {}) {
   return session.analyzedAt || session.completedAt || session.submittedAt || session.updatedAt || session.createdAt || '';
+}
+
+function resourcePackTimeOf(pack = {}) {
+  return pack.completedAt || pack.scheduledVerificationAt || pack.updatedAt || pack.createdAt || '';
 }
 
 function sessionVerdictCounts(session = {}) {
@@ -253,7 +289,7 @@ function sessionVerdictCounts(session = {}) {
   }, { correctCount: 0, incorrectCount: 0, unclearCount: 0 });
 }
 
-function buildTimeline({ reports = [], papers = [], englishSessions = [] }) {
+function buildTimeline({ reports = [], papers = [], englishSessions = [], learningResourcePacks = [] }) {
   const items = [];
 
   reports.forEach(report => {
@@ -323,6 +359,26 @@ function buildTimeline({ reports = [], papers = [], englishSessions = [] }) {
     });
   });
 
+  learningResourcePacks.forEach(pack => {
+    const eventTime = resourcePackTimeOf(pack);
+    const completed = pack.status === 'completed';
+    const title = pack.title || (pack.target && pack.target.title) || '未命名卡点';
+    items.push({
+      id: `learning-resource-${pack._id}`,
+      type: 'learning_resource',
+      subject: pack.subject,
+      packId: pack._id,
+      status: pack.status || '',
+      title: `学习任务包：${title}`,
+      summary: completed ? '已完成学习' : '待完成学习',
+      estimatedMinutes: pack.estimatedMinutes || 0,
+      target: pack.target || null,
+      url: `/pages/learning-resource/learning-resource?packId=${encodeURIComponent(pack._id || '')}`,
+      createdAt: eventTime,
+      occurredAt: eventTime,
+    });
+  });
+
   return items.sort((a, b) => toTime(b.occurredAt || b.createdAt) - toTime(a.occurredAt || a.createdAt));
 }
 
@@ -381,10 +437,11 @@ async function getLearningTimeline(openId, studentId, subjectValue, options = {}
   const limit = normalizeLimit(options.limit, 20, 100);
   const cursor = normalizeCursor(options.cursor);
   const fetchLimit = normalizeLimit(limit + 1, limit + 1, 101);
-  const [reports, papers, englishSessions] = await Promise.all([
+  const [reports, papers, englishSessions, learningResourcePacks] = await Promise.all([
     getReports(studentId, subject, fetchLimit, cursor),
     getPapers(studentId, subject, fetchLimit, cursor),
     getEnglishSessions(studentId, subject, fetchLimit, cursor),
+    getLearningResourcePacks(studentId, subject, fetchLimit, cursor),
   ]);
   const candidates = [
     ...reports.map(report => ({
@@ -405,17 +462,27 @@ async function getLearningTimeline(openId, studentId, subjectValue, options = {}
       cursor: session.createdAt || sessionTimeOf(session),
       occurredAt: sessionTimeOf(session),
     })),
+    ...learningResourcePacks.map(pack => ({
+      kind: 'learningResourcePack',
+      id: pack._id,
+      cursor: pack.updatedAt || pack.createdAt || resourcePackTimeOf(pack),
+      occurredAt: resourcePackTimeOf(pack),
+    })),
   ].sort((a, b) => toTime(b.occurredAt || b.cursor) - toTime(a.occurredAt || a.cursor));
   const pageRecords = candidates.slice(0, limit);
   const hasMore = candidates.length > limit;
   const reportIds = new Set(pageRecords.filter(item => item.kind === 'report').map(item => item.id));
   const paperIds = new Set(pageRecords.filter(item => item.kind === 'paper').map(item => item.id));
   const sessionIds = new Set(pageRecords.filter(item => item.kind === 'englishSession').map(item => item.id));
+  const packIds = new Set(pageRecords.filter(item => item.kind === 'learningResourcePack').map(item => item.id));
   const pageReports = reports.filter(report => reportIds.has(report._id)).map(summarizeReportForTimeline);
   const pagePapers = papers.filter(paper => paperIds.has(paper._id)).map(summarizePaperForTimeline);
   const pageEnglishSessions = englishSessions
     .filter(session => sessionIds.has(session._id))
     .map(summarizeEnglishSessionForTimeline);
+  const pageLearningResourcePacks = learningResourcePacks
+    .filter(pack => packIds.has(pack._id))
+    .map(summarizeLearningResourcePackForTimeline);
   const lastRecord = pageRecords[pageRecords.length - 1] || null;
 
   return withAccess(access, {
@@ -428,7 +495,13 @@ async function getLearningTimeline(openId, studentId, subjectValue, options = {}
     reports: pageReports,
     papers: pagePapers,
     englishSessions: pageEnglishSessions,
-    items: buildTimeline({ reports: pageReports, papers: pagePapers, englishSessions: pageEnglishSessions }),
+    learningResourcePacks: pageLearningResourcePacks,
+    items: buildTimeline({
+      reports: pageReports,
+      papers: pagePapers,
+      englishSessions: pageEnglishSessions,
+      learningResourcePacks: pageLearningResourcePacks,
+    }),
   });
 }
 
