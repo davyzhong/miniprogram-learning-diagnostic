@@ -4,6 +4,15 @@ cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// 安全：历史重分析是破坏性维护操作（归档报告、重写 subjectProfiles），
+// 必须通过 MATH_REANALYSIS_TOKEN 校验，与 analyzePhotos 的 isTrustedReanalysisRequest 对齐。
+// 任何外部 wx.cloud.callFunction 调用若不携带正确 token 一律拒绝。
+const REANALYSIS_TOKEN = process.env.MATH_REANALYSIS_TOKEN || ''
+
+function isTrustedReanalysisRequest(event = {}) {
+  return Boolean(REANALYSIS_TOKEN && event.reanalysisToken === REANALYSIS_TOKEN)
+}
+
 const VERSION = 'math-full-reanalysis-v2.2-hierarchy'
 const LEARNING_MAP_VERSION = 'math-learning-map-v2.2-hierarchy'
 const SUBJECT = 'math'
@@ -918,6 +927,10 @@ async function finalize(event = {}) {
 }
 
 exports.main = async (event = {}) => {
+  // 安全：所有 phase 都必须通过 token 校验，防止外部直接调用触发破坏性历史重分析
+  if (!isTrustedReanalysisRequest(event)) {
+    return { success: false, error: '未授权的历史重分析请求，缺少或 token 无效' }
+  }
   const phase = event.phase || 'start'
   if (phase === 'start') return start(event)
   if (phase === 'aggregate') return aggregate(event)

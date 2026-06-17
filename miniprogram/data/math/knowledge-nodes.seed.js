@@ -1,3 +1,6 @@
+// 小学数学知识节点库（前端版）。
+// 内容与仓库根 data/math/knowledge-nodes.seed.json 保持一致；
+// 这里改用 module.exports，符合 miniprogram/data 下 *.seed.js 的前端加载约定。
 module.exports = {
   "version": "0.1.0",
   "updatedAt": "2026-06-17",
@@ -1966,7 +1969,9 @@ module.exports = {
         "判断轴对称图形",
         "画对称轴"
       ],
-      "commonBottlenecks": [],
+      "commonBottlenecks": [
+        "BN-AXIS-FOLD-MIDPOINT-DIRECTION"
+      ],
       "masteryCriteria": {
         "immediatePractice": "能判断常见轴对称图形。",
         "transferPractice": "能画对称轴。",

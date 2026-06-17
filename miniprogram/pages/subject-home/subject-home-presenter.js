@@ -1,8 +1,7 @@
 const {
   buildBottleneckViews,
   buildBottleneckStats,
-  profileBottlenecks,
-  buildGroupedBottleneckViews
+  profileBottlenecks
 } = require('../../utils/bottleneck-view')
 
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
@@ -200,7 +199,7 @@ function buildEnglishPrimaryTask(options = {}, permissions = {}) {
     toSafeCount(familiarity.untestedCount),
     toSafeCount(spelling.untestedCount)
   )
-  const todayCount = Math.min(20, scheduledCount + newWordCount || totalWords || 0)
+  const todayCount = Math.min(20, (scheduledCount + newWordCount) || totalWords || 0)
   if (!canWrite) {
     return {
       title: '当前可查看',
@@ -364,9 +363,6 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     subjectName
   })
   const taskQueue = currentBottlenecks.filter(item => item.status !== 'improved')
-  const taskQueueGroups = subject === 'math'
-    ? buildGroupedBottleneckViews(taskQueue, { subject, subjectName })
-    : []
   const chineseReviewQueue = options.subject === 'chinese' ? buildChineseReviewQueue(profile) : []
   const bottleneckStats = buildBottleneckStats(currentBottlenecks)
   const recentChanges = buildRecentChanges(reports, formatRelativeTime)
@@ -392,8 +388,6 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     nextAction: primaryTask.actionText,
     primaryTask,
     taskQueue: options.subject === 'english' ? [] : taskQueue,
-    hasTaskQueueGroups: taskQueueGroups.length > 0,
-    taskQueueGroups,
     pendingTaskCount: options.subject === 'chinese' && chineseReviewQueue.length > 0
       ? chineseReviewQueue.length
       : (options.subject === 'english' ? 0 : taskQueue.length),

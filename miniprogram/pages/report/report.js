@@ -129,7 +129,14 @@ Page({
     }
     return {
       report: await cloud.getReport(id),
-      permissions: {}
+      // 回退路径无法确定权限，保守关闭所有写操作按钮，避免未授权用户看到可操作 UI。
+      // 后端云函数仍会做二次权限校验（防御深度），这里只是 UI 层的安全默认值。
+      permissions: {
+        canUpload: false,
+        canGeneratePaper: false,
+        canRetryAnalysis: false,
+        canManageParents: false
+      }
     }
   },
 
