@@ -8,6 +8,8 @@
 
 ### Added
 
+- **L1-L4 测试框架**：数据一致性守护（18 断言）、诊断准确性回归（41 条证据）、卡点分组回归（28 卡点）、数据驱动 E2E、结果聚合、真实云回归
+- **数据扩充 v0.3**：知识节点 31→91、历史证据 20→41、卡点 27→28、资源 26→28，四库交叉引用一致性 100%
 - 家庭学习工作台与单孩子学习档案分流：0 个孩子显示空态，1 个孩子直接进入档案，多孩子显示高密度工作台
 - 家长成员管理：owner 可邀请/移除共同家长，viewer 除成员管理外可查看资料并参与上传、出卷、重试等学习流程
 - 学习卡点中心与单卡点详情：支持从首页、档案、学科页和报告页进入卡点工作台，查看证据链并生成验证卷
@@ -19,18 +21,22 @@
 - 验证试卷出卷配置器：支持 `targetCode` 单卡点预选，并展示题量、预计用时和 A4 页数 (`pages/generate-verification/`)
 - 学习记录时间线：按天聚合诊断报告、验证试卷、验证作答上传和原始照片 (`pages/upload-history/`)
 - 试卷 PDF 已下载状态：同一份试卷下载后显示「已下载」，避免重复下载 (`pages/paper-preview/`)
-- 学习卡点短名称格式化：对家长和学生展示“小数分数、单位换算”等摘要，不直接暴露 LP 编号 (`utils/util.js`)
+- 学习卡点短名称格式化：对家长和学生展示"小数分数、单位换算"等摘要，不直接暴露 LP 编号 (`utils/util.js`)
 - 新版双女孩学习插图与应用分享 Logo 资源 (`miniprogram/assets/images/`, `brand-assets/`)
 
 ### Changed
 
-- 验证试卷题量调整为每个学习卡点 5 道题：3 道核心验证题 + 2 道迁移延展题，用于复测当前卡点并观察相邻卡点
+- **云函数 `_shared` 子目录重构**：微信开发者工具上传时跳过下划线前缀子目录，导致 `require('./_shared/access')` 在云端失败、预览/真机空白。8 个云函数的共享文件（access.js/constants.js/math-bottleneck-hierarchy.js）移到各自根目录，改为 `require('./access')`；删除顶层 `cloudfunctions/_shared/`
+- **Intl API 兼容性修复**：微信 iOS/Mac 运行时不支持 `Intl`，导致首页 `formatRelativeTime` 崩溃、预览/真机完全空白。3 处 `Intl.DateTimeFormat` 替换为纯数学时区计算（UTC+8 偏移 + `getUTC*`）
+- **试卷生成超时优化**：`generatePaper` 每卡点题量 5→3（2核心+1延展），卡点上限 60→8，temperature 0.7→0.3，prompt 精简，确保 LLM 在 60 秒内返回
+- **前端 LLM 调用超时修复**：`callGeneratePaper`/`callGenerateReportPDF`/`confirmEnglishImportBatch`/`analyzeEnglishDictationPhoto` 加 `timeout: 60000`（微信默认 20 秒不够）
+- 验证试卷题量调整为每个学习卡点 3 道题：2 道核心验证题 + 1 道迁移延展题，用于复测当前卡点并观察相邻卡点
 - 批量照片分析改为服务端按图片串行异步处理，并通过后续云函数调用延续大批量任务，避免单次函数超过 60 秒限制
 - 学习记录主卡片更强调诊断报告、验证试卷和验证反馈，分析中/失败等中间态保持紧凑展示
 - `index` 从学生列表改为单人 MVP 学习档案首页；`subject-select` 降级为兼容的学科入口页
-- 首页“学习观察”收敛为“重点提示”，诊断解释主要保留在首页摘要和报告页
+- 首页”学习观察”收敛为”重点提示”，诊断解释主要保留在首页摘要和报告页
 - `upload-history` 支持不带学科参数时展示全学科学习记录
-- `npm test` 当前运行 261 个常规自动化用例；真实图片 E2E 改由 `npm run test:e2e-real-image` 单独运行
+- `npm test` 当前运行 447 个常规自动化用例（49 个测试文件）；真实图片 E2E 改由 `npm run test:e2e-real-image` 单独运行
 - PRD、项目计划、架构、测试、部署、云函数和故障排查文档更新到当前实现状态
 
 ---
