@@ -11,6 +11,7 @@
     "pages/report/report",
     "pages/bottleneck-center/bottleneck-center",
     "pages/bottleneck-detail/bottleneck-detail",
+    "pages/learning-resource/learning-resource",
     "pages/english-practice/english-practice",
     "pages/english-dictation/english-dictation",
     "pages/generate-verification/generate-verification",

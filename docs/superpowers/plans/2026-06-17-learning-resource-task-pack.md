@@ -705,7 +705,7 @@ git commit -m "feat: add learning resource cloud client"
 - Produces:
   - A visible task-pack page with `summary`, `concept`, `worked_example`, `common_mistake`, `practice` blocks.
 
-- [ ] **Step 1: Write presenter tests**
+- [x] **Step 1: Write presenter tests**
 
 Add `tests/learning-resource-presenter.test.js`:
 
@@ -734,7 +734,7 @@ test('buildLearningResourceView renders pack blocks and actions', () => {
 })
 ```
 
-- [ ] **Step 2: Run RED test**
+- [x] **Step 2: Run RED test**
 
 Run:
 
@@ -744,7 +744,7 @@ node --test tests/learning-resource-presenter.test.js
 
 Expected: fail because presenter file does not exist.
 
-- [ ] **Step 3: Implement presenter**
+- [x] **Step 3: Implement presenter**
 
 Create `miniprogram/pages/learning-resource/learning-resource-presenter.js`:
 
@@ -770,7 +770,7 @@ function buildLearningResourceView(pack = {}) {
 module.exports = { buildLearningResourceView }
 ```
 
-- [ ] **Step 4: Implement page files**
+- [x] **Step 4: Implement page files**
 
 Register page in `miniprogram/app.json`:
 
@@ -838,7 +838,7 @@ Page({
 })
 ```
 
-- [ ] **Step 5: Add WXML and WXSS**
+- [x] **Step 5: Add WXML and WXSS**
 
 Create WXML with block rendering:
 
@@ -900,7 +900,7 @@ Create WXSS:
 .primary { background: #2b6cb0; color: #ffffff; }
 ```
 
-- [ ] **Step 6: Run tests and preview**
+- [x] **Step 6: Run tests and preview**
 
 Run:
 
@@ -912,7 +912,7 @@ npm run verify
 
 Expected: tests pass and preview QR is generated.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 Run:
 
