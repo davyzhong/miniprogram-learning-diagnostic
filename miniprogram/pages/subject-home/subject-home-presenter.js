@@ -1,7 +1,8 @@
 const {
   buildBottleneckViews,
   buildBottleneckStats,
-  profileBottlenecks
+  profileBottlenecks,
+  buildGroupedBottleneckViews
 } = require('../../utils/bottleneck-view')
 
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
@@ -356,12 +357,16 @@ function buildTools(latestReport, permissions = {}, options = {}) {
 
 function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = () => '', options = {}) {
   const subjectName = options.subjectName || profile.subjectName || '数学'
+  const subject = options.subject || profile.subject || ''
   const permissions = options.permissions || {}
   const currentBottlenecks = buildSubjectBottleneckViews(profile, {
-    subject: options.subject,
+    subject,
     subjectName
   })
   const taskQueue = currentBottlenecks.filter(item => item.status !== 'improved')
+  const taskQueueGroups = subject === 'math'
+    ? buildGroupedBottleneckViews(taskQueue, { subject, subjectName })
+    : []
   const chineseReviewQueue = options.subject === 'chinese' ? buildChineseReviewQueue(profile) : []
   const bottleneckStats = buildBottleneckStats(currentBottlenecks)
   const recentChanges = buildRecentChanges(reports, formatRelativeTime)
@@ -387,6 +392,8 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     nextAction: primaryTask.actionText,
     primaryTask,
     taskQueue: options.subject === 'english' ? [] : taskQueue,
+    hasTaskQueueGroups: taskQueueGroups.length > 0,
+    taskQueueGroups,
     pendingTaskCount: options.subject === 'chinese' && chineseReviewQueue.length > 0
       ? chineseReviewQueue.length
       : (options.subject === 'english' ? 0 : taskQueue.length),

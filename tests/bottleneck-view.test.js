@@ -4,7 +4,8 @@ const assert = require('node:assert/strict')
 const {
   buildBottleneckViews,
   buildBottleneckStats,
-  findBottleneckView
+  findBottleneckView,
+  buildGroupedBottleneckViews
 } = require('../miniprogram/utils/bottleneck-view')
 
 const { formatBottleneckDisplayName } = require('../miniprogram/utils/util')
@@ -135,4 +136,30 @@ test('bottleneck views carry parent-facing taxonomy metadata', () => {
   assert.equal(views[0].category, '单位量纲')
   assert.match(views[0].parentDescription, /单位/)
   assert.equal(views[0].validationStyle, '单位换算验证题')
+})
+
+test('math bottleneck views group by category and family without losing fine items', () => {
+  const groups = buildGroupedBottleneckViews([
+    {
+      fineBottleneck: true,
+      bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+      lpName: '小数乘法中积的小数位数判断错误',
+      status: 'persisting',
+      subject: 'math'
+    },
+    {
+      fineBottleneck: true,
+      bottleneckId: 'BN-DEC-MUL-POINT-ESTIMATE',
+      lpName: '小数乘法后缺少数量级估算检查',
+      status: 'needs_verification',
+      subject: 'math'
+    }
+  ], { subject: 'math' })
+
+  assert.equal(groups[0].categoryTitle, '计算规则')
+  assert.equal(groups[0].title, '计算规则')
+  assert.equal(groups[0].summaryText, '2 个细分卡点')
+  assert.equal(groups[0].families[0].familyTitle, '小数点定位与移动')
+  assert.equal(groups[0].families[0].summaryText, '2 个卡点')
+  assert.equal(groups[0].families[0].items[0].displayName, '小数乘法中积的小数位数判断错误')
 })

@@ -504,3 +504,38 @@ test('math diagnosis report expands visible bottleneck list to fine-grained cand
   assert.doesNotMatch(view.bottleneckList[0].displayName, /^计算基础$/)
   assert.match(view.explanationEvidence, /2 个学习卡点/)
 })
+
+test('math diagnosis report exposes grouped bottleneck sections for parent-facing review', () => {
+  const view = buildReportView({
+    _id: 'report-math-groups',
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'diagnosis',
+    bottlenecks: [
+      {
+        lpCode: 'LP-001',
+        lpName: '计算基础',
+        status: 'found',
+        candidateBottlenecks: [
+          {
+            bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+            title: '小数乘法中积的小数位数判断错误'
+          },
+          {
+            bottleneckId: 'BN-DEC-MUL-POINT-ESTIMATE',
+            title: '小数乘法后缺少数量级估算检查'
+          }
+        ]
+      }
+    ]
+  })
+
+  assert.equal(view.hasBottleneckGroups, true)
+  assert.equal(view.bottleneckGroups[0].categoryTitle, '计算规则')
+  assert.equal(view.bottleneckGroups[0].summaryText, '2 个细分卡点')
+  assert.equal(view.bottleneckGroups[0].families[0].familyTitle, '小数点定位与移动')
+  assert.deepEqual(view.bottleneckGroups[0].families[0].items.map(item => item.displayName), [
+    '小数乘法中积的小数位数判断错误',
+    '小数乘法后缺少数量级估算检查'
+  ])
+})
