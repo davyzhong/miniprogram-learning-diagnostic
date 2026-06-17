@@ -255,6 +255,36 @@ test('timeline includes English vocabulary sessions as learning records', async 
   assert.deepEqual(JSON.parse(JSON.stringify(mathTimeline.englishSessions)), [])
 })
 
+test('learning timeline includes learning resource packs', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentMembers: [{ _id: 'member-1', studentId: 'student-1', ownerOpenId: 'owner-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }],
+    reports: [],
+    papers: [],
+    englishPracticeSessions: [],
+    learningResourcePacks: [
+      {
+        _id: 'pack-1',
+        _openid: 'owner-1',
+        studentId: 'student-1',
+        subject: 'math',
+        title: '小数乘法中积的小数位数判断错误',
+        status: 'completed',
+        createdAt: '2026-06-17T08:00:00.000Z',
+        updatedAt: '2026-06-17T08:10:00.000Z'
+      }
+    ]
+  })
+  const handler = loadStudentData(db, 'viewer-1')
+
+  const timeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1', limit: 20 })
+
+  assert.equal(timeline.success, true)
+  assert.equal(timeline.items[0].type, 'learning_resource')
+  assert.equal(timeline.items[0].title, '学习任务包：小数乘法中积的小数位数判断错误')
+  assert.equal(timeline.items[0].summary, '已完成学习')
+})
+
 test('owner can archive stale interrupted analysis records from the timeline', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],

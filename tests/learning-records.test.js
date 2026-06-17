@@ -416,6 +416,31 @@ test('learning records render English familiarity and paper dictation sessions',
   assert.ok(events[1].chips.includes('20 词'))
 })
 
+test('learning records render learning resource packs as timeline events', () => {
+  const packs = [
+    {
+      _id: 'pack-1',
+      studentId: 'student-1',
+      subject: 'math',
+      title: '小数乘法中积的小数位数判断错误',
+      status: 'completed',
+      estimatedMinutes: 8,
+      createdAt: '2026-06-17T08:00:00+08:00',
+      updatedAt: '2026-06-17T08:10:00+08:00'
+    }
+  ]
+
+  const { events } = buildTimelineEvents([], [], new Map(), 'math', '数学', [], packs)
+
+  assert.equal(events.length, 1)
+  assert.equal(events[0].kind, 'learning-resource')
+  assert.equal(events[0].title, '学习任务包：小数乘法中积的小数位数判断错误')
+  assert.equal(events[0].summary, '已完成学习')
+  assert.equal(events[0].actionText, '查看任务包')
+  assert.match(events[0].url, /pages\/learning-resource\/learning-resource\?packId=pack-1/)
+  assert.ok(events[0].chips.includes('约 8 分钟'))
+})
+
 test('paper preview presenter builds workbench state, question preview and feedback copy', () => {
   const paper = {
     _id: 'paper-1',

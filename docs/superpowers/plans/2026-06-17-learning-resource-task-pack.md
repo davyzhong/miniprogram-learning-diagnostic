@@ -1063,7 +1063,7 @@ git commit -m "feat: open learning packs from bottlenecks"
 - Produces:
   - Timeline items with `type: 'learning_resource'`, `title`, `subject`, `status`, `createdAt`.
 
-- [ ] **Step 1: Add failing timeline test**
+- [x] **Step 1: Add failing timeline test**
 
 Add to `tests/student-data-access.test.js`:
 
@@ -1097,7 +1097,7 @@ test('learning timeline includes completed learning resource packs', async () =>
 })
 ```
 
-- [ ] **Step 2: Run RED test**
+- [x] **Step 2: Run RED test**
 
 Run:
 
@@ -1107,7 +1107,7 @@ node --test tests/student-data-access.test.js
 
 Expected: fail because timeline does not include resource packs.
 
-- [ ] **Step 3: Implement timeline query and mapping**
+- [x] **Step 3: Implement timeline query and mapping**
 
 In `cloudfunctions/studentData/index.js`, update learning timeline loading to also query:
 
@@ -1133,7 +1133,7 @@ Map each pack:
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run:
 
@@ -1144,7 +1144,7 @@ npm run verify
 
 Expected: all tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
