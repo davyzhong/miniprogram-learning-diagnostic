@@ -105,7 +105,8 @@ test('verification PDF shortens long bottleneck names for question chips', async
   })
 
   const texts = operations.filter(item => item[0] === 'text').map(item => item[1])
-  assert.ok(texts.includes('百分数/小数转换'))
+  // 双栏布局下 chip 文本截断到 5 字符
+  assert.ok(texts.some(t => t.includes('百分数') && t.includes('…')), `expected truncated chip, got: ${texts.filter(t => t.includes('百分数'))}`)
   assert.equal(texts.includes('LP-003'), false)
 })
 

@@ -170,58 +170,65 @@ function drawGroupBar(doc, group, index, y, type = 'verification') {
   return y + 31;
 }
 
-function questionHeight(doc, question) {
+// 双栏布局：每行放两道题，充分利用 A4 宽度
+const COLUMN_GAP = 16;
+const COLUMN_WIDTH = (PAGE.contentWidth - COLUMN_GAP) / 2; // 每栏宽度 ≈ 253pt
+
+function questionHeight(doc, question, colWidth) {
   doc.fontSize(11);
+  const w = colWidth || COLUMN_WIDTH;
   const contentHeight = doc.heightOfString(question.content || '', {
-    width: PAGE.contentWidth - 22,
+    width: w - 8,
     lineGap: 2,
   });
-  const answerHeight = contentHeight > 38 ? 40 : 28;
-  return 24 + contentHeight + answerHeight + 12;
+  const answerHeight = contentHeight > 20 ? 32 : 22;
+  return 22 + contentHeight + answerHeight + 10;
 }
 
-function drawQuestion(doc, question, y) {
+function drawQuestion(doc, question, y, x, colWidth) {
+  const w = colWidth || COLUMN_WIDTH;
+  const left = x || PAGE.left;
   const number = question.index || '';
-  doc.fillColor(COLORS.blue).fontSize(13).text(String(number), PAGE.left, y, {
-    width: 22,
+  doc.fillColor(COLORS.blue).fontSize(12).text(String(number), left, y, {
+    width: 18,
   });
 
-  const chipX = PAGE.left + 26;
-  const chipText = summarizeBottleneckName(question.lpName);
-  const chipWidth = Math.max(50, Math.min(88, chipText.length * 7.5 + 14));
-  fillRect(doc, chipX, y + 1, chipWidth, 15, COLORS.chip, 3);
-  doc.fillColor(COLORS.muted).fontSize(8)
-    .text(chipText, chipX + 5, y + 4, { width: chipWidth - 10 });
+  // 卡点标签：截断到 5 字符，避免双栏下溢出
+  const chipX = left + 20;
+  const rawChip = summarizeBottleneckName(question.lpName);
+  const chipText = rawChip.length > 5 ? rawChip.slice(0, 5) + '…' : rawChip;
+  const chipWidth = Math.min(70, chipText.length * 7 + 12);
+  fillRect(doc, chipX, y + 1, chipWidth, 14, COLORS.chip, 2);
+  doc.fillColor(COLORS.muted).fontSize(7)
+    .text(chipText, chipX + 4, y + 3, { width: chipWidth - 8, lineBreak: false });
 
-  const contentY = y + 21;
+  const contentY = y + 19;
   doc.fillColor(COLORS.text).fontSize(11)
-    .text(question.content || '', PAGE.left, contentY, {
-      width: PAGE.contentWidth,
+    .text(question.content || '', left, contentY, {
+      width: w - 4,
       lineGap: 2,
     });
   const contentHeight = doc.heightOfString(question.content || '', {
-    width: PAGE.contentWidth,
+    width: w - 4,
     lineGap: 2,
   });
-  const boxY = contentY + contentHeight + 6;
-  const boxHeight = contentHeight > 38 ? 40 : 28;
+  const boxY = contentY + contentHeight + 5;
+  const boxHeight = contentHeight > 20 ? 32 : 22;
 
   doc.save()
     .strokeColor(COLORS.line)
-    .lineWidth(0.8)
-    .dash(4, { space: 3 })
-    .roundedRect(PAGE.left, boxY, PAGE.contentWidth, boxHeight, 4)
+    .lineWidth(0.7)
+    .dash(3, { space: 2 })
+    .roundedRect(left, boxY, w - 4, boxHeight, 3)
     .stroke()
     .undash()
     .restore();
-  doc.fillColor('#98A9BC').fontSize(7.5)
-    .text('演算区', PAGE.left + 6, boxY + 5, {
-      width: PAGE.contentWidth - 12,
-    });
+  doc.fillColor('#98A9BC').fontSize(7)
+    .text('演算', left + 4, boxY + 4, { width: w - 12, lineBreak: false });
 
-  const bottom = boxY + boxHeight + 7;
-  drawLine(doc, PAGE.left, bottom, PAGE.width - PAGE.right, bottom, COLORS.line, 0.5);
-  return bottom + 6;
+  const bottom = boxY + boxHeight + 6;
+  drawLine(doc, left, bottom, left + w - 4, bottom, COLORS.line, 0.5);
+  return bottom + 5;
 }
 
 function drawPageNumber(doc, pageNumber, answerPage = false, pageCode = '') {
@@ -375,32 +382,68 @@ async function generatePDF(questionsData, subject, type, options = {}) {
     }
     y = drawGroupBar(doc, group, groupIndex, y, type);
 
-    group.questions.forEach(question => {
-      const requiredHeight = questionHeight(doc, question);
-      const nextPageCode = questionPageCode(question, verificationPack, pageNumber);
+    // 双栏布局：两题一行（左栏 + 右栏）
+    for (let qi = 0; qi < group.questions.length; qi += 2) {
+      const leftQ = group.questions[qi];
+      const rightQ = group.questions[qi + 1];
+      const leftHeight = questionHeight(doc, leftQ);
+      const rightHeight = rightQ ? questionHeight(doc, rightQ) : 0;
+      const rowHeight = Math.max(leftHeight, rightHeight);
+
+      // 分页检查：当前行放不下就换页
+      const checkHeight = Math.max(rowHeight, 70);
+      const leftPageCode = questionPageCode(leftQ, verificationPack, pageNumber);
       if (
         type === 'verification'
         && currentStudentQuestionIds.length > 0
         && currentStudentPageCode
-        && nextPageCode
-        && nextPageCode !== currentStudentPageCode
+        && leftPageCode
+        && leftPageCode !== currentStudentPageCode
       ) {
         finishStudentPage();
         doc.addPage();
         pageNumber += 1;
-        y = startStudentPage(question);
+        y = startStudentPage(leftQ);
         y = drawGroupBar(doc, group, groupIndex, y, type);
       }
-      if (y + requiredHeight > PAGE.contentBottom) {
+      if (y + checkHeight > PAGE.contentBottom) {
         finishStudentPage();
         doc.addPage();
         pageNumber += 1;
-        y = startStudentPage(question);
+        y = startStudentPage(leftQ);
         y = drawGroupBar(doc, group, groupIndex, y, type);
       }
-      rememberQuestionOnStudentPage(question);
-      y = drawQuestion(doc, question, y);
-    });
+
+      // 左栏
+      rememberQuestionOnStudentPage(leftQ);
+      drawQuestion(doc, leftQ, y, PAGE.left, COLUMN_WIDTH);
+
+      // 右栏（如果有配对的题）
+      if (rightQ) {
+        const rightPageCode = questionPageCode(rightQ, verificationPack, pageNumber);
+        if (
+          type === 'verification'
+          && currentStudentQuestionIds.length > 0
+          && currentStudentPageCode
+          && rightPageCode
+          && rightPageCode !== currentStudentPageCode
+        ) {
+          // 右栏跨 pageCode：右栏单独画在下一行（降级单栏）
+          rememberQuestionOnStudentPage(leftQ);
+          y += leftHeight;
+          // 右题放下一行左栏
+          rememberQuestionOnStudentPage(rightQ);
+          drawQuestion(doc, rightQ, y, PAGE.left, COLUMN_WIDTH);
+          y += questionHeight(doc, rightQ);
+          continue;
+        }
+        rememberQuestionOnStudentPage(rightQ);
+        const rightX = PAGE.left + COLUMN_WIDTH + COLUMN_GAP;
+        drawQuestion(doc, rightQ, y, rightX, COLUMN_WIDTH);
+      }
+
+      y += rowHeight;
+    }
   });
   finishStudentPage();
 
