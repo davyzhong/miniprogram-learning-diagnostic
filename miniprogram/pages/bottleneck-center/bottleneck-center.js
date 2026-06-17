@@ -43,6 +43,13 @@ function matchesStatus(item, status) {
   return true
 }
 
+function compactList(values = []) {
+  return values
+    .filter(Boolean)
+    .map(value => String(value || '').replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+}
+
 Page({
   data: {
     loading: true,
@@ -169,6 +176,52 @@ Page({
     wx.navigateTo({
       url: `/pages/generate-verification/generate-verification?studentId=${this.data.studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(this.data.studentName || '')}&targetCode=${encodeURIComponent(lpCode)}`
     })
+  },
+
+  async onOpenLearningResource(e) {
+    const { viewId = '', lpCode = '', bottleneckId = '', subject = 'math' } = e.currentTarget.dataset
+    const bottleneck = this.data.allBottlenecks.find(item => (
+      (viewId && item.viewId === viewId)
+      || (bottleneckId && item.bottleneckId === bottleneckId)
+      || (lpCode && item.lpCode === lpCode && item.subject === subject)
+    ))
+    if (!bottleneck) return
+
+    wx.showLoading({ title: '正在生成任务' })
+    try {
+      const result = await cloud.generateLearningResourcePack({
+        studentId: this.data.studentId,
+        subject: bottleneck.subject || subject,
+        target: {
+          bottleneckId: bottleneck.bottleneckId || bottleneckId || '',
+          lpCode: bottleneck.lpCode || lpCode || '',
+          title: bottleneck.displayName || bottleneck.shortName || '学习卡点',
+          nodeId: bottleneck.nodeId || '',
+          categoryPath: compactList([bottleneck.category]),
+          symptomPatterns: compactList([
+            bottleneck.parentDescription,
+            bottleneck.evidenceText
+          ]),
+          repairStrategy: compactList([
+            bottleneck.actionText,
+            bottleneck.validationStyle
+          ])
+        },
+        resources: bottleneck.resources || []
+      })
+      wx.hideLoading()
+      const packId = result.packId || (result.pack && (result.pack._id || result.pack.packId))
+      if (!result.success || !packId) {
+        wx.showToast({ title: result.error || '任务生成失败', icon: 'none' })
+        return
+      }
+      wx.navigateTo({
+        url: `/pages/learning-resource/learning-resource?packId=${encodeURIComponent(packId)}`
+      })
+    } catch (error) {
+      wx.hideLoading()
+      wx.showToast({ title: error.message || '任务生成失败', icon: 'none' })
+    }
   },
 
   onRefresh() {

@@ -194,6 +194,13 @@ function evidenceVisibility(evidenceChain = [], showAll = false) {
   }
 }
 
+function compactList(values = []) {
+  return values
+    .filter(Boolean)
+    .map(value => compactText(value, 48))
+    .filter(Boolean)
+}
+
 Page({
   data: {
     loading: true,
@@ -295,6 +302,49 @@ Page({
     wx.navigateTo({
       url: `/pages/generate-verification/generate-verification?studentId=${this.data.studentId}&subject=${this.data.subject}&subjectName=${encodeURIComponent(this.data.subjectName)}&studentName=${encodeURIComponent(this.data.studentName || '')}&targetCode=${encodeURIComponent(this.data.lpCode)}`
     })
+  },
+
+  async onOpenLearningResource() {
+    const bottleneck = this.data.bottleneck
+    if (!bottleneck) return
+
+    const lpCode = bottleneck.lpCode || this.data.lpCode
+    wx.showLoading({ title: '正在生成任务' })
+    try {
+      const result = await cloud.generateLearningResourcePack({
+        studentId: this.data.studentId,
+        subject: this.data.subject,
+        sourceReportId: this.data.relatedReports[0] && this.data.relatedReports[0]._id,
+        target: {
+          bottleneckId: this.data.bottleneckId || bottleneck.bottleneckId || '',
+          lpCode,
+          title: bottleneck.displayName || bottleneck.shortName || '学习卡点',
+          nodeId: bottleneck.nodeId || '',
+          categoryPath: compactList([bottleneck.category]),
+          symptomPatterns: compactList([
+            bottleneck.parentDescription,
+            bottleneck.evidenceText
+          ]),
+          repairStrategy: compactList([
+            bottleneck.actionText,
+            bottleneck.validationStyle
+          ])
+        },
+        resources: bottleneck.resources || []
+      })
+      wx.hideLoading()
+      const packId = result.packId || (result.pack && (result.pack._id || result.pack.packId))
+      if (!result.success || !packId) {
+        wx.showToast({ title: result.error || '任务生成失败', icon: 'none' })
+        return
+      }
+      wx.navigateTo({
+        url: `/pages/learning-resource/learning-resource?packId=${encodeURIComponent(packId)}`
+      })
+    } catch (error) {
+      wx.hideLoading()
+      wx.showToast({ title: error.message || '任务生成失败', icon: 'none' })
+    }
   },
 
   onViewReport(e) {

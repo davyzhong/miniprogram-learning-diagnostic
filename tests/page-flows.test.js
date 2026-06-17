@@ -498,6 +498,18 @@ test('bottleneck center loads dashboard bottlenecks and filters by status', asyn
   assert.match(urls[1], /targetCode=LP-001/)
 })
 
+test('bottleneck pages expose learning task pack actions before verification', () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const detailWxml = fs.readFileSync(path.resolve(__dirname, '../miniprogram/pages/bottleneck-detail/bottleneck-detail.wxml'), 'utf8')
+  const centerWxml = fs.readFileSync(path.resolve(__dirname, '../miniprogram/pages/bottleneck-center/bottleneck-center.wxml'), 'utf8')
+
+  assert.match(detailWxml, /学一下/)
+  assert.match(detailWxml, /onOpenLearningResource/)
+  assert.match(centerWxml, /学一下/)
+  assert.match(centerWxml, /onOpenLearningResource/)
+})
+
 
 test('bottleneck detail builds a focused evidence workbench without repetitive report and paper lists', async () => {
   let dashboardArgs = null

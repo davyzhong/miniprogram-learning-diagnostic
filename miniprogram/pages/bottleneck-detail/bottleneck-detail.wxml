@@ -46,6 +46,22 @@
       <text class="time-text">{{bottleneck.timeText}}</text>
     </view>
 
+    <view class="section learning-section">
+      <view class="section-title-line">
+        <view>
+          <view class="section-heading">学习任务包</view>
+          <text class="section-subtitle">先用 5-10 分钟把这个卡点学清楚，再安排验证。</text>
+        </view>
+      </view>
+      <view class="learning-entry" bindtap="onOpenLearningResource">
+        <view class="learning-copy">
+          <text class="learning-title">学一下：{{bottleneck.displayName}}</text>
+          <text class="learning-desc">包含微讲解、例题拆解、易错对比和 3 道练习。</text>
+        </view>
+        <text class="arrow">›</text>
+      </view>
+    </view>
+
     <view class="section">
       <view class="section-title-line">
         <view>

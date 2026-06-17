@@ -414,6 +414,43 @@
   justify-content: center;
 }
 
+.learning-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+  padding: 28rpx;
+  border-radius: 18rpx;
+  background: #fff7e8;
+  border: 2rpx solid #fed7aa;
+  box-shadow: 0 4rpx 16rpx rgba(120, 72, 24, .06);
+}
+
+.learning-entry:active {
+  opacity: 0.74;
+}
+
+.learning-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.learning-title {
+  display: block;
+  color: #172033;
+  font-size: 30rpx;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.learning-desc {
+  display: block;
+  margin-top: 8rpx;
+  color: #7b4b19;
+  font-size: 25rpx;
+  line-height: 1.5;
+}
+
 .row-copy {
   flex: 1;
   min-width: 0;

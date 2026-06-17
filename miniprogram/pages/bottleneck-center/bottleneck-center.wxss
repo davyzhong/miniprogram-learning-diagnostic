@@ -271,6 +271,13 @@
   color: #15803d;
 }
 
+.card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  flex-shrink: 0;
+}
+
 .card-action {
   padding: 12rpx 16rpx;
   border-radius: 14rpx;
@@ -280,6 +287,18 @@
   font-weight: 850;
   white-space: nowrap;
   flex-shrink: 0;
+  text-align: center;
+}
+
+.card-action.learn {
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1rpx solid #fed7aa;
+}
+
+.card-action.verify {
+  background: #2563eb;
+  color: #fff;
 }
 
 .empty-title {
