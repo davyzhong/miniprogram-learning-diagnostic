@@ -171,40 +171,40 @@ function drawGroupBar(doc, group, index, y, type = 'verification') {
 }
 
 function questionHeight(doc, question) {
-  doc.fontSize(11.5);
+  doc.fontSize(11);
   const contentHeight = doc.heightOfString(question.content || '', {
     width: PAGE.contentWidth - 22,
-    lineGap: 3,
+    lineGap: 2,
   });
-  const answerHeight = contentHeight > 38 ? 72 : 58;
-  return 30 + contentHeight + answerHeight + 18;
+  const answerHeight = contentHeight > 38 ? 40 : 28;
+  return 24 + contentHeight + answerHeight + 12;
 }
 
 function drawQuestion(doc, question, y) {
   const number = question.index || '';
-  doc.fillColor(COLORS.blue).fontSize(14).text(String(number), PAGE.left, y, {
-    width: 24,
+  doc.fillColor(COLORS.blue).fontSize(13).text(String(number), PAGE.left, y, {
+    width: 22,
   });
 
-  const chipX = PAGE.left + 28;
+  const chipX = PAGE.left + 26;
   const chipText = summarizeBottleneckName(question.lpName);
-  const chipWidth = Math.max(55, Math.min(96, chipText.length * 8 + 16));
-  fillRect(doc, chipX, y + 1, chipWidth, 17, COLORS.chip, 3);
-  doc.fillColor(COLORS.muted).fontSize(8.5)
-    .text(chipText, chipX + 6, y + 5, { width: chipWidth - 12 });
+  const chipWidth = Math.max(50, Math.min(88, chipText.length * 7.5 + 14));
+  fillRect(doc, chipX, y + 1, chipWidth, 15, COLORS.chip, 3);
+  doc.fillColor(COLORS.muted).fontSize(8)
+    .text(chipText, chipX + 5, y + 4, { width: chipWidth - 10 });
 
-  const contentY = y + 25;
-  doc.fillColor(COLORS.text).fontSize(11.5)
+  const contentY = y + 21;
+  doc.fillColor(COLORS.text).fontSize(11)
     .text(question.content || '', PAGE.left, contentY, {
       width: PAGE.contentWidth,
-      lineGap: 3,
+      lineGap: 2,
     });
   const contentHeight = doc.heightOfString(question.content || '', {
     width: PAGE.contentWidth,
-    lineGap: 3,
+    lineGap: 2,
   });
-  const boxY = contentY + contentHeight + 8;
-  const boxHeight = contentHeight > 38 ? 72 : 58;
+  const boxY = contentY + contentHeight + 6;
+  const boxHeight = contentHeight > 38 ? 40 : 28;
 
   doc.save()
     .strokeColor(COLORS.line)
@@ -214,14 +214,14 @@ function drawQuestion(doc, question, y) {
     .stroke()
     .undash()
     .restore();
-  doc.fillColor('#98A9BC').fontSize(8.2)
-    .text('解题过程 / 演算区', PAGE.left + 8, boxY + 7, {
-      width: PAGE.contentWidth - 16,
+  doc.fillColor('#98A9BC').fontSize(7.5)
+    .text('演算区', PAGE.left + 6, boxY + 5, {
+      width: PAGE.contentWidth - 12,
     });
 
-  const bottom = boxY + boxHeight + 10;
-  drawLine(doc, PAGE.left, bottom, PAGE.width - PAGE.right, bottom, COLORS.line, 0.6);
-  return bottom + 9;
+  const bottom = boxY + boxHeight + 7;
+  drawLine(doc, PAGE.left, bottom, PAGE.width - PAGE.right, bottom, COLORS.line, 0.5);
+  return bottom + 6;
 }
 
 function drawPageNumber(doc, pageNumber, answerPage = false, pageCode = '') {
@@ -367,7 +367,7 @@ async function generatePDF(questionsData, subject, type, options = {}) {
       pageNumber += 1;
       y = startStudentPage(group.questions[0]);
     }
-    if (y + 145 > PAGE.contentBottom) {
+    if (y + 110 > PAGE.contentBottom) {
       finishStudentPage();
       doc.addPage();
       pageNumber += 1;
