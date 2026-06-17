@@ -88,7 +88,8 @@ Page({
     const loadedAt = this._lastProfileLoadedAt || 0
     if (this._profileCacheInvalidated) return false
     if (!loadedAt || Date.now() - loadedAt > SUBJECT_HOME_CACHE_TTL_MS) return false
-    return this.data.loading !== true && Boolean(this.data.primaryTask)
+    // data 中没有 loading 字段，原 this.data.loading !== true 永远为 true，属无效判断，已移除
+    return Boolean(this.data.primaryTask)
   },
 
   invalidateProfileCache() {

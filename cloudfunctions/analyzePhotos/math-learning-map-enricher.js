@@ -91,9 +91,17 @@ function textOf(value) {
 
 function legacyCodesFor(code = '') {
   if (!code) return []
-  if (LEGACY_CODE_ALIASES[code]) return LEGACY_CODE_ALIASES[code]
-  if (/^LP-[A-Z]+$/.test(code)) return [code]
-  return []
+  // 支持多码格式（如 "LP-AXIS / LP-LANG"），split 后逐个处理
+  const codes = String(code).split('/').map(item => item.trim()).filter(Boolean)
+  const result = []
+  for (const single of codes) {
+    if (LEGACY_CODE_ALIASES[single]) {
+      result.push(...LEGACY_CODE_ALIASES[single])
+    } else if (/^LP-[A-Z]+$/.test(single)) {
+      result.push(single)
+    }
+  }
+  return unique(result)
 }
 
 function existingCandidateIds(bottleneck = {}) {
