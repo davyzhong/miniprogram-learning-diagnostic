@@ -1,7 +1,7 @@
 // uploadAndAnalyze/index.js
 // 入口函数：接收fileIDs，创建reports记录，触发后台分析
 const cloud = require('wx-server-sdk');
-const { getStudentAccess, canOperateLearning } = require('../_shared/access');
+const { getStudentAccess, canOperateLearning } = require('./_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();

@@ -205,3 +205,54 @@ test('brand illustration and logo assets exist', () => {
     assert.ok(fs.statSync(absolutePath).size > 0, `${asset} is empty`)
   }
 })
+
+test('cloud functions do not reference ../_shared (CloudBase only packages per-function)', () => {
+  // CloudBase 部署时每个函数独立打包，../_shared/ 在部署后不存在。
+  // 所有 _shared 引用必须改为 ./_shared/（本地副本）。
+  const functionDirs = fs.readdirSync(path.join(root, 'cloudfunctions'))
+    .filter(name => name !== '_shared')
+    .filter(name => fs.statSync(path.join(root, 'cloudfunctions', name)).isDirectory())
+
+  const offenders = []
+  for (const fn of functionDirs) {
+    const fnPath = path.join(root, 'cloudfunctions', fn)
+    const jsFiles = fs.readdirSync(fnPath).filter(f => f.endsWith('.js'))
+    for (const jsFile of jsFiles) {
+      const content = read(`cloudfunctions/${fn}/${jsFile}`)
+      if (/require\(['"]\.\.\/_shared\//.test(content)) {
+        offenders.push(`${fn}/${jsFile}`)
+      }
+    }
+  }
+  assert.deepEqual(offenders, [], `这些文件仍引用 ../_shared，部署后会报错: ${offenders.join(', ')}`)
+})
+
+test('_shared 副本与源文件保持同步', () => {
+  // 确保各函数目录下的 _shared 副本与仓库根 _shared 源文件一致。
+  // 如果改了 _shared/access.js 但忘了同步副本，这里会报错。
+  const sharedSources = {
+    'access.js': ['generateReportPDF', 'getAnalysisProgress', 'learningResource', 'reportFeedback', 'studentAccess', 'studentData', 'uploadAndAnalyze', 'englishVocabulary', 'generatePaper'],
+    'constants.js': ['generateReportPDF'],
+    'math-bottleneck-hierarchy.js': ['analyzePhotos']
+  }
+
+  const mismatches = []
+  for (const [file, dirs] of Object.entries(sharedSources)) {
+    const sourceContent = read(`cloudfunctions/_shared/${file}`)
+    for (const dir of dirs) {
+      // englishVocabulary 和 generatePaper 的 access.js 是根级文件（历史遗留），不在 _shared/ 子目录
+      const copyPath = (dir === 'englishVocabulary' || dir === 'generatePaper') && file === 'access.js'
+        ? `cloudfunctions/${dir}/access.js`
+        : `cloudfunctions/${dir}/_shared/${file}`
+      if (!exists(copyPath)) {
+        mismatches.push(`${copyPath} 不存在`)
+        continue
+      }
+      const copyContent = read(copyPath)
+      if (sourceContent !== copyContent) {
+        mismatches.push(`${copyPath} 与 cloudfunctions/_shared/${file} 不一致`)
+      }
+    }
+  }
+  assert.deepEqual(mismatches, [], `_shared 副本已过期，请重新同步:\n${mismatches.join('\n')}`)
+})

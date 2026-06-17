@@ -1,7 +1,7 @@
 const knowledgeSeed = require('../../data/math/knowledge-nodes.seed.json')
 const bottleneckSeed = require('../../data/math/bottleneck-taxonomy-v2.seed.json')
 const resourceSeed = require('../../data/math/learning-resources.seed.json')
-const { normalizeFineBottleneck } = require('../_shared/math-bottleneck-hierarchy')
+const { normalizeFineBottleneck } = require('./_shared/math-bottleneck-hierarchy')
 
 const MAX_CANDIDATE_BOTTLENECKS = 3
 const MAX_RECOMMENDED_RESOURCES = 4

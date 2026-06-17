@@ -4,8 +4,8 @@ const pdfkit = require('pdfkit');
 const cloud = require('wx-server-sdk');
 const fs = require('fs');
 const path = require('path');
-const { getLearningResourceAccess, canOperateLearning } = require('../_shared/access');
-const { getSubjectName } = require('../_shared/constants');
+const { getLearningResourceAccess, canOperateLearning } = require('./_shared/access');
+const { getSubjectName } = require('./_shared/constants');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();

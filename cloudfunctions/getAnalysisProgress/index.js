@@ -1,7 +1,7 @@
 // getAnalysisProgress/index.js
 // 轻量查询函数：返回 analysisTasks 中的进度信息
 const cloud = require('wx-server-sdk');
-const { getLearningResourceAccess, canReadLearning } = require('../_shared/access');
+const { getLearningResourceAccess, canReadLearning } = require('./_shared/access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
