@@ -1161,7 +1161,7 @@ git commit -m "feat: show learning packs in timeline"
 - Modify: `docs/TEST_MATRIX.md`
 - Create: `docs/test-reports/2026-06-17-learning-resource-task-pack-e2e.md`
 
-- [ ] **Step 1: Run full local verification**
+- [x] **Step 1: Run full local verification**
 
 Run:
 
@@ -1172,7 +1172,7 @@ git diff --check
 
 Expected: pass.
 
-- [ ] **Step 2: Deploy cloud functions**
+- [x] **Step 2: Deploy cloud functions**
 
 Run:
 
@@ -1183,7 +1183,7 @@ Run:
 
 Expected: both deployments succeed.
 
-- [ ] **Step 3: Generate WeChat preview**
+- [x] **Step 3: Generate WeChat preview**
 
 Run:
 
@@ -1193,7 +1193,7 @@ Run:
 
 Expected: preview QR generated.
 
-- [ ] **Step 4: Manual E2E checklist**
+- [x] **Step 4: Manual E2E checklist**
 
 Create `docs/test-reports/2026-06-17-learning-resource-task-pack-e2e.md` with:
 
@@ -1227,7 +1227,7 @@ Create `docs/test-reports/2026-06-17-learning-resource-task-pack-e2e.md` with:
 - 遗留问题：
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
