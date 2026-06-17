@@ -1,7 +1,8 @@
 const { bottleneckLabelOf } = require('../../utils/learning-records')
 const {
   buildBottleneckView,
-  expandFineBottleneckItems
+  expandFineBottleneckItems,
+  buildGroupedBottleneckViews
 } = require('../../utils/bottleneck-view')
 const { buildLearningMapReportItems } = require('../../utils/math-learning-map')
 const { paperCodeOf } = require('../../utils/paper-display')
@@ -409,6 +410,9 @@ function buildReportView(report, options = {}) {
       })
     }
   })
+  const bottleneckGroups = report.subject === 'math'
+    ? buildGroupedBottleneckViews(bottlenecks, { subject: report.subject, subjectName: report.subjectName })
+    : []
   const learningMapItems = buildLearningMapReportItems(rawBottlenecks)
   const allErrorDetailList = errorDetails.map((item, index) => {
     const detail = item && typeof item === 'object' ? item : { questionContent: String(item || '') }
@@ -491,6 +495,8 @@ function buildReportView(report, options = {}) {
     bottleneckCount: bottlenecks.length,
     hasBottlenecks: bottlenecks.length > 0,
     bottleneckList,
+    hasBottleneckGroups: bottleneckGroups.length > 0,
+    bottleneckGroups,
     chineseErrorItemCount: chineseErrorItems.length,
     hasChineseErrorItems: chineseErrorItems.length > 0,
     chineseErrorItems,

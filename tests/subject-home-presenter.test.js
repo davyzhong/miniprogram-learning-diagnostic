@@ -93,6 +93,38 @@ test('math workbench expands coarse bottlenecks into fine-grained candidate bott
   assert.equal(view.persistingCount, 2)
 })
 
+test('math workbench exposes task queue grouped by category and family', () => {
+  const view = buildSubjectHomeView({
+    subject: 'math',
+    subjectName: '数学',
+    currentBottlenecks: [{
+      lpCode: 'LP-001',
+      lpName: '计算基础',
+      status: 'persisting',
+      severity: 'high',
+      candidateBottlenecks: [
+        {
+          bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+          title: '小数乘法中积的小数位数判断错误'
+        },
+        {
+          bottleneckId: 'BN-DEC-MUL-POINT-ESTIMATE',
+          title: '小数乘法后缺少数量级估算检查'
+        }
+      ]
+    }]
+  }, [], relative, { subject: 'math', subjectName: '数学' })
+
+  assert.equal(view.hasTaskQueueGroups, true)
+  assert.equal(view.taskQueueGroups[0].categoryTitle, '计算规则')
+  assert.equal(view.taskQueueGroups[0].summaryText, '2 个细分卡点')
+  assert.equal(view.taskQueueGroups[0].families[0].familyTitle, '小数点定位与移动')
+  assert.deepEqual(view.taskQueueGroups[0].families[0].items.map(item => item.displayName), [
+    '小数乘法中积的小数位数判断错误',
+    '小数乘法后缺少数量级估算检查'
+  ])
+})
+
 test('Chinese workbench prioritizes concrete review items over coarse bottlenecks', () => {
   const view = buildSubjectHomeView({
     subject: 'chinese',

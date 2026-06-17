@@ -1,6 +1,7 @@
 const { bottleneckLabelOf } = require('./learning-records')
 const { SUBJECT_NAMES } = require('./constants')
 const { getBottleneckMeta } = require('./bottleneck-taxonomy')
+const { groupBottlenecksByHierarchy } = require('./math-bottleneck-hierarchy')
 
 const STATUS_META = {
   needs_verification: { text: '待验证', className: 'pending', icon: '?', badgeText: '待验证', actionText: '生成验证卷' },
@@ -38,7 +39,17 @@ function toTime(value) {
 function formatDate(value) {
   const date = toDate(value)
   if (!date) return ''
-  return `${date.getMonth() + 1}月${date.getDate()}日`
+  // 固定北京时间（UTC+8），避免依赖运行环境的系统时区
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Shanghai',
+    month: 'numeric',
+    day: 'numeric'
+  }).formatToParts(date)
+  const map = {}
+  for (const part of parts) {
+    if (part.type !== 'literal') map[part.type] = part.value
+  }
+  return `${Number(map.month)}月${Number(map.day)}日`
 }
 
 function normalizeStatus(item = {}) {
@@ -204,7 +215,9 @@ function buildBottleneckView(item = {}, options = {}) {
   const weight = numberOf(item.weight)
   const subject = item.subject || options.subject || ''
   const taxonomy = getBottleneckMeta(item) || {}
-  const displayName = bottleneckLabelOf(item)
+  const displayName = item.fineBottleneck
+    ? (item.displayName || item.title || item.name || item.label || item.lpName || bottleneckLabelOf(item))
+    : bottleneckLabelOf(item)
   const firstSeenText = formatDate(item.firstSeenAt || item.sinceDate)
   const lastSeenText = formatDate(item.lastSeenAt || item.lastVerifiedAt || item.improvedDate)
 
@@ -270,6 +283,26 @@ function buildBottleneckViews(rawItems = [], options = {}) {
   return sortBottleneckViews(source.map(item => buildBottleneckView(item, options)))
 }
 
+function buildGroupedBottleneckViews(rawItems = [], options = {}) {
+  const subject = options.subject || ''
+  if (subject !== 'math') return []
+
+  const source = (rawItems || []).some(item => item && item.displayName && item.statusText)
+    ? rawItems
+    : buildBottleneckViews(rawItems, options)
+
+  return groupBottlenecksByHierarchy(source).map(group => ({
+    ...group,
+    title: group.categoryTitle,
+    summaryText: `${group.itemCount} 个细分卡点`,
+    families: group.families.map(family => ({
+      ...family,
+      title: family.familyTitle,
+      summaryText: `${family.itemCount} 个卡点`
+    }))
+  }))
+}
+
 function buildBottleneckStats(views = []) {
   const source = Array.isArray(views) ? views : []
   return {
@@ -300,6 +333,7 @@ module.exports = {
   expandFineBottleneckItems,
   buildBottleneckView,
   buildBottleneckViews,
+  buildGroupedBottleneckViews,
   sortBottleneckViews,
   buildBottleneckStats,
   findBottleneckView
