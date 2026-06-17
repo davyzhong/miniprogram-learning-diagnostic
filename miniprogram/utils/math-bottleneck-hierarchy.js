@@ -1,5 +1,5 @@
-const categorySeed = require('../../data/math/bottleneck-categories.seed.json')
-const bottleneckSeed = require('../../data/math/bottleneck-taxonomy-v2.seed.json')
+const categorySeed = require('../data/math/bottleneck-categories.seed')
+const bottleneckSeed = require('../data/math/bottleneck-taxonomy-v2.seed')
 
 const categoriesById = new Map((categorySeed.categories || []).map(item => [item.categoryId, item]))
 const familiesById = new Map((categorySeed.families || []).map(item => [item.familyId, item]))
