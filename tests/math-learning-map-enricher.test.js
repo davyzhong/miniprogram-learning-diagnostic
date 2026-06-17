@@ -65,9 +65,12 @@ test('enriches decimal multiplication errors with decimal-point learning resourc
 
   const bottleneck = result.report.bottlenecks[0]
   assert.ok(bottleneck.nodeIds.includes('MATH-NUM-DEC-MUL-POINT'))
-  assert.ok(
-    bottleneck.candidateBottlenecks.some(item => item.bottleneckId === 'BN-DEC-MUL-POINT-COUNT')
-  )
+  const candidate = bottleneck.candidateBottlenecks.find(item => item.bottleneckId === 'BN-DEC-MUL-POINT-COUNT')
+  assert.ok(candidate)
+  assert.equal(candidate.categoryId, 'MATH-CAT-CALC-RULE')
+  assert.equal(candidate.categoryTitle, '计算规则')
+  assert.equal(candidate.familyId, 'MATH-FAM-DECIMAL-POINT')
+  assert.equal(candidate.familyTitle, '小数点定位与移动')
   assert.ok(bottleneck.recommendedResourceIds.includes('RES-BILI-DEC-MUL-001'))
 })
 
@@ -106,6 +109,8 @@ test('rebuilt subject profile keeps fine bottleneck and resource fields', () => 
   assert.equal(profile.latestEffectiveReportId, 'report-fraction')
   assert.deepEqual(current.nodeIds, ['MATH-NUM-FRACTION-DIV-RECIPROCAL'])
   assert.equal(current.candidateBottlenecks[0].bottleneckId, 'BN-FRACTION-DIV-RECIPROCAL-MISSING')
+  assert.equal(current.candidateBottlenecks[0].categoryTitle, '计算规则')
+  assert.equal(current.candidateBottlenecks[0].familyTitle, '分数除法与倒数')
   assert.ok(current.recommendedResourceIds.includes('RES-BILI-FRACTION-DIV-001'))
   assert.ok(profile.pendingBottlenecks[0].candidateBottlenecks.length > 0)
 })

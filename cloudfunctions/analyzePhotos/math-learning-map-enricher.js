@@ -1,11 +1,12 @@
 const knowledgeSeed = require('../../data/math/knowledge-nodes.seed.json')
 const bottleneckSeed = require('../../data/math/bottleneck-taxonomy-v2.seed.json')
 const resourceSeed = require('../../data/math/learning-resources.seed.json')
+const { normalizeFineBottleneck } = require('../_shared/math-bottleneck-hierarchy')
 
 const MAX_CANDIDATE_BOTTLENECKS = 3
 const MAX_RECOMMENDED_RESOURCES = 4
 const LEVEL_RANK = { A: 0, B: 1, C: 2, D: 3 }
-const BACKFILL_VERSION = 'math-learning-map-v2.1'
+const BACKFILL_VERSION = 'math-learning-map-v2.2-hierarchy'
 
 const nodesById = new Map((knowledgeSeed.nodes || []).map(node => [node.nodeId, node]))
 const bottlenecksById = new Map((bottleneckSeed.bottlenecks || []).map(item => [item.bottleneckId, item]))
@@ -202,14 +203,19 @@ function resourcesFor({ nodeIds = [], bottleneckIds = [], explicitResourceIds = 
 }
 
 function candidatePayload(candidate, evidenceStrength, resourceIds) {
+  const normalized = normalizeFineBottleneck(candidate)
   return {
-    bottleneckId: candidate.bottleneckId,
-    title: candidate.title,
-    nodeId: candidate.nodeId,
-    categoryPath: candidate.categoryPath || [],
+    bottleneckId: normalized.bottleneckId,
+    title: normalized.title,
+    nodeId: normalized.nodeId,
+    categoryId: normalized.categoryId,
+    categoryTitle: normalized.categoryTitle,
+    familyId: normalized.familyId,
+    familyTitle: normalized.familyTitle,
+    categoryPath: normalized.categoryPath || [],
     evidenceStrength,
     microValidationRequired: true,
-    suggestedMicroValidation: (candidate.microValidationRules || []).slice(0, 3),
+    suggestedMicroValidation: (normalized.microValidationRules || []).slice(0, 3),
     recommendedResourceIds: resourceIds
   }
 }
