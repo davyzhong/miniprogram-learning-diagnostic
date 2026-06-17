@@ -1966,7 +1966,7 @@
         "判断轴对称图形",
         "画对称轴"
       ],
-      "commonBottlenecks": [],
+      "commonBottlenecks": ["BN-AXIS-FOLD-MIDPOINT-DIRECTION"],
       "masteryCriteria": {
         "immediatePractice": "能判断常见轴对称图形。",
         "transferPractice": "能画对称轴。",
