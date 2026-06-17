@@ -3,6 +3,12 @@ const assert = require('node:assert/strict')
 
 const categoriesSeed = require('../data/math/bottleneck-categories.seed.json')
 const bottleneckSeed = require('../data/math/bottleneck-taxonomy-v2.seed.json')
+const {
+  normalizeFineBottleneck,
+  groupBottlenecksByHierarchy,
+  categoryTitleOf,
+  familyTitleOf
+} = require('../miniprogram/utils/math-bottleneck-hierarchy')
 
 test('math bottleneck categories define category and family hierarchy', () => {
   assert.ok(categoriesSeed.version)
@@ -42,4 +48,31 @@ test('every fine math bottleneck is linked to category and family', () => {
     assert.ok(Array.isArray(bottleneck.recommendedPageTypes))
     assert.ok(bottleneck.recommendedPageTypes.length > 0)
   }
+})
+
+test('normalizes fine bottleneck hierarchy metadata', () => {
+  const normalized = normalizeFineBottleneck({
+    bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+    title: '小数乘法中积的小数位数判断错误'
+  })
+
+  assert.equal(categoryTitleOf(normalized.categoryId), '计算规则')
+  assert.equal(familyTitleOf(normalized.familyId), '小数点定位与移动')
+  assert.equal(normalized.categoryTitle, '计算规则')
+  assert.equal(normalized.familyTitle, '小数点定位与移动')
+  assert.equal(normalized.displayTitle, '小数乘法中积的小数位数判断错误')
+})
+
+test('groups bottlenecks by category then family', () => {
+  const groups = groupBottlenecksByHierarchy([
+    { bottleneckId: 'BN-DEC-MUL-POINT-COUNT' },
+    { bottleneckId: 'BN-DEC-MUL-POINT-ESTIMATE' }
+  ])
+
+  assert.equal(groups.length, 1)
+  assert.equal(groups[0].categoryTitle, '计算规则')
+  assert.equal(groups[0].itemCount, 2)
+  assert.equal(groups[0].families.length, 1)
+  assert.equal(groups[0].families[0].familyTitle, '小数点定位与移动')
+  assert.equal(groups[0].families[0].items.length, 2)
 })
