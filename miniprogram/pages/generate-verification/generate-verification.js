@@ -2,6 +2,7 @@
 const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
 const { buildBottleneckViews, profileBottlenecks } = require('../../utils/bottleneck-view')
+const { groupBottlenecksByHierarchy } = require('../../utils/math-bottleneck-hierarchy')
 const MAX_SELECTED_BOTTLENECKS = 60
 const MATH_TARGETS_PER_TASK_PAGE = 3
 const CHINESE_TARGETS_PER_TASK_PAGE = 8
@@ -236,6 +237,7 @@ Page({
     if (selected.length === 0 || this.data.previewing) return
     const questionCount = this.questionCountForSelection(selected.length, paperConfig.questionCount)
     const targets = targetCodesForPaper(selected)
+    const targetPlan = this.targetPlanForSelection(selected)
     if (targets.length === 0) {
       wx.showToast({ title: '学习卡点参数无效', icon: 'none' })
       return
@@ -250,6 +252,7 @@ Page({
         subject,
         type: 'verification',
         targets,
+        targetPlan,
         questionCount,
         preview: true
       })
@@ -278,6 +281,7 @@ Page({
     if (selected.length === 0 || this.data.generating) return
     const questionCount = this.questionCountForSelection(selected.length, paperConfig.questionCount)
     const targets = targetCodesForPaper(selected)
+    const targetPlan = this.targetPlanForSelection(selected)
     if (targets.length === 0) {
       wx.showToast({ title: '学习卡点参数无效', icon: 'none' })
       return
@@ -292,6 +296,7 @@ Page({
         subject,
         type: 'verification',
         targets,
+        targetPlan,
         questionCount,
         preview: false
       })
@@ -347,7 +352,54 @@ Page({
     })
   },
 
+  buildScheduledTaskPages(selectedItems = []) {
+    if (this.data.subject !== 'math') return []
+    const pages = []
+    const groups = groupBottlenecksByHierarchy(selectedItems)
+    groups.forEach(group => {
+      ;(group.families || []).forEach(family => {
+        const items = family.items || []
+        const targetIds = targetCodesForPaper(items)
+        const nodeIds = Array.from(new Set(items.flatMap(item => [
+          item.nodeId,
+          ...(item.nodeIds || []),
+          ...(item.familyNodeIds || [])
+        ]).filter(Boolean)))
+        const targetNames = items.map(item => item.displayName || item.lpName || item.bottleneckId || item.lpCode).filter(Boolean)
+        pages.push({
+          pageIndex: pages.length + 1,
+          title: `${family.familyTitle || group.categoryTitle || '专项'}任务页`,
+          pageType: items.length >= 2 ? 'same_family' : 'micro_confirm',
+          categoryId: group.categoryId || '',
+          categoryTitle: group.categoryTitle || '',
+          familyIds: family.familyId ? [family.familyId] : [],
+          familyTitle: family.familyTitle || '',
+          nodeIds,
+          targetIds,
+          targetNames,
+          targetSummary: family.familyTitle || group.categoryTitle || targetNames.join('、'),
+          targetCount: targetIds.length,
+          questionCount: this.questionCountForSelection(targetIds.length),
+          scopeText: targetNames.join('、')
+        })
+      })
+    })
+    return pages
+  },
+
+  targetPlanForSelection(selectedItems = []) {
+    const pages = this.buildScheduledTaskPages(selectedItems)
+    if (pages.length === 0) return null
+    return {
+      strategy: 'hierarchy_pages_v1',
+      pages
+    }
+  },
+
   buildTaskPages(selectedItems = []) {
+    const scheduledPages = this.buildScheduledTaskPages(selectedItems)
+    if (scheduledPages.length > 0) return scheduledPages
+
     const isChinese = this.data.subject === 'chinese'
     const targetsPerPage = isChinese ? CHINESE_TARGETS_PER_TASK_PAGE : MATH_TARGETS_PER_TASK_PAGE
     const pages = []

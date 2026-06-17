@@ -329,6 +329,7 @@ exports.main = async (event) => {
     questionCount = 12,
     grade = 0,
     paperDate = '',
+    targetPlan = {},
   } = event;
 
   if (!studentId) {
@@ -379,6 +380,7 @@ exports.main = async (event) => {
         paperCode: paperCodes.paperCode,
         paperDate: normalizedPaperDate,
         targets: verificationTargets,
+        targetPlan,
       })
       : null;
 
