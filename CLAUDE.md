@@ -22,8 +22,10 @@ Node.js tasks run from the repo root:
 | JS syntax check (121 files) | `npm run check` |
 | Full verify (tests + syntax) | `npm run verify` |
 | Real-image e2e (not in `npm test`) | `npm run test:e2e-real-image` |
+| Pre-deployment readiness | `npm run check:deployment` |
+| Full pre-release gate | `npm run release:check` (deployment + verify + coverage) |
 
-`npm test` enumerates test files explicitly (not a glob), so new test files must also be added to the `test` and `test:coverage` scripts in `package.json`. Tests use the Node.js built-in runner (`node --test`), no external framework. Run `npm run verify` after any change before committing.
+The `tests/` directory currently holds 44 `.test.js` files; `npm test` enumerates 35 of them explicitly (no glob), so any new test file must be added to both `test` and `test:coverage` scripts in `package.json`. Tests use the Node.js built-in runner (`node --test`), no external framework. Run `npm run verify` after any change; run `npm run release:check` before tagging a release.
 
 ## Architecture
 
@@ -31,7 +33,7 @@ Node.js tasks run from the repo root:
 Mini Program (16 pages, WXML/WXSS/JS)
     │  wx.cloud.callFunction()  /  direct wx.cloud.database() reads
     ▼
-CloudBase (serverless)
+CloudBase (serverless, 12 cloud functions)
     ├─ uploadAndAnalyze   → creates report record, fire-and-forget starts analyzePhotos
     ├─ analyzePhotos      → splits into batches of 5, calls analyzeBatch serially, dedups, merges, writes report/profile
     ├─ analyzeBatch       → downloads images, calls CloudBase AI vision model (hy3-preview)
@@ -41,7 +43,9 @@ CloudBase (serverless)
     ├─ studentAccess      → family member invites + owner-only family management
     ├─ studentData        → access-aware reads of student/report/paper/timeline
     ├─ reportFeedback     → parent feedback on reports, bottlenecks, errors, photos
-    └─ englishVocabulary  → personal word library, familiarity/spelling practice, AI dictation
+    ├─ englishVocabulary  → personal word library, familiarity/spelling practice, AI dictation
+    ├─ learningResource   → per-subject resource generation (math map seeds, english vocab)
+    └─ reanalyzeMathHistory → re-runs analyzeBatch over historical math reports
 ```
 
 ### Cross-cutting patterns (read multiple files before changing these)
@@ -57,7 +61,7 @@ CloudBase (serverless)
 
 ### Database collections
 
-`students`, `studentMembers` (owner/co-parent access), `studentInvites` (one-time join tokens), `subjectProfiles` (per-subject bottleneck tracking + analysis status), `reports` (diagnosis/verification, with `bottlenecks[]`, `errorDetails[]`, `pdfFileId`), `papers` (generated/default, with `paperKey` for default-paper caching), `analysisTasks` (async job progress), `reportFeedback` (parent feedback), `englishImportBatches` (vocabulary import staging), `studentEnglishWords` (personal word library), `englishPracticeSessions` (practice/dictation sessions). Full schema in `docs/DATA_DICTIONARY.md`.
+`students`, `studentMembers` (owner/co-parent access), `studentInvites` (one-time join tokens), `subjectProfiles` (per-subject bottleneck tracking + analysis status), `reports` (diagnosis/verification, with `bottlenecks[]`, `errorDetails[]`, `pdfFileId`), `papers` (generated/default, with `paperKey` for default-paper caching), `analysisTasks` (async job progress), `reportFeedback` (parent feedback), `englishImportBatches` (vocabulary import staging), `studentEnglishWords` (personal word library), `englishPracticeSessions` (practice/dictation sessions), `learningResources` (per-subject generated resources: math map nodes, english word packs), `mathHistoryReanalysisTasks` (reanalysis job progress). Full schema in `docs/DATA_DICTIONARY.md`.
 
 ## Conventions
 
