@@ -497,6 +497,7 @@ function buildReportView(report, options = {}) {
     bottleneckList,
     hasBottleneckGroups: bottleneckGroups.length > 0,
     bottleneckGroups,
+    showFlatBottleneckList: bottlenecks.length > 0 && bottleneckGroups.length === 0,
     chineseErrorItemCount: chineseErrorItems.length,
     hasChineseErrorItems: chineseErrorItems.length > 0,
     chineseErrorItems,
