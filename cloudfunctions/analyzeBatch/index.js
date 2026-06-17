@@ -196,7 +196,9 @@ async function authorizeBatch({ reportId, taskId, fileIDs }) {
   if (!report || !task || task.reportId !== reportId || task.status !== 'processing') {
     return { allowed: false, error: '无权执行批次分析' };
   }
-  if (report._openid && task._openid !== report._openid) {
+  // 安全校验：report 必须有 _openid 才能做归属比对。
+  // report._openid 缺失（旧数据/异常数据）时直接拒绝，防止权限链断裂后被绕过。
+  if (!report._openid || task._openid !== report._openid) {
     return { allowed: false, error: '无权执行批次分析' };
   }
   const allowedFiles = new Set(Array.isArray(task.fileIDs) ? task.fileIDs : []);

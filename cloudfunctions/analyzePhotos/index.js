@@ -239,6 +239,10 @@ async function loadReportContext(reportId, continuationTaskId = '', options = {}
     }
   } else if (report._openid && !currentOpenId) {
     return { earlyResult: { success: false, error: '无权访问该报告' } };
+  } else {
+    // 兜底：report 无 _openid（旧数据/异常数据）且当前调用无用户上下文（内部 callFunction），
+    // 又非 trusted reanalysis、无 continuationTaskId —— 权限链完全断裂，必须拒绝。
+    return { earlyResult: { success: false, error: '无法验证报告归属，拒绝分析' } };
   }
 
   const subject = SUBJECTS.has(report.subject) ? report.subject : 'math';
@@ -408,6 +412,9 @@ async function runAnalyzeBatches({ batches, batchOffset = 0, totalBatches, subje
     if (!batchResults[i]) {
       batchResults[i] = { success: false, error: lastError || '图片分析失败，请稍后重试' };
     }
+    // 设计说明：每批完成即更新 completedBatches，供前端轮询展示实时进度。
+    // 每次分析通常 5-20 批，写入次数在 CloudBase 可承受范围内。
+    // 若未来扩展到大批量场景，可改为每 N 批节流写一次。
     await db.collection('analysisTasks').doc(taskId).update({
       data: { completedBatches: _.inc(1) },
     }).catch(err => {
