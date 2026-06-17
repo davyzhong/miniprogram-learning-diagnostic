@@ -437,24 +437,37 @@ cd miniprogram-learning-diagnostic
 
 ## 测试
 
+本项目采用四层测试金字塔，全部基于 Node.js 内置 runner（`node --test`），零第三方依赖：
+
+| 层级 | 说明 | 命令 |
+|------|------|------|
+| **L0 单元** | 447 个函数级测试（云函数/Presenter/工具/数据层），<3 秒 | `npm test` |
+| **L1 数据守护** | 四库交叉引用完整性（18 断言）、部署就绪、合约红线 | `npm test`（自动包含）|
+| **L2 诊断回归** | 41 条历史证据验证 enricher、28 卡点归组回归 | `npm test`（自动包含）|
+| **L3 DevTools E2E** | 17 页面 + 数据驱动场景 + 结果聚合 | `npm run test:e2e:all` |
+| **L4 真实云** | 发布前验证云函数部署可用性（默认跳过） | `RUN_REAL_CLOUD=1 npm run test:real-cloud` |
+
 ```bash
-# 运行常规自动化测试（353 用例，不含真实图片 E2E）
+# 日常开发：运行全部单元 + 数据守护 + 诊断回归（447 用例，<3 秒）
 npm test
 
-# 带覆盖率报告
+# 带覆盖率报告（行/函数 80% 门槛）
 npm run test:coverage
 
-# 完整验证（测试 + JS 语法检查）
+# 完整验证（测试 + JS 语法检查 164 文件）
 npm run verify
+
+# DevTools 页面级 E2E（需先开微信开发者工具）
+npm run test:e2e:doctor       # 环境探测
+npm run test:e2e:fullpage      # 17 页面回归
+npm run test:e2e:data-driven   # 数据驱动 E2E
+npm run test:e2e:all           # 聚合所有 E2E + 报告
+
+# 发布前
+npm run release:check          # 部署 + 全测试 + 覆盖率
 ```
 
-端到端真实图片测试脚本需单独运行：
-
-```bash
-npm run test:e2e-real-image
-```
-
-该脚本依赖本机真实试卷图片路径与 CloudBase 环境，适合作为发布前手动验收。
+> 完整测试框架设计见 [docs/TEST_FRAMEWORK_DESIGN.md](./docs/TEST_FRAMEWORK_DESIGN.md)。
 
 ---
 
@@ -469,6 +482,9 @@ npm run test:e2e-real-image
 | [docs/METRICS.md](./docs/METRICS.md) | 单个孩子运营指标：分析完成率、报告质量、验证通过率、反馈率和周趋势 |
 | [docs/RELEASE_CHECKLIST.md](./docs/RELEASE_CHECKLIST.md) | 发布门禁、云函数部署核对、真实数据烟测和回滚流程 |
 | [docs/TEST_MATRIX.md](./docs/TEST_MATRIX.md) | 测试矩阵与验收清单 |
+| [docs/TEST_FRAMEWORK_DESIGN.md](./docs/TEST_FRAMEWORK_DESIGN.md) | 四层测试框架设计（L0-L4 分层、DevTools E2E、数据守护） |
+| [docs/CLOUD_FUNCTIONS.md](./docs/CLOUD_FUNCTIONS.md) | 云函数 API 参考（入参/出参/错误处理/依赖关系） |
+| [CHANGELOG.md](./CHANGELOG.md) | 版本变更记录 |
 
 ---
 

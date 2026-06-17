@@ -1,7 +1,7 @@
 # 学习诊断小程序 — 自动化测试框架设计
 
 > 设计日期：2026-06-17 | 作者：qiming + Claude
-> 基于：PRD v2.9 / PROJECT_PLAN / 现有 44 个测试文件 436 用例 / 现场跑通 23/23 DevTools E2E
+> 基于：PRD v2.9 / PROJECT_PLAN / 现有 49 个测试文件 447 用例 / 现场跑通 23/23 DevTools E2E
 > AI agent 入口：本框架已沉淀为 skill `learning-diagnostic-testing`，agent 在本项目说"测试/验证/跑回归"时会自动加载，命令和分层见 skill 的 SKILL.md。
 
 ## 一、目标
@@ -11,7 +11,7 @@
 **三层递进**：
 
 1. **L1 静态守卫**：语法 + 架构红线 + 部署完整性，秒级反馈
-2. **L2 逻辑守卫**：440+ 单元/集成用例覆盖全部云函数、Presenter、工具函数，<3 秒跑完
+2. **L2 逻辑守卫**：447 单元/集成用例覆盖全部云函数、Presenter、工具函数，<3 秒跑完
 3. **L3 渲染守卫**：通过微信开发者工具 CLI 驱动真实小程序页面，断言渲染文案和跨页交互
 
 **反目标**：不搞 100% 覆盖率崇拜、不造"为测试而测试"的用例、测试代码不做无意义抽象。
@@ -29,7 +29,7 @@
 │   触发：发布前 / PR / 主动跑                                       │
 ├─────────────────────────────────────────────────────────────────┤
 │                     L2 逻辑守卫 (node:test)                       │
-│   436 用例：云函数、Presenter、工具函数、数据访问层、合约红线       │
+│   447 用例：云函数、Presenter、工具函数、数据访问层、合约红线       │
 │   工具：Node.js 内置 test runner + 自研 harness                    │
 │   耗时：<3 秒                                                     │
 │   触发：每次提交前 (npm run verify)                                │
@@ -43,7 +43,7 @@
 
 ### 2.1 L1：静态守卫
 
-**工具**：`scripts/check-js.js` + `tests/deployment-readiness.test.js` + `tests/contracts.test.js`
+**工具**：`scripts/check-js.js` + `tests/deployment-readiness.test.js` + `tests/contracts.test.js` + `tests/data-consistency-guard.test.js`
 
 **检查清单**：
 
@@ -52,6 +52,7 @@
 | JS 语法 | `check-js.js` | 扫描全部 `.js` 文件，检查语法错误 |
 | 部署完整性 | `deployment-readiness.test.js` | 云函数清单 vs 实际目录、页面四件套完整性 |
 | 架构红线 | `contracts.test.js` | SDK 初始化顺序、env 硬编码、PDF 字体存在、共享模块复用、安全约束 |
+| 四库交叉引用完整性 | `data-consistency-guard.test.js` | evidence→bottleneck→node→resource 四库 ID 交叉引用必须全部可达（18 断言） |
 
 **设计原则**：
 - L1 不调用任何外部服务，不加载页面运行时
@@ -100,8 +101,12 @@ L2 测试
 │   └── 页面 controller 的完整生命周期：首页分流 → 学科主页 → 拍照 → 报告
 ├── 合约红线测试（contracts.test.js, 22 用例）
 │   └── env 字符串硬编码、SDK init 顺序、字体文件存在、瓶颈命名两份同步
-└── 回归补丁测试（coverage-gap.test.js, 6 用例）
-    └── 历史修复场景的防止回归
+├── 回归补丁测试（coverage-gap.test.js, 6 用例）
+│   └── 历史修复场景的防止回归
+├── 诊断准确性回归（diagnostic-accuracy-regression.test.js, 41 证据）
+│   └── 41 条历史证据回放，验证 enricher 输出不漂移
+└── 卡点归组回归（bottleneck-hierarchy-regression.test.js, 28 卡点）
+    └── 28 个卡点归组验证，防止 bottleneck 层级分组退化
 ```
 
 ### 2.3 L3：渲染守卫
@@ -117,6 +122,9 @@ L2 测试
 | `devtools-parent-timeline-e2e.js` | 19 个家长/时间线场景 | 强 | 可用 |
 | `devtools-english-e2e.js` | 英语模块专域 | 强 | 可用 |
 | `devtools-real-data-smoke.js` | 真实数据冒烟 | 中（依赖真实学生数据） | 人工跑 |
+| `devtools-e2e-data-driven.js` | 数据驱动 E2E | 强（从 seed.json 动态读取，注入真实卡点/资源） | 可用 |
+| `e2e-report-aggregator.js` | 多脚本结果聚合 | 汇总各 E2E report.json 为统一 Markdown 报告 | 可用 |
+| `e2e-real-cloud.test.js` | L4 真实云回归 | 强（真实 analyzeBatch 结构校验） | 默认跳过（RUN_REAL_CLOUD=1） |
 | `devtools-cli-doctor.js` | 环境探测 | 诊断 | ✅ 5/5 |
 
 **cloud mock 注入模式**（核心创新）：
@@ -153,7 +161,7 @@ automator.launch() → miniProgram.evaluate(cloudMocks)
   ↓
 npm run verify          ← L1 + L2，<5 秒
   ├─ npm run check      ← L1 语法
-  └─ npm test           ← L2 436 用例
+  └─ npm test           ← L2 447 用例
   ↓ 通过？
   ├─ 否 → 修
   └─ 是 → 进入下一层

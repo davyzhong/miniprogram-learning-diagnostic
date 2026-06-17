@@ -31,7 +31,7 @@ Node.js tasks run from the repo root:
 | English module E2E | `npm run test:devtools-english` | L3 |
 | Parent/timeline E2E | `npm run test:devtools-parent-timeline` | L3 |
 
-The `tests/` directory currently holds 44 `.test.js` files; `npm test` enumerates 35 of them explicitly (no glob), so any new test file must be added to both `test` and `test:coverage` scripts in `package.json`. Tests use the Node.js built-in runner (`node --test`), no external framework. Run `npm run verify` after any change; run `npm run release:check` before tagging a release.
+The `tests/` directory currently holds 49 `.test.js` files; `npm test` enumerates 42 of them explicitly (no glob), so any new test file must be added to both `test` and `test:coverage` scripts in `package.json`. Tests use the Node.js built-in runner (`node --test`), no external framework — 447 tests, <3s. Run `npm run verify` after any change; run `npm run release:check` before tagging a release.
 
 ## Architecture
 
@@ -58,9 +58,10 @@ CloudBase (serverless, 12 cloud functions)
 
 - **Server trigger + client polling**: `uploadAndAnalyze` creates the report then starts `analyzePhotos` fire-and-forget; the client returns immediately and relies on polling. Frontend polling builds on the generic `miniprogram/utils/poller.js` (`createPoller`), wrapped by `miniprogram/utils/analysis-poller.js` which classifies analysis state (waiting / in-progress / completed / failed / timeout, including stale-task detection). `subject-home` and `report` pages use this wrapper.
 - **Batch pipeline + OCR dedup**: `analyzePhotos` splits images into batches of 5 and processes them serially via `analyzeBatch`, writing progress to `analysisTasks.completedBatches`. The orchestration is split into `analyzePhotos/pipeline.js`; cross-batch and cross-historical-report deduplication lives in `analyzePhotos/photo-dedup.js`.
-- **Centralized access control**: `cloudfunctions/_shared/access.js` is the single source of permission checks (`getStudentAccess`, `getLearningResourceAccess`). Every cloud function that touches a student or learning resource must go through it. Co-parents (invited `studentMembers` with role) can operate learning workflows (upload, generate papers, retry analysis, read/download reports); **family-member management stays owner-only**.
-- **Bottleneck naming**: Internal IDs are LP-style codes (`LP-001`–`LP-010` math, `LP-101`–`LP-104` Chinese, `LP-201`–`LP-204` English). User-facing surfaces (UI, PDF, report) must show readable summaries like "计算基础" / "审题理解", never raw LP codes. The mapping + alias normalization lives in **two parallel copies** that must stay in sync: `miniprogram/utils/bottleneck-name.js` and `cloudfunctions/_shared/bottleneck-name.js`.
-- **Subject constants**: `miniprogram/utils/constants.js` and `cloudfunctions/_shared/constants.js` define the three subjects (math / chinese / english), their display names, codes, and colors. The frontend copy additionally carries short names and per-subject color tokens.
+- **Centralized access control**: `access.js` is the single source of permission checks (`getStudentAccess`, `getLearningResourceAccess`). Each cloud function has its own root-level copy (e.g. `cloudfunctions/studentAccess/access.js`); they must all stay identical — the test `各云函数的共享文件副本互相保持一致` enforces this. Every cloud function that touches a student or learning resource must go through it. Co-parents (invited `studentMembers` with role) can operate learning workflows (upload, generate papers, retry analysis, read/download reports); **family-member management stays owner-only**.
+- **Shared file distribution**: Shared files (`access.js`, `constants.js`, `bottleneck-name.js`, `math-bottleneck-hierarchy.js`) are copied into each cloud function's root directory — NOT in a `_shared/` subdirectory. WeChat DevTools skips underscore-prefixed directories during upload, so `require('./_shared/access')` fails on the cloud. Use `require('./access')` (root-level) instead. The test `cloudfunctions 下不再有 _shared 目录` prevents regression.
+- **Bottleneck naming**: Internal IDs are LP-style codes (`LP-001`–`LP-010` math, `LP-101`–`LP-104` Chinese, `LP-201`–`LP-204` English). User-facing surfaces (UI, PDF, report) must show readable summaries like "计算基础" / "审题理解", never raw LP codes. The mapping + alias normalization lives in **two parallel copies** that must stay in sync: `miniprogram/utils/bottleneck-name.js` and the per-function `cloudfunctions/*/bottleneck-name.js`.
+- **Subject constants**: `miniprogram/utils/constants.js` and `cloudfunctions/*/constants.js` define the three subjects (math / chinese / english), their display names, codes, and colors. The frontend copy additionally carries short names and per-subject color tokens.
 - **Presenter split**: Heavy pages keep UI in `<page>.js` and extract testable logic into `<page>-presenter.js` (see `index`, `upload-history`, `paper-preview`, `report`, `subject-home`). Presenters are plain JS with no `wx` dependency so they can be unit-tested directly.
 - **Data access layer**: `miniprogram/utils/cloud.js` wraps `wx.cloud.callFunction` (expecting a `{success, data, error}` envelope — `success === false` throws) and also exposes direct DB reads. Pages and other utils call through it rather than hitting `wx.cloud` directly.
 - **PDF generation**: `pdfkit` runs inside cloud functions using a bundled `NotoSansCJKsc-Regular.otf`. A missing font must fail loudly, not produce garbled Chinese.
@@ -72,8 +73,10 @@ CloudBase (serverless, 12 cloud functions)
 ## Conventions
 
 - Cloud function envelopes follow `{success, data, error}`; throw on `success === false` from the client wrapper.
-- When adding a subject, subject color, or bottleneck code, update **both** the `_shared/` (backend) and `miniprogram/utils/` (frontend) copies of the relevant constants/mapping file.
+- When adding a subject, subject color, or bottleneck code, update the root-level copies in BOTH cloud functions (`cloudfunctions/*/constants.js`, `cloudfunctions/*/bottleneck-name.js`) and frontend (`miniprogram/utils/`). Never use a `_shared/` subdirectory — put shared files at the cloud function root.
 - Chinese PDF fonts are bundled inside the cloud function directories — do not configure `FONT_FILE_ID` or external font paths.
+- **Never use `Intl` API in miniprogram code** — WeChat iOS/macOS runtime does not support it. Use `getUTC*` methods with manual timezone offset instead (see `beijingParts` in `miniprogram/utils/util.js`).
+- **LLM cloud functions need frontend `timeout: 60000`** — `wx.cloud.callFunction` defaults to 20s, but `generatePaper` / `generateReportPDF` / LLM-backed actions need up to 60s. See `callGeneratePaper` in `cloud.js`.
 
 ## Known gaps
 
