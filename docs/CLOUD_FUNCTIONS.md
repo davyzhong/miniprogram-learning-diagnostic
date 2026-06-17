@@ -14,6 +14,7 @@
 - [analyzePhotos](#analyzephotos)
 - [analyzeBatch](#analyzebatch)
 - [generatePaper](#generatepaper)
+- [reanalyzeMathHistory](#reanalyzemathhistory)
 - [generateReportPDF](#generatereportpdf)
 - [getAnalysisProgress](#getanalysisprogress)
 - [辅助模块](#辅助模块)
@@ -846,7 +847,16 @@ wx.cloud.callFunction({
     studentId: 'stu_xxx',
     subject: 'math',
     type: 'verification',         // verification | default-diagnosis
-    targets: ['LP-001', 'LP-002'], // 验证模式必填，1~5 个卡点 code
+    targets: ['BN-DEC-MUL-POINT-COUNT', 'BN-DEC-MUL-POINT-ESTIMATE'],
+    targetPlan: {
+      strategy: 'hierarchy_pages_v1',
+      pages: [{
+        pageType: 'same_family',
+        categoryTitle: '计算规则',
+        familyTitle: '小数点定位与移动',
+        targetIds: ['BN-DEC-MUL-POINT-COUNT', 'BN-DEC-MUL-POINT-ESTIMATE']
+      }]
+    },
     preview: false,               // true 时仅生成 PDF，不写入 papers
     paperKey: 'v202406',          // 套题标识，≤20 字符
     questionCount: 12,            // 仅 default-diagnosis 生效，6~20
@@ -862,7 +872,8 @@ wx.cloud.callFunction({
 | studentId | string | 是 | 学生文档 ID | `'stu_xxx'` |
 | subject | string | 否 | 学科，默认 `'math'` | `'english'` |
 | type | string | 否 | 试卷类型，默认 `'verification'`；可选 `verification / default-diagnosis` | `'default-diagnosis'` |
-| targets | string[] | 条件必填 | 验证模式下必填，1~5 个 LP-XXX 格式卡点 code；正则 `/^LP-[A-Z0-9-]{1,24}$/` | `['LP-001']` |
+| targets | string[] | 条件必填 | 验证模式下必填，1~60 个目标编码；兼容 `LP-*` 粗卡点、`BN-*` 数学细卡点、`CHI-*` 语文错项目标 | `['BN-DEC-MUL-POINT-COUNT']` |
+| targetPlan | Object | 否 | 验证任务分页计划；数学层级组卷使用 `strategy='hierarchy_pages_v1'`，可按粗类/家族合并同类细卡点 | 见下方 |
 | preview | boolean | 否 | 是否预览模式，默认 false；true 时不写库 | `true` |
 | paperKey | string | 否 | 套题标识，截断至 20 字符 | `'v202406'` |
 | questionCount | number | 否 | 默认诊断试卷题目数，clamp 到 6~20，默认 12 | `15` |
@@ -881,7 +892,12 @@ wx.cloud.callFunction({
   "questionCount": 10,
   "studentPages": 1,
   "answerPages": 1,
-  "totalPages": 2
+  "totalPages": 2,
+  "verificationPack": {
+    "scheduleStrategy": "hierarchy_pages_v1",
+    "totalTargets": 2,
+    "totalStudentPages": 1
+  }
 }
 ```
 
@@ -914,7 +930,7 @@ wx.cloud.callFunction({
 | --- | --- |
 | 缺少 studentId | 未传 studentId |
 | 学科或试卷类型无效 | subject / type 不在白名单 |
-| 学习卡点参数无效 | targets 非数组 / 长度 > 5 / code 不符合正则 |
+| 学习卡点参数无效 | targets 非数组 / 长度 > 60 / code 不符合 `LP-*`、`BN-*` 或 `CHI-*` 目标格式 |
 | 验证试卷至少需要一个学习卡点 | type=verification 但 targets 为空 |
 | 默认诊断试卷需要选择有效年级 | type=default-diagnosis 但 grade 不在 1~6 |
 | 学生不存在 | students 查无此 doc |
@@ -947,8 +963,54 @@ wx.cloud.callFunction({
 2. **Prompt 防注入**：学生姓名、paperKey 等均经 `cleanPromptText` 清洗（去换行、去尖括号、截断）。
 3. **题目数量校验**：先过滤缺少题干或答案的不完整题；完整题数量不足期望值时抛错，若 AI 多生成则截取前 N 道。
 4. **预览模式**：`preview=true` 时 PDF 仍会上传云存储，但不写 papers 记录，适合即时预览。
-5. 验证试卷题目数 = `targets.length × 5`，每个卡点固定为 3 道核心验证题 + 2 道迁移延展题，不由前端自定义。
-6. PDF 分页阈值 y > 700，每题预留答题空白区。
+5. 验证试卷题目数 = `targets.length × 5`，每个目标固定为 3 道核心验证题 + 2 道迁移延展题。
+6. 数学细卡点较多时，前端可传入 `targetPlan.pages`；后端会把同一家族/同一粗类的细卡点安排到同一任务页，并在 `verificationPack.pages` 中保存 `pageType/categoryTitle/familyTitle/targetIds/questionIds`。
+7. PDF 学生页会打印唯一 `pageCode`，孩子可以批量打印、分批作答；上传照片后可按页追踪验证效果。
+8. PDF 分页阈值 y > 700，每题预留答题空白区。
+
+---
+
+## reanalyzeMathHistory
+
+### 功能描述
+
+数学历史报告维护云函数。用于把历史图片重新进入当前 AI 诊断链路，或把同一学生的历史图片合并成一份“截至当前时间点”的完整数学诊断快照。当前版本标记为 `math-full-reanalysis-v2.2-hierarchy`，输出应使用数学卡点层级版学习地图：粗类、卡点家族、细卡点、知识节点和推荐资源。
+
+### action / phase 列表
+
+| phase | 必填参数 | 描述 |
+| --- | --- | --- |
+| `aggregate` | `studentId` 可选；`apply` 可选 | 按学生聚合所有可见历史数学报告图片，创建一份 `sourceType='history-aggregate'` 的待分析快照报告 |
+| `status` | `reportId` | 查询重分析报告和关联 `analysisTasks` 的进度，返回 `learningMapBackfill` 与 `reanalysis` 标记 |
+| `retryAggregateFailedBatch` | `reportId` | 对历史合并报告中失败的单页批次执行补跑 |
+| `resumeAggregateFinalization` | `reportId` | 批次均完成但最终合并中断时恢复最终合并 |
+| `finalize` | `studentId` 可选；`apply` 可选 | 逐份替换模式下归档旧报告并重建数学 `subjectProfiles` |
+
+### 输出重点
+
+`aggregate` 创建的新报告会写入：
+
+```json
+{
+  "sourceType": "history-aggregate",
+  "reanalysis": {
+    "version": "math-full-reanalysis-v2.2-hierarchy",
+    "learningMapVersion": "math-learning-map-v2.2-hierarchy",
+    "aggregateCurrentSnapshot": true,
+    "bottleneckHierarchy": {
+      "enabled": true,
+      "levels": ["category", "family", "fineBottleneck"]
+    }
+  }
+}
+```
+
+### 注意事项
+
+1. 自用场景优先使用 `aggregate`：把历史图片合并成一份当前完整快照，而不是为每份旧报告生成多份新版报告。
+2. 历史快照仍保留 `sourceReportIds`、`imageFileIds` 和 `imageFiles`，便于追溯证据来源。
+3. 层级字段由 `analyzePhotos/math-learning-map-enricher.js` 写入 `reports.bottlenecks[].candidateBottlenecks[]`，维护脚本 `scripts/backfill-math-learning-map.js` 可对旧报告补齐并输出 `hierarchyBackfilledCount / missingHierarchyCount`。
+4. 本地直接 dry-run 需要 `wx-server-sdk` 或云函数环境；没有 SDK 时可用 `--input` 本地 JSON 做预演。
 
 ---
 

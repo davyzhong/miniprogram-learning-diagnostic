@@ -121,6 +121,13 @@
 | `verificationPassCount` | Number | 完整通过验证次数 | `1` |
 | `verificationFailCount` | Number | 验证未通过次数 | `0` |
 | `weight` | Number | 0-100 的当前关注权重，越高越需要优先处理 | `50` |
+| `nodeIds` | Array\<String\> | 关联数学知识地图节点；旧 LP 卡点可为空，新数学诊断应尽量填充 | `["MATH-NUM-DEC-MUL-POINT"]` |
+| `candidateBottlenecks` | Array\<Object\> | 细颗粒度候选卡点，含粗类、家族、细卡点和证据强度 | 见 reports.bottlenecks 子结构 |
+| `recommendedResourceIds` | Array\<String\> | 推荐重学资源 ID 列表 | `["RES-BILI-DEC-MUL-001"]` |
+| `resourcePlan` | Array\<Object\> | 面向家长的资源顺序、平台、链接和角色 | `[{ "platform": "B站" }]` |
+| `evidenceStrength` | String | 证据强度：`high` \| `medium` \| `low` | `"high"` |
+| `nextActionType` | String | 下一步动作类型：`resourceReview` \| `microValidation` 等 | `"resourceReview"` |
+| `nextActionText` | String | 面向家长的下一步建议 | `"先看高质量锚点校准小数乘法..."` |
 
 #### pendingBottlenecks 子结构
 
@@ -195,6 +202,8 @@ MVP 数学卡点当前包含：
 | `verificationPageEvidence` | Array\<Object\> | 否 | `[]` | 按页面编号汇总的验证证据，用于追踪任务包哪几页已回传 | 见下方子结构 |
 | `quality` | Object | 是 | 规则计算 | 报告证据质量，决定是否可作为强结论更新长期档案 | 见下方子结构 |
 | `isEffective` | Boolean | 是 | `false` | 是否允许参与综合诊断和最近变化 | `true` |
+| `learningMapBackfill` | Object | 否 | — | 数学旧报告学习地图/层级字段回填记录 | `{ "version": "math-learning-map-v2.2-hierarchy" }` |
+| `reanalysis` | Object | 否 | — | 历史重分析标记；合并快照会包含 `aggregateCurrentSnapshot=true` | `{ "version": "math-full-reanalysis-v2.2-hierarchy" }` |
 | `changeSummary` | String | 是 | `''` | 面向家长的一句话变化描述 | `"发现分数运算卡点"` |
 | `profileAppliedAt` | Date | 否 | — | 成功应用到综合诊断的时间 | `ISODate("2026-06-12T...")` |
 | `pdfFileId` | String | 否 | — | 报告 PDF 的云存储 fileID（generateReportPDF 写入） | `"cloud://xxx/report.pdf"` |
@@ -230,6 +239,30 @@ MVP 数学卡点当前包含：
 | `status` | String | 卡点状态（验证模式有值）：`'found'` \| `'improved'` \| `'worsened'` \| `'new'` \| `'persisting'` | `"new"` |
 | `rootCause` | String | AI 给出的根因假设（≤300 字） | `"通分规则不熟练"` |
 | `suggestion` | String | 修复建议（≤300 字） | `"练习异分母分数加减法"` |
+| `nodeIds` | Array\<String\> | 关联知识地图节点 ID | `["MATH-NUM-FRACTION-ADD-SUB-COMMON"]` |
+| `candidateBottlenecks` | Array\<Object\> | 数学细颗粒度卡点候选；每个候选必须尽量带粗类/家族字段 | 见下方 |
+| `evidenceStrength` | String | 综合证据强度：`high` \| `medium` \| `low` | `"medium"` |
+| `recommendedResourceIds` | Array\<String\> | 推荐学习资源 ID | `["RES-BILI-FRACTION-DIV-001"]` |
+| `resourcePlan` | Array\<Object\> | 推荐资源的可展示计划，保存平台、标题、URL、推荐等级和角色 | `[{ "role": "国内补充" }]` |
+| `nextActionType` | String | 下一步动作类型 | `"resourceReview"` |
+| `nextActionText` | String | 家长可读下一步建议 | `"先用推荐资源重学，再做微验证。"` |
+
+#### candidateBottlenecks 子结构
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `bottleneckId` | String | 细卡点 ID，通常为 `BN-*` | `"BN-DEC-MUL-POINT-COUNT"` |
+| `title` | String | 细卡点中文标题 | `"小数乘法中积的小数位数判断错误"` |
+| `nodeId` | String | 对应知识节点 ID | `"MATH-NUM-DEC-MUL-POINT"` |
+| `categoryId` | String | 粗类 ID，用于展示分组和资源/验证调度 | `"MATH-CAT-CALC-RULE"` |
+| `categoryTitle` | String | 粗类中文名 | `"计算规则"` |
+| `familyId` | String | 卡点家族 ID，用于把同类细卡点合并到同一验证任务页 | `"MATH-FAM-DECIMAL-POINT"` |
+| `familyTitle` | String | 卡点家族中文名 | `"小数点定位与移动"` |
+| `categoryPath` | Array\<String\> | 中文层级路径 | `["计算规则", "小数点定位与移动", "小数乘法中积的小数位数判断错误"]` |
+| `evidenceStrength` | String | 此候选卡点的证据强度 | `"high"` |
+| `microValidationRequired` | Boolean | 是否需要微验证确认 | `true` |
+| `suggestedMicroValidation` | Array\<String\> | 微验证题型建议 | `["给出 3 道小数乘法判断积的小数位数"]` |
+| `recommendedResourceIds` | Array\<String\> | 针对此候选卡点的资源 ID | `["RES-BILI-DEC-MUL-001"]` |
 
 #### errorDetails 子结构
 
@@ -426,9 +459,20 @@ MVP 数学卡点当前包含：
 | `totalQuestions` | Number | 总题数 | `165` |
 | `totalStudentPages` | Number | 计划学生任务页数 | `11` |
 | `completedStudentPages` | Number | 已回传学生任务页数，生成时为 0，展示时可由报告派生 | `0` |
-| `pages` | Array\<Object\> | 任务页列表，每页包含 `pageCode`、`targetIds`、`targets`、`questionIds` | `[{ "pageCode": "MATH-V-20260616-01-P01" }]` |
+| `pages` | Array\<Object\> | 任务页列表，每页包含 `pageCode`、`pageType`、粗类/家族字段、`targetIds`、`targets`、`questionIds` | `[{ "pageCode": "MATH-V-20260616-01-P01" }]` |
 
 > 试卷生命周期不新增数据库字段，由前端根据 `papers`、关联的最新 `reports(type='verification')` 和本机 PDF 下载标记派生：`generated`（已生成待下载）、`downloaded`（已下载待作答）、`analyzing`（作答已上传，反馈分析中）、`failed`（反馈失败，可重新上传）、`completed`（验证反馈已完成）。学习记录中同一份试卷优先展示最新一次验证反馈状态。
+
+`verificationPack.pages[]` 在数学层级组卷时会额外包含：
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `pageType` | String | `same_family` \| `micro_confirm` \| `mixed_review` | `"same_family"` |
+| `categoryId` / `categoryTitle` | String | 该页主要验证的粗类 | `"计算规则"` |
+| `familyIds` / `familyTitle` | Array\<String\> / String | 该页覆盖的卡点家族 | `"小数点定位与移动"` |
+| `nodeIds` | Array\<String\> | 该页覆盖的知识节点 | `["MATH-NUM-DEC-MUL-POINT"]` |
+| `targetSummary` | String | 页面标题/范围摘要 | `"小数点定位与移动"` |
+| `targetNames` | Array\<String\> | 该页覆盖的细卡点中文名 | `["小数乘法中积的小数位数判断错误"]` |
 
 #### questions 子结构
 

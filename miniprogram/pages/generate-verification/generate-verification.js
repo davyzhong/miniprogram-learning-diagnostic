@@ -359,29 +359,32 @@ Page({
     groups.forEach(group => {
       ;(group.families || []).forEach(family => {
         const items = family.items || []
-        const targetIds = targetCodesForPaper(items)
-        const nodeIds = Array.from(new Set(items.flatMap(item => [
-          item.nodeId,
-          ...(item.nodeIds || []),
-          ...(item.familyNodeIds || [])
-        ]).filter(Boolean)))
-        const targetNames = items.map(item => item.displayName || item.lpName || item.bottleneckId || item.lpCode).filter(Boolean)
-        pages.push({
-          pageIndex: pages.length + 1,
-          title: `${family.familyTitle || group.categoryTitle || '专项'}任务页`,
-          pageType: items.length >= 2 ? 'same_family' : 'micro_confirm',
-          categoryId: group.categoryId || '',
-          categoryTitle: group.categoryTitle || '',
-          familyIds: family.familyId ? [family.familyId] : [],
-          familyTitle: family.familyTitle || '',
-          nodeIds,
-          targetIds,
-          targetNames,
-          targetSummary: family.familyTitle || group.categoryTitle || targetNames.join('、'),
-          targetCount: targetIds.length,
-          questionCount: this.questionCountForSelection(targetIds.length),
-          scopeText: targetNames.join('、')
-        })
+        for (let start = 0; start < items.length; start += MATH_TARGETS_PER_TASK_PAGE) {
+          const pageItems = items.slice(start, start + MATH_TARGETS_PER_TASK_PAGE)
+          const targetIds = targetCodesForPaper(pageItems)
+          const nodeIds = Array.from(new Set(pageItems.flatMap(item => [
+            item.nodeId,
+            ...(item.nodeIds || []),
+            ...(item.familyNodeIds || [])
+          ]).filter(Boolean)))
+          const targetNames = pageItems.map(item => item.displayName || item.lpName || item.bottleneckId || item.lpCode).filter(Boolean)
+          pages.push({
+            pageIndex: pages.length + 1,
+            title: `${family.familyTitle || group.categoryTitle || '专项'}任务页`,
+            pageType: pageItems.length >= 2 ? 'same_family' : 'micro_confirm',
+            categoryId: group.categoryId || '',
+            categoryTitle: group.categoryTitle || '',
+            familyIds: family.familyId ? [family.familyId] : [],
+            familyTitle: family.familyTitle || '',
+            nodeIds,
+            targetIds,
+            targetNames,
+            targetSummary: family.familyTitle || group.categoryTitle || targetNames.join('、'),
+            targetCount: targetIds.length,
+            questionCount: this.questionCountForSelection(targetIds.length),
+            scopeText: targetNames.join('、')
+          })
+        }
       })
     })
     return pages
@@ -396,10 +399,7 @@ Page({
     }
   },
 
-  buildTaskPages(selectedItems = []) {
-    const scheduledPages = this.buildScheduledTaskPages(selectedItems)
-    if (scheduledPages.length > 0) return scheduledPages
-
+  buildChunkedTaskPages(selectedItems = []) {
     const isChinese = this.data.subject === 'chinese'
     const targetsPerPage = isChinese ? CHINESE_TARGETS_PER_TASK_PAGE : MATH_TARGETS_PER_TASK_PAGE
     const pages = []
@@ -415,6 +415,16 @@ Page({
       })
     }
     return pages
+  },
+
+  buildTaskPages(selectedItems = []) {
+    const scheduledPages = this.buildScheduledTaskPages(selectedItems)
+    const chunkedPages = this.buildChunkedTaskPages(selectedItems)
+    const hasUngovernedTargets = selectedItems.some(item => !item.categoryId && !item.familyId)
+    if (scheduledPages.length > 0 && !(hasUngovernedTargets && scheduledPages.length > chunkedPages.length)) {
+      return scheduledPages
+    }
+    return chunkedPages
   },
 
   buildPaperConfig(selectedItemsOrCount, selectedSummary) {

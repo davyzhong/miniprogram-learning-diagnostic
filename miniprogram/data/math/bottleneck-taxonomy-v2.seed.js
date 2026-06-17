@@ -1,6 +1,6 @@
 module.exports = {
   "version": "0.1.0",
-  "updatedAt": "2026-06-16",
+  "updatedAt": "2026-06-17",
   "subject": "math",
   "scope": "钟青羽小学数学细颗粒度学习卡点首批种子库。",
   "sourceDocs": [
@@ -49,6 +49,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "28 × 204 = 5600，漏加 28 × 4 = 112"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-INT-PARTIAL",
+      "familyTitle": "整数乘法部分积",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "步骤拆解",
+        "部分积标记",
+        "错例对比"
       ]
     },
     {
@@ -90,6 +105,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "584 + 8008 ÷ 26 × 15 中 8008 ÷ 26 误算为 4004"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-LONG-DIVISION",
+      "familyTitle": "长除法试商与商位",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "竖式步骤",
+        "试商",
+        "回验"
       ]
     },
     {
@@ -130,6 +160,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "8.5 × 3.16 写成 2.186"
+      ],
+      "categoryId": "MATH-CAT-NUMBER-SENSE",
+      "categoryTitle": "数感与数量级",
+      "familyId": "MATH-FAM-DECIMAL-PLACE-VALUE",
+      "familyTitle": "小数位值与数量级",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "位值表",
+        "估算",
+        "数量级判断"
       ]
     },
     {
@@ -170,6 +215,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "8.5 × 3.16 = 2.186，正确为 26.86"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-DECIMAL-POINT",
+      "familyTitle": "小数点定位与移动",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "步骤拆解",
+        "数量级估算",
+        "错例对比"
       ]
     },
     {
@@ -210,6 +270,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "8.5 × 3.16 的正确结果应接近 8.5 × 3 = 25.5"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-DECIMAL-POINT",
+      "familyTitle": "小数点定位与移动",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "步骤拆解",
+        "数量级估算",
+        "错例对比"
       ]
     },
     {
@@ -250,6 +325,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "0.25 + 0.15 ÷ 3/4 × 5/8 最后加法出错"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-FRACTION-COMMON-DENOM",
+      "familyTitle": "异分母通分",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "分数条",
+        "通分步骤",
+        "单位一致"
       ]
     },
     {
@@ -290,6 +380,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "4/9 × [(5/6 - 3/4) × 4/5] 结果膨胀"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-FRACTION-SIMPLIFY",
+      "familyTitle": "分数约分与结果大小",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "约分对象",
+        "大小估计",
+        "错例对比"
       ]
     },
     {
@@ -330,6 +435,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "6 ÷ 7/8 写成 50"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-FRACTION-DIVISION",
+      "familyTitle": "分数除法与倒数",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "数轴直观",
+        "倒数规则",
+        "包含除"
       ]
     },
     {
@@ -369,6 +489,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "6 ÷ 7/8 的错误答案暴露大小直觉不足"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-FRACTION-DIVISION",
+      "familyTitle": "分数除法与倒数",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "数轴直观",
+        "倒数规则",
+        "包含除"
       ]
     },
     {
@@ -408,6 +543,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "84 ÷ [(1/3 + 0.2) × 1.5] 结果偏离"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-FRACTION-DECIMAL-CONVERT",
+      "familyTitle": "分数小数形式统一",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "形式统一",
+        "无限小数",
+        "混合运算"
       ]
     },
     {
@@ -448,6 +598,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "汽车含 5% 优惠后价格 47.25 万，求原价"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-PERCENT-BASE",
+      "familyTitle": "百分数单位 1",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "单位1",
+        "线段图",
+        "关系句"
       ]
     },
     {
@@ -487,6 +652,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "47.25 万优惠题两次修改方向不同"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-PERCENT-BASE",
+      "familyTitle": "百分数单位 1",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "单位1",
+        "线段图",
+        "关系句"
       ]
     },
     {
@@ -526,6 +706,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "稿费缴税 672 元反推稿费总额错误"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-PIECEWISE",
+      "familyTitle": "分段关系与税率",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "分段表格",
+        "区间边界",
+        "应用建模"
       ]
     },
     {
@@ -565,6 +760,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "1/a = 3/b 求 a:b 的方向错误"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-RATIO-MEANING",
+      "familyTitle": "比的意义与参照系",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "线段图",
+        "对象顺序",
+        "参照系"
       ]
     },
     {
@@ -604,6 +814,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "运货题把剩余 5/8 与第一天 1/4 直接相减"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-RATIO-MEANING",
+      "familyTitle": "比的意义与参照系",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "线段图",
+        "对象顺序",
+        "参照系"
       ]
     },
     {
@@ -643,6 +868,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "已知 1/a = 3/b，求 a:b 错"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-RATIO-PROPERTY",
+      "familyTitle": "比例性质与穷尽判断",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "比例性质",
+        "穷尽检查",
+        "错例对比"
       ]
     },
     {
@@ -682,6 +922,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "判断哪组数不能组成比例时漏选"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-RATIO-PROPERTY",
+      "familyTitle": "比例性质与穷尽判断",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "比例性质",
+        "穷尽检查",
+        "错例对比"
       ]
     },
     {
@@ -721,6 +976,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "比例尺 1:400000 到 1:1600000 换算错误"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-SCALE",
+      "familyTitle": "比例尺与实际距离",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "三量关系",
+        "单位统一",
+        "步骤框架"
       ]
     },
     {
@@ -760,6 +1030,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "圆柱注水图示 cm、题目 dm，答案单位混乱"
+      ],
+      "categoryId": "MATH-CAT-MEASURE",
+      "categoryTitle": "单位与量纲",
+      "familyId": "MATH-FAM-UNIT-CONVERT",
+      "familyTitle": "单位统一与量纲判断",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "进率表",
+        "量纲对比",
+        "真实场景"
       ]
     },
     {
@@ -799,6 +1084,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "喷水面积题答案写 cm² 且多乘半径"
+      ],
+      "categoryId": "MATH-CAT-MEASURE",
+      "categoryTitle": "单位与量纲",
+      "familyId": "MATH-FAM-UNIT-CONVERT",
+      "familyTitle": "单位统一与量纲判断",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "进率表",
+        "量纲对比",
+        "真实场景"
       ]
     },
     {
@@ -838,6 +1138,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "水泵喷水半径 9m 求面积，算成 81π × 9"
+      ],
+      "categoryId": "MATH-CAT-GEOMETRY",
+      "categoryTitle": "图形与空间",
+      "familyId": "MATH-FAM-CIRCLE-FORMULA",
+      "familyTitle": "圆周长与圆面积公式边界",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "公式边界",
+        "图示推导",
+        "单位辨析"
       ]
     },
     {
@@ -877,6 +1192,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "圆相关题中公式提取不稳定"
+      ],
+      "categoryId": "MATH-CAT-GEOMETRY",
+      "categoryTitle": "图形与空间",
+      "familyId": "MATH-FAM-CIRCLE-FORMULA",
+      "familyTitle": "圆周长与圆面积公式边界",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "公式边界",
+        "图示推导",
+        "单位辨析"
       ]
     },
     {
@@ -916,6 +1246,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "圆柱注水和喷水面积题暴露面积体积串扰"
+      ],
+      "categoryId": "MATH-CAT-GEOMETRY",
+      "categoryTitle": "图形与空间",
+      "familyId": "MATH-FAM-SOLID-GEOMETRY",
+      "familyTitle": "立体图形体积与表面积",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "动态演示",
+        "暴露面枚举",
+        "公式边界"
       ]
     },
     {
@@ -955,6 +1300,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "大圆柱内挖三个小圆柱，答案漏 16π"
+      ],
+      "categoryId": "MATH-CAT-GEOMETRY",
+      "categoryTitle": "图形与空间",
+      "familyId": "MATH-FAM-SOLID-GEOMETRY",
+      "familyTitle": "立体图形体积与表面积",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "动态演示",
+        "暴露面枚举",
+        "公式边界"
       ]
     },
     {
@@ -995,6 +1355,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "蜡烛 1 小时后余 14.6cm，2 小时后余 11.8cm，误将 2.8 ÷ 2"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-UNIFORM-CHANGE",
+      "familyTitle": "匀速变化与单位变化量",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "表格",
+        "差值",
+        "变化关系"
       ]
     },
     {
@@ -1035,6 +1410,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "8.5×3.16=2.186、三角形面积 15、5600÷28 不回到 204"
+      ],
+      "categoryId": "MATH-CAT-META",
+      "categoryTitle": "验算与学习习惯",
+      "familyId": "MATH-FAM-ESTIMATION-CHECK",
+      "familyTitle": "估算与结果合理性检查",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "估算流程",
+        "检查清单",
+        "数量级"
       ]
     },
     {
@@ -1075,6 +1465,21 @@ module.exports = {
       ],
       "sourceEvidence": [
         "多道错题可通过简单反向验证发现，但卷面无验算痕迹"
+      ],
+      "categoryId": "MATH-CAT-META",
+      "categoryTitle": "验算与学习习惯",
+      "familyId": "MATH-FAM-INVERSE-CHECK",
+      "familyTitle": "逆运算回代验算",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "回代",
+        "逆运算",
+        "草稿组织"
       ]
     }
   ]
