@@ -293,7 +293,7 @@ test('learning profile home uses shared access and lets co-parents operate learn
   assert.equal(page.data.homeMode, 'single-profile')
   assert.equal(page.data.permissions.canUpload, true)
   assert.equal(page.data.permissions.canManageParents, false)
-  assert.equal(page.data.home.nextAction.primaryText, '生成验证试卷')
+  assert.equal(page.data.home.nextAction.primaryText, '生成纸面验证卷')
 
   page.onPrimaryAction()
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
@@ -415,7 +415,7 @@ test('student profile page loads one child and keeps profile actions clickable',
   await page.onLoad({ studentId: 'student-1' })
 
   assert.equal(page.data.home.studentName, '钟青羽')
-  assert.equal(page.data.home.nextAction.primaryText, '生成验证试卷')
+  assert.equal(page.data.home.nextAction.primaryText, '生成纸面验证卷')
   page.onPrimaryReportTap()
   page.onViewAllRecords()
   page.onSubjectTap({ currentTarget: { dataset: { subject: 'math' } } })
@@ -2254,7 +2254,7 @@ test('learning records load all subjects when no subject filter is provided', as
   assert.equal(page.data.activeSubject, '')
   assert.equal(page.data.titleText, '钟青羽 · 学习记录')
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
-    '生成数学验证试卷',
+    '生成数学纸面验证卷',
     '数学诊断报告'
   ])
   assert.equal(page.data.filters.find(item => item.key === '').active, true)
@@ -2309,7 +2309,7 @@ test('learning records prefer shared timeline access before legacy collection qu
   assert.equal(seen.legacyReports, 0)
   assert.equal(seen.legacyPapers, 0)
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
-    '生成数学验证试卷',
+    '生成数学纸面验证卷',
     '数学诊断报告'
   ])
 })
@@ -2642,7 +2642,7 @@ test('learning records treat route subject as an initial filter on the complete 
 
   assert.equal(page.data.activeSubject, '')
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
-    '生成英语验证试卷',
+    '生成英语纸面验证卷',
     '数学诊断报告',
     '语文诊断报告'
   ])

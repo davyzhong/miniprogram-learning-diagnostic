@@ -4,8 +4,8 @@ const { getBottleneckMeta } = require('./bottleneck-taxonomy')
 const { groupBottlenecksByHierarchy } = require('./math-bottleneck-hierarchy')
 
 const STATUS_META = {
-  needs_verification: { text: '待验证', className: 'pending', icon: '?', badgeText: '待验证', actionText: '生成验证卷' },
-  persisting: { text: '持续出现', className: 'persisting', icon: '!', badgeText: '持续观察', actionText: '生成验证卷' },
+  needs_verification: { text: '待验证', className: 'pending', icon: '?', badgeText: '待验证', actionText: '生成纸面验证卷' },
+  persisting: { text: '持续出现', className: 'persisting', icon: '!', badgeText: '持续观察', actionText: '生成纸面验证卷' },
   improved: { text: '已改善', className: 'improved', icon: '✓', badgeText: '已改善', actionText: '查看证据' }
 }
 

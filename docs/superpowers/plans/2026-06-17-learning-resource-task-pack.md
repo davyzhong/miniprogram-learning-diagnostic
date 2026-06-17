@@ -1255,7 +1255,7 @@ git commit -m "test: verify learning resource task pack flow"
 - `学习任务包`: child-facing learning material and short practice.
 - `验证卷`: paper-based evidence collection.
 
-- [ ] **Step 1: Audit repeated CTAs**
+- [x] **Step 1: Audit repeated CTAs**
 
 Run:
 
@@ -1265,7 +1265,7 @@ rg -n "学一下|学习任务包|生成验证|验证卷|学习材料|推荐资�
 
 Expected: list all entry copies.
 
-- [ ] **Step 2: Make actions consistent**
+- [x] **Step 2: Make actions consistent**
 
 Use these labels:
 
@@ -1277,7 +1277,7 @@ Use these labels:
 查看证据链
 ```
 
-- [ ] **Step 3: Run preview**
+- [x] **Step 3: Run preview**
 
 Run:
 
@@ -1288,7 +1288,7 @@ npm run verify
 
 Expected: preview QR generated.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 
@@ -1301,16 +1301,23 @@ git commit -m "chore: polish learning resource entry copy"
 
 ## Acceptance Checklist
 
-- [ ] A math bottleneck can open an in-app learning task pack.
-- [ ] The task pack contains card-point explanation, concept, worked example, common mistake, and 3 practice items.
-- [ ] The child can finish the pack without opening external links.
-- [ ] External links are shown only as parent reference.
-- [ ] Completing the pack writes a learning-record event.
-- [ ] The pack can be queued for later verification.
-- [ ] Existing report, bottleneck center, verification paper, and learning records still work.
-- [ ] `npm run verify` passes.
-- [ ] WeChat DevTools CLI preview succeeds.
-- [ ] Cloud functions are deployed before real-device testing.
+- [x] A math bottleneck can open an in-app learning task pack.
+- [x] The task pack contains card-point explanation, concept, worked example, common mistake, and 3 practice items.
+- [x] The child can finish the pack without opening external links.
+- [x] External links are shown only as parent reference.
+- [x] Completing the pack writes a learning-record event.
+- [x] The pack can be queued for later verification.
+- [x] Existing report, bottleneck center, verification paper, and learning records still work.
+- [x] `npm run verify` passes.
+- [x] WeChat DevTools CLI preview succeeds.
+- [x] Cloud functions are deployed before real-device testing.
+
+2026-06-17 execution note:
+
+- Completed Tasks 1-8 in separate commits.
+- Deployed `learningResource` and `studentData` cloud functions.
+- Final regression: `npm run verify` passed with 407 tests.
+- Final WeChat DevTools CLI preview succeeded, package size 723.6 KB.
 
 ---
 

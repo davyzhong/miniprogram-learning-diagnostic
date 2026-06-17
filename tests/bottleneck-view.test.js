@@ -38,7 +38,7 @@ test('bottleneck view hides LP codes and formats readable state', () => {
   assert.equal(views[0].statusBadgeText, '持续观察')
   assert.equal(views[0].priorityText, '高优先级')
   assert.equal(views[0].evidenceText, '3 次证据 · 最近 5 道相关错题')
-  assert.equal(views[0].actionText, '生成验证卷')
+  assert.equal(views[0].actionText, '生成纸面验证卷')
   assert.doesNotMatch(views[0].displayName, /LP-\d+/)
 })
 

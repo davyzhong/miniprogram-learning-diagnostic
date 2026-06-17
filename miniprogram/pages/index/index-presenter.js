@@ -337,7 +337,7 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
         summary: hasPending
           ? `用于确认${pendingNames}是否稳定出现。`
           : '上传试卷后，系统会整理学习观察和诊断报告。',
-        primaryText: hasPending ? '生成验证试卷' : (hasImprovedOnly ? '上传新试卷' : '上传第一份试卷'),
+        primaryText: hasPending ? '生成纸面验证卷' : (hasImprovedOnly ? '上传新试卷' : '上传第一份试卷'),
         secondaryText: hasPending ? '上传新试卷' : '查看学习记录',
         subject: nextSubject
       }

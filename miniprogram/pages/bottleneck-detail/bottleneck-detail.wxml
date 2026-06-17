@@ -111,7 +111,7 @@
 
     <view class="action-panel">
       <view class="secondary-action" bindtap="onBackToCenter">返回卡点中心</view>
-      <view class="primary-action" bindtap="onGenerateVerification">生成验证卷</view>
+      <view class="primary-action" bindtap="onGenerateVerification">生成纸面验证卷</view>
     </view>
   </view>
 

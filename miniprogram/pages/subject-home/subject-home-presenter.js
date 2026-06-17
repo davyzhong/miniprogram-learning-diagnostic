@@ -142,7 +142,7 @@ function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions = {}
     return {
       title: '下一步建议',
       summary: `${chineseReviewQueue.length} 个具体错项等待复测，建议先生成语文错项复测卷。`,
-      actionText: '生成验证试卷',
+      actionText: '生成纸面验证卷',
       actionType: 'verification'
     }
   }
@@ -150,8 +150,8 @@ function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions = {}
   if (taskQueue.length > 0) {
     return {
       title: '下一步建议',
-      summary: `${taskQueue.length} 个学习卡点等待验证，建议先做一张纸质验证卷。`,
-      actionText: '生成验证试卷',
+      summary: `${taskQueue.length} 个学习卡点等待验证，建议先做一张纸面验证卷。`,
+      actionText: '生成纸面验证卷',
       actionType: 'verification'
     }
   }

@@ -247,7 +247,7 @@ Page({
     })
   },
 
-  // ========== 生成验证试卷 ==========
+  // ========== 生成纸面验证卷 ==========
   onGenerateVerification() {
     if (!this.data.canGeneratePaper) return
     var report = this._fullReport || this.data.report

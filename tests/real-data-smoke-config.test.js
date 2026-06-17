@@ -32,7 +32,7 @@ test('real data smoke config builds default routes for one student', () => {
     '数学工作台',
     '学习卡点中心',
     '学习记录',
-    '生成验证试卷'
+    '生成纸面验证卷'
   ])
   assert.match(config.routes[1].path, /studentId=student-1/)
   assert.match(config.routes[1].path, /studentName=%E9%92%9F%E9%9D%92%E7%BE%BD/)
