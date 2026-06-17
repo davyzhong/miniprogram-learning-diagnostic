@@ -340,6 +340,22 @@ async function getReportFeedback(reportId) {
   return result.items || []
 }
 
+async function generateLearningResourcePack(payload = {}) {
+  return callFunction('learningResource', { action: 'generatePack', ...payload })
+}
+
+async function getLearningResourcePack(packId) {
+  return callFunction('learningResource', { action: 'getPack', packId })
+}
+
+async function completeLearningResourcePack(payload = {}) {
+  return callFunction('learningResource', { action: 'completePack', ...payload })
+}
+
+async function scheduleResourcePackVerification(packId) {
+  return callFunction('learningResource', { action: 'scheduleVerification', packId })
+}
+
 async function getEnglishVocabularySummary(studentId, today = '') {
   return callFunction('englishVocabulary', { action: 'getVocabularySummary', studentId, today })
 }
@@ -430,6 +446,10 @@ module.exports = {
   getPaperDetail,
   createReportFeedback,
   getReportFeedback,
+  generateLearningResourcePack,
+  getLearningResourcePack,
+  completeLearningResourcePack,
+  scheduleResourcePackVerification,
   getEnglishVocabularySummary,
   createEnglishImportBatch,
   confirmEnglishImportBatch,
