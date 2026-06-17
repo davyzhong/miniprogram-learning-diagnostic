@@ -227,32 +227,39 @@ test('cloud functions do not reference ../_shared (CloudBase only packages per-f
   assert.deepEqual(offenders, [], `这些文件仍引用 ../_shared，部署后会报错: ${offenders.join(', ')}`)
 })
 
-test('_shared 副本与源文件保持同步', () => {
-  // 确保各函数目录下的 _shared 副本与仓库根 _shared 源文件一致。
-  // 如果改了 _shared/access.js 但忘了同步副本，这里会报错。
-  const sharedSources = {
+test('各云函数的共享文件副本互相保持一致', () => {
+  // 共享文件直接复制成各云函数的根级文件（不再用 _shared 子目录或顶层源目录）。
+  // 这里检查同一文件名的所有副本内容一致——改了其中一个就要同步全部。
+  const sharedFiles = {
     'access.js': ['generateReportPDF', 'getAnalysisProgress', 'learningResource', 'reportFeedback', 'studentAccess', 'studentData', 'uploadAndAnalyze', 'englishVocabulary', 'generatePaper'],
-    'constants.js': ['generateReportPDF'],
-    'math-bottleneck-hierarchy.js': ['analyzePhotos']
+    'constants.js': ['generateReportPDF', 'generatePaper'],
+    'bottleneck-name.js': ['analyzeBatch', 'generatePaper'],
   }
 
   const mismatches = []
-  for (const [file, dirs] of Object.entries(sharedSources)) {
-    const sourceContent = read(`cloudfunctions/_shared/${file}`)
+  for (const [file, dirs] of Object.entries(sharedFiles)) {
+    // 以第一个目录的副本作为基准
+    const baseline = read(`cloudfunctions/${dirs[0]}/${file}`)
     for (const dir of dirs) {
-      // englishVocabulary 和 generatePaper 的 access.js 是根级文件（历史遗留），不在 _shared/ 子目录
-      const copyPath = (dir === 'englishVocabulary' || dir === 'generatePaper') && file === 'access.js'
-        ? `cloudfunctions/${dir}/access.js`
-        : `cloudfunctions/${dir}/_shared/${file}`
+      const copyPath = `cloudfunctions/${dir}/${file}`
       if (!exists(copyPath)) {
         mismatches.push(`${copyPath} 不存在`)
         continue
       }
       const copyContent = read(copyPath)
-      if (sourceContent !== copyContent) {
-        mismatches.push(`${copyPath} 与 cloudfunctions/_shared/${file} 不一致`)
+      if (baseline !== copyContent) {
+        mismatches.push(`${copyPath} 与 ${dirs[0]}/${file} 不一致`)
       }
     }
   }
-  assert.deepEqual(mismatches, [], `_shared 副本已过期，请重新同步:\n${mismatches.join('\n')}`)
+  assert.deepEqual(mismatches, [], `共享文件副本不一致，请同步:\n${mismatches.join('\n')}`)
+})
+
+test('cloudfunctions 下不再有 _shared 目录（避免微信工具误上传）', () => {
+  // 微信开发者工具会把 cloudfunctions/ 下的子目录当作云函数上传，
+  // _shared 以下划线开头会导致 FunctionName 报错，且各云函数的 _shared 子目录
+  // 上传时会被跳过。重构后共享文件已是各云函数的根级文件，_shared 目录应完全消失。
+  const dirs = fs.readdirSync(path.join(root, 'cloudfunctions'))
+  const violations = dirs.filter(d => d === '_shared' || d.startsWith('_'))
+  assert.deepEqual(violations, [], `cloudfunctions/ 下仍有下划线开头的目录:\n${violations.join('\n')}`)
 })

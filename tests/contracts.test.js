@@ -133,7 +133,7 @@ test('subject profile reads avoid a compound student and subject index', () => {
 
 test('analysis progress endpoint uses shared resource access checks', () => {
   const source = read('cloudfunctions/getAnalysisProgress/index.js')
-  const accessSource = read('cloudfunctions/_shared/access.js')
+  const accessSource = read('cloudfunctions/getAnalysisProgress/access.js')
   assert.match(source, /cloud\.getWXContext\(\)\.OPENID/)
   assert.match(source, /getLearningResourceAccess/)
   assert.match(source, /canReadLearning/)
@@ -143,8 +143,8 @@ test('analysis progress endpoint uses shared resource access checks', () => {
 
 test('studentData cloud function reuses shared access helpers', () => {
   const source = read('cloudfunctions/studentData/index.js')
-  // 复用共享 access（./_shared/access 本地副本或 ../_shared/access 开发时路径均可）
-  assert.match(source, /require\(['"]\.+\/_shared\/access['"]\)/)
+  // access.js 现在是云函数根级文件（不再用 _shared 子目录）
+  assert.match(source, /require\(['"]\.\/access['"]\)/)
   assert.doesNotMatch(source, /function permissionsForRole/)
   assert.doesNotMatch(source, /function canManageFamily/)
   assert.match(source, /getStudentAccess\(db, studentId, openId\)/)
@@ -152,7 +152,7 @@ test('studentData cloud function reuses shared access helpers', () => {
 
 test('reportFeedback cloud function reuses shared access helpers', () => {
   const source = read('cloudfunctions/reportFeedback/index.js')
-  assert.match(source, /require\(['"]\.+\/_shared\/access['"]\)/)
+  assert.match(source, /require\(['"]\.\/access['"]\)/)
   assert.doesNotMatch(source, /function getLearningResourceAccess/)
   assert.doesNotMatch(source, /function canOperateLearning/)
   assert.doesNotMatch(source, /function canReadLearning/)

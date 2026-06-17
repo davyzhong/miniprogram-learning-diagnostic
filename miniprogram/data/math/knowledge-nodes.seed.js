@@ -193,7 +193,7 @@ module.exports = {
       "priority": "high",
       "prerequisites": [
         "MATH-NUM-FRACTION-MEANING",
-        "MATH-NUM-MULTIPLE-LCM"
+        "MATH-NUM-INT-GCD-LCM"
       ],
       "successors": [
         "MATH-NUM-FRACTION-MIXED-OPS"
@@ -229,7 +229,7 @@ module.exports = {
       "priority": "high",
       "prerequisites": [
         "MATH-NUM-FRACTION-MEANING",
-        "MATH-NUM-FACTOR-GCD"
+        "MATH-NUM-INT-GCD-LCM"
       ],
       "successors": [
         "MATH-NUM-FRACTION-MIXED-OPS"
@@ -634,7 +634,7 @@ module.exports = {
       ],
       "priority": "medium",
       "prerequisites": [
-        "MATH-GEO-RECTANGLE-AREA"
+        "MATH-GEO-AREA-RECTANGLE"
       ],
       "successors": [
         "MATH-GEO-TRANSFORM-AREA-INVARIANT"
@@ -696,7 +696,7 @@ module.exports = {
       ],
       "priority": "medium",
       "prerequisites": [
-        "MATH-GEO-CIRCLE-RADIUS-DIAMETER"
+        "MATH-GEO-CIRCLE-AREA"
       ],
       "successors": [
         "MATH-GEO-CIRCLE-AREA"

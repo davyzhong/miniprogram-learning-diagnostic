@@ -1,4 +1,6 @@
 // app.js
+require('./utils/intl-polyfill')
+
 App({
   onLaunch() {
     if (!wx.cloud) {

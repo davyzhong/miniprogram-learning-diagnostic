@@ -3,7 +3,7 @@ const {
   getStudentAccess,
   canManageFamily,
   permissionsForRole,
-} = require('./_shared/access');
+} = require('./access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();

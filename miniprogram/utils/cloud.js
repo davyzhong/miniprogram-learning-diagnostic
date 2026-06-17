@@ -252,18 +252,21 @@ async function callAnalyzePhotos(params, options) {
 
 /**
  * 调用云函数：生成验证/诊断试卷 PDF
+ * LLM 生成耗时较长，前端需要匹配云函数的超时（60 秒）。
+ * 微信 wx.cloud.callFunction 默认超时 20 秒，必须显式传 timeout。
  * @param {object} params - { studentId, subject, type, targets }
  */
 async function callGeneratePaper(params) {
-  return callFunction('generatePaper', params)
+  return callFunction('generatePaper', params, { timeout: 60000 })
 }
 
 /**
  * 调用云函数：生成报告 PDF
+ * PDFKit 渲染耗时较长，前端匹配云函数超时（60 秒）。
  * @param {object} params - { reportId }
  */
 async function callGenerateReportPDF(params) {
-  return callFunction('generateReportPDF', params)
+  return callFunction('generateReportPDF', params, { timeout: 60000 })
 }
 
 async function getAnalysisProgress(reportId) {
@@ -365,7 +368,7 @@ async function createEnglishImportBatch(payload = {}) {
 }
 
 async function confirmEnglishImportBatch(studentId, batchId) {
-  return callFunction('englishVocabulary', { action: 'confirmImportBatch', studentId, batchId })
+  return callFunction('englishVocabulary', { action: 'confirmImportBatch', studentId, batchId }, { timeout: 60000 })
 }
 
 async function seedEnglishPersonalVocabulary(studentId) {
@@ -389,7 +392,7 @@ async function submitEnglishDictationPhoto(payload = {}) {
 }
 
 async function analyzeEnglishDictationPhoto(payload = {}) {
-  return callFunction('englishVocabulary', { action: 'analyzeDictationPhoto', ...payload })
+  return callFunction('englishVocabulary', { action: 'analyzeDictationPhoto', ...payload }, { timeout: 60000 })
 }
 
 async function generateEnglishPracticeSession(payload = {}) {

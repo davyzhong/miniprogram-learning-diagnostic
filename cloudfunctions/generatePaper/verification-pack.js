@@ -263,7 +263,9 @@ function decorateQuestionsWithPack(questions = [], pack = {}) {
     targetRoleCounts.set(targetId, roleCount)
 
     const questionId = firstNonEmpty(question.questionId, `${pageCode}-Q${pad2(pageCount)}`)
-    const questionRole = firstNonEmpty(question.questionRole, roleCount <= 3 ? 'core' : 'transfer')
+    // 前 N 题是核心验证题（core），之后是迁移延展题（transfer）。
+    // N 必须与 generatePaper/index.js 的 VERIFICATION_CORE_QUESTION_COUNT 保持一致。
+    const questionRole = firstNonEmpty(question.questionRole, roleCount <= 2 ? 'core' : 'transfer')
     const decoratedQuestion = {
       ...question,
       questionId,

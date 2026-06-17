@@ -305,13 +305,13 @@ test('getAnalysisProgress returns the newest task and rejects other owners', asy
 })
 
 test('generatePaper stores and returns printable PDF page metadata', async () => {
-  const questions = Array.from({ length: 10 }, (_, index) => ({
+  const questions = Array.from({ length: 6 }, (_, index) => ({
     index: index + 1,
     content: `计算题 ${index + 1}`,
     answer: String(index + 1),
     points: 10,
-    lpCode: index < 5 ? 'LP-001' : 'LP-008',
-    lpName: index < 5 ? '计算错误' : '审题错误'
+    lpCode: index < 3 ? 'LP-001' : 'LP-008',
+    lpName: index < 3 ? '计算错误' : '审题错误'
   }))
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
@@ -353,7 +353,7 @@ test('generatePaper stores and returns printable PDF page metadata', async () =>
   const paper = db.dump('papers')[0]
 
   assert.equal(result.success, true)
-  assert.equal(result.questionCount, 10)
+  assert.equal(result.questionCount, 6)
   assert.equal(result.studentPages, 1)
   assert.equal(result.answerPages, 1)
   assert.equal(result.totalPages, 2)
@@ -373,13 +373,13 @@ test('generatePaper stores and returns printable PDF page metadata', async () =>
 })
 
 test('generatePaper filters incomplete AI questions before trimming to expected count', async () => {
-  const questions = Array.from({ length: 12 }, (_, index) => ({
+  const questions = Array.from({ length: 8 }, (_, index) => ({
     index: index + 1,
     content: `计算题 ${index + 1}`,
     answer: index === 2 ? '' : String(index + 1),
     points: 10,
-    lpCode: index < 6 ? 'LP-001' : 'LP-008',
-    lpName: index < 6 ? '计算错误' : '审题错误'
+    lpCode: index < 4 ? 'LP-001' : 'LP-008',
+    lpName: index < 4 ? '计算错误' : '审题错误'
   }))
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
@@ -409,15 +409,15 @@ test('generatePaper filters incomplete AI questions before trimming to expected 
   const paper = db.dump('papers')[0]
 
   assert.equal(result.success, true)
-  assert.equal(result.questionCount, 10)
-  assert.equal(paper.questions.length, 10)
+  assert.equal(result.questionCount, 6)
+  assert.equal(paper.questions.length, 6)
   assert.equal(paper.questions.some(question => question.content === '计算题 3'), false)
-  assert.equal(paper.questions.at(-1).content, '计算题 11')
+  assert.equal(paper.questions.at(-1).content, '计算题 7')
 })
 
 test('generatePaper asks verification papers to include core and extension questions', async () => {
   let prompt = ''
-  const questions = Array.from({ length: 5 }, (_, index) => ({
+  const questions = Array.from({ length: 3 }, (_, index) => ({
     index: index + 1,
     content: `计算题 ${index + 1}`,
     answer: String(index + 1),
@@ -459,9 +459,9 @@ test('generatePaper asks verification papers to include core and extension quest
   })
 
   assert.equal(result.success, true)
-  assert.match(prompt, /每个卡点 5 道/)
-  assert.match(prompt, /3 道核心验证题/)
-  assert.match(prompt, /2 道迁移延展题/)
+  assert.match(prompt, /每卡点3题/)
+  assert.match(prompt, /2核心/)
+  assert.match(prompt, /1延展/)
 })
 
 test('generatePaper accepts fine math bottleneck ids and resolves candidate names', async () => {
@@ -525,8 +525,8 @@ test('generatePaper stores verificationPack for many fine bottlenecks', async ()
   let prompt = ''
   const targets = Array.from({ length: 8 }, (_, index) => `BN-FINE-${index + 1}`)
   const questions = targets.flatMap((targetId, targetIndex) => (
-    Array.from({ length: 5 }, (_, questionIndex) => ({
-      index: targetIndex * 5 + questionIndex + 1,
+    Array.from({ length: 3 }, (_, questionIndex) => ({
+      index: targetIndex * 3 + questionIndex + 1,
       content: `细卡点 ${targetIndex + 1} 复测题 ${questionIndex + 1}`,
       answer: String(questionIndex + 1),
       points: 10,
@@ -571,18 +571,16 @@ test('generatePaper stores verificationPack for many fine bottlenecks', async ()
         pdfOptions = args[3]
         return {
           buffer: Buffer.from('pdf'),
-          studentPages: 3,
+          studentPages: 2,
           answerPages: 2,
-          totalPages: 5,
+          totalPages: 4,
           studentPageCodes: [
             'MATH-V-20260616-01-P01',
-            'MATH-V-20260616-01-P02',
-            'MATH-V-20260616-01-P03'
+            'MATH-V-20260616-01-P02'
           ],
           studentPageMetadata: [
-            { pageNumber: 1, pageCode: 'MATH-V-20260616-01-P01', questionIds: Array.from({ length: 15 }, (_, index) => `Q-${index + 1}`) },
-            { pageNumber: 2, pageCode: 'MATH-V-20260616-01-P02', questionIds: Array.from({ length: 15 }, (_, index) => `Q-${index + 16}`) },
-            { pageNumber: 3, pageCode: 'MATH-V-20260616-01-P03', questionIds: Array.from({ length: 10 }, (_, index) => `Q-${index + 31}`) }
+            { pageNumber: 1, pageCode: 'MATH-V-20260616-01-P01', questionIds: Array.from({ length: 12 }, (_, index) => `Q-${index + 1}`) },
+            { pageNumber: 2, pageCode: 'MATH-V-20260616-01-P02', questionIds: Array.from({ length: 12 }, (_, index) => `Q-${index + 13}`) }
           ]
         }
       }
@@ -603,24 +601,24 @@ test('generatePaper stores verificationPack for many fine bottlenecks', async ()
   assert.equal(pdfOptions.verificationPack.totalTargets, 8)
   assert.deepEqual(paper.bottleneckTargets, targets)
   assert.equal(paper.verificationPack.totalTargets, 8)
-  assert.equal(paper.verificationPack.totalQuestions, 40)
+  assert.equal(paper.verificationPack.totalQuestions, 24)
   assert.equal(paper.verificationPack.pages.length, 3)
   assert.deepEqual(paper.verificationPack.pages.map(page => page.pageCode), [
     'MATH-V-20260616-01-P01',
     'MATH-V-20260616-01-P02',
     'MATH-V-20260616-01-P03'
   ])
-  assert.deepEqual(paper.verificationPack.pages.map(page => page.questionIds.length), [15, 15, 10])
+  // verificationPack 按 target 分页（3+3+2），PDF 渲染的 studentPageCodes 是独立的
+  assert.deepEqual(paper.verificationPack.pages.map(page => page.questionIds.length), [9, 9, 6])
   assert.equal(paper.questions[0].pageCode, 'MATH-V-20260616-01-P01')
   assert.equal(paper.questions[0].targetId, 'BN-FINE-1')
   assert.equal(paper.questions[0].targetType, 'fine_bottleneck')
-  assert.equal(paper.questions[3].questionRole, 'transfer')
+  assert.equal(paper.questions[2].questionRole, 'transfer')
   assert.deepEqual(paper.studentPageCodes, [
     'MATH-V-20260616-01-P01',
-    'MATH-V-20260616-01-P02',
-    'MATH-V-20260616-01-P03'
+    'MATH-V-20260616-01-P02'
   ])
-  assert.equal(paper.studentPageMetadata.length, 3)
+  assert.equal(paper.studentPageMetadata.length, 2)
 })
 
 test('generatePaper uses chinese concrete review items before generic bottleneck drills', async () => {
@@ -1880,7 +1878,7 @@ test('generatePaper uses the grade selected for a default diagnostic paper', asy
   })
 
   assert.equal(result.success, true)
-  assert.match(prompt, /年级：3年级/)
+  assert.match(prompt, /3年级/)
   assert.equal(db.dump('papers')[0].grade, 3)
 })
 

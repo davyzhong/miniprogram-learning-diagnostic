@@ -14,7 +14,7 @@ const {
   judgeSpokenWord,
   judgeWrittenWord,
   buildDictationItems
-} = require('../cloudfunctions/_shared/english-vocabulary')
+} = require('../cloudfunctions/englishVocabulary/english-vocabulary')
 
 test('normalizes English import candidates and deduplicates by word grade volume and unit', () => {
   const normalized = normalizeImportCandidates({

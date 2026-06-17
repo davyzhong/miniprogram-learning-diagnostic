@@ -39,17 +39,9 @@ function toTime(value) {
 function formatDate(value) {
   const date = toDate(value)
   if (!date) return ''
-  // 固定北京时间（UTC+8），避免依赖运行环境的系统时区
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Asia/Shanghai',
-    month: 'numeric',
-    day: 'numeric'
-  }).formatToParts(date)
-  const map = {}
-  for (const part of parts) {
-    if (part.type !== 'literal') map[part.type] = part.value
-  }
-  return `${Number(map.month)}月${Number(map.day)}日`
+  // 固定北京时间（UTC+8），纯数学偏移，不依赖 Intl
+  const shifted = new Date(date.getTime() + 8 * 60 * 60 * 1000)
+  return `${shifted.getUTCMonth() + 1}月${shifted.getUTCDate()}日`
 }
 
 function normalizeStatus(item = {}) {
