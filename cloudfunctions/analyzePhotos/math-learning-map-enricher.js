@@ -204,6 +204,13 @@ function resourcesFor({ nodeIds = [], bottleneckIds = [], explicitResourceIds = 
 
 function candidatePayload(candidate, evidenceStrength, resourceIds) {
   const normalized = normalizeFineBottleneck(candidate)
+  // categoryPath 不再透传 seed 里的旧值（旧值与新 categoryTitle/familyTitle 系统性冲突）。
+  // 改为用新层级字段动态拼装，保证分组渲染时标签一致。
+  const dynamicPath = [
+    normalized.categoryTitle,
+    normalized.familyTitle,
+    normalized.title
+  ].filter(Boolean)
   return {
     bottleneckId: normalized.bottleneckId,
     title: normalized.title,
@@ -212,7 +219,7 @@ function candidatePayload(candidate, evidenceStrength, resourceIds) {
     categoryTitle: normalized.categoryTitle,
     familyId: normalized.familyId,
     familyTitle: normalized.familyTitle,
-    categoryPath: normalized.categoryPath || [],
+    categoryPath: dynamicPath,
     evidenceStrength,
     microValidationRequired: true,
     suggestedMicroValidation: (normalized.microValidationRules || []).slice(0, 3),
@@ -318,6 +325,14 @@ function hasLearningMapFields(bottleneck = {}) {
 function enrichMathReport(report = {}, options = {}) {
   if (report.subject && report.subject !== 'math') {
     return { report: { ...report }, changed: false, enrichedCount: 0 }
+  }
+
+  // 幂等短路：如果报告已经用当前 BACKFILL_VERSION enrich 过，直接返回不重算。
+  // 防止 backfill 脚本重跑时 recommendedResourceIds 越滚越多（见 enrichBottleneck L270/L297）。
+  // 如需强制重新 enrich，传入 options.force = true。
+  if (!options.force && report.learningMapBackfill && report.learningMapBackfill.version === BACKFILL_VERSION) {
+    const enrichedCount = (report.bottlenecks || []).filter(hasLearningMapFields).length
+    return { report: { ...report }, changed: false, enrichedCount }
   }
 
   const before = JSON.stringify(report.bottlenecks || [])

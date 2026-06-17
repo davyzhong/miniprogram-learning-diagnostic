@@ -87,6 +87,18 @@
       "resourceRole": "优先选择流程卡、检查清单和错题复盘示范资源。",
       "defaultPageType": "mixed_review",
       "displayOrder": 70
+    },
+    {
+      "categoryId": "MATH-CAT-GEO-TRANSFORM",
+      "title": "图形变换",
+      "shortTitle": "图形变换",
+      "description": "对称、平移、旋转、折叠等图形变换中的方向与数量判断不稳。",
+      "diagnosticRole": "用于识别图形运动中的方向感、对称判断和倍数语义问题。",
+      "displayRole": "帮助家长看到孩子是否在图形变换的方向和数量关系上出错。",
+      "verificationRole": "适合加入方向标注、中点先行和语义对照专项题。",
+      "resourceRole": "优先选择方向标注、动态演示和语义对照类资源。",
+      "defaultPageType": "same_family",
+      "displayOrder": 45
     }
   ],
   "families": [
@@ -249,6 +261,14 @@
       "nodeIds": [],
       "verificationTemplate": "要求圈出已知条件、问题目标和关键词。",
       "resourceStyleHints": ["读题拆解", "关键词", "关系句"]
+    },
+    {
+      "familyId": "MATH-FAM-AXIS-SYM",
+      "categoryId": "MATH-CAT-GEO-TRANSFORM",
+      "title": "数轴与对称",
+      "nodeIds": ["MATH-GEO-AXIS-SYM"],
+      "verificationTemplate": "先标中点，再用箭头标对称方向，最后代入数值验证倍数。",
+      "resourceStyleHints": ["方向标注", "中点先行", "语义对照"]
     }
   ]
 }
