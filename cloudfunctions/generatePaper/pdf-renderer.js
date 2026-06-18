@@ -112,62 +112,75 @@ function drawPaperCode(doc, paperDisplayCode, y) {
   return y + 17;
 }
 
-function drawStudentHeader(doc, subject, type, continuation = false, paperDate = '', paperDisplayCode = '') {
+function drawStudentHeader(doc, subject, type, continuation = false, paperDate = '', paperDisplayCode = '', pageNumber = 1, pageCode = '') {
   const subjectName = getSubjectName(subject, '数学');
-  const title = getPaperTitle(subject, type);
   if (continuation) {
-    doc.fillColor(COLORS.navy).fontSize(13)
-      .text(`${title} · ${subjectName}`, PAGE.left, PAGE.top, {
+    // 续页：试卷编号 + 页面编码，一行
+    const parts = [];
+    if (paperDisplayCode) parts.push(paperDisplayCode);
+    if (pageCode) parts.push(pageCode);
+    const headerText = parts.length ? parts.join('  ·  ') : subjectName;
+    doc.fillColor(COLORS.navy).fontSize(14)
+      .text(headerText, PAGE.left, PAGE.top, {
         width: PAGE.contentWidth,
         align: 'center',
       });
-    const codeBottom = drawPaperCode(doc, paperDisplayCode, PAGE.top + 19);
-    const dividerY = paperDisplayCode ? codeBottom + 6 : 61;
-    drawLine(doc, PAGE.left, dividerY, PAGE.width - PAGE.right, dividerY, COLORS.blue, 1.5);
-    return dividerY + 15;
+    drawLine(doc, PAGE.left, PAGE.top + 20, PAGE.width - PAGE.right, PAGE.top + 20, COLORS.blue, 1.5);
+    return PAGE.top + 28;
   }
 
-  doc.fillColor(COLORS.navy).fontSize(22)
-    .text(title, PAGE.left, PAGE.top + 2, {
-      width: PAGE.contentWidth,
-      align: 'center',
+  // 首页标题栏：试卷编号 + 页面编码，一行不换行
+  const parts = [];
+  if (paperDisplayCode) parts.push(paperDisplayCode);
+  if (pageCode) parts.push(pageCode);
+  const headerText = parts.length ? parts.join('  ·  ') : subjectName;
+  doc.fillColor(COLORS.navy).fontSize(15)
+    .text(headerText, PAGE.left, PAGE.top, {
+      width: PAGE.contentWidth - 90,
+      align: 'left',
+      lineBreak: false,
     });
+  const dateText = formatPaperDate(paperDate);
+  if (dateText) {
+    doc.fillColor(COLORS.muted).fontSize(10)
+      .text(dateText, PAGE.width - PAGE.right - 80, PAGE.top + 4, {
+        width: 80, align: 'right', lineBreak: false,
+      });
+  }
 
-  let metaY = paperDisplayCode ? drawPaperCode(doc, paperDisplayCode, 62) : 62;
-  const dateBottom = drawPaperDate(doc, paperDate, metaY);
-  const fieldY = (paperDate || paperDisplayCode) ? dateBottom + 4 : 78;
+  const fieldY = PAGE.top + 24;
   const fields = [
-    { label: '姓名', x: PAGE.left + 92, lineWidth: 94 },
-    { label: '日期', x: PAGE.left + 230, lineWidth: 94 },
-    { label: '用时', x: PAGE.left + 368, lineWidth: 94 },
+    { label: '姓名', x: PAGE.left + 50, lineWidth: 80 },
+    { label: '班级', x: PAGE.left + 165, lineWidth: 80 },
+    { label: '用时', x: PAGE.left + 280, lineWidth: 60 },
+    { label: '得分', x: PAGE.left + 375, lineWidth: 50 },
   ];
-  doc.fillColor(COLORS.text).fontSize(10.5);
+  doc.fillColor(COLORS.text).fontSize(10);
   fields.forEach(field => {
-    doc.text(field.label, field.x, fieldY, { width: 28 });
-    drawLine(doc, field.x + 31, fieldY + 13, field.x + 31 + field.lineWidth, fieldY + 13, COLORS.muted, 0.7);
+    doc.text(field.label, field.x, fieldY + 2, { width: 30 });
+    drawLine(doc, field.x + 32, fieldY + 12, field.x + 32 + field.lineWidth, fieldY + 12, COLORS.muted, 0.7);
   });
 
-  const dividerY = paperDate ? fieldY + 23 : 101;
+  const dividerY = fieldY + 20;
   drawLine(doc, PAGE.left, dividerY, PAGE.width - PAGE.right, dividerY, COLORS.blue, 1.8);
-  doc.fillColor(COLORS.text).fontSize(9.5)
-    .text('请认真作答，并写出完整计算过程。完成后请花几秒检查答案是否合理。',
-      PAGE.left, dividerY + 9, { width: PAGE.contentWidth, lineGap: 2 });
-  return dividerY + 38;
+  return dividerY + 12;
 }
 
 function drawGroupBar(doc, group, index, y, type = 'verification') {
-  fillRect(doc, PAGE.left, y, PAGE.contentWidth, 24, COLORS.pale, 3);
+  // 轻量分组标题：无背景色块，单行文字，紧凑
   const label = `${String.fromCharCode(65 + index)}. ${group.displayName}`;
-  doc.fillColor(COLORS.blue).fontSize(11.5)
-    .text(label, PAGE.left + 8, y + 5, { width: PAGE.contentWidth * 0.62 });
+  doc.fillColor(COLORS.blue).fontSize(10)
+    .text(label, PAGE.left, y, { width: PAGE.contentWidth * 0.7 });
   const modeLabel = type === 'verification' ? '验证' : '覆盖';
-  doc.fillColor(COLORS.muted).fontSize(8.8)
-    .text(`${modeLabel} · 共 ${group.questions.length} 题`,
-      PAGE.left + PAGE.contentWidth * 0.62, y + 6, {
-        width: PAGE.contentWidth * 0.36 - 8,
+  doc.fillColor(COLORS.muted).fontSize(8)
+    .text(`${modeLabel} · ${group.questions.length} 题`,
+      PAGE.left + PAGE.contentWidth * 0.7, y + 1, {
+        width: PAGE.contentWidth * 0.3,
         align: 'right',
       });
-  return y + 31;
+  // 轻量下划线
+  drawLine(doc, PAGE.left, y + 14, PAGE.width - PAGE.right, y + 14, COLORS.pale, 0.8);
+  return y + 19;
 }
 
 // 双栏布局：每行放两道题，充分利用 A4 宽度
@@ -177,43 +190,34 @@ const COLUMN_WIDTH = (PAGE.contentWidth - COLUMN_GAP) / 2; // 每栏宽度 ≈ 2
 function questionHeight(doc, question, colWidth) {
   doc.fontSize(11);
   const w = colWidth || COLUMN_WIDTH;
-  const contentHeight = doc.heightOfString(question.content || '', {
-    width: w - 8,
+  const fullText = `${question.index || ''}. ${question.content || ''}`;
+  const contentHeight = doc.heightOfString(fullText, {
+    width: w - 6,
     lineGap: 2,
   });
-  const answerHeight = contentHeight > 20 ? 32 : 22;
-  return 22 + contentHeight + answerHeight + 10;
+  const answerHeight = contentHeight > 20 ? 56 : 48;
+  return contentHeight + answerHeight + 10;
 }
 
 function drawQuestion(doc, question, y, x, colWidth) {
   const w = colWidth || COLUMN_WIDTH;
   const left = x || PAGE.left;
-  const number = question.index || '';
-  doc.fillColor(COLORS.blue).fontSize(12).text(String(number), left, y, {
-    width: 18,
-  });
 
-  // 卡点标签：截断到 5 字符，避免双栏下溢出
-  const chipX = left + 20;
-  const rawChip = summarizeBottleneckName(question.lpName);
-  const chipText = rawChip.length > 5 ? rawChip.slice(0, 5) + '…' : rawChip;
-  const chipWidth = Math.min(70, chipText.length * 7 + 12);
-  fillRect(doc, chipX, y + 1, chipWidth, 14, COLORS.chip, 2);
-  doc.fillColor(COLORS.muted).fontSize(7)
-    .text(chipText, chipX + 4, y + 3, { width: chipWidth - 8, lineBreak: false });
-
-  const contentY = y + 19;
+  // 题号 + 题目内容合并一行：1. 计算 0.25 × 0.4 = ？
+  const fullText = `${question.index || ''}. ${question.content || ''}`;
   doc.fillColor(COLORS.text).fontSize(11)
-    .text(question.content || '', left, contentY, {
+    .text(fullText, left, y, {
       width: w - 4,
       lineGap: 2,
     });
-  const contentHeight = doc.heightOfString(question.content || '', {
+  doc.fillColor(COLORS.blue).fontSize(11); // 题号颜色（被 text 覆盖，但保留链路）
+  const contentHeight = doc.heightOfString(fullText, {
     width: w - 4,
     lineGap: 2,
   });
-  const boxY = contentY + contentHeight + 5;
-  const boxHeight = contentHeight > 20 ? 32 : 22;
+
+  const boxY = y + contentHeight + 4;
+  const boxHeight = contentHeight > 20 ? 56 : 48;
 
   doc.save()
     .strokeColor(COLORS.line)
@@ -224,30 +228,18 @@ function drawQuestion(doc, question, y, x, colWidth) {
     .undash()
     .restore();
   doc.fillColor('#98A9BC').fontSize(7)
-    .text('演算', left + 4, boxY + 4, { width: w - 12, lineBreak: false });
+    .text('演算', left + 4, boxY + 3, { width: w - 12, lineBreak: false });
 
-  const bottom = boxY + boxHeight + 6;
-  drawLine(doc, left, bottom, left + w - 4, bottom, COLORS.line, 0.5);
-  return bottom + 5;
+  return boxY + boxHeight + 6;
 }
 
 function drawPageNumber(doc, pageNumber, answerPage = false, pageCode = '') {
-  if (!answerPage && pageCode) {
-    doc.fillColor(COLORS.blue).fontSize(8.5)
-      .text(`页面编号：${pageCode}`,
-        PAGE.left, PAGE.height - 63, {
-          width: PAGE.contentWidth,
-          height: 12,
-          align: 'center',
-          lineBreak: false,
-        });
-  }
-
-  doc.fillColor(COLORS.muted).fontSize(8.5)
-    .text(answerPage ? `答案页 · 第 ${pageNumber} 页` : `第 ${pageNumber} 页`,
-      PAGE.left, PAGE.height - 48, {
+  // 页面编码已移到标题栏，页尾只保留简洁页码
+  doc.fillColor(COLORS.muted).fontSize(8)
+    .text(answerPage ? `答案 · 第 ${pageNumber} 页` : `第 ${pageNumber} 页`,
+      PAGE.left, PAGE.height - 30, {
         width: PAGE.contentWidth,
-        height: 12,
+        height: 10,
         align: 'center',
         lineBreak: false,
       });
@@ -283,24 +275,42 @@ function drawAnswerHeader(doc, subject, type, paperDate = '', paperDisplayCode =
   return metaY + 47;
 }
 
-function drawAnswer(doc, question, y) {
-  const answerText = `${question.index || ''}. ${question.answer || ''}`;
-  doc.fillColor(COLORS.text).fontSize(10.5)
-    .text(answerText, PAGE.left + 8, y + 7, {
-      width: PAGE.contentWidth - 16,
-      lineGap: 3,
-    });
-  const height = Math.max(34, doc.heightOfString(answerText, {
-    width: PAGE.contentWidth - 16,
-    lineGap: 3,
-  }) + 16);
-  doc.save()
-    .strokeColor(COLORS.line)
-    .lineWidth(0.6)
-    .roundedRect(PAGE.left, y, PAGE.contentWidth, height, 4)
-    .stroke()
-    .restore();
-  return y + height + 8;
+function drawAnswer(doc, question, y, x, colWidth) {
+  const w = colWidth || COLUMN_WIDTH;
+  const left = x || PAGE.left;
+  const num = question.index || '';
+  const lpName = summarizeBottleneckName(question.lpName);
+  const answer = question.answer || '';
+  const explanation = question.explanation || question.reasoning || '';
+
+  // 把所有文本合并成一个字符串，一次性渲染，避免 PDFKit 游标覆盖
+  // 格式：1. [卡点名] 答案：xxx \n 思路：xxx
+  let line1 = `${num}. [${lpName}]`;
+  let line2 = `答案：${answer}`;
+  let line3 = explanation ? `思路：${explanation}` : '';
+
+  // 渲染第一行（题号 + 卡点名）
+  doc.fillColor(COLORS.blue).fontSize(9)
+    .text(line1, left, y, { width: w - 4, lineGap: 0, lineBreak: false });
+  const h1 = doc.heightOfString(line1, { width: w - 4, lineGap: 0 });
+
+  // 渲染第二行（答案）
+  doc.fillColor(COLORS.navy).fontSize(10)
+    .text(line2, left, y + h1 + 2, { width: w - 4, lineGap: 1, lineBreak: false });
+  const h2 = doc.heightOfString(line2, { width: w - 4, lineGap: 1 });
+
+  // 渲染第三行（解题思路）
+  let h3 = 0;
+  if (line3) {
+    doc.fillColor(COLORS.muted).fontSize(8.5)
+      .text(line3, left, y + h1 + 2 + h2 + 3, { width: w - 4, lineGap: 1, lineBreak: true });
+    h3 = doc.heightOfString(line3, { width: w - 4, lineGap: 1 });
+  }
+
+  const totalHeight = h1 + 2 + h2 + (line3 ? 3 + h3 : 0) + 8;
+  // 重置 doc 内部游标到下方，避免影响后续渲染
+  doc.y = y + totalHeight;
+  return { y: y + totalHeight, height: totalHeight };
 }
 
 async function generatePDF(questionsData, subject, type, options = {}) {
@@ -351,12 +361,12 @@ async function generatePDF(questionsData, subject, type, options = {}) {
     currentStudentPageCode = nextQuestion
       ? questionPageCode(nextQuestion, verificationPack, pageNumber)
       : pageCodeFromPack(verificationPack, pageNumber);
-    return drawStudentHeader(doc, subject, type, true, paperDate, paperDisplayCode);
+    return drawStudentHeader(doc, subject, type, true, paperDate, paperDisplayCode, pageNumber, currentStudentPageCode);
   }
 
   const groups = groupQuestions(questionsData.questions || []);
   let pageNumber = 1;
-  let y = drawStudentHeader(doc, subject, type, false, paperDate, paperDisplayCode);
+  let y = drawStudentHeader(doc, subject, type, false, paperDate, paperDisplayCode, 1, pageCodeFromPack(verificationPack, 1));
 
   groups.forEach((group, groupIndex) => {
     const firstQuestionPageCode = group.questions[0]
@@ -374,7 +384,8 @@ async function generatePDF(questionsData, subject, type, options = {}) {
       pageNumber += 1;
       y = startStudentPage(group.questions[0]);
     }
-    if (y + 110 > PAGE.contentBottom) {
+    // 分页检查：只剩不到一行空间就换页（双栏下一行约 85pt）
+    if (y + 85 > PAGE.contentBottom) {
       finishStudentPage();
       doc.addPage();
       pageNumber += 1;
@@ -391,7 +402,7 @@ async function generatePDF(questionsData, subject, type, options = {}) {
       const rowHeight = Math.max(leftHeight, rightHeight);
 
       // 分页检查：当前行放不下就换页
-      const checkHeight = Math.max(rowHeight, 70);
+      const checkHeight = Math.max(rowHeight, 75);
       const leftPageCode = questionPageCode(leftQ, verificationPack, pageNumber);
       if (
         type === 'verification'
@@ -450,30 +461,26 @@ async function generatePDF(questionsData, subject, type, options = {}) {
   doc.addPage();
   let answerPageNumber = 1;
   y = drawAnswerHeader(doc, subject, type, paperDate, paperDisplayCode);
-  groups.forEach((group, groupIndex) => {
-    if (y + 70 > PAGE.contentBottom) {
+  // 答案双栏：两题一行
+  const allQuestions = groups.flatMap(g => g.questions);
+  for (let qi = 0; qi < allQuestions.length; qi += 2) {
+    const leftAns = allQuestions[qi];
+    const rightAns = allQuestions[qi + 1];
+    const leftResult = drawAnswer(doc, leftAns, y, PAGE.left, COLUMN_WIDTH);
+    let rightHeight = 0;
+    if (rightAns) {
+      const rightResult = drawAnswer(doc, rightAns, y, PAGE.left + COLUMN_WIDTH + COLUMN_GAP, COLUMN_WIDTH);
+      rightHeight = rightResult.height;
+    }
+    y += Math.max(leftResult.height, rightHeight);
+    // 分页检查
+    if (y + 50 > PAGE.contentBottom && qi + 2 < allQuestions.length) {
       drawPageNumber(doc, answerPageNumber, true);
       doc.addPage();
       answerPageNumber += 1;
       y = drawAnswerHeader(doc, subject, type, paperDate, paperDisplayCode);
     }
-    y = drawGroupBar(doc, group, groupIndex, y, type);
-    group.questions.forEach(question => {
-      const answerText = `${question.index || ''}. ${question.answer || ''}`;
-      const requiredHeight = Math.max(34, doc.heightOfString(answerText, {
-        width: PAGE.contentWidth - 16,
-        lineGap: 3,
-      }) + 16) + 8;
-      if (y + requiredHeight > PAGE.contentBottom) {
-        drawPageNumber(doc, answerPageNumber, true);
-        doc.addPage();
-        answerPageNumber += 1;
-        y = drawAnswerHeader(doc, subject, type, paperDate, paperDisplayCode);
-        y = drawGroupBar(doc, group, groupIndex, y, type);
-      }
-      y = drawAnswer(doc, question, y);
-    });
-  });
+  }
   drawPageNumber(doc, answerPageNumber, true);
 
   doc.end();
