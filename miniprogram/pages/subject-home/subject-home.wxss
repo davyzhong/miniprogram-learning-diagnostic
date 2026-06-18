@@ -471,3 +471,11 @@
 .tool-item:active {
   transform: scale(.985);
 }
+
+.map-entry { display: flex; align-items: center; padding: 24rpx; margin: 16rpx 0; background: #fff; border-radius: 16rpx; box-shadow: 0 4rpx 16rpx rgba(15,47,82,.05); }
+.map-entry:active { background: #f7fafc; }
+.map-entry-icon { font-size: 40rpx; margin-right: 20rpx; }
+.map-entry-text { flex: 1; }
+.map-entry-title { display: block; font-size: 30rpx; font-weight: 600; color: #1a365d; }
+.map-entry-desc { display: block; font-size: 24rpx; color: #718096; margin-top: 4rpx; }
+.map-entry-arrow { font-size: 32rpx; color: #cbd5e0; }

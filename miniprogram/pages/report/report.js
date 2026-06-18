@@ -367,6 +367,34 @@ Page({
     wx.navigateTo({ url })
   },
 
+  // 知识地图卡点入口：直跳 learning-resource（跳过 bottleneck-detail）
+  async onBottleneckSnapshotTap(e) {
+    const { lpCode, lpName } = e.currentTarget.dataset
+    const report = this._fullReport || this.data
+    if (!report.studentId || !lpCode) return
+
+    wx.showLoading({ title: '加载讲解…' })
+    try {
+      // 生成学习任务包，直接跳到资源页
+      const result = await cloud.generateLearningResourcePack({
+        studentId: report.studentId,
+        subject: report.subject,
+        sourceReportId: report._id,
+        target: { lpCode, lpName, bottleneckId: lpCode },
+        resources: [],
+      })
+      wx.hideLoading()
+      if (result.success && result.packId) {
+        wx.navigateTo({ url: '/pages/learning-resource/learning-resource?packId=' + result.packId })
+      } else {
+        wx.showToast({ title: result.error || '加载失败', icon: 'none' })
+      }
+    } catch (err) {
+      wx.hideLoading()
+      wx.showToast({ title: err.message || '加载失败', icon: 'none' })
+    }
+  },
+
   noop() {},
 
   buildFeedbackMap(items) {

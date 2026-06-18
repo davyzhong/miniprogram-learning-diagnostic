@@ -15,6 +15,15 @@
     </view>
   </view>
 
+  <view class="map-entry" bindtap="onKnowledgeMapTap">
+    <text class="map-entry-icon">🗺️</text>
+    <view class="map-entry-text">
+      <text class="map-entry-title">知识地图</text>
+      <text class="map-entry-desc">{{pendingTaskCount > 0 ? pendingTaskCount + ' 个待修复卡点' : '查看知识结构'}}</text>
+    </view>
+    <text class="map-entry-arrow">›</text>
+  </view>
+
   <view class="analysis-state" wx:if="{{analysisStatus}}" bindtap="onAnalysisCardTap">
     <view class="state-icon state-icon-analyzing">···</view>
     <view class="state-copy">

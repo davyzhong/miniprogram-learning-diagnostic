@@ -1,0 +1,30 @@
+.page { min-height: 100vh; padding: 28rpx 28rpx 80rpx; box-sizing: border-box; background: #f5f8fc; }
+.loading { text-align: center; padding: 80rpx; color: #a0aec0; font-size: 28rpx; }
+.empty { text-align: center; padding: 80rpx; color: #a0aec0; }
+.empty-hint { text-align: center; padding: 60rpx 40rpx; color: #a0aec0; font-size: 26rpx; line-height: 1.6; }
+
+.hero { text-align: center; padding: 40rpx 0 32rpx; }
+.hero-title { display: block; font-size: 38rpx; font-weight: 700; color: #1a365d; }
+.hero-summary { display: block; font-size: 26rpx; color: #718096; margin-top: 12rpx; }
+
+.domain-list { display: flex; flex-direction: column; gap: 16rpx; }
+
+.domain-card { background: #fff; border-radius: 16rpx; overflow: hidden; box-shadow: 0 4rpx 16rpx rgba(15,47,82,.05); }
+.domain-header { display: flex; align-items: center; padding: 28rpx 24rpx; }
+.domain-icon { font-size: 44rpx; margin-right: 20rpx; }
+.domain-info { flex: 1; min-width: 0; }
+.domain-name { display: block; font-size: 30rpx; font-weight: 600; color: #1a365d; }
+.domain-stats { display: block; font-size: 22rpx; color: #718096; margin-top: 6rpx; }
+.domain-chevron { font-size: 28rpx; color: #cbd5e0; }
+
+.domain-bottlenecks { border-top: 1rpx solid #edf2f7; padding: 8rpx 0; }
+.bn-item { display: flex; align-items: center; padding: 20rpx 24rpx; border-left: 6rpx solid #e2e8f0; }
+.bn-item.pending { border-left-color: #fbbf24; }
+.bn-item.active { border-left-color: #f87171; }
+.bn-item.mastered { border-left-color: #34d399; }
+.bn-item:active { background: #f7fafc; }
+.bn-icon { font-size: 28rpx; margin-right: 16rpx; }
+.bn-text { flex: 1; min-width: 0; }
+.bn-name { display: block; font-size: 26rpx; color: #2d3748; }
+.bn-meta { display: block; font-size: 22rpx; color: #a0aec0; margin-top: 4rpx; }
+.bn-arrow { font-size: 32rpx; color: #cbd5e0; }

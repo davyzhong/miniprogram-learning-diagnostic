@@ -205,6 +205,21 @@
       </view>
     </view>
 
+    <view class="knowledge-map-snapshot" wx:if="{{hasKnowledgeMapSnapshot && !isVerification}}">
+      <view class="map-snapshot-header">🗺️ 知识地图更新</view>
+      <view class="map-snapshot-list">
+        <view class="map-snapshot-item {{item.statusClass}}" wx:for="{{knowledgeMapSnapshot}}" wx:key="lpCode"
+              catchtap="onBottleneckSnapshotTap" data-lp-code="{{item.lpCode}}" data-lp-name="{{item.displayName}}">
+          <text class="snapshot-icon">{{item.statusIcon}}</text>
+          <view class="snapshot-text">
+            <text class="snapshot-name">{{item.displayName}}</text>
+            <text class="snapshot-meta">{{item.statusText}}</text>
+          </view>
+          <text class="snapshot-arrow">查看讲解 ›</text>
+        </view>
+      </view>
+    </view>
+
     <view class="primary-action" wx:if="{{showNextStep && canGeneratePaper}}" bindtap="onGenerateVerification"><text>＋</text><text>生成纸面验证卷</text></view>
     <view class="bottom-actions">
       <button class="btn-secondary action-btn" bindtap="onShare">分享</button>
