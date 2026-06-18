@@ -4,19 +4,30 @@
   "subject": "math",
   "resourcePolicy": "高质量讲法优先：Khan Academy、YouTube 等资源如果在某个知识点上讲法清楚、结构严谨、置信度高，可以作为高质量锚点来源；同一知识点尽量补充 B站、小红书、公众号等国内资源，方便国内网络环境下使用、中文复述和孩子定向观看。官方资源作为准确性校验和备用。只保存链接、摘要、评价和适用场景，不搬运正文或视频。",
   "selectionPolicy": {
-    "qualityAnchorPlatforms": [
-      "Khan Academy",
-      "YouTube"
-    ],
-    "domesticSupplementPlatforms": [
+    "jumpablePlatforms": [
       "B站",
-      "小红书",
-      "公众号",
+      "小红书"
+    ],
+    "authoritativePlatforms": [
       "国家中小学智慧教育平台",
       "人教社"
     ],
-    "rankingRule": "同一知识点先看是否存在 Khan Academy、YouTube 等高质量锚点讲法；若存在，保留其较高质量优先级，同时补充至少一条国内资源用于孩子实际观看或家长中文转述。",
-    "domesticUseRule": "国内资源不替代高质量锚点资源的判断价值，而是补足网络可访问性、中文表达、平台熟悉度和孩子接受度。",
+    "conceptAnchorPlatforms": [
+      "Khan Academy",
+      "Khan Academy 中文版",
+      "均一教育平台",
+      "YouTube"
+    ],
+    "platformPriority": {
+      "B站": 1,
+      "小红书": 2,
+      "国家中小学智慧教育平台": 3,
+      "Khan Academy": 4,
+      "Khan Academy 中文版": 4,
+      "均一教育平台": 5
+    },
+    "rankingRule": "小程序展示时，B站和小红书排在最前（可跳转小程序），国家中小学智慧教育平台次之（权威），可汗学院和均一教育排最后（概念锚点但需复制链接）。",
+    "domesticUseRule": "国内资源（B站/小红书/国家平台）优先展示，方便国内网络环境下使用、中文复述和孩子定向观看。",
     "childAccessRule": "无论平台内外，孩子都不直接刷推荐流，只观看家长筛选后的指定资源。"
   },
   "childAccessRule": "孩子不直接进入平台首页、评论区或推荐流；家长打开指定资源，孩子只观看指定内容并完成复述和变式练习。",
