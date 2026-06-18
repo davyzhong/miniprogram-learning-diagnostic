@@ -81,9 +81,21 @@ function buildPracticeItems({ target: rawTarget = {} } = {}) {
 function buildResourcePackDraft({ studentId, subject = 'math', sourceReportId = '', target: rawTarget = {}, resources = [] } = {}) {
   const target = normalizeResourcePackTarget(rawTarget)
   const practiceItems = buildPracticeItems({ target })
-  const firstSymptom = target.symptomPatterns[0] || `这个卡点会影响 ${target.title} 相关题目的稳定性。`
-  const repairText = target.repairStrategy.length > 0
-    ? target.repairStrategy.join('；')
+  const symptoms = target.symptomPatterns || []
+  const repairSteps = target.repairStrategy || []
+
+  // 增强内容：用 taxonomy 数据填充，不依赖 LLM 也能有结构化内容
+  const summaryBody = target.title
+  const conceptBody = symptoms.length > 0
+    ? symptoms.slice(0, 3).map((s, i) => `${i + 1}. ${s}`).join('\n')
+    : `这个卡点会影响 ${target.title} 相关题目的稳定性。`
+  const exampleQuestion = practiceItems[0].question
+  const exampleSteps = practiceItems[0].explanation
+    ? [practiceItems[0].explanation]
+    : ['先确认孩子能复述卡点的关键错误点，再做练习。']
+  const mistakeText = symptoms.length > 1 ? symptoms[1] : '只看答案，不检查过程。'
+  const correctionText = repairSteps.length > 0
+    ? repairSteps.join('；')
     : '先复述规则，再看例题，最后做 3 道小练习。'
 
   return {
@@ -98,11 +110,13 @@ function buildResourcePackDraft({ studentId, subject = 'math', sourceReportId = 
     status: 'ready',
     estimatedMinutes: 8,
     version: 1,
+    cacheVersion: 1,
+    llmEnhanced: false,
     blocks: [
-      { type: 'summary', title: '今天补什么', body: target.title },
-      { type: 'concept', title: '为什么会错', body: firstSymptom },
-      { type: 'worked_example', title: '例题拆解', question: practiceItems[0].question, steps: [practiceItems[0].explanation] },
-      { type: 'common_mistake', title: '常见错误对比', mistake: '只看答案，不检查过程。', correction: repairText, explanation: '这一步用来把错误路径和正确路径分开。' },
+      { type: 'summary', title: '今天补什么', body: summaryBody },
+      { type: 'concept', title: '为什么会错', body: conceptBody },
+      { type: 'worked_example', title: '例题拆解', question: exampleQuestion, steps: exampleSteps },
+      { type: 'common_mistake', title: '常见错误对比', mistake: mistakeText, correction: correctionText, explanation: '这一步用来把错误路径和正确路径分开。' },
       { type: 'practice', title: '马上练 3 题', questions: practiceItems }
     ],
     practiceItems,
