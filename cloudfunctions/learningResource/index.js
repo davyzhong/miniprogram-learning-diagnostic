@@ -32,6 +32,9 @@ function publicPack(pack = {}) {
     status: pack.status,
     estimatedMinutes: pack.estimatedMinutes,
     version: pack.version,
+    cacheVersion: pack.cacheVersion || 1,
+    llmEnhanced: pack.llmEnhanced || false,
+    enhancedAt: pack.enhancedAt || null,
     blocks: pack.blocks || [],
     practiceItems: pack.practiceItems || [],
     externalResources: pack.externalResources || [],
@@ -69,14 +72,27 @@ async function generatePack(event, openId) {
   if (subject !== 'math') throw new Error('第一版学习任务包仅支持数学')
   await assertStudentOperate(studentId, openId)
 
-  // 安全校验：如果传了 sourceReportId，必须确认该报告确实属于当前 studentId，
-  // 防止伪造任务包与报告的血缘关联
   const sourceReportId = cleanText(event.sourceReportId, 80)
   if (sourceReportId) {
     const reportRes = await db.collection('reports').doc(sourceReportId).get()
     const sourceReport = reportRes.data
     if (!sourceReport) throw new Error('关联的分析报告不存在')
     if (sourceReport.studentId !== studentId) throw new Error('关联报告归属与当前学生不匹配')
+  }
+
+  // 缓存检查：同一卡点是否已有增强后的 pack
+  const target = event.target || {}
+  const targetId = target.bottleneckId || target.lpCode || target.id || ''
+  if (targetId) {
+    const cacheRes = await db.collection('learningResourcePacks')
+      .where({ studentId, subject, targetId, llmEnhanced: true })
+      .orderBy('enhancedAt', 'desc')
+      .limit(1)
+      .get()
+    if (cacheRes.data.length > 0) {
+      const cached = cacheRes.data[0]
+      return { success: true, packId: cached._id, pack: publicPack(cached) }
+    }
   }
 
   const draft = buildResourcePackDraft({
@@ -86,9 +102,18 @@ async function generatePack(event, openId) {
     target: event.target || {},
     resources: event.resources || []
   })
+
+  // LLM 增强：用 taxonomy 数据 + LLM 生成更深入的讲解内容
+  let enhancedDraft = draft
+  try {
+    enhancedDraft = await enhancePackWithLLM(draft, subject)
+  } catch (err) {
+    console.warn('LLM 增强失败，使用 taxonomy 数据版本:', err.message)
+  }
+
   const createdAt = now()
   const data = {
-    ...draft,
+    ...enhancedDraft,
     _openid: openId,
     createdAt,
     updatedAt: createdAt
@@ -98,6 +123,88 @@ async function generatePack(event, openId) {
     success: true,
     packId: result._id,
     pack: publicPack({ _id: result._id, ...data })
+  }
+}
+
+// LLM 增强函数
+async function enhancePackWithLLM(draft, subject) {
+  if (subject !== 'math') return draft
+
+  const target = {
+    title: draft.title,
+    bottleneckId: draft.bottleneckId,
+    lpCode: draft.lpCode,
+  }
+  const blocks = draft.blocks || []
+
+  // 构建 prompt
+  const conceptBlock = blocks.find(b => b.type === 'concept') || {}
+  const summaryBlock = blocks.find(b => b.type === 'summary') || {}
+  const practiceBlock = blocks.find(b => b.type === 'practice') || {}
+
+  const prompt = `你是数学老师，为以下学习卡点生成讲解内容（面向家长辅导六年级孩子）。
+
+卡点：${target.bottleneckId || target.lpCode}（${target.title}）
+现有症状描述：${conceptBlock.body || ''}
+
+请生成更深入的讲解，直接返回 JSON：
+{
+  "summary": "一句话说明为什么这个卡点重要，以及它如何影响后续学习",
+  "concept": "2-3 个典型错误场景，每个附'为什么会这样想'的解释，用换行分隔",
+  "workedExample": {"question":"一道具体题目","steps":["步骤1","步骤2","步骤3"]},
+  "commonMistake": {"mistake":"学生常见的错误做法","correction":"正确做法","explanation":"如何判断和纠正"},
+  "practice": [{"question":"练习题1","answer":"答案","explanation":"思路"},{"question":"练习题2","answer":"答案","explanation":"思路"},{"question":"练习题3","answer":"答案","explanation":"思路"}]
+}
+
+要求：
+- 内容具体，写真实数字和计算过程
+- 不要写泛泛提醒（如"注意小数点"），直接写具体步骤
+- 难度匹配六年级`
+
+  const app = cloud.init()
+  const model = app.ai.createModel('cloudbase')
+  const result = await model.generateText({
+    model: 'deepseek-v4-flash',
+    messages: [{ role: 'user', content: prompt }],
+    temperature: 0.4,
+  })
+
+  const text = result.text || ''
+  const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
+  const enhanced = JSON.parse(cleanText)
+
+  // 用增强内容替换 draft.blocks
+  return {
+    ...draft,
+    cacheVersion: 1,
+    llmEnhanced: true,
+    enhancedAt: new Date(),
+    blocks: [
+      { type: 'summary', title: '今天补什么', body: enhanced.summary || summaryBlock.body || draft.title },
+      { type: 'concept', title: '为什么会错', body: enhanced.concept || conceptBlock.body || '' },
+      { type: 'worked_example', title: '例题拆解',
+        question: enhanced.workedExample?.question || practiceBlock.questions?.[0]?.question || '',
+        steps: enhanced.workedExample?.steps || [] },
+      { type: 'common_mistake', title: '常见错误对比',
+        mistake: enhanced.commonMistake?.mistake || '',
+        correction: enhanced.commonMistake?.correction || '',
+        explanation: enhanced.commonMistake?.explanation || '' },
+      { type: 'practice', title: '马上练 3 题',
+        questions: (enhanced.practice || []).map((p, i) => ({
+          questionId: `${target.bottleneckId || 'math'}-LLM-P${i + 1}`,
+          targetId: target.bottleneckId,
+          question: p.question,
+          answer: p.answer,
+          explanation: p.explanation,
+        })) },
+    ],
+    practiceItems: (enhanced.practice || []).map((p, i) => ({
+      questionId: `${target.bottleneckId || 'math'}-LLM-P${i + 1}`,
+      targetId: target.bottleneckId,
+      question: p.question,
+      answer: p.answer,
+      explanation: p.explanation,
+    })),
   }
 }
 
