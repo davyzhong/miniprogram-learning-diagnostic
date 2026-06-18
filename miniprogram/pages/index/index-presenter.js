@@ -67,6 +67,56 @@ function subjectLabelList(subjects) {
   return subjects.map(item => item.name).join('、')
 }
 
+// 知识地图卡片：4 领域 + 进度可视化
+const DOMAIN_META = [
+  { key: '数与代数', icon: '🔢', short: '数与代数' },
+  { key: '图形与几何', icon: '📐', short: '图形几何' },
+  { key: '统计与概率', icon: '📊', short: '统计概率' },
+  { key: '综合与实践', icon: '🔧', short: '综合实践' },
+]
+
+function buildKnowledgeMapCard(subjects = [], bottleneckStats = {}) {
+  const pending = bottleneckStats.pendingCount || 0
+  const improved = bottleneckStats.improvedCount || 0
+  const total = bottleneckStats.totalCount || 0
+  const hasData = total > 0
+
+  // 按领域分组卡点（从 subjects 的 bottleneckViews 提取）
+  const domains = DOMAIN_META.map(meta => {
+    // 从 subjects 找该领域的卡点数（简化版：用 subject 级统计）
+    return {
+      icon: meta.icon,
+      name: meta.short,
+      pendingCount: 0,
+      masteredCount: 0,
+      status: 'unknown',
+    }
+  })
+
+  // 如果有学科数据，用学科粒度填充
+  if (subjects.length > 0) {
+    const mathSubject = subjects.find(s => s.key === 'math')
+    if (mathSubject) {
+      // 简化：把卡点统计映射到领域（实际应按 nodeId 的 domain 分类）
+      // 第一版用整体统计代替领域细分
+      domains[0].pendingCount = pending
+      domains[0].masteredCount = improved
+      domains[0].status = pending > 0 ? 'active' : (improved > 0 ? 'mastered' : 'unknown')
+    }
+  }
+
+  return {
+    visible: hasData,
+    title: '学习地图',
+    summary: hasData
+      ? `${pending > 0 ? pending + ' 个待修复' : '当前无待修复卡点'}${improved > 0 ? ' · ' + improved + ' 个已改善' : ''}`
+      : '上传试卷后生成',
+    domains,
+    totalPending: pending,
+    totalMastered: improved,
+  }
+}
+
 function buildCoverageText(analyzedSubjects, missingSubjects) {
   if (analyzedSubjects.length === 0) return '样本覆盖：暂无有效诊断记录。'
   const analyzedText = `已分析${subjectLabelList(analyzedSubjects)}试卷`
@@ -366,6 +416,7 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
     observations: priorityHighlights,
     primaryReport: buildPrimaryReport(reports, subjectByKey, formatRelativeTime),
     recentRecords: buildRecentRecords(reports, papers, subjectByKey, formatRelativeTime),
+    knowledgeMapCard: buildKnowledgeMapCard(subjects, bottleneckStats),
     nextAction,
     permissions,
     canWriteActions,

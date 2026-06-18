@@ -142,24 +142,27 @@ async function enhancePackWithLLM(draft, subject) {
   const summaryBlock = blocks.find(b => b.type === 'summary') || {}
   const practiceBlock = blocks.find(b => b.type === 'practice') || {}
 
-  const prompt = `你是数学老师，为以下学习卡点生成讲解内容（面向家长辅导六年级孩子）。
+  const prompt = `你是经验丰富的数学老师，为以下学习卡点生成讲解内容。
+
+面向对象：六年级学生家长（孩子即将升初中），需要专业、清晰、有条理的辅导指引，不要低幼化。
 
 卡点：${target.bottleneckId || target.lpCode}（${target.title}）
 现有症状描述：${conceptBlock.body || ''}
 
-请生成更深入的讲解，直接返回 JSON：
+请生成讲解内容，直接返回 JSON：
 {
-  "summary": "一句话说明为什么这个卡点重要，以及它如何影响后续学习",
-  "concept": "2-3 个典型错误场景，每个附'为什么会这样想'的解释，用换行分隔",
-  "workedExample": {"question":"一道具体题目","steps":["步骤1","步骤2","步骤3"]},
-  "commonMistake": {"mistake":"学生常见的错误做法","correction":"正确做法","explanation":"如何判断和纠正"},
-  "practice": [{"question":"练习题1","answer":"答案","explanation":"思路"},{"question":"练习题2","answer":"答案","explanation":"思路"},{"question":"练习题3","answer":"答案","explanation":"思路"}]
+  "summary": "简述这个卡点的核心问题和它对后续学习的影响（1-2句话，专业但不啰嗦）",
+  "concept": "列出2-3个典型错误场景，每个附简要的原因分析。用换行分隔。格式：错误描述 → 为什么会这样",
+  "workedExample": {"question":"一道典型题目（带具体数字）","steps":["解题步骤1（写出关键判断）","步骤2","步骤3"]},
+  "commonMistake": {"mistake":"最常见的错误做法（具体）","correction":"对应的正确做法","explanation":"如何快速判断孩子是否在犯这个错"},
+  "practice": [{"question":"第1题：基础验证（难度较低）","answer":"答案","explanation":"解题关键"},{"question":"第2题：进阶练习","answer":"答案","explanation":"解题关键"},{"question":"第3题：迁移应用（换情境）","answer":"答案","explanation":"解题关键"}]
 }
 
 要求：
-- 内容具体，写真实数字和计算过程
-- 不要写泛泛提醒（如"注意小数点"），直接写具体步骤
-- 难度匹配六年级`
+- 内容具体，写出真实数字和完整计算过程
+- 语气专业清晰，像一位有经验的家教在跟家长沟通
+- 不要写'注意小数点'这类空洞提醒，直接写具体操作步骤
+- 难度匹配六年级水平`
 
   const app = cloud.init()
   const model = app.ai.createModel('cloudbase')
@@ -180,16 +183,16 @@ async function enhancePackWithLLM(draft, subject) {
     llmEnhanced: true,
     enhancedAt: new Date(),
     blocks: [
-      { type: 'summary', title: '今天补什么', body: enhanced.summary || summaryBlock.body || draft.title },
-      { type: 'concept', title: '为什么会错', body: enhanced.concept || conceptBlock.body || '' },
-      { type: 'worked_example', title: '例题拆解',
+      { type: 'summary', title: '这个卡点是什么', body: enhanced.summary || summaryBlock.body || draft.title },
+      { type: 'concept', title: '为什么会这样错', body: enhanced.concept || conceptBlock.body || '' },
+      { type: 'worked_example', title: '正确的解题路径',
         question: enhanced.workedExample?.question || practiceBlock.questions?.[0]?.question || '',
         steps: enhanced.workedExample?.steps || [] },
-      { type: 'common_mistake', title: '常见错误对比',
+      { type: 'common_mistake', title: '容易踩的坑',
         mistake: enhanced.commonMistake?.mistake || '',
         correction: enhanced.commonMistake?.correction || '',
         explanation: enhanced.commonMistake?.explanation || '' },
-      { type: 'practice', title: '马上练 3 题',
+      { type: 'practice', title: '练三道',
         questions: (enhanced.practice || []).map((p, i) => ({
           questionId: `${target.bottleneckId || 'math'}-LLM-P${i + 1}`,
           targetId: target.bottleneckId,

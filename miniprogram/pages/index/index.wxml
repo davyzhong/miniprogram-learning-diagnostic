@@ -221,6 +221,22 @@
       </view>
     </view>
 
+    <view class="section-block" wx:if="{{home.knowledgeMapCard.visible}}">
+      <view class="section-heading">🗺️ {{home.knowledgeMapCard.title}}</view>
+      <view class="surface map-card">
+        <text class="map-summary">{{home.knowledgeMapCard.summary}}</text>
+        <view class="map-domains">
+          <view class="map-domain" wx:for="{{home.knowledgeMapCard.domains}}" wx:key="name">
+            <text class="domain-icon">{{item.icon}}</text>
+            <text class="domain-name">{{item.name}}</text>
+            <text class="domain-badge {{item.status === 'active' ? 'active' : item.status === 'mastered' ? 'mastered' : ''}}">
+              {{item.status === 'active' ? item.pendingCount + '待修' : item.status === 'mastered' ? '✓' : '—'}}
+            </text>
+          </view>
+        </view>
+      </view>
+    </view>
+
     <view class="section-block" wx:if="{{home.priorityHighlights.length > 0}}">
       <view class="section-heading">重点提示</view>
       <view class="surface">
