@@ -146,6 +146,7 @@ wx.cloud.callFunction({
 | `getLearningTimeline` | `studentId`；`subject` 可选 | reports、papers、englishSessions、items 派生时间线 |
 | `getReportDetail` | `reportId` | student、report |
 | `getPaperDetail` | `paperId` | student、paper |
+| `getActiveVerificationPaper` | `studentId`、`subject` | paper、status（ready/generating/failed/none）。验证卷自动生成场景的状态查询 |
 | `cleanupStaleLearningRecords` | `studentId`；`subject` 可选；`dryRun` 可选 | owner 清理长时间中断的分析记录；`dryRun=true` 只返回可清理数量和记录 ID，不写库 |
 
 ### 统一返回字段

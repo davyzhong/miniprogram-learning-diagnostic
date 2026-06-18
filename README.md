@@ -169,7 +169,9 @@ flowchart LR
 - 哪些学习卡点正在影响作答。
 - 这些卡点来自多少张试卷、多少道相关错题。
 - 最近是否通过验证卷出现改善。
-- 下一步应该上传新试卷，还是先生成验证卷复测。
+- 下一步应该上传新试卷，还是先复测验证卷。
+
+> **验证卷自动生成**：诊断报告完成后，系统自动在后台生成验证卷（覆盖旧卷、失败重试）。家长只需预览、打印、上传作答，无需手动点击"生成"。验证卷以细卡点（BN）为出题单位，每个卡点出 2 题（1 核心+1 延展），附含解题思路。
 
 ### 2. 第一次使用
 
@@ -376,12 +378,13 @@ miniprogram-learning-diagnostic/
 │   ├── studentData/             #   访问感知的学习资料聚合读取
 │   ├── reportFeedback/          #   家长反馈和复核线索
 │   ├── englishVocabulary/       #   英语个人词库、熟悉度练习和纸面听写
-│   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF
-│   └── generateReportPDF/       #   生成报告 PDF
+│   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF（双栏布局+解题思路）
+│   ├── generateReportPDF/       #   生成报告 PDF
+│   └── analyzePhotos/           #   照片分析主流程 + auto-verification.js（验证卷自动生成）
 ├── services/skills/             # P0 Skill 能力内核
 ├── cli/ldx.js                   # 本地 CLI 入口
-├── tests/                       # 自动化测试（353 个常规用例 + 真实图片 E2E 脚本）
-├── scripts/                     # check-js.js（语法检查）、DevTools E2E、指标导出
+├── tests/                       # 自动化测试（460 个用例 + 真实图片 E2E 脚本）
+├── scripts/                     # check-js.js、preview-pdf.js（PDF预览）、DevTools E2E、指标导出
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
 ├── PROJECT_PLAN.md              # 技术架构与开发计划
@@ -441,21 +444,25 @@ cd miniprogram-learning-diagnostic
 
 | 层级 | 说明 | 命令 |
 |------|------|------|
-| **L0 单元** | 447 个函数级测试（云函数/Presenter/工具/数据层），<3 秒 | `npm test` |
+| **L0 单元** | 460 个函数级测试（云函数/Presenter/工具/数据层），<3 秒 | `npm test` |
 | **L1 数据守护** | 四库交叉引用完整性（18 断言）、部署就绪、合约红线 | `npm test`（自动包含）|
 | **L2 诊断回归** | 41 条历史证据验证 enricher、28 卡点归组回归 | `npm test`（自动包含）|
 | **L3 DevTools E2E** | 17 页面 + 数据驱动场景 + 结果聚合 | `npm run test:e2e:all` |
 | **L4 真实云** | 发布前验证云函数部署可用性（默认跳过） | `RUN_REAL_CLOUD=1 npm run test:real-cloud` |
 
 ```bash
-# 日常开发：运行全部单元 + 数据守护 + 诊断回归（447 用例，<3 秒）
+# 日常开发：运行全部单元 + 数据守护 + 诊断回归（460 用例，<3 秒）
 npm test
 
 # 带覆盖率报告（行/函数 80% 门槛）
 npm run test:coverage
 
-# 完整验证（测试 + JS 语法检查 164 文件）
+# 完整验证（测试 + JS 语法检查 162 文件）
 npm run verify
+
+# PDF 格式本地预览（不用上传云函数）
+node scripts/preview-pdf.js
+open tmp/preview-verification.pdf
 
 # DevTools 页面级 E2E（需先开微信开发者工具）
 npm run test:e2e:doctor       # 环境探测

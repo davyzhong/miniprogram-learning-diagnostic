@@ -38,6 +38,7 @@
 | `npm run release:check` | 发布前自动门禁 | 执行 `check:deployment` 和 `verify`；仍需手动跑 `git diff --check` 与 DevTools CLI `preview` |
 | `npm run check` | 静态语法检查 | 执行 `scripts/check-js.js`，扫描当前全部 JS 文件 |
 | `npm run verify` | 完整本地验证 | `npm test && npm run check`，提交前必跑 |
+| `node scripts/preview-pdf.js` | 本地 PDF 格式预览 | 不上传云函数直接看 PDF 效果，输出到 `tmp/preview-verification.pdf`。改完 `pdf-renderer.js` 后必跑 |
 
 常用场景：
 

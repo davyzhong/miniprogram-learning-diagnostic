@@ -1,7 +1,7 @@
 # 学习诊断小程序 — 自动化测试框架设计
 
 > 设计日期：2026-06-17 | 作者：qiming + Claude
-> 基于：PRD v2.9 / PROJECT_PLAN / 现有 49 个测试文件 447 用例 / 现场跑通 23/23 DevTools E2E
+> 基于：PRD v2.9 / PROJECT_PLAN / 现有 50 个测试文件 460 用例 / 现场跑通 23/23 DevTools E2E
 > AI agent 入口：本框架已沉淀为 skill `learning-diagnostic-testing`，agent 在本项目说"测试/验证/跑回归"时会自动加载，命令和分层见 skill 的 SKILL.md。
 
 ## 一、目标
@@ -11,7 +11,7 @@
 **三层递进**：
 
 1. **L1 静态守卫**：语法 + 架构红线 + 部署完整性，秒级反馈
-2. **L2 逻辑守卫**：447 单元/集成用例覆盖全部云函数、Presenter、工具函数，<3 秒跑完
+2. **L2 逻辑守卫**：460 单元/集成用例覆盖全部云函数、Presenter、工具函数，<3 秒跑完
 3. **L3 渲染守卫**：通过微信开发者工具 CLI 驱动真实小程序页面，断言渲染文案和跨页交互
 
 **反目标**：不搞 100% 覆盖率崇拜、不造"为测试而测试"的用例、测试代码不做无意义抽象。
@@ -29,7 +29,7 @@
 │   触发：发布前 / PR / 主动跑                                       │
 ├─────────────────────────────────────────────────────────────────┤
 │                     L2 逻辑守卫 (node:test)                       │
-│   447 用例：云函数、Presenter、工具函数、数据访问层、合约红线       │
+│   460 用例：云函数、Presenter、工具函数、数据访问层、合约红线       │
 │   工具：Node.js 内置 test runner + 自研 harness                    │
 │   耗时：<3 秒                                                     │
 │   触发：每次提交前 (npm run verify)                                │
@@ -161,7 +161,7 @@ automator.launch() → miniProgram.evaluate(cloudMocks)
   ↓
 npm run verify          ← L1 + L2，<5 秒
   ├─ npm run check      ← L1 语法
-  └─ npm test           ← L2 447 用例
+  └─ npm test           ← L2 460 用例
   ↓ 通过？
   ├─ 否 → 修
   └─ 是 → 进入下一层
