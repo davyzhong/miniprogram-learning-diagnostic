@@ -113,11 +113,11 @@ function buildResourcePackDraft({ studentId, subject = 'math', sourceReportId = 
     cacheVersion: 1,
     llmEnhanced: false,
     blocks: [
-      { type: 'summary', title: '今天补什么', body: summaryBody },
-      { type: 'concept', title: '为什么会错', body: conceptBody },
-      { type: 'worked_example', title: '例题拆解', question: exampleQuestion, steps: exampleSteps },
-      { type: 'common_mistake', title: '常见错误对比', mistake: mistakeText, correction: correctionText, explanation: '这一步用来把错误路径和正确路径分开。' },
-      { type: 'practice', title: '马上练 3 题', questions: practiceItems }
+      { type: 'summary', title: '这个卡点是什么', body: summaryBody },
+      { type: 'concept', title: '为什么会这样错', body: conceptBody },
+      { type: 'worked_example', title: '正确的解题路径', question: exampleQuestion, steps: exampleSteps },
+      { type: 'common_mistake', title: '容易踩的坑', mistake: mistakeText, correction: correctionText, explanation: '把错误路径和正确路径分开，才能精准修复。' },
+      { type: 'practice', title: '练三道', questions: practiceItems }
     ],
     practiceItems,
     externalResources: (resources || []).map(resource => ({
