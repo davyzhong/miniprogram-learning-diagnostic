@@ -8,8 +8,8 @@ const MAX_RESOURCES_PER_ITEM = 4
 const nodesById = new Map((knowledgeSeed.nodes || []).map(node => [node.nodeId, node]))
 const bottlenecksById = new Map((bottleneckSeed.bottlenecks || []).map(item => [item.bottleneckId, item]))
 const resourcesById = new Map((resourceSeed.resources || []).map(resource => [resource.resourceId, resource]))
-const qualityAnchorPlatforms = new Set(resourceSeed.selectionPolicy?.qualityAnchorPlatforms || [])
-const domesticSupplementPlatforms = new Set(resourceSeed.selectionPolicy?.domesticSupplementPlatforms || [])
+const qualityAnchorPlatforms = new Set(resourceSeed.selectionPolicy?.conceptAnchorPlatforms || resourceSeed.selectionPolicy?.qualityAnchorPlatforms || [])
+const domesticSupplementPlatforms = new Set(resourceSeed.selectionPolicy?.jumpablePlatforms || resourceSeed.selectionPolicy?.domesticSupplementPlatforms || [])
 
 const NODE_TITLE_OVERRIDES = {
   'MATH-NUM-DEC-DIV-POINT': '小数除法中的小数点移动',

@@ -1,6 +1,13 @@
 const cloud = require('../../utils/cloud')
 const { buildLearningResourceView } = require('./learning-resource-presenter')
 
+function copyLinkWithToast(url, platform) {
+  wx.setClipboardData({
+    data: url,
+    success: () => wx.showToast({ title: `链接已复制，请到${platform}打开`, icon: 'none', duration: 2500 })
+  })
+}
+
 Page({
   data: {
     loading: true,
@@ -78,6 +85,29 @@ Page({
     } catch (error) {
       wx.hideLoading()
       wx.showToast({ title: error.message || '操作失败', icon: 'none' })
+    }
+  },
+
+  onExternalResourceTap(e) {
+    const { url, platform, canJump } = e.currentTarget.dataset
+    if (!url) {
+      wx.showToast({ title: '暂无链接', icon: 'none' })
+      return
+    }
+
+    if (canJump && platform === 'B站' || platform === '哔哩哔哩') {
+      // 尝试跳转 B站小程序，降级为复制链接
+      wx.openEmbeddedMiniProgram && wx.openEmbeddedMiniProgram({
+        appId: 'wx7e979c1c1c1c1c1c', // 占位，需替换为 B站小程序实际 appId
+        fail: () => copyLinkWithToast(url, platform)
+      }) || copyLinkWithToast(url, platform)
+    } else if (canJump && platform === '小红书') {
+      wx.openEmbeddedMiniProgram && wx.openEmbeddedMiniProgram({
+        appId: 'wx6a1f1f1f1f1f1f1f', // 占位，需替换为小红书小程序实际 appId
+        fail: () => copyLinkWithToast(url, platform)
+      }) || copyLinkWithToast(url, platform)
+    } else {
+      copyLinkWithToast(url, platform)
     }
   }
 })

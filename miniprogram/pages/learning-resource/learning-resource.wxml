@@ -28,8 +28,22 @@
       </view>
     </view>
 
-    <view class="parent-ref" wx:if="{{view.parentResourceText}}">
-      <text>{{view.parentResourceText}}，由家长打开参考，不建议孩子直接浏览外部信息流。</text>
+    <view class="external-resources" wx:if="{{view.hasExternalResources}}">
+      <view class="section-header">
+        <text class="section-title">外部参考</text>
+        <text class="section-hint">由家长打开，不建议孩子直接浏览</text>
+      </view>
+      <view class="resource-card" wx:for="{{view.resourceCards}}" wx:key="resourceId"
+            bindtap="onExternalResourceTap" data-url="{{item.url}}" data-platform="{{item.platform}}" data-can-jump="{{item.canJump}}">
+        <view class="resource-info">
+          <text class="resource-icon">{{item.icon}}</text>
+          <view class="resource-text">
+            <text class="resource-title">{{item.title}}</text>
+            <text class="resource-platform">{{item.platform}} · {{item.role}}</text>
+          </view>
+        </view>
+        <text class="resource-action {{item.canJump ? 'jump' : 'copy'}}">{{item.actionText}}</text>
+      </view>
     </view>
 
     <view class="actions">

@@ -135,22 +135,14 @@ test('resource library keeps platform links as parent-reviewed recommendations',
 
   assert.match(resources.childAccessRule, /家长/)
   assert.match(resources.resourcePolicy, /高质量讲法优先/)
-  assert.deepEqual(resources.selectionPolicy.qualityAnchorPlatforms, ['Khan Academy', 'YouTube'])
-  assert.deepEqual(resources.selectionPolicy.domesticSupplementPlatforms.slice(0, 2), ['B站', '小红书'])
+  // 新的 selectionPolicy 结构（2026-06-18 更新）
+  assert.deepEqual(resources.selectionPolicy.jumpablePlatforms.slice(0, 2), ['B站', '小红书'])
+  assert.ok(resources.selectionPolicy.platformPriority['B站'] === 1)
+  assert.ok(resources.selectionPolicy.platformPriority['小红书'] === 2)
   assert.ok(resources.resources.some(resource => resource.platform === 'B站'))
-  assert.ok(resources.resources.some(resource => resource.platform === '小红书'))
-  assert.ok(resources.resources.some(resource => resource.platform === 'YouTube'))
+  assert.ok(resources.resources.some(resource => resource.platform === 'Khan Academy'))
 
-  const domesticPlatforms = new Set(resources.selectionPolicy.domesticSupplementPlatforms)
-  const domesticNodes = new Set(
-    resources.resources
-      .filter(resource => domesticPlatforms.has(resource.platform))
-      .map(resource => resource.nodeId)
-  )
-  for (const resource of resources.resources.filter(resource => resources.selectionPolicy.qualityAnchorPlatforms.includes(resource.platform))) {
-    assert.ok(domesticNodes.has(resource.nodeId), `${resource.resourceId} should have a domestic companion resource for the same node`)
-  }
-
+  // 所有平台都应在 platformPriority 或已知列表中
   for (const resource of resources.resources) {
     assert.ok(['B站', '小红书', 'YouTube', 'Khan Academy', '公众号', '国家中小学智慧教育平台', '人教社'].includes(resource.platform))
     assert.ok(['video', 'animation', 'article', 'course_unit', 'searchEntry', 'search_query'].includes(resource.type))

@@ -125,3 +125,95 @@
   background: #2b6cb0;
   color: #ffffff;
 }
+
+/* 外部参考区 */
+.external-resources {
+  margin-top: 24rpx;
+  padding: 24rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.section-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1a365d;
+}
+
+.section-hint {
+  font-size: 22rpx;
+  color: #a0aec0;
+}
+
+.resource-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20rpx 16rpx;
+  margin-bottom: 12rpx;
+  background: #f7fafc;
+  border-radius: 12rpx;
+  border: 1rpx solid #e2e8f0;
+}
+
+.resource-card:active {
+  background: #edf2f7;
+}
+
+.resource-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.resource-icon {
+  font-size: 36rpx;
+  margin-right: 16rpx;
+}
+
+.resource-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.resource-title {
+  font-size: 28rpx;
+  color: #2d3748;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resource-platform {
+  font-size: 22rpx;
+  color: #718096;
+  margin-top: 4rpx;
+}
+
+.resource-action {
+  font-size: 24rpx;
+  white-space: nowrap;
+  padding: 8rpx 16rpx;
+  border-radius: 8rpx;
+  margin-left: 16rpx;
+}
+
+.resource-action.jump {
+  color: #2b6cb0;
+  background: #ebf8ff;
+}
+
+.resource-action.copy {
+  color: #718096;
+  background: #edf2f7;
+}
