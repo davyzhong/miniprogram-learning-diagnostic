@@ -31,7 +31,7 @@ Node.js tasks run from the repo root:
 | English module E2E | `npm run test:devtools-english` | L3 |
 | Parent/timeline E2E | `npm run test:devtools-parent-timeline` | L3 |
 
-The `tests/` directory currently holds 49 `.test.js` files; `npm test` enumerates 42 of them explicitly (no glob), so any new test file must be added to both `test` and `test:coverage` scripts in `package.json`. Tests use the Node.js built-in runner (`node --test`), no external framework — 447 tests, <3s. Run `npm run verify` after any change; run `npm run release:check` before tagging a release.
+The `tests/` directory currently holds 50 `.test.js` files; `npm test` enumerates 44 of them explicitly (no glob), so any new test file must be added to both `test` and `test:coverage` scripts in `package.json`. Tests use the Node.js built-in runner (`node --test`), no external framework — 460 tests, <3s. Run `npm run verify` after any change; run `npm run release:check` before tagging a release.
 
 ## Architecture
 
