@@ -77,6 +77,8 @@ CloudBase (serverless, 12 cloud functions)
 - Chinese PDF fonts are bundled inside the cloud function directories — do not configure `FONT_FILE_ID` or external font paths.
 - **Never use `Intl` API in miniprogram code** — WeChat iOS/macOS runtime does not support it. Use `getUTC*` methods with manual timezone offset instead (see `beijingParts` in `miniprogram/utils/util.js`).
 - **LLM cloud functions need frontend `timeout: 60000`** — `wx.cloud.callFunction` defaults to 20s, but `generatePaper` / `generateReportPDF` / LLM-backed actions need up to 60s. See `callGeneratePaper` in `cloud.js`.
+- **PDF 格式迭代用本地预览工具** — `node scripts/preview-pdf.js` 生成到 `tmp/preview-verification.pdf`，不用上传云函数。改完 `pdf-renderer.js` 直接跑看效果。**每次调整 PDF 格式后，清除旧验证试卷并重新生成。**
+- **验证卷自动生成** — 诊断报告完成后 `analyzePhotos` 自动触发 `generatePaper`（通过 `auto-verification.js`）。用户无需手动点击，只需预览/打印。覆盖策略：新诊断标记旧卷 superseded。失败重试 3 次。
 
 ## GitHub sync workflow
 

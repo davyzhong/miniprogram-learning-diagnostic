@@ -8,6 +8,11 @@
 
 ### Added
 
+- **本地 PDF 预览工具** `scripts/preview-pdf.js`：改完 PDF 渲染代码直接跑，不用上传云函数即可看效果。输出到 `tmp/preview-verification.pdf`
+- **验证卷自动生成**：诊断报告完成后后台异步生成验证卷（含覆盖旧卷、失败重试 3 次、状态查询）
+- **验证卷出题逻辑重新设计**：以细卡点（BN）为出题单位，每个 BN 出 2 题，上限 20 题。prompt 填充 taxonomy 的症状和验证规则
+- **答案页解题思路**：LLM 生成 explanation 字段（具体计算步骤），答案页双栏显示题号+卡点名+答案+解题思路
+
 - **L1-L4 测试框架**：数据一致性守护（18 断言）、诊断准确性回归（41 条证据）、卡点分组回归（28 卡点）、数据驱动 E2E、结果聚合、真实云回归
 - **数据扩充 v0.3**：知识节点 31→91、历史证据 20→41、卡点 27→28、资源 26→28，四库交叉引用一致性 100%
 - 家庭学习工作台与单孩子学习档案分流：0 个孩子显示空态，1 个孩子直接进入档案，多孩子显示高密度工作台
@@ -26,7 +31,10 @@
 
 ### Changed
 
-- **云函数 `_shared` 子目录重构**：微信开发者工具上传时跳过下划线前缀子目录，导致 `require('./_shared/access')` 在云端失败、预览/真机空白。8 个云函数的共享文件（access.js/constants.js/math-bottleneck-hierarchy.js）移到各自根目录，改为 `require('./access')`；删除顶层 `cloudfunctions/_shared/`
+- **PDF 验证卷格式大幅优化**：双栏布局、题号题目合并、演算区扩大、标题栏精简、答案页改显示解题思路。20 题从 ~4 页压缩到 3 页
+- **验证卷题量调整**：每个细卡点 2 题（1 核心+1 延展），总上限 20 题
+- **验证卷 prompt 增强**：填充 taxonomy 的 symptomPatterns 和 microValidationRules
+- **云函数 `_shared` 子目录重构**：微信开发者工具上传时跳过下划线前缀子目录，导致 `require('./_shared/access')` 在云端失败、预览/真机空白。8 个云函数的共享文件移到各自根目录，改为 `require('./access')`；删除顶层 `cloudfunctions/_shared/`
 - **Intl API 兼容性修复**：微信 iOS/Mac 运行时不支持 `Intl`，导致首页 `formatRelativeTime` 崩溃、预览/真机完全空白。3 处 `Intl.DateTimeFormat` 替换为纯数学时区计算（UTC+8 偏移 + `getUTC*`）
 - **试卷生成超时优化**：`generatePaper` 每卡点题量 5→3（2核心+1延展），卡点上限 60→8，temperature 0.7→0.3，prompt 精简，确保 LLM 在 60 秒内返回
 - **前端 LLM 调用超时修复**：`callGeneratePaper`/`callGenerateReportPDF`/`confirmEnglishImportBatch`/`analyzeEnglishDictationPhoto` 加 `timeout: 60000`（微信默认 20 秒不够）
