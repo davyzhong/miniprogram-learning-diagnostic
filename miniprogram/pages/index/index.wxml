@@ -221,8 +221,9 @@
       </view>
     </view>
 
-    <view class="section-block" wx:if="{{home.knowledgeMapCard.visible}}">
-      <view class="section-heading">🗺️ {{home.knowledgeMapCard.title}}</view>
+    <view class="section-block" wx:if="{{home.knowledgeMapCard.visible}}"
+          bindtap="onKnowledgeMapTap">
+      <view class="section-heading">🗺️ {{home.knowledgeMapCard.title}} <text class="section-more">查看详情 ›</text></view>
       <view class="surface map-card">
         <text class="map-summary">{{home.knowledgeMapCard.summary}}</text>
         <view class="map-domains">

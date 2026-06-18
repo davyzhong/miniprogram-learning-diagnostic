@@ -1,0 +1,44 @@
+<view class="page">
+  <view wx:if="{{loading}}" class="loading">加载知识地图...</view>
+
+  <view wx:elif="{{errorText}}" class="empty">
+    <text>{{errorText}}</text>
+  </view>
+
+  <view wx:else>
+    <view class="hero">
+      <text class="hero-title">🗺️ {{view.title}}</text>
+      <text class="hero-summary">{{view.summary}}</text>
+    </view>
+
+    <view wx:if="{{!view.hasData}}" class="empty-hint">
+      上传试卷后，知识地图会自动生成。
+    </view>
+
+    <view class="domain-list">
+      <view class="domain-card" wx:for="{{view.domains}}" wx:key="key"
+            bindtap="onDomainTap" data-domain="{{item.key}}">
+        <view class="domain-header">
+          <text class="domain-icon">{{item.icon}}</text>
+          <view class="domain-info">
+            <text class="domain-name">{{item.name}}</text>
+            <text class="domain-stats">{{item.count > 0 ? item.count + ' 个卡点' : '暂无数据'}}{{item.activeCount > 0 ? ' · ' + item.activeCount + '待修' : ''}}</text>
+          </view>
+          <text class="domain-chevron">{{item.expanded ? '▾' : '▸'}}</text>
+        </view>
+
+        <view class="domain-bottlenecks" wx:if="{{item.expanded && item.bottlenecks.length > 0}}">
+          <view class="bn-item {{b.statusClass}}" wx:for="{{item.bottlenecks}}" wx:for-item="b" wx:key="lpCode"
+                catchtap="onBottleneckTap" data-lp-code="{{b.lpCode}}" data-lp-name="{{b.displayName}}">
+            <text class="bn-icon">{{b.statusIcon}}</text>
+            <view class="bn-text">
+              <text class="bn-name">{{b.displayName}}</text>
+              <text class="bn-meta">{{b.metaText}} · {{b.statusText}}</text>
+            </view>
+            <text class="bn-arrow">›</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

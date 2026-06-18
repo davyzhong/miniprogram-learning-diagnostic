@@ -1079,6 +1079,13 @@
   padding: 28rpx 24rpx;
 }
 
+.section-more {
+  float: right;
+  font-size: 22rpx;
+  color: #2b6cb0;
+  font-weight: 400;
+}
+
 .map-summary {
   display: block;
   font-size: 26rpx;

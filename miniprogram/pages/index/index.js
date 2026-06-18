@@ -48,6 +48,18 @@ Page({
     return this.loadStudents()
   },
 
+  onKnowledgeMapTap() {
+    const student = this.data.home && this.data.home.studentId
+    const name = this.data.home && this.data.home.studentName
+    if (!student) {
+      wx.showToast({ title: '请先选择孩子', icon: 'none' })
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/knowledge-map/knowledge-map?studentId=${student}&studentName=${encodeURIComponent(name || '')}&subject=math`,
+    })
+  },
+
   hasFreshHomeSnapshot() {
     const loadedAt = this._lastHomeLoadedAt || 0
     if (!loadedAt || Date.now() - loadedAt > HOME_CACHE_TTL_MS) {

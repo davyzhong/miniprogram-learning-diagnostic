@@ -276,6 +276,13 @@ Page({
     this.navigateToVerification()
   },
 
+  onKnowledgeMapTap() {
+    const { studentId, studentName, subject } = this.data
+    wx.navigateTo({
+      url: `/pages/knowledge-map/knowledge-map?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&subject=${subject}`,
+    })
+  },
+
   async navigateToVerification(targetCode = '') {
     if (!this.data.canWriteActions) return
     const { studentId, subject, subjectName, studentName } = this.data

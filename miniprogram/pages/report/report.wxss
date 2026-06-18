@@ -28,3 +28,17 @@
 .learning-resource-action { align-items: center; color: #245ea8; display: flex; font-size: 22rpx; font-weight: 760; justify-content: space-between; margin-top: 9rpx; }
 .learning-resource-usage { color: #8795a5; display: block; font-size: 20rpx; line-height: 1.4; margin-top: 5rpx; }
 .resource-arrow { font-size: 30rpx; line-height: 1; }
+
+/* 知识地图卡点入口 */
+.knowledge-map-snapshot { margin: 24rpx 0; padding: 24rpx; background: #fff; border-radius: 16rpx; box-shadow: 0 4rpx 16rpx rgba(15, 47, 82, .05); }
+.map-snapshot-header { font-size: 28rpx; font-weight: 600; color: #1a365d; margin-bottom: 16rpx; }
+.map-snapshot-list { display: flex; flex-direction: column; gap: 12rpx; }
+.map-snapshot-item { display: flex; align-items: center; padding: 16rpx; background: #f7fafc; border-radius: 12rpx; border-left: 6rpx solid #cbd5e0; }
+.map-snapshot-item.pending { border-left-color: #fc8181; }
+.map-snapshot-item.persisting { border-left-color: #f6ad55; }
+.map-snapshot-item.improved { border-left-color: #68d391; }
+.snapshot-icon { font-size: 32rpx; margin-right: 16rpx; }
+.snapshot-text { flex: 1; min-width: 0; }
+.snapshot-name { display: block; font-size: 26rpx; color: #2d3748; }
+.snapshot-meta { display: block; font-size: 22rpx; color: #718096; margin-top: 4rpx; }
+.snapshot-arrow { font-size: 22rpx; color: #2b6cb0; white-space: nowrap; margin-left: 16rpx; }
