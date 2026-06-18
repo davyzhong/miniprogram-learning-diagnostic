@@ -74,9 +74,8 @@ test('verification PDF uses bundled Chinese font and renders grouped student and
   })
 
   const texts = operations.filter(item => item[0] === 'text').map(item => item[1])
-  assert.ok(texts.includes('学习卡点验证卷'))
-  assert.equal(texts.filter(text => text === '试卷日期：2026年06月13日').length, 2)
-  assert.equal(texts.filter(text => text === '试卷编号：数学-20260613-01').length, 2)
+  // 标题栏：试卷编号 + 页面编码，不再显示"学习卡点验证卷"
+  assert.ok(texts.some(t => t.includes('数学-20260613-01')), '标题栏应含试卷编号')
   assert.ok(texts.includes('A. 计算错误'))
   assert.ok(texts.includes('B. 审题错误'))
   assert.equal(texts.some(text => /^LP-\d+/.test(text)), false)
@@ -86,7 +85,7 @@ test('verification PDF uses bundled Chinese font and renders grouped student and
   assert.ok(operations.some(item => item[0] === 'registerFont' && item[2] === fontPath))
 })
 
-test('verification PDF shortens long bottleneck names for question chips', async () => {
+test('verification PDF renders bottleneck names without raw codes', async () => {
   const { PdfMock, operations } = createRecordingPdfKit()
   const { generatePDF } = require('../cloudfunctions/generatePaper/pdf-renderer')
   await generatePDF({
@@ -105,8 +104,8 @@ test('verification PDF shortens long bottleneck names for question chips', async
   })
 
   const texts = operations.filter(item => item[0] === 'text').map(item => item[1])
-  // 双栏布局下 chip 文本截断到 5 字符
-  assert.ok(texts.some(t => t.includes('百分数') && t.includes('…')), `expected truncated chip, got: ${texts.filter(t => t.includes('百分数'))}`)
+  // 卡点名不再在题目区画 chip，而是在 groupBar 和答案区显示
+  // 核心断言：原始 LP 编码不应出现在用户可见文本中
   assert.equal(texts.includes('LP-003'), false)
 })
 
@@ -186,8 +185,9 @@ test('verification PDF prints traceable page codes on student pages', async () =
   })
 
   const texts = operations.filter(item => item[0] === 'text').map(item => item[1])
-  assert.ok(texts.includes('页面编号：MATH-V-20260616-01-P01'))
-  assert.ok(texts.includes('页面编号：MATH-V-20260616-01-P02'))
+  // pageCode 已移到标题栏（不再在页尾显示"页面编号：xxx"）
+  assert.ok(texts.some(t => t.includes('MATH-V-20260616-01-P01')), '标题栏应含 pageCode P01')
+  assert.ok(texts.some(t => t.includes('MATH-V-20260616-01-P02')), '标题栏应含 pageCode P02')
   assert.deepEqual(result.studentPageCodes, [
     'MATH-V-20260616-01-P01',
     'MATH-V-20260616-01-P02'

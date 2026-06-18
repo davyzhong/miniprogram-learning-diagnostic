@@ -316,7 +316,7 @@ ${chineseReviewPromptBlock}
 6. 直接返回JSON，不要\`\`\`json包裹
 
 输出：
-{"title":"标题","questions":[{"index":1,"content":"题目","answer":"答案","points":5,"lpCode":"BN-...","lpName":"卡点名","reviewItemId":"","targetText":"","verificationMethod":""}]}
+{"title":"标题","questions":[{"index":1,"content":"题目","answer":"答案","explanation":"解题步骤（写出具体计算过程和关键判断，不要写'注意小数点'这类泛泛提醒，直接写'0.25有2位小数、0.4有1位，共3位，积=0.10'这种具体内容）","points":5,"lpCode":"BN-...","lpName":"卡点名","reviewItemId":"","targetText":"","verificationMethod":""}]}
 
 开始生成：`;
 
