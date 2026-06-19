@@ -106,7 +106,7 @@ function buildKnowledgeMapCard(subjects = [], bottleneckStats = {}) {
   }
 
   return {
-    visible: hasData,
+    visible: true, // 始终显示卡片，无数据时显示提示文案
     title: '学习地图',
     summary: hasData
       ? `${pending > 0 ? pending + ' 个待修复' : '当前无待修复卡点'}${improved > 0 ? ' · ' + improved + ' 个已改善' : ''}`
