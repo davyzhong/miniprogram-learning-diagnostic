@@ -9,6 +9,46 @@ const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-disp
 const { SUBJECT_NAMES } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 
+// 知识节点 seed（查前序依赖）
+const knowledgeSeed = require('../../data/math/knowledge-nodes.seed')
+const nodeMap = new Map((knowledgeSeed.nodes || []).map(n => [n.nodeId, n]))
+
+const DOMAIN_ICONS = {
+  '数与代数': '🔢', '图形与几何': '📐', '统计与概率': '📊', '综合与实践': '🔧',
+}
+
+function buildKnowledgePosition(bottleneck = {}) {
+  const nodeId = bottleneck.nodeId || ''
+  const node = nodeId ? nodeMap.get(nodeId) : null
+  if (!node) return { visible: false }
+
+  const domain = node.domain || '数与代数'
+  const domainIcon = DOMAIN_ICONS[domain] || '📚'
+  const prerequisites = (node.prerequisites || [])
+    .map(pid => {
+      const preNode = nodeMap.get(pid)
+      return preNode ? { nodeId: pid, title: preNode.title || pid } : null
+    })
+    .filter(Boolean)
+
+  // 找后续节点：哪些节点的 prerequisites 包含当前 nodeId
+  const dependents = (knowledgeSeed.nodes || [])
+    .filter(n => (n.prerequisites || []).includes(nodeId))
+    .map(n => ({ nodeId: n.nodeId, title: n.title || n.nodeId }))
+
+  return {
+    visible: true,
+    domain,
+    domainIcon,
+    nodeTitle: node.title || nodeId,
+    gradeRange: node.gradeRange || [],
+    prerequisites: prerequisites.slice(0, 4),
+    dependents: dependents.slice(0, 4),
+    hasPrerequisites: prerequisites.length > 0,
+    hasDependents: dependents.length > 0,
+  }
+}
+
 const EVIDENCE_PREVIEW_LIMIT = 3
 
 function toDate(value) {
@@ -282,11 +322,16 @@ Page({
         .filter(paper => paperMatches(paper, relatedLpCode))
         .sort((a, b) => timeOf(b.createdAt || b.paperDate) - timeOf(a.createdAt || a.paperDate))
       const evidenceChain = buildEvidenceChain(relatedReports, relatedPapers, this.data.subjectName, relatedLpCode)
+
+      // 知识位置：从 knowledge-nodes seed 查前序和关联节点
+      const knowledgePosition = buildKnowledgePosition(bottleneck)
+
       this.setData({
         bottleneck,
         relatedReports,
         relatedPapers,
         evidenceChain,
+        knowledgePosition,
         ...evidenceVisibility(evidenceChain),
         loading: false,
         emptyText: ''

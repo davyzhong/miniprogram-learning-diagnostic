@@ -278,8 +278,16 @@ Page({
 
   onKnowledgeMapTap() {
     const { studentId, studentName, subject } = this.data
+    if (!studentId) {
+      wx.showToast({ title: '缺少孩子信息', icon: 'none' })
+      return
+    }
     wx.navigateTo({
       url: `/pages/knowledge-map/knowledge-map?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&subject=${subject}`,
+      fail: (err) => {
+        console.error('跳转知识地图失败:', err)
+        wx.showToast({ title: '跳转失败', icon: 'none' })
+      },
     })
   },
 
