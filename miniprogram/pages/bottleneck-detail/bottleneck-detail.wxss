@@ -3,9 +3,6 @@
   background: #f4f7fa;
   padding: 28rpx 28rpx 156rpx;
   box-sizing: border-box;
-
-  /* 知识位置 */
-  --kp-bg: #fff;
 }
 
 .knowledge-position { padding: 24rpx; margin-bottom: 16rpx; background: #fff; border-radius: 16rpx; }
@@ -15,7 +12,6 @@
 .position-chain { margin: 8rpx 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 8rpx; }
 .chain-label { font-size: 22rpx; color: #a0aec0; }
 .chain-node { font-size: 22rpx; color: #4a5568; background: #edf2f7; padding: 4rpx 12rpx; border-radius: 6rpx; }
-}
 
 .loading-state,
 .empty-state {
