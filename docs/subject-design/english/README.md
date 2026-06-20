@@ -1,27 +1,39 @@
 # English Subject Design
 
-> Scope: English diagnosis, vocabulary, written evidence, and oral/listening exploration boundaries.  
+> Scope: 钟青羽英语学科的个人词库、认词练习、纸面听写、错词本和学习记录。
 > Updated: 2026-06-20
 
-## Active Documents
+## Read First
 
-- [English Written Diagnosis And Tech Decision](./english-written-diagnosis-and-tech-decision.md)
-- [English subject design](../钟青羽英语学科设计文档.md)
-- [English dual-loop design spec](../钟青羽英语双功能闭环设计规格.md)
-- [English dual-loop technical implementation](../钟青羽英语双功能闭环技术实现文档.md)
-- [English test cases](../../test-cases/钟青羽英语学科测试用例库.md)
+| 文档 | 定位 | 何时阅读 |
+| --- | --- | --- |
+| [钟青羽英语学科设计文档](./钟青羽英语学科设计文档.md) | 当前正式设计文档 | 改英语产品、页面、流程、文案前先读 |
+| [钟青羽英语双功能闭环技术实现文档](./钟青羽英语双功能闭环技术实现文档.md) | 技术实现规格 | 改数据模型、云函数、页面交互、测试前读 |
+| [钟青羽英语学科测试用例库](../../test-cases/钟青羽英语学科测试用例库.md) | 测试用例和验收清单 | 做页面级测试、DevTools E2E、回归验收前读 |
+
+## Reference Documents
+
+| 文档 | 当前状态 |
+| --- | --- |
+| [钟青羽英语双功能闭环设计规格](./钟青羽英语双功能闭环设计规格.md) | 历史/技术参考：双维状态机、联动抽词、候选词约束 OCR。当前实现以正式设计文档的收束范围为准 |
+| [English Written Diagnosis And Tech Decision](./english-written-diagnosis-and-tech-decision.md) | 早期决策记录：解释为什么英语最初考虑过书面诊断，以及为什么口语/听力需要谨慎推进 |
 
 ## Current Product Boundary
 
-The mini program should prioritize written English diagnosis first:
+当前英语学科不做“大英语学习系统”，只做词汇掌握闭环：
 
-- Vocabulary spelling.
-- Word meaning confusion.
-- Grammar.
-- Sentence structure.
-- Reading comprehension.
-- Written expression.
-- Paper dictation evidence.
+- 个人词库：以钟青羽的 PEP 词库为基础，后续可补充小学常用词。
+- 认词练习：看中文或英文提示，孩子口头回答对应内容，AI 自动判定。
+- 纸面听写：看提示写在纸上，完成后拍照上传，按词判定拼写掌握。
+- 错词本：集中处理高频错词、会认不会写、不熟词和待复测词。
+- 学习记录：保留认词、听写和听写照片证据，形成可追踪时间线。
 
-Oral pronunciation and listening diagnosis should remain exploratory until the product can avoid drifting into a general practice app.
+当前暂不做：
 
+- 发音评分；
+- 听力专项训练；
+- 时态和句型专项；
+- 阅读理解；
+- 作文表达；
+- 英语整卷拍照诊断；
+- 类似数学的英语“学习卡点”体系。

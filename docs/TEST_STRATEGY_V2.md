@@ -83,10 +83,10 @@
 - [x] Phase 5.2：重写 `docs/TESTING.md` 的命令表、E2E 分学科说明和输出目录说明。
 - [x] Phase 5.3：更新 `docs/TEST_FRAMEWORK_DESIGN.md`，从 L1/L2/L3 改成 Unit Automation + CLI E2E。
 - [x] Phase 5.4：更新 `docs/TEST_MATRIX.md` 的当前基线、命令和缺失测试文件引用。
-- [ ] Phase 6.1：运行新增合同测试，确认通过。
-- [ ] Phase 6.2：运行 `npm test`。
-- [ ] Phase 6.3：运行 `npm run check`。
-- [ ] Phase 6.4：搜索旧命令、旧目录和过期数字，确认没有误导性主文档残留。
+- [x] Phase 6.1：运行新增合同测试，确认通过。
+- [x] Phase 6.2：运行 `npm test`。
+- [x] Phase 6.3：运行 `npm run check`。
+- [x] Phase 6.4：搜索旧命令、旧目录和过期数字，确认没有误导性主文档残留。
 
 ## 6. 后续不在本轮完成的工作
 
