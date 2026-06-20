@@ -1,21 +1,41 @@
 <!--pages/subject-home/subject-home.wxml-->
 <view class="page page-{{subject}}">
-  <view class="workbench-card">
+  <view class="workbench-card {{subject === 'english' ? 'english-hero-card' : ''}}">
     <view class="workbench-header">
       <view class="subject-mark">{{subjectInitial}}</view>
       <view class="workbench-copy">
         <text class="workbench-eyebrow">{{primaryTask.title}}</text>
-        <text class="workbench-title">{{primaryTask.actionText}}</text>
+        <text class="workbench-title">{{subject === 'english' ? '英语词汇掌握' : primaryTask.actionText}}</text>
       </view>
     </view>
     <text class="workbench-summary">{{primaryTask.summary}}</text>
-    <view class="primary-action" bindtap="onPrimaryAction">
+    <view class="primary-action" wx:if="{{subject !== 'english'}}" bindtap="onPrimaryAction">
       <text>{{primaryTask.actionText}}</text>
       <text class="primary-arrow">›</text>
     </view>
   </view>
 
-  <view class="map-entry" bindtap="onKnowledgeMapTap">
+  <view class="english-action-grid" wx:if="{{subject === 'english'}}">
+    <view
+      class="english-action-card {{item.recommended ? 'is-recommended' : ''}} {{item.disabled ? 'is-disabled' : ''}}"
+      wx:for="{{englishActionCards}}"
+      wx:key="key"
+      bindtap="onEnglishActionTap"
+      data-action-type="{{item.actionType}}"
+      data-disabled="{{item.disabled}}"
+    >
+      <view class="english-action-top">
+        <view class="english-action-icon">{{item.icon}}</view>
+        <text class="english-action-badge" wx:if="{{item.badgeText}}">{{item.badgeText}}</text>
+      </view>
+      <text class="english-action-title">{{item.title}}</text>
+      <text class="english-action-subtitle">{{item.subtitle}}</text>
+      <text class="english-action-meta">{{item.disabled ? item.disabledText : item.meta}}</text>
+      <view class="english-action-button">{{item.disabled ? item.disabledText : item.actionText}}</view>
+    </view>
+  </view>
+
+  <view class="map-entry" wx:if="{{subject !== 'english'}}" bindtap="onKnowledgeMapTap">
     <text class="map-entry-icon">🗺️</text>
     <view class="map-entry-text">
       <text class="map-entry-title">知识地图</text>
@@ -51,11 +71,11 @@
   <view class="english-vocab-card" wx:if="{{subject === 'english'}}">
     <view class="section-heading">
       <view class="heading-icon">Aa</view>
-      <text>英语学习进度</text>
+      <text>个人词库摘要</text>
     </view>
     <view class="english-vocab-status">
-      <text class="english-vocab-status-title">{{englishVocabularyStats.totalWords}} 词已准备</text>
-      <text class="english-vocab-status-desc">系统会按薄弱词和复测节奏安排每天出现的单词。</text>
+      <text class="english-vocab-status-title">{{englishVocabularyStats.totalWords}} 个词已进入个人词库</text>
+      <text class="english-vocab-status-desc">词库作为底座自动维护，日常优先从认词练习和纸面听写开始。</text>
     </view>
     <view class="english-stat-grid">
       <view class="english-stat" wx:for="{{englishQuickStats}}" wx:key="key">
@@ -124,8 +144,8 @@
 
   <view class="section tools-section">
     <view class="section-heading">
-      <view class="heading-icon">2</view>
-      <text>{{subject === 'english' ? '继续练习' : '工具'}}</text>
+      <view class="heading-icon">{{subject === 'english' ? '↺' : '2'}}</view>
+      <text>{{subject === 'english' ? '辅助入口' : '工具'}}</text>
     </view>
     <view class="tool-grid">
       <view
