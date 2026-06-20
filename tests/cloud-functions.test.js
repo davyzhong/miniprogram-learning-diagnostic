@@ -320,8 +320,8 @@ test('generatePaper stores and returns printable PDF page metadata', async () =>
       studentId: 'student-1',
       subject: 'math',
       pendingBottlenecks: [
-        { lpCode: 'LP-001', lpName: '计算错误' },
-        { lpCode: 'LP-008', lpName: '审题错误' }
+        { lpCode: 'LP-001', lpName: '计算错误', weight: 55 },
+        { lpCode: 'LP-008', lpName: '审题错误', weight: 55 }
       ]
     }],
     papers: []
@@ -388,8 +388,8 @@ test('generatePaper filters incomplete AI questions before trimming to expected 
       studentId: 'student-1',
       subject: 'math',
       pendingBottlenecks: [
-        { lpCode: 'LP-001', lpName: '计算错误' },
-        { lpCode: 'LP-008', lpName: '审题错误' }
+        { lpCode: 'LP-001', lpName: '计算错误', weight: 55 },
+        { lpCode: 'LP-008', lpName: '审题错误', weight: 55 }
       ]
     }],
     papers: []
@@ -459,9 +459,10 @@ test('generatePaper asks verification papers to include core and extension quest
   })
 
   assert.equal(result.success, true)
-  assert.match(prompt, /每个卡点出 2 题/)
-  assert.match(prompt, /1核心/)
-  assert.match(prompt, /1延展/)
+  // 置信度分层出题：prompt 应包含分层指令（不再固定"每个卡点出2题"）
+  assert.match(prompt, /置信度/)
+  assert.match(prompt, /核心题/)
+  assert.match(prompt, /迁移题/)
 })
 
 test('generatePaper accepts fine math bottleneck ids and resolves candidate names', async () => {
@@ -546,7 +547,7 @@ test('generatePaper stores verificationPack for many fine bottlenecks', async ()
         candidateBottlenecks: [{
           bottleneckId: targetId,
           title: `细分卡点 ${index + 1}`,
-          weight: 100 - index
+          weight: 60 - index
         }]
       }))
     }],
@@ -602,14 +603,13 @@ test('generatePaper stores verificationPack for many fine bottlenecks', async ()
   assert.deepEqual(paper.bottleneckTargets, targets)
   assert.equal(paper.verificationPack.totalTargets, 8)
   assert.equal(paper.verificationPack.totalQuestions, 16)
-  assert.equal(paper.verificationPack.pages.length, 3)
+  assert.equal(paper.verificationPack.pages.length, 2)
   assert.deepEqual(paper.verificationPack.pages.map(page => page.pageCode), [
     'MATH-V-20260616-01-P01',
-    'MATH-V-20260616-01-P02',
-    'MATH-V-20260616-01-P03'
+    'MATH-V-20260616-01-P02'
   ])
-  // verificationPack 按 target 分页（3+3+2），每卡点 2 题
-  assert.deepEqual(paper.verificationPack.pages.map(page => page.questionIds.length), [6, 6, 4])
+  // verificationPack 按 target 分页（每页 5 个 target），8 个 target 分 2 页：5+3
+  assert.deepEqual(paper.verificationPack.pages.map(page => page.questionIds.length), [10, 6])
   assert.equal(paper.questions[0].pageCode, 'MATH-V-20260616-01-P01')
   assert.equal(paper.questions[0].targetId, 'BN-FINE-1')
   assert.equal(paper.questions[0].targetType, 'fine_bottleneck')
@@ -1911,7 +1911,7 @@ test('generatePaper validates default grades and verification target limits befo
     studentId: 'student-1',
     subject: 'math',
     type: 'verification',
-    targets: Array.from({ length: 61 }, (_, index) => `LP-${String(index + 1).padStart(3, '0')}`)
+    targets: Array.from({ length: 81 }, (_, index) => `LP-${String(index + 1).padStart(3, '0')}`)
   })).error, '学习卡点参数无效')
   assert.equal(initCalls, 1)
   assert.equal(db.dump('papers').length, 0)

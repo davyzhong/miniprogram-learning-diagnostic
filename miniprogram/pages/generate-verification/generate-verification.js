@@ -1,15 +1,27 @@
 // pages/generate-verification/generate-verification.js
+// 兜底页：仅在验证卷 none/failed 状态下进入，正常流程由统一入口 navigateToVerificationPaper 处理。
+// 卡点默认全选，题量按置信度分层（高3/中2/低1），不再有硬上限。
 const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
-const { buildBottleneckViews, profileBottlenecks } = require('../../utils/bottleneck-view')
+const { buildBottleneckViews, profileBottlenecks, buildConfidence } = require('../../utils/bottleneck-view')
 const { groupBottlenecksByHierarchy } = require('../../utils/math-bottleneck-hierarchy')
-const MAX_SELECTED_BOTTLENECKS = 10
-const MATH_TARGETS_PER_TASK_PAGE = 3
+
+// 置信度分层出题数（与云函数 generatePaper 保持一致）
+const CONFIDENCE_HIGH_THRESHOLD = 75
+const CONFIDENCE_MEDIUM_THRESHOLD = 45
+const QUESTIONS_FOR_HIGH = 3
+const QUESTIONS_FOR_MEDIUM = 2
+const QUESTIONS_FOR_LOW = 1
+
+function questionsForWeight(weight) {
+  const w = Number(weight) || 0
+  if (w >= CONFIDENCE_HIGH_THRESHOLD) return QUESTIONS_FOR_HIGH
+  if (w >= CONFIDENCE_MEDIUM_THRESHOLD) return QUESTIONS_FOR_MEDIUM
+  return QUESTIONS_FOR_LOW
+}
+
+const MATH_TARGETS_PER_TASK_PAGE = 5
 const CHINESE_TARGETS_PER_TASK_PAGE = 8
-const CORE_QUESTIONS_PER_BOTTLENECK = 1
-const EXTENSION_QUESTIONS_PER_BOTTLENECK = 1
-const QUESTIONS_PER_BOTTLENECK = CORE_QUESTIONS_PER_BOTTLENECK + EXTENSION_QUESTIONS_PER_BOTTLENECK
-const MAX_TOTAL_QUESTIONS = 20
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
 const CHINESE_REVIEW_TYPE_LABELS = {
   character: '汉字',
@@ -126,15 +138,12 @@ function targetCodesForPaper(bottlenecks = []) {
   return result
 }
 
+// 卡点默认全选（兜底页场景：用户想手动生成时，默认覆盖全量）
+// 若带 initialTargetCodes（从某卡点入口进来），则只选匹配项。
 function applySelectionLimit(bottlenecks = [], initialTargetCodes = []) {
   const hasInitialTargets = initialTargetCodes.length > 0
-  let selectedCount = 0
-  return bottlenecks.map((b, index) => {
-    const shouldSelect = hasInitialTargets
-      ? targetMatchesBottleneck(initialTargetCodes, b)
-      : index < MAX_SELECTED_BOTTLENECKS
-    const selected = Boolean(shouldSelect && selectedCount < MAX_SELECTED_BOTTLENECKS)
-    if (selected) selectedCount += 1
+  return bottlenecks.map(b => {
+    const selected = hasInitialTargets ? targetMatchesBottleneck(initialTargetCodes, b) : true
     return { ...b, selected }
   })
 }
@@ -193,10 +202,15 @@ Page({
           verificationBottlenecks(profile, this.data.initialTargetCodes)
             .map(b => {
               const sinceDateText = this.formatDate(b.sinceDate || b.firstSeenAt)
+              const confidence = buildConfidence(b)
+              const expectedQuestions = questionsForWeight(b.weight)
               return {
                 ...b,
                 sinceDateText,
-                rangeText: b.detailText || `首次发现：${sinceDateText || '待补充'}`
+                rangeText: b.detailText || `首次发现：${sinceDateText || '待补充'}`,
+                confidenceLabel: confidence.label,
+                confidenceClass: confidence.level,
+                expectedQuestions
               }
             }),
           this.data.initialTargetCodes
@@ -213,30 +227,22 @@ Page({
     }
   },
 
-  // 切换卡点选中状态
+  // 切换卡点选中状态（无上限，用户自由选择）
   onToggleBottleneck(e) {
     const idx = e.currentTarget.dataset.index
     const { bottlenecks } = this.data
     const b = bottlenecks[idx]
-
-    const selectedCount = bottlenecks.filter(x => x.selected).length
-    if (!b.selected && selectedCount >= MAX_SELECTED_BOTTLENECKS) {
-      wx.showToast({ title: `最多选 ${MAX_SELECTED_BOTTLENECKS} 个目标`, icon: 'none' })
-      return
-    }
-
     const key = `bottlenecks[${idx}].selected`
     this.setData({ [key]: !b.selected })
-
     this.setSelectionState(this.data.bottlenecks)
   },
 
   // 预览 PDF（调用云函数生成临时 PDF）
   async onPreview() {
-    const { studentId, subject, bottlenecks, paperConfig } = this.data
+    const { studentId, subject, bottlenecks } = this.data
     const selected = bottlenecks.filter(b => b.selected)
     if (selected.length === 0 || this.data.previewing) return
-    const questionCount = this.questionCountForSelection(selected.length, paperConfig.questionCount)
+    const questionCount = this.questionCountForSelection(selected)
     const targets = targetCodesForPaper(selected)
     const targetPlan = this.targetPlanForSelection(selected)
     if (targets.length === 0) {
@@ -277,10 +283,10 @@ Page({
 
   // 生成试卷（正式生成并保存）
   async onGenerate() {
-    const { studentId, subject, subjectName, bottlenecks, paperConfig } = this.data
+    const { studentId, subject, subjectName, bottlenecks } = this.data
     const selected = bottlenecks.filter(b => b.selected)
     if (selected.length === 0 || this.data.generating) return
-    const questionCount = this.questionCountForSelection(selected.length, paperConfig.questionCount)
+    const questionCount = this.questionCountForSelection(selected)
     const targets = targetCodesForPaper(selected)
     const targetPlan = this.targetPlanForSelection(selected)
     if (targets.length === 0) {
@@ -383,7 +389,7 @@ Page({
             targetNames,
             targetSummary: family.familyTitle || group.categoryTitle || targetNames.join('、'),
             targetCount: targetIds.length,
-            questionCount: this.questionCountForSelection(targetIds.length),
+            questionCount: this.questionCountForSelection(pageItems),
             scopeText: targetNames.join('、')
           })
         }
@@ -411,7 +417,7 @@ Page({
         pageIndex: pages.length + 1,
         title: `任务页 ${pages.length + 1}`,
         targetCount: targets.length,
-        questionCount: this.questionCountForSelection(targets.length),
+        questionCount: this.questionCountForSelection(targets),
         targetNames: targets.map(item => item.displayName || item.lpName || item.bottleneckId || item.lpCode).filter(Boolean),
         scopeText: targets.map(item => item.displayName || item.lpName || item.bottleneckId || item.lpCode).filter(Boolean).join('、')
       })
@@ -432,27 +438,27 @@ Page({
   buildPaperConfig(selectedItemsOrCount, selectedSummary) {
     const selectedItems = Array.isArray(selectedItemsOrCount) ? selectedItemsOrCount : []
     const selectedCount = Array.isArray(selectedItemsOrCount) ? selectedItems.length : Number(selectedItemsOrCount) || 0
-    const questionCount = this.questionCountForSelection(selectedCount)
+    const questionCount = this.questionCountForSelection(selectedItems)
     const isChinese = this.data.subject === 'chinese'
     const taskPages = this.buildTaskPages(selectedItems)
     return {
       scopeText: selectedSummary || '未选择学习卡点',
       questionCount,
-      estimatedMinutes: Math.max(0, selectedCount * 8),
+      estimatedMinutes: Math.max(0, Math.round(questionCount * 4)),
       pages: Math.max(1, Math.ceil(questionCount / 10)),
       taskPageCount: taskPages.length,
       taskPages,
-      maxTargets: MAX_SELECTED_BOTTLENECKS,
       paperSize: 'A4',
       targetUnitLabel: isChinese ? '错项数' : '卡点数',
       strategyText: isChinese
         ? '每个错项至少直接复测一次，并补充语境迁移题'
-        : `每个卡点 ${CORE_QUESTIONS_PER_BOTTLENECK} 道核心题 + ${EXTENSION_QUESTIONS_PER_BOTTLENECK} 道迁移题`
+        : '按置信度分层：高置信3题、中置信2题、低置信1题'
     }
   },
 
-  questionCountForSelection(selectedCount, configuredCount = 0) {
-    const expectedCount = selectedCount * QUESTIONS_PER_BOTTLENECK
-    return expectedCount || Number(configuredCount) || 0
+  // 题量按置信度累加：Σ questionsForWeight(weight)
+  questionCountForSelection(selectedItemsOrCount) {
+    const selectedItems = Array.isArray(selectedItemsOrCount) ? selectedItemsOrCount : []
+    return selectedItems.reduce((sum, item) => sum + questionsForWeight(item.weight), 0)
   }
 })

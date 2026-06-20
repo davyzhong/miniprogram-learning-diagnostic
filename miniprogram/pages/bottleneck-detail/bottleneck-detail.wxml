@@ -22,6 +22,15 @@
       </view>
     </view>
 
+    <view class="confidence-card" wx:if="{{confidence}}">
+      <view class="confidence-header">
+        <text class="confidence-title">置信度</text>
+        <text class="confidence-level {{confidence.level}}">{{confidence.dots}} {{confidence.label}}（{{confidence.score}}分）</text>
+      </view>
+      <text class="confidence-detail">{{confidence.detail}}</text>
+      <text class="confidence-trend" wx:if="{{bottleneck.trendText}}">趋势：{{bottleneck.trendText}}</text>
+    </view>
+
     <view class="metrics">
       <view class="metric" bindtap="onMetricTap" data-target="reports">
         <text class="metric-value">{{bottleneck.evidenceCount}}</text>
@@ -127,7 +136,7 @@
 
     <view class="action-panel">
       <view class="secondary-action" bindtap="onBackToCenter">返回卡点中心</view>
-      <view class="primary-action" bindtap="onGenerateVerification">生成纸面验证卷</view>
+      <view class="primary-action" bindtap="onGenerateVerification">查看验证卷</view>
     </view>
   </view>
 

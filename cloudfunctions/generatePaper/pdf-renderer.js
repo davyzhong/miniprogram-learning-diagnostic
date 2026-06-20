@@ -41,6 +41,7 @@ function groupQuestions(questions) {
         lpName: question.lpName || '综合验证',
         displayName: summarizeBottleneckName(question.lpName),
         questions: [],
+        confidenceLabel: question.confidenceLabel || '',
       };
       byKey.set(key, group);
       groups.push(group);
@@ -166,21 +167,29 @@ function drawStudentHeader(doc, subject, type, continuation = false, paperDate =
   return dividerY + 12;
 }
 
-function drawGroupBar(doc, group, index, y, type = 'verification') {
-  // 轻量分组标题：无背景色块，单行文字，紧凑
-  const label = `${String.fromCharCode(65 + index)}. ${group.displayName}`;
-  doc.fillColor(COLORS.blue).fontSize(10)
-    .text(label, PAGE.left, y, { width: PAGE.contentWidth * 0.7 });
+/**
+ * 栏内卡点标签：只占栏宽，跟随题目。左栏/右栏各自独立。
+ * 返回实际占用高度。
+ */
+function drawColumnGroupLabel(doc, groupName, qCount, confidenceLabel, y, x, colWidth, type = 'verification') {
+  const w = colWidth || COLUMN_WIDTH;
+  // 卡点名 + 右侧"验证N题"同一行
+  const nameWidth = w * 0.65;
+  const tagWidth = w * 0.35;
+  doc.fillColor(COLORS.blue).fontSize(9);
+  const nameHeight = doc.heightOfString(groupName || '', { width: nameWidth, lineGap: 1 });
+  doc.text(groupName || '', x, y, { width: nameWidth, lineGap: 1 });
+
+  const confTag = confidenceLabel ? `·${confidenceLabel}` : '';
   const modeLabel = type === 'verification' ? '验证' : '覆盖';
-  doc.fillColor(COLORS.muted).fontSize(8)
-    .text(`${modeLabel} · ${group.questions.length} 题`,
-      PAGE.left + PAGE.contentWidth * 0.7, y + 1, {
-        width: PAGE.contentWidth * 0.3,
-        align: 'right',
-      });
-  // 轻量下划线
-  drawLine(doc, PAGE.left, y + 14, PAGE.width - PAGE.right, y + 14, COLORS.pale, 0.8);
-  return y + 19;
+  doc.fillColor(COLORS.muted).fontSize(7.5)
+    .text(`${modeLabel}${qCount}题${confTag}`, x + nameWidth, y + 1, {
+      width: tagWidth, align: 'right',
+    });
+
+  // 下划线分隔
+  drawLine(doc, x, y + nameHeight + 2, x + w - 4, y + nameHeight + 2, COLORS.pale, 0.6);
+  return nameHeight + 5;
 }
 
 // 双栏布局：每行放两道题，充分利用 A4 宽度
@@ -195,11 +204,21 @@ function questionHeight(doc, question, colWidth) {
     width: w - 6,
     lineGap: 2,
   });
-  const answerHeight = contentHeight > 20 ? 56 : 48;
-  return contentHeight + answerHeight + 10;
+  // 演算区统一 52pt + 4pt 间距 + 10pt 底部
+  return contentHeight + 52 + 4 + 10;
 }
 
-function drawQuestion(doc, question, y, x, colWidth) {
+/**
+ * 计算题目的"内容文字高度"（不含演算区），用于双栏对齐时统一文字区高度
+ */
+function questionContentHeight(doc, question, colWidth) {
+  doc.fontSize(11);
+  const w = colWidth || COLUMN_WIDTH;
+  const fullText = `${question.index || ''}. ${question.content || ''}`;
+  return doc.heightOfString(fullText, { width: w - 6, lineGap: 2 });
+}
+
+function drawQuestion(doc, question, y, x, colWidth, alignContentHeight) {
   const w = colWidth || COLUMN_WIDTH;
   const left = x || PAGE.left;
 
@@ -210,14 +229,13 @@ function drawQuestion(doc, question, y, x, colWidth) {
       width: w - 4,
       lineGap: 2,
     });
-  doc.fillColor(COLORS.blue).fontSize(11); // 题号颜色（被 text 覆盖，但保留链路）
-  const contentHeight = doc.heightOfString(fullText, {
-    width: w - 4,
-    lineGap: 2,
-  });
 
+  // 演算区 Y 坐标：如果有对齐高度，用对齐高度（保证左右栏演算区同一 Y 开始）
+  const ownContentHeight = doc.heightOfString(fullText, { width: w - 4, lineGap: 2 });
+  const contentHeight = alignContentHeight || ownContentHeight;
   const boxY = y + contentHeight + 4;
-  const boxHeight = contentHeight > 20 ? 56 : 48;
+  // 演算区高度统一用 52pt（不区分长短题，保证双栏底部对齐）
+  const boxHeight = 52;
 
   doc.save()
     .strokeColor(COLORS.line)
@@ -364,96 +382,126 @@ async function generatePDF(questionsData, subject, type, options = {}) {
     return drawStudentHeader(doc, subject, type, true, paperDate, paperDisplayCode, pageNumber, currentStudentPageCode);
   }
 
-  const groups = groupQuestions(questionsData.questions || []);
+  // 按 pageCode 分组渲染：每个 pageCode 一页学生页，页内题目双栏排列。
+  // 不再逐 lpCode 画 group bar（28 个 lpCode 会浪费大量空间），
+  // 改为每个 pageCode 页头画一个汇总 bar（列出该页覆盖的卡点）。
+  const studentQuestions = questionsData.questions || [];
+  const groups = groupQuestions(studentQuestions);
+
+  // 按 pageCode 把题目分成页
+  const pagesByCode = new Map();  // pageCode → [{ group, question }]
+  groups.forEach(group => {
+    group.questions.forEach(question => {
+      const pc = questionPageCode(question, verificationPack, 1) || 'AUTO-1';
+      if (!pagesByCode.has(pc)) pagesByCode.set(pc, []);
+      pagesByCode.get(pc).push({ group, question });
+    });
+  });
+
+  const pageCodes = Array.from(pagesByCode.keys()).sort();
   let pageNumber = 1;
-  let y = drawStudentHeader(doc, subject, type, false, paperDate, paperDisplayCode, 1, pageCodeFromPack(verificationPack, 1));
+  let y = drawStudentHeader(doc, subject, type, false, paperDate, paperDisplayCode, 1, pageCodes[0] || '');
 
-  groups.forEach((group, groupIndex) => {
-    const firstQuestionPageCode = group.questions[0]
-      ? questionPageCode(group.questions[0], verificationPack, pageNumber)
-      : '';
-    if (
-      type === 'verification'
-      && currentStudentQuestionIds.length > 0
-      && currentStudentPageCode
-      && firstQuestionPageCode
-      && firstQuestionPageCode !== currentStudentPageCode
-    ) {
+  pageCodes.forEach((pageCode, pageIdx) => {
+    const pageItems = pagesByCode.get(pageCode) || [];
+    const pageQuestions = pageItems.map(item => item.question);
+
+    if (pageIdx > 0) {
       finishStudentPage();
       doc.addPage();
       pageNumber += 1;
-      y = startStudentPage(group.questions[0]);
+      y = startStudentPage(pageQuestions[0] || null);
     }
-    // 分页检查：只剩不到一行空间就换页（双栏下一行约 85pt）
-    if (y + 85 > PAGE.contentBottom) {
-      finishStudentPage();
-      doc.addPage();
-      pageNumber += 1;
-      y = startStudentPage(group.questions[0]);
-    }
-    y = drawGroupBar(doc, group, groupIndex, y, type);
 
-    // 双栏布局：两题一行（左栏 + 右栏）
-    for (let qi = 0; qi < group.questions.length; qi += 2) {
-      const leftQ = group.questions[qi];
-      const rightQ = group.questions[qi + 1];
-      const leftHeight = questionHeight(doc, leftQ);
-      const rightHeight = rightQ ? questionHeight(doc, rightQ) : 0;
-      const rowHeight = Math.max(leftHeight, rightHeight);
+    // 渲染策略：左右栏各自独立跟踪 lpCode，各自画栏内卡点标签。
+    // 卡点标签只占栏宽（不占整行），跟随题目。左右栏题目严格对齐。
+    let lastLeftLp = '';
+    let lastRightLp = '';
+    // 统计每个 lpCode 的题目数（用于标签显示）
+    const lpCounts = new Map();
+    const lpConfidence = new Map();
+    pageQuestions.forEach(q => {
+      const lp = q.lpCode || q.targetId || '';
+      lpCounts.set(lp, (lpCounts.get(lp) || 0) + 1);
+    });
+    groups.forEach(g => {
+      if (g.lpCode) lpConfidence.set(g.lpCode, g.confidenceLabel || '');
+    });
 
-      // 分页检查：当前行放不下就换页
-      const checkHeight = Math.max(rowHeight, 75);
-      const leftPageCode = questionPageCode(leftQ, verificationPack, pageNumber);
-      if (
-        type === 'verification'
-        && currentStudentQuestionIds.length > 0
-        && currentStudentPageCode
-        && leftPageCode
-        && leftPageCode !== currentStudentPageCode
-      ) {
+    for (let qi = 0; qi < pageQuestions.length; qi += 2) {
+      const leftQ = pageQuestions[qi];
+      const rightQ = pageQuestions[qi + 1];
+      const leftLp = leftQ.lpCode || leftQ.targetId || '';
+      const rightLp = rightQ ? (rightQ.lpCode || rightQ.targetId || '') : '';
+
+      // 1. 各栏独立判断是否需要画卡点标签
+      const leftNeedsLabel = leftLp !== lastLeftLp;
+      const rightNeedsLabel = rightQ && rightLp !== lastRightLp;
+
+      // 2. 计算标签高度（各栏独立，取最大值保证对齐）
+      let leftLabelH = 0, rightLabelH = 0;
+      if (leftNeedsLabel) {
+        doc.fontSize(9);
+        leftLabelH = doc.heightOfString(leftQ.lpName || leftLp, { width: COLUMN_WIDTH * 0.65, lineGap: 1 }) + 5;
+      }
+      if (rightNeedsLabel) {
+        doc.fontSize(9);
+        rightLabelH = doc.heightOfString(rightQ.lpName || rightLp, { width: COLUMN_WIDTH * 0.65, lineGap: 1 }) + 5;
+      }
+      const labelHeight = Math.max(leftLabelH, rightLabelH);
+
+      // 3. 计算题目行高
+      const leftContentH = questionContentHeight(doc, leftQ);
+      const rightContentH = rightQ ? questionContentHeight(doc, rightQ) : 0;
+      const alignContentHeight = Math.max(leftContentH, rightContentH);
+      const questionRowHeight = alignContentHeight + 52 + 4 + 10;
+
+      // 4. 总高度 = 标签高度 + 题目高度
+      const totalHeight = labelHeight + questionRowHeight;
+
+      // 5. 分页检查
+      if (y + totalHeight > PAGE.contentBottom) {
         finishStudentPage();
         doc.addPage();
         pageNumber += 1;
         y = startStudentPage(leftQ);
-        y = drawGroupBar(doc, group, groupIndex, y, type);
-      }
-      if (y + checkHeight > PAGE.contentBottom) {
-        finishStudentPage();
-        doc.addPage();
-        pageNumber += 1;
-        y = startStudentPage(leftQ);
-        y = drawGroupBar(doc, group, groupIndex, y, type);
+        // 换页后重置（跨页同卡点也重画标签，因为到了新页）
+        lastLeftLp = '';
+        lastRightLp = '';
+        qi -= 2;
+        continue;
       }
 
-      // 左栏
+      // 6. 画左栏卡点标签（如果需要）
+      if (leftNeedsLabel) {
+        const conf = lpConfidence.get(leftLp) || '';
+        const actualLabelH = drawColumnGroupLabel(doc,
+          leftQ.lpName || leftLp, lpCounts.get(leftLp) || 1, conf,
+          y, PAGE.left, COLUMN_WIDTH, type);
+        lastLeftLp = leftLp;
+        // 如果左右标签高度不等，左栏标签后补空白对齐到 labelHeight
+      }
+
+      // 7. 画右栏卡点标签（如果需要）
+      if (rightNeedsLabel) {
+        const conf = lpConfidence.get(rightLp) || '';
+        drawColumnGroupLabel(doc,
+          rightQ.lpName || rightLp, lpCounts.get(rightLp) || 1, conf,
+          y, PAGE.left + COLUMN_WIDTH + COLUMN_GAP, COLUMN_WIDTH, type);
+        lastRightLp = rightLp;
+      }
+
+      // 8. 题目起始 Y = 当前 Y + 标签高度
+      const questionY = y + labelHeight;
+
+      // 9. 画双栏题目
       rememberQuestionOnStudentPage(leftQ);
-      drawQuestion(doc, leftQ, y, PAGE.left, COLUMN_WIDTH);
-
-      // 右栏（如果有配对的题）
+      drawQuestion(doc, leftQ, questionY, PAGE.left, COLUMN_WIDTH, alignContentHeight);
       if (rightQ) {
-        const rightPageCode = questionPageCode(rightQ, verificationPack, pageNumber);
-        if (
-          type === 'verification'
-          && currentStudentQuestionIds.length > 0
-          && currentStudentPageCode
-          && rightPageCode
-          && rightPageCode !== currentStudentPageCode
-        ) {
-          // 右栏跨 pageCode：右栏单独画在下一行（降级单栏）
-          rememberQuestionOnStudentPage(leftQ);
-          y += leftHeight;
-          // 右题放下一行左栏
-          rememberQuestionOnStudentPage(rightQ);
-          drawQuestion(doc, rightQ, y, PAGE.left, COLUMN_WIDTH);
-          y += questionHeight(doc, rightQ);
-          continue;
-        }
         rememberQuestionOnStudentPage(rightQ);
-        const rightX = PAGE.left + COLUMN_WIDTH + COLUMN_GAP;
-        drawQuestion(doc, rightQ, y, rightX, COLUMN_WIDTH);
+        drawQuestion(doc, rightQ, questionY, PAGE.left + COLUMN_WIDTH + COLUMN_GAP, COLUMN_WIDTH, alignContentHeight);
       }
-
-      y += rowHeight;
+      y += totalHeight;
     }
   });
   finishStudentPage();

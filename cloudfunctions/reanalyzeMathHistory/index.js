@@ -828,18 +828,45 @@ async function rebuildSubjectProfile(studentId, activeReports = []) {
   const profile = (profileRes.data || [])[0]
   if (!profile) return null
 
-  const latest = activeReports
+  // === merge 语义：聚合所有有效报告的卡点 ===
+  // 不再只取最新一份报告覆盖，而是按时间正序回放所有有效报告，
+  // 用 buildProfileSummary 的 merge 逻辑累加卡点，保证全量历史数据不丢失。
+  const { buildProfileSummary } = require('./profile-summary')
+  const studentReports = activeReports
     .filter(report => report.studentId === studentId)
     .filter(report => report.isEffective !== false)
-    .sort((a, b) => timeOf(b) - timeOf(a))[0]
-  const currentBottlenecks = latest ? (latest.bottlenecks || []) : []
+    .filter(report => report.bottlenecks && report.bottlenecks.length > 0 || (report.verificationTargets && report.verificationTargets.length > 0))
+    .sort((a, b) => timeOf(a) - timeOf(b))  // 正序：从最早到最新
+
+  let mergedProfile = {
+    currentBottlenecks: [],
+    pendingBottlenecks: [],
+    improvedBottlenecks: [],
+    chineseReviewItems: [],
+  }
+
+  for (const report of studentReports) {
+    const reportTime = report.createdAt ? new Date(report.createdAt) : now()
+    const summary = buildProfileSummary(mergedProfile, report, reportTime)
+    if (summary.isEffective) {
+      mergedProfile = {
+        ...mergedProfile,
+        currentBottlenecks: summary.currentBottlenecks,
+        chineseReviewItems: summary.chineseReviewItems || mergedProfile.chineseReviewItems,
+        currentSummary: summary.currentSummary,
+        nextAction: summary.nextAction,
+      }
+    }
+  }
+
+  const currentBottlenecks = mergedProfile.currentBottlenecks
   const pendingBottlenecks = currentBottlenecks
     .filter(item => item.status !== 'improved')
     .map(item => ({
       lpCode: item.lpCode,
       lpName: item.lpName,
       severity: item.severity || 'medium',
-      sinceDate: item.firstSeenAt || latest.evidenceTime || latest.createdAt || now(),
+      sinceDate: item.firstSeenAt || now(),
       nodeIds: item.nodeIds || [],
       candidateBottlenecks: item.candidateBottlenecks || [],
       recommendedResourceIds: item.recommendedResourceIds || [],
@@ -848,12 +875,26 @@ async function rebuildSubjectProfile(studentId, activeReports = []) {
       nextActionType: item.nextActionType || '',
       nextActionText: item.nextActionText || ''
     }))
+  const improvedBottlenecks = currentBottlenecks
+    .filter(item => item.status === 'improved')
+    .map(item => ({
+      lpCode: item.lpCode,
+      lpName: item.lpName,
+      sinceDate: item.firstSeenAt || now(),
+      improvedDate: item.lastPassedAt || item.lastSeenAt || now(),
+    }))
 
+  // 归档保护：把旧 currentBottlenecks 存到 archivedBottlenecks，防止再次丢失
+  const oldBottlenecks = (profile.currentBottlenecks || [])
+
+  const latest = studentReports.length > 0 ? studentReports[studentReports.length - 1] : null
   const patch = {
-    currentSummary: latest ? (latest.changeSummary || latest.summary || '已基于重分析报告更新学习卡点。') : '暂未形成明确学习卡点，建议继续上传试卷观察。',
+    currentSummary: mergedProfile.currentSummary || (latest ? (latest.changeSummary || latest.summary || '已基于重分析报告更新学习卡点。') : '暂未形成明确学习卡点，建议继续上传试卷观察。'),
     currentBottlenecks,
     pendingBottlenecks,
-    improvedBottlenecks: [],
+    improvedBottlenecks,
+    archivedBottlenecks: oldBottlenecks,
+    archivedAt: now(),
     nextAction: currentBottlenecks.length > 0 ? '先重学，再微验证' : '继续上传试卷',
     latestEffectiveReportId: latest ? latest._id : '',
     totalReports: activeReports.filter(report => report.studentId === studentId).length,
@@ -867,7 +908,11 @@ async function rebuildSubjectProfile(studentId, activeReports = []) {
     studentId,
     profileId: profile._id,
     latestEffectiveReportId: patch.latestEffectiveReportId,
-    currentBottleneckCount: currentBottlenecks.length
+    currentBottleneckCount: currentBottlenecks.length,
+    pendingCount: pendingBottlenecks.length,
+    improvedCount: improvedBottlenecks.length,
+    archivedCount: oldBottlenecks.length,
+    replayedReportCount: studentReports.length,
   }
 }
 

@@ -2,7 +2,8 @@ const { bottleneckLabelOf } = require('../../utils/learning-records')
 const {
   buildBottleneckView,
   expandFineBottleneckItems,
-  buildGroupedBottleneckViews
+  buildGroupedBottleneckViews,
+  buildConfidence
 } = require('../../utils/bottleneck-view')
 const { buildLearningMapReportItems } = require('../../utils/math-learning-map')
 const { paperCodeOf } = require('../../utils/paper-display')
@@ -184,7 +185,7 @@ function buildDiagnosisExplanation(report, context = {}) {
       : (hasChineseErrorItems
         ? '语文记忆型错项已单独列出，验证卷会优先复测这些字词、诗句或积累项。'
         : '暂未发现明确学习卡点，建议继续积累样本。')),
-    explanationActionText: bottleneckCount > 0 || hasChineseErrorItems ? '生成纸面验证卷' : '继续拍照诊断',
+    explanationActionText: bottleneckCount > 0 || hasChineseErrorItems ? '查看验证卷' : '继续拍照诊断',
     explanationActionType: bottleneckCount > 0 || hasChineseErrorItems ? 'generate-verification' : 'upload-diagnosis',
     explanationActionUrl: bottleneckCount > 0 || hasChineseErrorItems
       ? buildTraceableUrl({
@@ -375,8 +376,21 @@ function buildReportView(report, options = {}) {
   const isVerification = report.type === 'verification'
   const paperCodeText = paperCodeOf(report.linkedPaper || report.paper)
   const linkedPaper = report.linkedPaper || report.paper || {}
-  const rawBottlenecks = report.bottlenecks || []
-  const bottlenecks = buildReportBottleneckViews(report)
+
+  // 诊断报告展示全量卡点：优先用 profile.currentBottlenecks（合并了所有历史报告），
+  // 而非单次 report.bottlenecks（只含本次 AI 识别的卡点）。
+  // 验证报告（verification）仍用单次报告卡点，因为它只反映本次验证结果。
+  const profile = options.profile || report.profile || null
+  const useProfileBottlenecks = !isVerification
+    && profile
+    && Array.isArray(profile.currentBottlenecks)
+    && profile.currentBottlenecks.length > 0
+  const reportForBottlenecks = useProfileBottlenecks
+    ? { ...report, bottlenecks: profile.currentBottlenecks }
+    : report
+
+  const rawBottlenecks = reportForBottlenecks.bottlenecks || []
+  const bottlenecks = buildReportBottleneckViews(reportForBottlenecks)
   const errorDetails = report.errorDetails || []
   const sourcePhotos = reportImageFiles(report)
   const chineseErrorItems = buildChineseErrorItemViews(report)
@@ -391,10 +405,15 @@ function buildReportView(report, options = {}) {
         ? { statusText: '持续出现', statusClass: 'persisting', statusIcon: '!' }
         : { statusText: '需要验证', statusClass: 'pending', statusIcon: '?' }
     const displayName = bottleneckLabelOf(item)
+    const confidence = buildConfidence(item)
     return {
       ...item,
       ...status,
       displayName,
+      confidenceDots: confidence.dots,
+      confidenceLabel: confidence.label,
+      confidenceLevel: confidence.level,
+      confidenceDetail: confidence.detail,
       metaText: item.fineBottleneck && item.evidenceText
         ? item.evidenceText
         : `${item.errorCount || 0} 道相关错题 · ${displayName}`,

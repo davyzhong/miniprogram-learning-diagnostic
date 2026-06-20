@@ -158,6 +158,7 @@ function expandFineBottleneckItems(rawItems = [], options = {}) {
         parentLpName: item.lpName || '',
         parentDisplayName,
         bottleneckId: candidate.bottleneckId || '',
+        nodeId: candidate.nodeId || '',
         lpName: title,
         title,
         name: title,
@@ -299,8 +300,9 @@ function buildBottleneckStats(views = []) {
   const source = Array.isArray(views) ? views : []
   return {
     totalCount: source.length,
+    // 统一口径："待修复" = status !== 'improved'（含 needs_verification + persisting + recurring）
+    pendingCount: source.filter(item => item.status !== 'improved').length,
     activeCount: source.filter(item => item.status !== 'improved').length,
-    pendingCount: source.filter(item => item.status === 'needs_verification').length,
     persistingCount: source.filter(item => item.status === 'persisting').length,
     improvedCount: source.filter(item => item.status === 'improved').length,
     recurringCount: source.filter(item => item.trend === 'recurring').length
@@ -318,6 +320,40 @@ function findBottleneckView(views = [], identifier = '') {
   )) || null
 }
 
+// === 置信度计算（与云函数 generatePaper 的分层逻辑保持一致）===
+// 阈值：weight≥75 = 高，45-74 = 中，<45 = 低
+const CONFIDENCE_HIGH = 75
+const CONFIDENCE_MEDIUM = 45
+
+function buildConfidence(bottleneck = {}) {
+  const weight = Number(bottleneck.weight) || 0
+  const evidenceCount = Number(bottleneck.evidenceCount) || 0
+  const passCount = Number(bottleneck.verificationPassCount) || 0
+  const failCount = Number(bottleneck.verificationFailCount) || 0
+  const evidenceStrength = bottleneck.evidenceStrength || ''
+
+  // 如果没有 weight，用 evidenceStrength 映射
+  const effectiveWeight = weight || (evidenceStrength === 'high' ? 85 : evidenceStrength === 'medium' ? 60 : 35)
+
+  let level, label, dots
+  if (effectiveWeight >= CONFIDENCE_HIGH) {
+    level = 'high'; label = '高置信'; dots = '●●●'
+  } else if (effectiveWeight >= CONFIDENCE_MEDIUM) {
+    level = 'medium'; label = '中置信'; dots = '●●○'
+  } else {
+    level = 'low'; label = '低置信'; dots = '●○○'
+  }
+
+  // 构建详情文案
+  const parts = []
+  if (evidenceCount > 0) parts.push(`${evidenceCount}次证据`)
+  if (passCount > 0) parts.push(`通过${passCount}次`)
+  if (failCount > 0) parts.push(`未通过${failCount}次`)
+  const detail = parts.length > 0 ? parts.join(' · ') : '初步观察'
+
+  return { level, label, dots, score: effectiveWeight, detail, evidenceCount, passCount, failCount }
+}
+
 module.exports = {
   STATUS_META,
   TREND_META,
@@ -328,5 +364,6 @@ module.exports = {
   buildGroupedBottleneckViews,
   sortBottleneckViews,
   buildBottleneckStats,
-  findBottleneckView
+  findBottleneckView,
+  buildConfidence
 }

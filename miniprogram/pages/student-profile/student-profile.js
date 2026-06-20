@@ -17,6 +17,18 @@ Page({
 
   ...sharedNavigation,
 
+  onKnowledgeMapTap() {
+    const student = this.data.home && this.data.home.studentId
+    const name = this.data.home && this.data.home.studentName
+    if (!student) {
+      wx.showToast({ title: '请先选择孩子', icon: 'none' })
+      return
+    }
+    wx.navigateTo({
+      url: `/pages/knowledge-map/knowledge-map?studentId=${student}&studentName=${encodeURIComponent(name || '')}&subject=math`,
+    })
+  },
+
   async onLoad(options = {}) {
     const studentId = options.studentId || ''
     this.setData({ studentId })

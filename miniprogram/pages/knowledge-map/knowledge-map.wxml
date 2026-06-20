@@ -5,37 +5,70 @@
     <text>{{errorText}}</text>
   </view>
 
+  <view wx:elif="{{!view.hasData}}" class="empty">
+    <text class="empty-title">还没有学习卡点数据</text>
+    <text class="empty-hint">上传一份试卷后，系统会自动识别卡点并生成学习地图。</text>
+    <view class="empty-cta" bindtap="onUploadTap">去上传试卷</view>
+  </view>
+
   <view wx:else>
     <view class="hero">
       <text class="hero-title">🗺️ {{view.title}}</text>
       <text class="hero-summary">{{view.summary}}</text>
+      <text class="hero-hint">点击任意卡点直接开始学习，约 5-10 分钟讲清楚一个卡点</text>
     </view>
 
-    <view wx:if="{{!view.hasData}}" class="empty-hint">
-      上传试卷后，知识地图会自动生成。
+    <!-- 优先卡点 CTA：把最该处理的卡点置顶放大 -->
+    <view wx:if="{{view.priorityBottleneck}}" class="priority-card"
+          catchtap="onBottleneckTap"
+          data-lp-code="{{view.priorityBottleneck.lpCode}}"
+          data-lp-name="{{view.priorityBottleneck.displayName}}"
+          data-bottleneck-id="{{view.priorityBottleneck.bottleneckId}}"
+          data-node-id="{{view.priorityBottleneck.nodeId}}">
+      <view class="priority-badge">最该先处理</view>
+      <view class="priority-body">
+        <text class="priority-name">{{view.priorityBottleneck.displayName}}</text>
+        <text class="priority-symptom">{{view.priorityBottleneck.symptomText}}</text>
+      </view>
+      <view class="priority-action">
+        <text class="priority-action-text">学一下</text>
+        <text class="priority-action-arrow">›</text>
+      </view>
     </view>
 
+    <!-- 领域分组：默认平铺所有卡点，不再折叠 -->
     <view class="domain-list">
-      <view class="domain-card" wx:for="{{view.domains}}" wx:key="key"
-            bindtap="onDomainTap" data-domain="{{item.key}}">
+      <view class="domain-card" wx:for="{{view.domains}}" wx:key="key">
         <view class="domain-header">
           <text class="domain-icon">{{item.icon}}</text>
           <view class="domain-info">
             <text class="domain-name">{{item.name}}</text>
-            <text class="domain-stats">{{item.count > 0 ? item.count + ' 个卡点' : '暂无数据'}}{{item.activeCount > 0 ? ' · ' + item.activeCount + '待修' : ''}}</text>
+            <text class="domain-stats">{{item.count}} 个卡点{{item.pendingCount > 0 ? ' · ' + item.pendingCount + '待修' : ''}}</text>
           </view>
-          <text class="domain-chevron">{{item.expanded ? '▾' : '▸'}}</text>
         </view>
 
-        <view class="domain-bottlenecks" wx:if="{{item.expanded && item.bottlenecks.length > 0}}">
-          <view class="bn-item {{b.statusClass}}" wx:for="{{item.bottlenecks}}" wx:for-item="b" wx:key="lpCode"
-                catchtap="onBottleneckTap" data-lp-code="{{b.lpCode}}" data-lp-name="{{b.displayName}}">
+        <view class="domain-bottlenecks">
+          <view class="bn-item {{b.statusClass}}"
+                wx:for="{{item.bottlenecks}}"
+                wx:for-item="b"
+                wx:key="lpCode"
+                catchtap="onBottleneckTap"
+                data-lp-code="{{b.lpCode}}"
+                data-lp-name="{{b.displayName}}"
+                data-bottleneck-id="{{b.bottleneckId}}"
+                data-node-id="{{b.nodeId}}">
             <text class="bn-icon">{{b.statusIcon}}</text>
             <view class="bn-text">
-              <text class="bn-name">{{b.displayName}}</text>
-              <text class="bn-meta">{{b.metaText}} · {{b.statusText}}</text>
+              <view class="bn-name-row">
+                <text class="bn-name">{{b.displayName}}</text>
+                <text class="bn-confidence {{b.confidenceLevel}}">{{b.confidenceDots}} {{b.confidenceLabel}}</text>
+              </view>
+              <text class="bn-symptom">{{b.confidenceDetail}} · {{b.symptomText}}</text>
             </view>
-            <text class="bn-arrow">›</text>
+            <view class="bn-cta">
+              <text class="bn-cta-text">学一下</text>
+              <text class="bn-arrow">›</text>
+            </view>
           </view>
         </view>
       </view>

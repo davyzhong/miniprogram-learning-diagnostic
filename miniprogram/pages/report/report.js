@@ -4,6 +4,7 @@ const { formatChineseDateTime } = require('../../utils/util')
 const { createAnalysisPoller } = require('../../utils/analysis-poller')
 const { buildReportView } = require('./report-presenter')
 const { getSubjectName } = require('../../utils/constants')
+const { navigateToVerificationPaper, startVerificationPoller, stopVerificationPoller } = require('../../utils/shared-navigation')
 
 function downloadCloudFile(fileID) {
   return new Promise((resolve, reject) => {
@@ -176,7 +177,8 @@ Page({
       const feedbackItems = await this.loadFeedbackItems(id, detail)
       const feedbackByTarget = this.buildFeedbackMap(feedbackItems)
       const dateText = formatChineseDateTime(report.createdAt)
-      const view = buildReportView(reportWithContext)
+      // 传 profile 给 presenter，让诊断报告展示全量合并卡点（而非单次报告的卡点）
+      const view = buildReportView(reportWithContext, { profile: detail.profile || detail.subjectProfile || null })
 
       // 待验证卡点数优先来自报告详情，避免报告页再拉整套学科 Dashboard。
       var pendingCount = typeof detail.pendingCount === 'number'
@@ -216,6 +218,10 @@ Page({
         this.startPolling(id)
       }
 
+      // 诊断报告（非验证报告）且有卡点时：静默检查验证卷是否在生成中，
+      // 若是则启动轮询，生成完成后自动跳转预览（符合"异步自动生成、无需点击"）
+      this.maybeStartVerificationPolling(report, view)
+
     } catch (err) {
       console.error('加载报告失败', err)
       wx.showToast({ title: '加载失败', icon: 'none' })
@@ -254,45 +260,17 @@ Page({
     })
   },
 
-  // ========== 生成/查看纸面验证卷（自动生成状态分流） ==========
+  // ========== 查看验证卷（统一入口：状态分流 + 自动轮询 + 兜底重新生成） ==========
   async onGenerateVerification() {
     if (!this.data.canGeneratePaper) return
     var report = this._fullReport || this.data.report
-    var studentId = report.studentId
-    var subject = report.subject
-    var subjectName = getSubjectName(subject)
-
-    var bottleneckCodes = (report.bottlenecks || [])
-      .map(function(b) { return b.lpCode })
-    var chineseReviewItemIds = report.subject === 'chinese'
-      ? (report.chineseErrorItems || []).map(function(item) { return item.itemId || item.id }).filter(Boolean)
-      : []
-    var bottlenecks = bottleneckCodes.concat(chineseReviewItemIds).join(',')
-
-    // 状态分流：查是否有自动生成的验证卷
-    wx.showLoading({ title: '查看验证卷…' })
-    var status = 'none'
-    var paperId = ''
-    try {
-      var result = await cloud.getActiveVerificationPaper(studentId, subject)
-      status = result.status || 'none'
-      paperId = result.paper && result.paper._id ? result.paper._id : ''
-    } catch (e) {
-      status = 'none'
-    }
-    wx.hideLoading()
-
-    if (status === 'ready' && paperId) {
-      wx.navigateTo({ url: '/pages/paper-preview/paper-preview?paperId=' + paperId })
-      return
-    }
-    if (status === 'generating') {
-      wx.showToast({ title: '验证卷生成中，请稍候', icon: 'none', duration: 2500 })
-      return
-    }
-    // failed 或 none：跳生成页
-    wx.navigateTo({
-      url: '/pages/generate-verification/generate-verification?studentId=' + studentId + '&subject=' + subject + '&subjectName=' + encodeURIComponent(subjectName) + '&bottlenecks=' + encodeURIComponent(bottlenecks)
+    var reportId = this.data.reportId
+    // 停止 onLoad 启动的轮询（用户主动点击时，由 navigateToVerificationPaper 管理）
+    stopVerificationPoller()
+    await navigateToVerificationPaper(cloud, {
+      studentId: report.studentId,
+      subject: report.subject,
+      reportId
     })
   },
 
@@ -588,9 +566,44 @@ Page({
 
   onHide() {
     if (this._poller) this._poller.stop()
+    stopVerificationPoller()
   },
 
   onUnload() {
     if (this._poller) this._poller.stop()
+    stopVerificationPoller()
+  },
+
+  // 静默检查验证卷状态：诊断报告且有卡点时，若验证卷正在生成则启动轮询
+  async maybeStartVerificationPolling(report, view) {
+    if (!report || !report.studentId) return
+    // 只对诊断报告（非验证报告）生效
+    if (view && view.isVerification) return
+    // 没有待验证卡点则不触发
+    var hasBottleneck = view && view.bottleneckCount > 0
+    if (!hasBottleneck && !(this.data.pendingCount > 0)) return
+    try {
+      var result = await cloud.getActiveVerificationPaper(report.studentId, report.subject, this.data.reportId)
+      var status = result.status || 'none'
+      var paper = result.paper || null
+      var progress = paper && paper.generationProgress ? paper.generationProgress : null
+      var completedBatches = progress ? (progress.completedBatches || 0) : 0
+      if (status === 'generating') {
+        if (completedBatches > 0) {
+          // 已有批次完成（别的入口在驱动），只轮询
+          startVerificationPoller(cloud, report.studentId, report.subject, this.data.reportId)
+        } else {
+          // 0 批完成（analyzePhotos 只创建了记录），静默驱动生成
+          // 不显示 loading（用户可能在看报告），生成完成后自动跳转
+          this._silentDriveGeneration = true
+          navigateToVerificationPaper(cloud, {
+            studentId: report.studentId,
+            subject: report.subject,
+            reportId: this.data.reportId
+          }).then(r => { this._silentDriveGeneration = false })
+            .catch(() => { this._silentDriveGeneration = false })
+        }
+      }
+    } catch (e) { /* 静默失败，不影响报告浏览 */ }
   }
 })

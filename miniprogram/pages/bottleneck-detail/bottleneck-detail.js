@@ -2,12 +2,14 @@ const cloud = require('../../utils/cloud')
 const {
   buildBottleneckViews,
   findBottleneckView,
-  profileBottlenecks
+  profileBottlenecks,
+  buildConfidence
 } = require('../../utils/bottleneck-view')
 const { bottleneckListText } = require('../../utils/learning-records')
 const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-display')
 const { SUBJECT_NAMES } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
+const { navigateToVerificationPaper } = require('../../utils/shared-navigation')
 
 // 知识节点 seed（查前序依赖）
 const knowledgeSeed = require('../../data/math/knowledge-nodes.seed')
@@ -325,9 +327,12 @@ Page({
 
       // 知识位置：从 knowledge-nodes seed 查前序和关联节点
       const knowledgePosition = buildKnowledgePosition(bottleneck)
+      // 置信度仪表盘
+      const confidence = buildConfidence(bottleneck)
 
       this.setData({
         bottleneck,
+        confidence,
         relatedReports,
         relatedPapers,
         evidenceChain,
@@ -344,29 +349,9 @@ Page({
   },
 
   async onGenerateVerification() {
-    const { studentId, subject, subjectName, studentName, lpCode } = this.data
-    // 状态分流
-    wx.showLoading({ title: '查看验证卷…' })
-    let status = 'none'
-    let paperId = ''
-    try {
-      const result = await cloud.getActiveVerificationPaper(studentId, subject)
-      status = result.status || 'none'
-      paperId = result.paper && result.paper._id ? result.paper._id : ''
-    } catch (e) { status = 'none' }
-    wx.hideLoading()
-
-    if (status === 'ready' && paperId) {
-      wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${paperId}` })
-      return
-    }
-    if (status === 'generating') {
-      wx.showToast({ title: '验证卷生成中，请稍候', icon: 'none', duration: 2500 })
-      return
-    }
-    wx.navigateTo({
-      url: `/pages/generate-verification/generate-verification?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName || '')}&targetCode=${encodeURIComponent(lpCode)}`
-    })
+    const { studentId, subject } = this.data
+    // 统一入口：状态分流 + 自动轮询 + 兜底重新生成
+    await navigateToVerificationPaper(cloud, { studentId, subject, reportId: '' })
   },
 
   async onOpenLearningResource() {

@@ -136,7 +136,8 @@ test('learning profile home loads the active student summary', async () => {
     getPapers: async filter => {
       assert.deepEqual(JSON.parse(JSON.stringify(filter)), { studentId: 'student-1' })
       return []
-    }
+    },
+    getActiveVerificationPaper: async () => ({ status: 'ready', paper: { _id: 'paper-1' } })
   }
   const { page, wx } = loadPage('miniprogram/pages/index/index.js', {
     modules: {
@@ -162,8 +163,8 @@ test('learning profile home loads the active student summary', async () => {
   assert.match(urls[0], /pages\/bottleneck-center\/bottleneck-center/)
   assert.match(urls[1], /pages\/bottleneck-detail\/bottleneck-detail/)
   assert.match(urls[1], /lpCode=LP-001/)
-  assert.match(urls[2], /pages\/generate-verification\/generate-verification/)
-  assert.match(urls[2], /targetCode=LP-001/)
+  // 统一入口：ready 时跳预览页
+  assert.match(urls[2], /pages\/paper-preview\/paper-preview\?paperId=paper-1/)
 })
 
 test('learning profile home falls back to legacy student reads when shared access is unavailable', async () => {
@@ -475,7 +476,8 @@ test('bottleneck center loads dashboard bottlenecks and filters by status', asyn
           ]
         }]
       }
-    }
+    },
+    getActiveVerificationPaper: async () => ({ status: 'ready', paper: { _id: 'paper-1' } })
   }
   const wx = createWxMock()
   const { page } = loadPage('miniprogram/pages/bottleneck-center/bottleneck-center.js', {
@@ -494,11 +496,11 @@ test('bottleneck center loads dashboard bottlenecks and filters by status', asyn
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.filteredBottlenecks.map(item => item.displayName))), ['审题理解'])
 
   page.onBottleneckTap({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
-  page.onGenerateForBottleneck({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
+  await page.onGenerateForBottleneck({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
   const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
   assert.match(urls[0], /pages\/bottleneck-detail\/bottleneck-detail/)
-  assert.match(urls[1], /pages\/generate-verification\/generate-verification/)
-  assert.match(urls[1], /targetCode=LP-001/)
+  // 统一入口：ready 时跳预览页
+  assert.match(urls[1], /pages\/paper-preview\/paper-preview\?paperId=paper-1/)
 })
 
 test('bottleneck pages expose learning task pack actions before verification', () => {
@@ -587,7 +589,8 @@ test('bottleneck detail builds a focused evidence workbench without repetitive r
           }
         ]
       }
-    }
+    },
+    getActiveVerificationPaper: async () => ({ status: 'ready', paper: { _id: 'paper-2' } })
   }
   const wx = createWxMock()
   const { page } = loadPage('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', {
@@ -625,12 +628,12 @@ test('bottleneck detail builds a focused evidence workbench without repetitive r
   assert.equal(page.data.visibleEvidenceChain.length, 4)
   assert.equal(page.data.showAllEvidence, true)
 
-  page.onGenerateVerification()
+  await page.onGenerateVerification()
   page.onViewReport({ currentTarget: { dataset: { id: 'report-1' } } })
   page.onViewPaper({ currentTarget: { dataset: { id: 'paper-1' } } })
   const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
-  assert.match(urls[0], /pages\/generate-verification\/generate-verification/)
-  assert.match(urls[0], /targetCode=LP-001/)
+  // 统一入口：ready 时跳预览页
+  assert.match(urls[0], /pages\/paper-preview\/paper-preview\?paperId=paper-2/)
   assert.match(urls[1], /pages\/report\/report\?id=report-1/)
   assert.match(urls[2], /pages\/paper-preview\/paper-preview\?paperId=paper-1/)
 })
@@ -957,12 +960,15 @@ test('subject home shows learning workflow tools for co-parent access', async ()
 })
 
 
-test('subject home task and primary actions open the focused workflow', () => {
+test('subject home task and primary actions open the focused workflow', async () => {
   const wx = createWxMock()
+  const cloud = {
+    getActiveVerificationPaper: async () => ({ status: 'ready', paper: { _id: 'paper-1' } })
+  }
   const { page } = loadPage('miniprogram/pages/subject-home/subject-home.js', {
     wx,
     modules: {
-      '../../utils/cloud': {},
+      '../../utils/cloud': cloud,
       '../../utils/util': { formatRelativeTime: () => '' },
       '../../utils/poller': { createPoller: () => ({ start() {}, stop() {}, isRunning: () => false }) }
     }
@@ -973,16 +979,18 @@ test('subject home task and primary actions open the focused workflow', () => {
     subjectName: '数学',
     studentName: '钟青羽',
     grade: '6',
-    primaryTask: { actionType: 'verification' }
+    primaryTask: { actionType: 'verification' },
+    canWriteActions: true
   })
 
   page.onTaskTap({ currentTarget: { dataset: { code: 'LP-001' } } })
-  page.onPrimaryAction()
+  await page.onPrimaryAction()
 
   const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
   assert.match(urls[0], /pages\/bottleneck-detail\/bottleneck-detail/)
   assert.match(urls[0], /lpCode=LP-001/)
-  assert.match(urls[1], /pages\/generate-verification\/generate-verification/)
+  // 统一入口：ready 时跳预览页
+  assert.match(urls[1], /pages\/paper-preview\/paper-preview\?paperId=paper-1/)
 })
 
 test('English practice page generates a 20 word familiarity session without patterns', async () => {
@@ -1403,9 +1411,10 @@ test('verification page selects all available bottlenecks by default', async () 
   await page.loadPendingBottlenecks()
   assert.equal(page.data.selectedCount, 2)
   assert.ok(page.data.bottlenecks.every(item => item.selected))
-  assert.equal(page.data.paperConfig.questionCount, 4)
+  // 置信度分层：medium(55)→2题，high(80)→3题，共5题
+  assert.equal(page.data.paperConfig.questionCount, 5)
   assert.equal(page.data.paperConfig.pages, 1)
-  assert.equal(page.data.paperConfig.strategyText, '每个卡点 1 道核心题 + 1 道迁移题')
+  assert.equal(page.data.paperConfig.strategyText, '按置信度分层：高置信3题、中置信2题、低置信1题')
 })
 
 test('verification page focuses the workbench target code when provided', async () => {
@@ -1435,7 +1444,8 @@ test('verification page focuses the workbench target code when provided', async 
   assert.equal(page.data.selectedCount, 1)
   assert.equal(page.data.selectedSummary, '审题理解')
   assert.equal(page.data.paperConfig.scopeText, '审题理解')
-  assert.equal(page.data.paperConfig.questionCount, 2)
+  // LP-008 severity high → weight 80 → 高置信 → 3题
+  assert.equal(page.data.paperConfig.questionCount, 3)
 })
 
 test('verification page uses current bottlenecks with shared priority sorting', async () => {
@@ -1575,10 +1585,11 @@ test('verification page plans all report-selected fine math targets and sends fi
     JSON.parse(JSON.stringify(page.data.bottlenecks.filter(item => item.selected).map(item => item.bottleneckId))),
     ['BN-FINE-1', 'BN-FINE-2', 'BN-FINE-3', 'BN-FINE-4', 'BN-FINE-5', 'BN-FINE-6', 'BN-FINE-7']
   )
-  assert.equal(page.data.paperConfig.taskPageCount, 3)
+  // 每页 5 个 BN：7 个 = 2 页（5 + 2）
+  assert.equal(page.data.paperConfig.taskPageCount, 2)
   assert.deepEqual(
     JSON.parse(JSON.stringify(page.data.paperConfig.taskPages.map(item => item.targetCount))),
-    [3, 3, 1]
+    [5, 2]
   )
 
   await page.onGenerate()
@@ -1592,7 +1603,8 @@ test('verification page plans all report-selected fine math targets and sends fi
     'BN-FINE-6',
     'BN-FINE-7'
   ])
-  assert.equal(request.questionCount, 14)
+  // 7 个 BN 全是 high(85) → 高置信 → 每个3题 = 21题
+  assert.equal(request.questionCount, 21)
 })
 
 test('verification page uses Chinese concrete review items as selectable targets', async () => {
@@ -1676,7 +1688,8 @@ test('verification paper generation sends only selected bottlenecks and opens th
 
   await page.onGenerate()
   assert.deepEqual(JSON.parse(JSON.stringify(request.targets)), ['LP-001'])
-  assert.equal(request.questionCount, 2)
+  // 无 weight 字段 → 低置信 → 1题
+  assert.equal(request.questionCount, 1)
   assert.equal(request.type, 'verification')
   assert.equal(request.preview, false)
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paperId=paper-1/)
@@ -1855,7 +1868,7 @@ test('paper preview falls back to question bottleneck names for legacy papers', 
   assert.equal(page.data.bottleneckText, '计算错误、审题错误')
 })
 
-test('paper preview downloads once and marks the PDF as downloaded', async () => {
+test('paper preview allows multiple downloads (user may lose the file)', async () => {
   let downloadCount = 0
   const storage = {}
   const wx = createWxMock({
@@ -1881,33 +1894,48 @@ test('paper preview downloads once and marks the PDF as downloaded', async () =>
   assert.equal(downloadCount, 1)
   assert.equal(wx.calls.find(call => call.name === 'openDocument').payload.filePath, '/tmp/paper.pdf')
 
+  // 第二次下载：允许重复下载（用户可能找不到文件需要重新下载）
   await page.onDownload()
-  assert.equal(downloadCount, 1)
-  assert.ok(wx.calls.some(call => call.name === 'showToast' && /已下载/.test(call.payload.title)))
+  assert.equal(downloadCount, 2, '第二次下载应成功，不再被阻止')
+  assert.equal(page.data.downloading, false)
 })
 
-test('report passes its subject name into verification paper generation', () => {
+test('report passes its subject name into verification paper generation', async () => {
   const wx = createWxMock()
+  let activePaperCall = null
+  const cloud = {
+    getActiveVerificationPaper: async (studentId, subject, reportId) => {
+      activePaperCall = { studentId, subject, reportId }
+      return { status: 'ready', paper: { _id: 'paper-1' } }
+    }
+  }
   const { page } = loadPage('miniprogram/pages/report/report.js', {
     wx,
     modules: {
-      '../../utils/cloud': {},
+      '../../utils/cloud': cloud,
       '../../utils/util': { formatChineseDateTime: () => '' },
       '../../utils/poller': { createPoller: () => ({ start() {}, stop() {} }) },
       './report-presenter': { buildReportView: () => ({}) }
     }
   })
   page.setData({
+    reportId: 'report-1',
     report: {
       studentId: 'student-1',
       subject: 'chinese',
       bottlenecks: [{ lpCode: 'LP-101' }]
-    }
+    },
+    canGeneratePaper: true
   })
 
-  page.onGenerateVerification()
-  const url = wx.calls.find(call => call.name === 'navigateTo').payload.url
-  assert.match(url, /subjectName=%E8%AF%AD%E6%96%87/)
+  await page.onGenerateVerification()
+  // 统一入口：查验证卷状态，ready 时直接跳预览
+  assert.equal(activePaperCall.studentId, 'student-1')
+  assert.equal(activePaperCall.subject, 'chinese')
+  assert.equal(activePaperCall.reportId, 'report-1')
+  const nav = wx.calls.find(call => call.name === 'navigateTo')
+  assert.ok(nav, '应当跳转到预览页')
+  assert.match(nav.payload.url, /paperId=paper-1/)
 })
 
 test('report retry treats a cloud timeout as background analysis and resumes polling', async () => {
@@ -2942,6 +2970,7 @@ test('report co-parent can generate paper and retry analysis', async () => {
       }
     }),
     getSubjectDashboard: async () => ({ profile: { pendingBottlenecks: [{ lpCode: 'LP-001' }] } }),
+    getActiveVerificationPaper: async () => ({ status: 'ready', paper: { _id: 'paper-ready' } }),
     callAnalyzePhotos: async () => { retryCalled = true }
   }
   const wx = createWxMock()
@@ -2959,10 +2988,11 @@ test('report co-parent can generate paper and retry analysis', async () => {
   assert.equal(page.data.canGeneratePaper, true)
   assert.equal(page.data.canRetryAnalysis, true)
 
-  page.onGenerateVerification()
+  await page.onGenerateVerification()
   page.onRetryAnalysis()
   assert.equal(retryCalled, true)
-  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
+  // 统一入口：ready 时跳预览页
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paper-preview\?paperId=paper-ready/)
 })
 
 test('report learning resource cards copy resource links for parent review', () => {

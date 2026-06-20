@@ -4,6 +4,7 @@ const { formatRelativeTime } = require('../../utils/util')
 const { buildStatusText } = require('../../utils/learning-records')
 const { createAnalysisPoller } = require('../../utils/analysis-poller')
 const { buildSubjectHomeView } = require('./subject-home-presenter')
+const { navigateToVerificationPaper } = require('../../utils/shared-navigation')
 const { getSubjectColor } = require('../../utils/constants')
 
 const SUBJECT_HOME_CACHE_TTL_MS = 30 * 1000
@@ -293,32 +294,9 @@ Page({
 
   async navigateToVerification(targetCode = '') {
     if (!this.data.canWriteActions) return
-    const { studentId, subject, subjectName, studentName } = this.data
-    // 状态分流：查是否有自动生成的验证卷
-    wx.showLoading({ title: '查看验证卷…' })
-    let status = 'none'
-    let paperId = ''
-    try {
-      const result = await cloud.getActiveVerificationPaper(studentId, subject)
-      status = result.status || 'none'
-      paperId = result.paper && result.paper._id ? result.paper._id : ''
-    } catch (e) {
-      status = 'none'
-    }
-    wx.hideLoading()
-
-    if (status === 'ready' && paperId) {
-      wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${paperId}` })
-      return
-    }
-    if (status === 'generating') {
-      wx.showToast({ title: '验证卷生成中，请稍候', icon: 'none', duration: 2500 })
-      return
-    }
-    const targetParam = targetCode ? `&targetCode=${encodeURIComponent(targetCode)}` : ''
-    wx.navigateTo({
-      url: `/pages/generate-verification/generate-verification?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName)}${targetParam}`
-    })
+    const { studentId, subject } = this.data
+    // 统一入口：状态分流 + 自动轮询 + 兜底重新生成
+    await navigateToVerificationPaper(cloud, { studentId, subject, reportId: '' })
   },
 
   navigateToBottleneckDetail(lpCode = '', bottleneckId = '', viewId = '') {
@@ -355,7 +333,7 @@ Page({
 
   onPrimaryAction() {
     const actionType = this.data.primaryTask && this.data.primaryTask.actionType
-    this.navigateByAction(actionType || (this.data.isFirstUse ? 'diagnosis' : 'verification'))
+    return this.navigateByAction(actionType || (this.data.isFirstUse ? 'diagnosis' : 'verification'))
   },
 
   onTaskTap(e) {
@@ -391,8 +369,7 @@ Page({
       return
     }
     if (actionType === 'verification') {
-      this.navigateToVerification(payload.targetCode || '')
-      return
+      return this.navigateToVerification(payload.targetCode || '')
     }
     if (actionType === 'defaultPaper') {
       this.onDefaultPaperTap()

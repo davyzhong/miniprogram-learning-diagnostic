@@ -77,8 +77,54 @@ CloudBase (serverless, 12 cloud functions)
 - Chinese PDF fonts are bundled inside the cloud function directories — do not configure `FONT_FILE_ID` or external font paths.
 - **Never use `Intl` API in miniprogram code** — WeChat iOS/macOS runtime does not support it. Use `getUTC*` methods with manual timezone offset instead (see `beijingParts` in `miniprogram/utils/util.js`).
 - **LLM cloud functions need frontend `timeout: 60000`** — `wx.cloud.callFunction` defaults to 20s, but `generatePaper` / `generateReportPDF` / LLM-backed actions need up to 60s. See `callGeneratePaper` in `cloud.js`.
-- **PDF 格式迭代用本地预览工具** — `node scripts/preview-pdf.js` 生成到 `tmp/preview-verification.pdf`，不用上传云函数。改完 `pdf-renderer.js` 直接跑看效果。**每次调整 PDF 格式后，清除旧验证试卷并重新生成。**
-- **验证卷自动生成** — 诊断报告完成后 `analyzePhotos` 自动触发 `generatePaper`（通过 `auto-verification.js`）。用户无需手动点击，只需预览/打印。覆盖策略：新诊断标记旧卷 superseded。失败重试 3 次。
+- **PDF 格式迭代用本地预览工具** — `node scripts/preview-real-paper.js`（真实数据）或 `preview-pdf.js`（模拟数据）生成到 `tmp/`，不用上传云函数。改完 `pdf-renderer.js` 直接跑看效果。**每次调整 PDF 格式后，清除旧验证试卷并重新生成。**
+- **验证卷异步自动生成（v3）** — 诊断报告完成后 `analyzePhotos` 只创建 generating 记录（不实际生成，因云函数 return 后进程销毁）。前端 `navigateToVerificationPaper` 检测到 generating 且 completedBatches===0 时驱动逐批生成：循环调 `generatePaper(_appendToPaperId)` 每批 6-8 个 BN，最后调 `_regeneratePdf`。题量按置信度分层（高3/中2/低1题）。所有入口的"查看验证卷"按钮统一调 `navigateToVerificationPaper`。详见 `docs/subject-design/验证卷完整设计文档.md`。
+- **验证卷 PDF 渲染规范（数学）** — ①按题数均匀分页（10题/页）②分页前按 lpCode stable sort（同卡点连续，避免双栏交错）③题目统一连续编号（`index=idx+1`，不用 LLM 批次内编号）④卡点标签栏内跟随（`drawColumnGroupLabel`，只占栏宽不占整行，左右栏各自独立跟踪 lpCode）⑤卡点名完整不截断、无 ABCD 字母编号 ⑥双栏严格对齐（文字区取 max、演算区统一 52pt）⑦LaTeX 清理（`cleanLatex`：`\frac{1}{4}`→`1/4`）⑧explanation 禁止模板废话、必须含本题具体数字计算步骤。
+
+### 全局信息一致性原则（CRITICAL）
+
+**同一份业务数据在不同页面展示时，统计口径必须完全一致。** 如果任何两个页面的数字不一致，就是 bug。
+
+#### 卡点统计统一口径
+
+所有展示"待修复卡点数"的页面，**必须**使用统一定义：
+
+```
+待修复 = status !== 'improved'（含 needs_verification + persisting + recurring + worsened）
+```
+
+**禁止**以下写法：
+- ❌ 只数 `persisting`（漏了 needs_verification）
+- ❌ 只数 `needs_verification`（漏了 persisting）
+- ❌ 用 `pendingBottlenecks.length`（粗卡点未展开，和展开后的数字不一致）
+
+**实现位置**：`buildBottleneckStats()` 的 `pendingCount` 和 `activeCount` 都用 `status !== 'improved'`。
+
+#### 卡点展示粒度一致性（CRITICAL）
+
+数学学科的卡点有粗（LP-xxx，8 个）和细（BN-xxx，~38 个）两层。**所有页面展示卡点数量时，必须统一使用"展开细卡点后的计数"**，否则同一份数据在不同页面会显示不同数字（8 vs 38）。
+
+涉及页面（修改时必须全部检查）：
+| 页面 | 数据源 | 展示粒度 | 计数字段 | 口径 |
+|---|---|---|---|---|
+| index（首页） | `allSubjectBottleneckViews`（数学展开 BN） | 细 | metrics"待验证" + bottleneckStats | status !== 'improved' |
+| student-profile | 同上（复用 index-presenter） | 细 | bottleneckStats.activeCount + metrics | status !== 'improved' |
+| subject-home | `buildSubjectBottleneckViews`（数学展开 BN） | 细 | pendingTaskCount | status !== 'improved' |
+| knowledge-map | `expandFineBottleneckItems`（展开 BN） | 细 | pendingCount（statusClass !== 'mastered'） | status !== 'improved' |
+| bottleneck-center | `buildBottleneckViews`（expandCandidates: true） | 细 | buildBottleneckStats | status !== 'improved' |
+| report | `buildReportBottleneckViews`（数学展开 BN） | 细 | bottleneckCount（全量）/ pendingCount | 全量 / status !== 'improved' |
+
+**关键**：`buildBottleneckViews` 调用时，数学学科**必须**传 `expandCandidates: true`，否则细卡点不会展开，计数会是粗卡点数（8）而非细卡点数（38）。`allSubjectBottleneckViews`（index-presenter.js）按学科分别构建，对 `subject.key === 'math'` 传 `expandCandidates`。
+
+#### 置信度统一
+
+所有展示卡点的地方必须附带置信度标签（`buildConfidence` 函数计算）：
+- 阈值：weight≥75 = 高置信，45-74 = 中置信，<45 = 低置信
+- 展示格式：`●●● 高置信` / `●●○ 中置信` / `●○○ 低置信`
+- 颜色：红/黄/灰三色体系
+- 云函数出题（`questionsForWeight`）和前端展示（`buildConfidence`）的阈值**必须一致**
+
+详见 `docs/subject-design/置信度驱动分层验证模型设计文档.md`。
 
 ## GitHub sync workflow
 
@@ -106,4 +152,5 @@ When the user asks to sync / pull / align with GitHub, **GitHub is the source of
 - `PROJECT_PLAN.md` — architecture, data models, progress tracker
 - `SETUP.md` — deployment (env, DB setup, font upload)
 - `docs/ARCHITECTURE.md`, `docs/CLOUD_FUNCTIONS.md`, `docs/DATA_DICTIONARY.md`, `docs/TESTING.md`, `docs/TROUBLESHOOTING.md`, `docs/TEST_MATRIX.md`, `docs/TEST_FRAMEWORK_DESIGN.md`
+- `docs/subject-design/置信度驱动分层验证模型设计文档.md` — **置信度分层出题、卡点细颗粒度模型、诊断报告↔验证卷↔反馈闭环、信息一致性全局原则**
 - `.claude/skills/test-framework/skill.md` — 三层测试框架 skill（测试分层、命令、写测试模式、harness 用法）

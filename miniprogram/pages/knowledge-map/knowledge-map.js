@@ -9,6 +9,8 @@ Page({
     subject: 'math',
     view: null,
     errorText: '',
+    // 标记当前正在生成任务包的卡点，前端做按钮 loading 态
+    generatingLpCode: '',
   },
 
   async onLoad(options = {}) {
@@ -28,30 +30,56 @@ Page({
     try {
       const profile = await cloud.getSubjectProfile(this.data.studentId, this.data.subject)
       const view = buildKnowledgeMapPageView(profile || {}, this.data.subject)
-      this.setData({ loading: false, view })
+      this.setData({ loading: false, view, errorText: '' })
     } catch (err) {
-      this.setData({ loading: false, errorText: err.message || '加载失败' })
+      this.setData({ loading: false, errorText: (err && err.message) || '加载失败' })
     }
   },
 
-  onDomainTap(e) {
-    const { domain } = e.currentTarget.dataset
-    // 展开/收起领域内的卡点列表
-    const view = this.data.view
-    if (!view) return
-    const domains = view.domains.map(d => ({
-      ...d,
-      expanded: d.key === domain ? !d.expanded : false,
-    }))
-    this.setData({ 'view.domains': domains })
+  // 点击卡点：直跳 learning-resource（跳过 bottleneck-detail 中间页）
+  // 与 report 页的 onBottleneckSnapshotTap 保持一致的快捷路径。
+  async onBottleneckTap(e) {
+    const { lpCode, lpName, bottleneckId, nodeId } = e.currentTarget.dataset
+    if (!lpCode) return
+    if (this.data.generatingLpCode) return // 防止重复点击
+
+    this.setData({ generatingLpCode: lpCode })
+    wx.showLoading({ title: '正在准备讲解…' })
+    try {
+      const result = await cloud.generateLearningResourcePack({
+        studentId: this.data.studentId,
+        subject: this.data.subject,
+        target: {
+          lpCode,
+          lpName: lpName || '',
+          bottleneckId: bottleneckId || lpCode,
+          nodeId: nodeId || '',
+          title: lpName || '学习卡点',
+        },
+        resources: [],
+      })
+      wx.hideLoading()
+      const packId = result && (result.packId || (result.pack && result.pack._id))
+      if (result && result.success && packId) {
+        wx.navigateTo({
+          url: `/pages/learning-resource/learning-resource?packId=${encodeURIComponent(packId)}`,
+        })
+      } else {
+        wx.showToast({ title: (result && result.error) || '讲解生成失败，请稍后重试', icon: 'none' })
+      }
+    } catch (err) {
+      wx.hideLoading()
+      wx.showToast({ title: (err && err.message) || '讲解生成失败', icon: 'none' })
+    } finally {
+      this.setData({ generatingLpCode: '' })
+    }
   },
 
-  onBottleneckTap(e) {
-    const { lpCode, lpName } = e.currentTarget.dataset
-    if (!lpCode) return
-    // 直跳 learning-resource
+  // 空状态：引导用户上传试卷
+  onUploadTap() {
+    const { studentId, studentName, subject } = this.data
     wx.navigateTo({
-      url: `/pages/bottleneck-detail/bottleneck-detail?studentId=${this.data.studentId}&studentName=${encodeURIComponent(this.data.studentName)}&subject=${this.data.subject}&subjectName=${encodeURIComponent(this.data.subjectName || '数学')}&lpCode=${lpCode}`,
+      url: `/pages/upload/upload?mode=diagnosis&studentId=${studentId}&subject=${subject}&studentName=${encodeURIComponent(studentName || '')}`,
     })
   },
 })

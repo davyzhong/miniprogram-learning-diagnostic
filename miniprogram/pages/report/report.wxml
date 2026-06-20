@@ -108,10 +108,11 @@
         <view class="bottleneck-copy">
           <view class="bottleneck-title-row">
             <text class="bottleneck-title">{{item.displayName}}</text>
+            <text class="confidence-tag {{item.confidenceLevel}}">{{item.confidenceDots}}</text>
             <text class="status-label status-label-{{item.statusClass}}">{{item.statusText}}</text>
           </view>
           <text class="bottleneck-desc">{{item.rootCause || item.suggestion || '建议结合相关错题进一步观察。'}}</text>
-          <text class="bottleneck-meta">{{item.metaText}}</text>
+          <text class="bottleneck-meta">{{item.confidenceLabel}} · {{item.confidenceDetail}} · {{item.metaText}}</text>
           <text class="feedback-link" catchtap="onOpenFeedback" data-target-type="bottleneck" data-target-id="{{item.bottleneckId || item.lpCode}}" data-type="wrong_bottleneck">反馈这个卡点</text>
         </view>
       </view>
@@ -220,7 +221,7 @@
       </view>
     </view>
 
-    <view class="primary-action" wx:if="{{showNextStep && canGeneratePaper}}" bindtap="onGenerateVerification"><text>＋</text><text>生成纸面验证卷</text></view>
+    <view class="primary-action" wx:if="{{showNextStep && canGeneratePaper}}" bindtap="onGenerateVerification"><text>＋</text><text>查看验证卷</text></view>
     <view class="bottom-actions">
       <button class="btn-secondary action-btn" bindtap="onShare">分享</button>
       <button class="btn-secondary action-btn" bindtap="onDownloadPDF" disabled="{{generatingPdf}}">{{generatingPdf ? '生成中...' : '下载 PDF'}}</button>

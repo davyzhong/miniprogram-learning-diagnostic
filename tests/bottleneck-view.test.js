@@ -79,8 +79,9 @@ test('bottleneck stats and lookup use normalized views', () => {
   const stats = buildBottleneckStats(views)
 
   assert.equal(stats.totalCount, 4)
+  // 统一口径：pendingCount = status !== 'improved'（含 needs_verification + persisting）
   assert.equal(stats.activeCount, 3)
-  assert.equal(stats.pendingCount, 1)
+  assert.equal(stats.pendingCount, 3)
   assert.equal(stats.persistingCount, 2)
   assert.equal(stats.improvedCount, 1)
   assert.equal(stats.recurringCount, 1)

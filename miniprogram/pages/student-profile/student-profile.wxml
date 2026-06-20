@@ -6,10 +6,16 @@
 
   <view class="profile-home" wx:elif="{{home}}">
     <view class="top-row">
-      <text class="page-title">{{home.studentName}} · 学习档案</text>
+      <view class="top-left" bindtap="onBackHome">
+        <text class="back-arrow">‹</text>
+        <text class="page-title">{{home.studentName}} · 学习档案</text>
+      </view>
       <view class="manage-actions">
         <view class="manage-link" wx:if="{{permissions.canManageParents}}" bindtap="onParentManagement">家长管理</view>
-        <view class="manage-link" bindtap="onBackHome">返回首页</view>
+        <view class="switch-student-btn" bindtap="onBackHome">
+          <text class="switch-icon">⇄</text>
+          <text class="switch-text">切换孩子</text>
+        </view>
       </view>
     </view>
 
@@ -85,10 +91,12 @@
         <view
           class="bottleneck-card bottleneck-{{item.statusClass}}"
           wx:for="{{home.priorityBottlenecks}}"
-          wx:key="lpCode"
+          wx:key="viewId"
           bindtap="onBottleneckTap"
           data-subject="{{item.subject}}"
           data-lp-code="{{item.lpCode}}"
+          data-bottleneck-id="{{item.bottleneckId}}"
+          data-view-id="{{item.viewId}}"
         >
           <view class="bottleneck-icon">{{item.statusIcon}}</view>
           <view class="bottleneck-copy">
@@ -125,6 +133,21 @@
       <view class="metric-cell metric-{{item.tone}}" wx:for="{{home.metrics}}" wx:key="label">
         <text class="metric-value">{{item.value}}</text>
         <text class="metric-label">{{item.label}}</text>
+      </view>
+    </view>
+
+    <view class="map-compact-bar" wx:if="{{home.knowledgeMapCard.visible}}"
+          bindtap="onKnowledgeMapTap">
+      <view class="map-compact-left">
+        <text class="map-compact-icon">🗺️</text>
+        <view class="map-compact-info">
+          <text class="map-compact-title">学习地图</text>
+          <text class="map-compact-summary">{{home.knowledgeMapCard.summary}}</text>
+        </view>
+      </view>
+      <view class="map-compact-action">
+        <text class="map-compact-action-text">查看</text>
+        <text class="map-compact-action-arrow">›</text>
       </view>
     </view>
 

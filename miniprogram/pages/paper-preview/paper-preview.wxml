@@ -97,18 +97,9 @@
     </view>
   </view>
 
-  <view class="action-bar">
-    <button class="btn-secondary action-btn" bindtap="onDownload" disabled="{{downloading || pdfDownloaded}}">
-      {{pdfDownloaded ? '已下载' : (downloading ? '下载中...' : '下载 PDF')}}
-    </button>
-    <button class="btn-primary action-btn" bindtap="onSharePrint">
-      分享打印
-    </button>
-  </view>
-
-  <view class="bottom-bar" wx:if="{{mode === 'paper'}}">
-    <button class="btn-primary btn-main" bindtap="onPrimaryAction">
-      {{primaryActionText || uploadBtnText}}
+  <view class="bottom-bar">
+    <button class="btn-primary btn-main" bindtap="onPrimaryAction" disabled="{{downloading}}">
+      {{downloading ? '下载中...' : (primaryActionText || uploadBtnText)}}
     </button>
   </view>
 </view>

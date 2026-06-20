@@ -217,3 +217,283 @@
   color: #718096;
   background: #edf2f7;
 }
+
+/* === 例题+分步 === */
+.example-question {
+  margin-top: 16rpx;
+  padding: 18rpx 20rpx;
+  background: #f0f7ff;
+  border-radius: 12rpx;
+  border-left: 6rpx solid #2b6cb0;
+}
+
+.example-q-label {
+  display: inline-block;
+  font-size: 22rpx;
+  color: #2b6cb0;
+  font-weight: 600;
+  margin-right: 12rpx;
+}
+
+.example-q-text {
+  font-size: 28rpx;
+  color: #1a365d;
+  line-height: 1.6;
+}
+
+.step-list {
+  margin-top: 16rpx;
+}
+
+.step-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 12rpx 0;
+  border-bottom: 1rpx solid #edf2f7;
+}
+
+.step-row:last-child {
+  border-bottom: none;
+}
+
+.step-num {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  text-align: center;
+  background: #2b6cb0;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 22rpx;
+  font-weight: 600;
+  margin-right: 16rpx;
+  margin-top: 2rpx;
+}
+
+.step-text {
+  flex: 1;
+  font-size: 27rpx;
+  color: #2d3748;
+  line-height: 1.6;
+}
+
+/* === 易错对比 === */
+.mistake-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 18rpx 20rpx;
+  margin-top: 14rpx;
+  border-radius: 12rpx;
+}
+
+.mistake-wrong {
+  background: #fff5f5;
+  border-left: 6rpx solid #fc8181;
+}
+
+.mistake-right {
+  background: #f0fff4;
+  border-left: 6rpx solid #68d391;
+}
+
+.mistake-icon {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 24rpx;
+  font-weight: 700;
+  margin-right: 14rpx;
+  margin-top: 2rpx;
+}
+
+.mistake-wrong .mistake-icon {
+  background: #fc8181;
+  color: #fff;
+}
+
+.mistake-right .mistake-icon {
+  background: #68d391;
+  color: #fff;
+}
+
+.mistake-copy {
+  flex: 1;
+}
+
+.mistake-label {
+  display: block;
+  font-size: 22rpx;
+  font-weight: 600;
+  margin-bottom: 4rpx;
+}
+
+.mistake-wrong .mistake-label {
+  color: #c53030;
+}
+
+.mistake-right .mistake-label {
+  color: #276749;
+}
+
+.mistake-text {
+  font-size: 27rpx;
+  color: #2d3748;
+  line-height: 1.6;
+}
+
+.mistake-hint {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 14rpx;
+  padding: 14rpx 18rpx;
+  background: #fffbeb;
+  border-radius: 10rpx;
+}
+
+.mistake-hint-icon {
+  flex-shrink: 0;
+  font-size: 28rpx;
+  margin-right: 10rpx;
+}
+
+.mistake-hint-text {
+  flex: 1;
+  font-size: 25rpx;
+  color: #744210;
+  line-height: 1.6;
+}
+
+/* === 练习题（增强版：题号+答案+解题关键）=== */
+.practice-list {
+  margin-top: 12rpx;
+}
+
+.practice-row {
+  margin-top: 16rpx;
+  padding: 22rpx;
+  border-radius: 14rpx;
+  background: #f7fafc;
+  border: 1rpx solid #e2e8f0;
+}
+
+.practice-q-line {
+  display: flex;
+  align-items: flex-start;
+}
+
+.practice-num {
+  flex-shrink: 0;
+  width: 36rpx;
+  height: 36rpx;
+  line-height: 36rpx;
+  text-align: center;
+  background: #2b6cb0;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 22rpx;
+  font-weight: 600;
+  margin-right: 14rpx;
+  margin-top: 2rpx;
+}
+
+.practice-question {
+  flex: 1;
+  font-size: 28rpx;
+  color: #1a365d;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.practice-a-line {
+  display: flex;
+  align-items: baseline;
+  margin-top: 10rpx;
+}
+
+.practice-answer-label {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #68d391;
+  font-weight: 600;
+  margin-right: 10rpx;
+}
+
+.practice-answer {
+  font-size: 26rpx;
+  color: #2d3748;
+}
+
+.practice-exp-line {
+  display: flex;
+  align-items: baseline;
+  margin-top: 6rpx;
+}
+
+.practice-exp-label {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #f6ad55;
+  font-weight: 600;
+  margin-right: 10rpx;
+}
+
+.practice-exp {
+  flex: 1;
+  font-size: 25rpx;
+  color: #4a5568;
+  line-height: 1.5;
+}
+
+/* === 练习题折叠/展开按钮 === */
+.practice-reveal-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  margin-top: 16rpx;
+  padding: 16rpx 20rpx;
+  margin-left: 50rpx;
+  background: #ebf8ff;
+  border-radius: 10rpx;
+  border: 1rpx dashed #63b3ed;
+}
+
+.practice-reveal-btn:active {
+  background: #bee3f8;
+}
+
+.practice-reveal-text {
+  font-size: 24rpx;
+  color: #2b6cb0;
+  font-weight: 500;
+}
+
+.practice-reveal-arrow {
+  font-size: 22rpx;
+  color: #63b3ed;
+}
+
+.practice-revealed {
+  margin-top: 14rpx;
+  padding: 18rpx 20rpx 10rpx 50rpx;
+  background: #f0fff4;
+  border-radius: 10rpx;
+  border-left: 4rpx solid #68d391;
+}
+
+.practice-collapse-btn {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8rpx;
+  padding: 4rpx 0;
+}
+
+.practice-collapse-text {
+  font-size: 22rpx;
+  color: #a0aec0;
+  padding: 4rpx 12rpx;
+}

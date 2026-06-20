@@ -12,22 +12,95 @@
       <text class="meta">{{view.timeText}} · {{view.practiceCount}} 道练习</text>
     </view>
 
-    <view class="block block-{{item.type}}" wx:for="{{view.blocks}}" wx:key="title">
-      <text class="block-title">{{item.title}}</text>
-      <text class="block-body" wx:if="{{item.body}}">{{item.body}}</text>
+    <!-- 概述板块 -->
+    <view class="block block-summary" wx:if="{{view.summaryBlock}}">
+      <text class="block-title">{{view.summaryBlock.title}}</text>
+      <text class="block-body">{{view.summaryBlock.body}}</text>
+    </view>
 
-      <view wx:if="{{item.steps}}" class="step-list">
-        <text class="step" wx:for="{{item.steps}}" wx:for-item="step" wx:key="*this">{{step}}</text>
+    <!-- 错因分析板块（症状 + 根因 + 真实错例）-->
+    <view class="block block-concept" wx:if="{{view.conceptBlock}}">
+      <text class="block-title">{{view.conceptBlock.title}}</text>
+      <text class="block-body">{{view.conceptBlock.body}}</text>
+    </view>
+
+    <!-- 正确解题路径（例题 + 分步）-->
+    <view class="block block-worked_example" wx:if="{{view.workedExampleBlock}}">
+      <text class="block-title">{{view.workedExampleBlock.title}}</text>
+      <view class="example-question" wx:if="{{view.workedExampleBlock.question}}">
+        <text class="example-q-label">例题</text>
+        <text class="example-q-text">{{view.workedExampleBlock.question}}</text>
       </view>
-
-      <view wx:if="{{item.questions}}" class="practice-list">
-        <view class="practice-row" wx:for="{{item.questions}}" wx:for-item="question" wx:key="question">
-          <text class="practice-question">{{question.question}}</text>
-          <text class="practice-answer">答案：{{question.answer}}</text>
+      <view class="step-list" wx:if="{{view.workedExampleBlock.steps.length > 0}}">
+        <view class="step-row" wx:for="{{view.workedExampleBlock.steps}}" wx:key="*this">
+          <text class="step-num">{{index + 1}}</text>
+          <text class="step-text">{{item}}</text>
         </view>
       </view>
     </view>
 
+    <!-- 易错对比（错误做法 vs 正确做法 + 判断方法）-->
+    <view class="block block-common_mistake" wx:if="{{view.commonMistakeBlock}}">
+      <text class="block-title">{{view.commonMistakeBlock.title}}</text>
+      <view class="mistake-row mistake-wrong" wx:if="{{view.commonMistakeBlock.mistake}}">
+        <text class="mistake-icon">✗</text>
+        <view class="mistake-copy">
+          <text class="mistake-label">常见错误</text>
+          <text class="mistake-text">{{view.commonMistakeBlock.mistake}}</text>
+        </view>
+      </view>
+      <view class="mistake-row mistake-right" wx:if="{{view.commonMistakeBlock.correction}}">
+        <text class="mistake-icon">✓</text>
+        <view class="mistake-copy">
+          <text class="mistake-label">正确做法</text>
+          <text class="mistake-text">{{view.commonMistakeBlock.correction}}</text>
+        </view>
+      </view>
+      <view class="mistake-hint" wx:if="{{view.commonMistakeBlock.explanation}}">
+        <text class="mistake-hint-icon">💡</text>
+        <text class="mistake-hint-text">{{view.commonMistakeBlock.explanation}}</text>
+      </view>
+    </view>
+
+    <!-- 练三道（题目 + 折叠答案/解题关键）-->
+    <view class="block block-practice" wx:if="{{view.practiceBlock}}">
+      <text class="block-title">{{view.practiceBlock.title}}</text>
+      <view class="practice-list">
+        <view class="practice-row" wx:for="{{view.practiceBlock.questions}}" wx:key="questionId">
+          <view class="practice-q-line">
+            <text class="practice-num">{{index + 1}}</text>
+            <text class="practice-question">{{item.question}}</text>
+          </view>
+          <view class="practice-reveal-btn" wx:if="{{!item.revealed}}"
+                catchtap="onPracticeToggle" data-question-id="{{item.questionId}}">
+            <text class="practice-reveal-text">想一想后点开看答案</text>
+            <text class="practice-reveal-arrow">▸</text>
+          </view>
+          <view class="practice-revealed" wx:if="{{item.revealed}}">
+            <view class="practice-a-line">
+              <text class="practice-answer-label">答案</text>
+              <text class="practice-answer">{{item.answer}}</text>
+            </view>
+            <view class="practice-exp-line" wx:if="{{item.explanation}}">
+              <text class="practice-exp-label">解题关键</text>
+              <text class="practice-exp">{{item.explanation}}</text>
+            </view>
+            <view class="practice-collapse-btn"
+                  catchtap="onPracticeToggle" data-question-id="{{item.questionId}}">
+              <text class="practice-collapse-text">收起</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 怎么算学会了（达标标准）-->
+    <view class="block block-mastery_check" wx:if="{{view.masteryBlock}}">
+      <text class="block-title">{{view.masteryBlock.title}}</text>
+      <text class="block-body">{{view.masteryBlock.body}}</text>
+    </view>
+
+    <!-- 外部参考资源 -->
     <view class="external-resources" wx:if="{{view.hasExternalResources}}">
       <view class="section-header">
         <text class="section-title">外部参考</text>

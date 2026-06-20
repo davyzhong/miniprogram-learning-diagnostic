@@ -34,7 +34,7 @@ test('paper preview lifecycle starts with generated paper and download as the ne
   assert.equal(state.workbenchStatus, 'generated')
   assert.equal(state.workbenchStatusText, '试卷已生成')
   assert.equal(state.primaryActionType, 'download')
-  assert.equal(state.primaryActionText, '下载 PDF，准备打印')
+  assert.equal(state.primaryActionText, '下载 PDF 并打印')
   assert.deepEqual(state.lifecycleSteps.map(step => step.status), ['active', 'waiting', 'waiting'])
 })
 
@@ -166,4 +166,33 @@ test('paper preview formats default paper names without repeating the grade key'
     page.getPaperName({ type: 'default-diagnosis', grade: 3, paperKey: 'grade3_a' }),
     '3年级 A 卷'
   )
+})
+
+test('paper-preview.wxml 不再有冗余的 action-bar（下载PDF+分享打印已合并到底部主按钮）', () => {
+  const fs = require('fs')
+  const path = require('path')
+  const wxml = fs.readFileSync(
+    path.join(__dirname, '..', 'miniprogram/pages/paper-preview/paper-preview.wxml'),
+    'utf8'
+  )
+  // 不应再有 action-bar（原来的双按钮区域）
+  assert.ok(!/class="action-bar"/.test(wxml), '不应再有 action-bar')
+  // 不应再有"分享打印"假按钮
+  assert.ok(!/分享打印/.test(wxml), '不应再有"分享打印"按钮')
+  // 不应再有 onSharePrint 绑定
+  assert.ok(!/onSharePrint/.test(wxml), '不应再绑定 onSharePrint')
+  // 底部 bottom-bar 应该保留（统一主按钮）
+  assert.match(wxml, /class="bottom-bar"/, '应有 bottom-bar 主操作区')
+})
+
+test('paper-preview.js 不再有 onSharePrint 方法', () => {
+  const fs = require('fs')
+  const path = require('path')
+  const js = fs.readFileSync(
+    path.join(__dirname, '..', 'miniprogram/pages/paper-preview/paper-preview.js'),
+    'utf8'
+  )
+  assert.ok(!/onSharePrint\s*\(/.test(js), 'onSharePrint 方法应已删除')
+  // onShareAppMessage 应保留（微信右上角系统分享）
+  assert.match(js, /onShareAppMessage\s*\(/, 'onShareAppMessage 应保留（系统分享）')
 })

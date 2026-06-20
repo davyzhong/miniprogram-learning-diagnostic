@@ -8,6 +8,7 @@ const {
   SUBJECTS,
   SUBJECT_NAMES
 } = require('../../utils/constants')
+const { navigateToVerificationPaper } = require('../../utils/shared-navigation')
 
 const SUBJECT_FILTERS = [
   { key: 'all', name: '全部' },
@@ -172,30 +173,9 @@ Page({
   async onGenerateForBottleneck(e) {
     const { subject = 'math', lpCode = '' } = e.currentTarget.dataset
     if (!lpCode) return
-    const subjectName = SUBJECT_NAMES[subject] || '数学'
-    const { studentId, studentName } = this.data
-    // 状态分流
-    wx.showLoading({ title: '查看验证卷…' })
-    let status = 'none'
-    let paperId = ''
-    try {
-      const result = await cloud.getActiveVerificationPaper(studentId, subject)
-      status = result.status || 'none'
-      paperId = result.paper && result.paper._id ? result.paper._id : ''
-    } catch (err) { status = 'none' }
-    wx.hideLoading()
-
-    if (status === 'ready' && paperId) {
-      wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${paperId}` })
-      return
-    }
-    if (status === 'generating') {
-      wx.showToast({ title: '验证卷生成中，请稍候', icon: 'none', duration: 2500 })
-      return
-    }
-    wx.navigateTo({
-      url: `/pages/generate-verification/generate-verification?studentId=${studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(studentName || '')}&targetCode=${encodeURIComponent(lpCode)}`
-    })
+    const { studentId } = this.data
+    // 统一入口：状态分流 + 自动轮询 + 兜底重新生成
+    await navigateToVerificationPaper(cloud, { studentId, subject, reportId: '' })
   },
 
   async onOpenLearningResource(e) {

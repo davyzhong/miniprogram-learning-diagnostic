@@ -66,7 +66,7 @@ function buildWorkbenchStatus(report, options = {}) {
     return {
       status: 'generated',
       text: '试卷已生成',
-      desc: '先下载 PDF 或分享打印，纸面作答后再回到这里上传验证。'
+      desc: '下载 PDF 打印后让孩子纸面作答，完成后回到这里拍照上传验证。'
     }
   }
   if (report.status === 'analyzing' || report.status === 'pending' || report.status === 'uploading') {
@@ -157,7 +157,7 @@ function buildPrimaryAction(status, { uploadUrl = '', reportUrl = '' } = {}) {
   }
   return {
     primaryActionType: 'download',
-    primaryActionText: '下载 PDF，准备打印',
+    primaryActionText: '下载 PDF 并打印',
     primaryActionUrl: ''
   }
 }
