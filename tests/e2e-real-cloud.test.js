@@ -21,8 +21,8 @@ const assert = require('node:assert/strict')
 
 const shouldRun = process.env.RUN_REAL_CLOUD === '1'
 
-// 真实云环境配置
-const CLOUD_ENV = process.env.CLOUD_ENV || 'cloud1-d6gneg68m5a7a3876'
+// 真实云环境配置（从环境变量读取，不在仓库中硬编码实例 ID）
+const CLOUD_ENV = process.env.CLOUD_ENV
 
 test('real cloud: analyzeBatch cloud function is reachable and returns valid structure', { skip: !shouldRun }, async () => {
   // 动态加载 @cloudbase/node-sdk（只在真实跑时才需要）

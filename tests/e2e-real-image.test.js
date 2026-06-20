@@ -12,7 +12,10 @@ const {
   writeRealImageReport
 } = require('./helpers/real-image-cases');
 
-const ENV_ID = 'cloud1-d6gneg68m5a7a3876';
+// 云环境 ID 从环境变量读取，避免在公开仓库中泄露实例信息。
+// 运行真实云测试前需：export CLOUD_ENV=cloud1-xxxxx
+// Mock 模式（--mock 或无 CLOUD_ENV）下此值仅用于构造 mock fileID，不会真正连云。
+const ENV_ID = process.env.CLOUD_ENV || 'mock-env-id';
 
 let tcb = null;
 let app = null;
