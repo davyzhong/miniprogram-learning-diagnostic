@@ -48,7 +48,10 @@
 .progress-card,
 .prompt-card,
 .upload-card,
-.result-card {
+.result-card,
+.ready-card,
+.finished-card,
+.fold-card {
   border-radius: 18rpx;
   background: #fff;
   box-shadow: 0 4rpx 18rpx rgba(15, 23, 42, .06);
@@ -66,7 +69,8 @@
 }
 
 .state-title,
-.upload-title {
+.upload-title,
+.ready-title {
   display: block;
   color: #25364a;
   font-size: 30rpx;
@@ -77,7 +81,9 @@
 .prompt-desc,
 .upload-desc,
 .voice-hint,
-.upload-status {
+.upload-status,
+.ready-desc,
+.command-hint {
   display: block;
   color: #64748b;
   font-size: 24rpx;
@@ -111,8 +117,20 @@
 
 .prompt-card,
 .upload-card,
-.result-card {
+.result-card,
+.ready-card,
+.finished-card,
+.fold-card {
   padding: 30rpx;
+}
+
+.ready-title {
+  font-size: 32rpx;
+  font-weight: 800;
+}
+
+.voice-start-btn {
+  margin-top: 16rpx;
 }
 
 .prompt-top {
@@ -129,6 +147,35 @@
   font-weight: 700;
   background: #fff7ed;
   color: #9c4f24;
+}
+
+.state-pill {
+  padding: 8rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 21rpx;
+  font-weight: 750;
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.state-speaking {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.state-writing {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.state-waitingCommand {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.state-idle {
+  background: #e2e8f0;
+  color: #475569;
 }
 
 .prompt-title {
@@ -174,6 +221,80 @@
   border-radius: 18rpx;
   font-size: 30rpx;
   font-weight: 750;
+}
+
+.fold-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18rpx;
+}
+
+.fold-title {
+  color: #25364a;
+  font-size: 28rpx;
+  font-weight: 800;
+}
+
+.fold-action {
+  color: #9c4f24;
+  font-size: 24rpx;
+  font-weight: 750;
+}
+
+.word-list {
+  margin-top: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.word-list.compact {
+  margin-top: 18rpx;
+  max-height: 520rpx;
+  overflow: auto;
+}
+
+.word-row {
+  display: grid;
+  grid-template-columns: 48rpx 1fr auto;
+  gap: 14rpx;
+  align-items: center;
+  padding: 16rpx;
+  border-radius: 14rpx;
+  background: #f8fafc;
+  border: 1rpx solid #e2e8f0;
+}
+
+.word-order {
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 44rpx;
+  border-radius: 999rpx;
+  text-align: center;
+  background: #fff7ed;
+  color: #9c4f24;
+  font-weight: 800;
+  font-size: 22rpx;
+}
+
+.word-main {
+  min-width: 0;
+}
+
+.word-en {
+  display: block;
+  color: #1f2937;
+  font-size: 28rpx;
+  font-weight: 800;
+  word-break: break-all;
+}
+
+.word-cn,
+.word-meta {
+  color: #64748b;
+  font-size: 22rpx;
+  line-height: 1.4;
 }
 
 .result-summary {

@@ -103,7 +103,7 @@ npm run test:e2e:doctor
 | core | `npm run test:e2e:core` | 17 个通用页面和基础跨页流程 |
 | math | `npm run test:e2e:math` | 数学数据驱动诊断 + 知识地图 + 学习资源 |
 | chinese | `npm run test:e2e:chinese` | 语文工作台、诊断报告、错项复测出卷轻量链路 |
-| english | `npm run test:e2e:english` | 英语工作台、自动导入、熟悉度、纸面听写、学习记录 |
+| english | `npm run test:e2e:english` | 英语工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 |
 | all | `npm run test:e2e:all` | core + math + english + 聚合报告 |
 | real-data | `npm run test:e2e:real-data` | 指定真实学生数据页面烟测 |
 | real-image | `npm run test:e2e:real-image` | 真实图片或 manifest 诊断链路 |
@@ -117,7 +117,7 @@ npm run test:e2e:doctor
 | math-data | `tmp/e2e/math-data/` | `report.json` |
 | math-knowledge-map | `tmp/e2e/math-knowledge-map/` | `report.json` |
 | chinese | `tmp/e2e/chinese/` | `report.json` |
-| english | `tmp/e2e/english/` | `report.json` |
+| english | `tmp/e2e/english/` | `report.json` + `ENG-*-initial.png` + `ENG-*-after-*.png` |
 | real-data | `tmp/e2e/real-data/` | `report.json` |
 | aggregate | `tmp/e2e/aggregate/` | `aggregate-report.md` |
 
@@ -128,7 +128,7 @@ npm run test:e2e:doctor
 | 学科 | 当前成熟度 | 策略 |
 |---|---|---|
 | 数学 | 最高 | 作为 E2E 样板，覆盖诊断、卡点、资源、知识地图和验证卷 |
-| 英语 | 较高 | 保持现有专属用例库，迁移到 `test:e2e:english` |
+| 英语 | 较高 | 使用 `tests/fixtures/english-devtools-test-cases.json` 作为专属用例库；每个用例必须声明页面路由、模拟器动作、数据断言和截图产物 |
 | 语文 | 起步 | 先覆盖错项复测的页面入口，后续补“错项一一对应验证”完整链路 |
 
 ## 五、日常开发流程

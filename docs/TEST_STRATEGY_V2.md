@@ -29,7 +29,7 @@
 | CLI E2E 核心页面 | `npm run test:e2e:core` | 微信开发者工具 CLI | 17 页面 + 跨页基础流程 | 报告无失败页面 |
 | CLI E2E 数学 | `npm run test:e2e:math` | 微信开发者工具 CLI | 数学工作台、诊断报告、细卡点、知识地图、资源、验证卷 | 报告无失败场景 |
 | CLI E2E 语文 | `npm run test:e2e:chinese` | 微信开发者工具 CLI | 语文错项复习和验证卷链路 | 初期允许指向核心页面占位，后续补专属脚本 |
-| CLI E2E 英语 | `npm run test:e2e:english` | 微信开发者工具 CLI | 英语工作台、词库、熟悉度、纸面听写、学习记录 | 报告无失败用例 |
+| CLI E2E 英语 | `npm run test:e2e:english` | 微信开发者工具 CLI | 英语工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 | 报告无失败用例 |
 | CLI E2E 全量 | `npm run test:e2e:all` | 微信开发者工具 CLI | core + math + english + 聚合报告 | 聚合报告无失败 |
 | 真实数据烟测 | `npm run test:e2e:real-data` | 微信开发者工具 CLI + 真实 CloudBase 数据 | 指定学生真实页面渲染 | 页面可打开且截图输出 |
 | 真实图片 E2E | `npm run test:e2e:real-image` | Node.js + 真实图片或 mock | 上传图片到诊断报告链路 | mock 或指定 manifest 通过 |
@@ -41,7 +41,7 @@
 |---|---|---|---|
 | 数学 | `devtools-e2e-data-driven.js`、`devtools-knowledge-map-e2e.js`、`devtools-e2e-fullpage.js` | 最完整主链路，作为 CLI E2E 样板 | 新增 `test:e2e:math` 聚合数学专项脚本 |
 | 语文 | 单元层已有 `chinese-review-targets.test.js` 和验证卷逻辑，页面 E2E 不完整 | 具体错项和验证题一一对应链路 | 新增 `test:e2e:chinese` 入口，先保留文档化占位，后续接专属脚本 |
-| 英语 | `devtools-english-e2e.js` 和测试用例库较完整 | 专属学科 E2E | 将旧命令 `test:devtools-english` 迁移为 `test:e2e:english`，旧命令保留兼容 |
+| 英语 | `devtools-english-e2e.js` 和 `tests/fixtures/english-devtools-test-cases.json` | 专属学科 E2E | 每个用例沉淀 route、steps、dataAssertions、artifacts，旧命令 `test:devtools-english` 保留兼容 |
 | 通用/家庭 | `devtools-e2e-fullpage.js`、`devtools-parent-timeline-e2e.js` | 非学科基础页面和家庭成员链路 | 新增 `test:e2e:core`，保留家长时间线兼容入口 |
 
 ## 3. 输出目录规范
@@ -52,7 +52,7 @@
 | math-data | `tmp/e2e/math-data/` | `report.json` |
 | math-knowledge-map | `tmp/e2e/math-knowledge-map/` | `report.json` |
 | chinese | `tmp/e2e/chinese/` | `report.json` |
-| english | `tmp/e2e/english/` | `report.json` |
+| english | `tmp/e2e/english/` | `report.json` + `ENG-*-initial.png` + `ENG-*-after-*.png` |
 | real-data | `tmp/e2e/real-data/` | `report.json` |
 | aggregate | `tmp/e2e/aggregate/` | `aggregate-report.md` |
 
