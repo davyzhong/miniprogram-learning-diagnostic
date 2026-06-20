@@ -109,6 +109,52 @@ test('multi-child index shows only the family workbench and routes child cards t
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/student-profile\/student-profile/)
 })
 
+test('index family workbench renders actionable card sections instead of old latest rows', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
+
+  assert.match(wxml, /family-workbench-hero/)
+  assert.match(wxml, /math-diagnostic-guide\.jpg/)
+  assert.match(wxml, /child-priority-action/)
+  assert.match(wxml, /secondary-action-grid/)
+  assert.match(wxml, /child-quick-grid/)
+  assert.doesNotMatch(wxml, /child-latest-row/)
+  assert.doesNotMatch(wxml, /child-next-row/)
+
+  assert.match(wxss, /\.child-priority-action/)
+  assert.match(wxss, /\.secondary-action-card/)
+  assert.match(wxss, /\.child-quick-link/)
+  assert.match(wxss, /\.family-workbench-hero/)
+})
+
+test('index and student profile render the redesigned personal action workbench', () => {
+  const indexWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+  const profileWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/student-profile/student-profile.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
+
+  for (const wxml of [indexWxml, profileWxml]) {
+    assert.match(wxml, /personal-hero-card/)
+    assert.match(wxml, /personal-primary-action/)
+    assert.match(wxml, /personal-report-card/)
+    assert.match(wxml, /personal-action-queue/)
+    assert.match(wxml, /personal-subject-list/)
+    assert.match(wxml, /student-profile-hero\.png/)
+  }
+
+  assert.doesNotMatch(profileWxml, /coverage-card/)
+  assert.doesNotMatch(profileWxml, /metric-strip/)
+  assert.doesNotMatch(profileWxml, /highlight-row/)
+  assert.doesNotMatch(profileWxml, /record-row/)
+  assert.doesNotMatch(profileWxml, /next-card/)
+  assert.doesNotMatch(profileWxml, /subject-grid/)
+
+  assert.match(wxss, /\.personal-hero-card/)
+  assert.match(wxss, /\.personal-primary-action/)
+  assert.match(wxss, /\.personal-report-card/)
+  assert.match(wxss, /\.personal-action-card/)
+  assert.match(wxss, /\.personal-subject-row/)
+})
+
 test('learning profile home loads the active student summary', async () => {
   const cloud = {
     getStudents: async () => [{ _id: 'student-1', name: '钟青羽', grade: 6 }],

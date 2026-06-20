@@ -74,6 +74,15 @@ const sharedNavigation = {
     this.navigateToSubject(e.currentTarget.dataset.subject || e.currentTarget.dataset.key || 'math')
   },
 
+  onTraceableUrlTap(e) {
+    const url = e.currentTarget.dataset.url || ''
+    if (!url) {
+      wx.showToast({ title: '暂时没有可查看内容', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url })
+  },
+
   onViewAllRecords() {
     const student = getStudent(this)
     const studentId = getStudentId(this)

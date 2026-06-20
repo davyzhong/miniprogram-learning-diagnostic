@@ -4,6 +4,8 @@
 
 **Goal:** 将多孩子首页升级为“行动优先 + 高信息密度 + 每个区块都可点击”的家庭学习工作台。
 
+**Implementation status (2026-06-20):** 已落地到 `index` 家庭工作台，并扩展到 `index` 单孩子模式与 `student-profile` 个人学习工作台。最终补充设计见 `docs/superpowers/specs/2026-06-20-actionable-family-and-personal-workbenches-design.md`。
+
 **Architecture:** 继续使用 `miniprogram/utils/child-workbench.js` 作为多孩子首页 view model 的唯一聚合层。`index.wxml` 只渲染 `priorityAction`、`secondaryActions`、`subjectRows`、`quickLinks` 这些可点击结构，不再渲染长篇 `latestValue`。路由统一走 `buildTraceableUrl` 和现有 `onTraceableUrlTap`，避免在页面里写重复跳转逻辑。
 
 **Tech Stack:** 微信小程序 WXML/WXSS、Node.js `node:test`、现有 `buildChildWorkbenchCards` presenter、现有 `buildTraceableUrl`、现有 `paper-display`。
@@ -950,4 +952,3 @@ If the new homepage layout causes rendering issues in DevTools:
 1. Keep the presenter tests and helpers.
 2. Revert only `miniprogram/pages/index/index.wxml` and `miniprogram/pages/index/index.wxss` to the previous rendering.
 3. Continue using `priorityAction`, `secondaryActions`, and `quickLinks` in data until the WXML issue is fixed.
-

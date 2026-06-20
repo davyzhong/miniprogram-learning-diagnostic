@@ -10,10 +10,11 @@ This directory contains the curated product documents that are directly useful f
 1. [Learning Diagnostic Product Brief](./learning-diagnostic-product-brief.md)
 2. [MVP Roadmap And Product Boundaries](./mvp-roadmap-and-boundaries.md)
 3. [Family Learning Workflow](./family-learning-workflow.md)
-4. [Prompt And Agent Design](./prompt-and-agent-design.md)
-5. [Architecture](../ARCHITECTURE.md)
-6. [Data Dictionary](../DATA_DICTIONARY.md)
-7. [Subject Design Index](../subject-design/README.md)
+4. [Family And Personal Workbenches Design](../superpowers/specs/2026-06-20-actionable-family-and-personal-workbenches-design.md)
+5. [Prompt And Agent Design](./prompt-and-agent-design.md)
+6. [Architecture](../ARCHITECTURE.md)
+7. [Data Dictionary](../DATA_DICTIONARY.md)
+8. [Subject Design Index](../subject-design/README.md)
 
 ## Document Boundary
 
@@ -43,4 +44,3 @@ This directory consolidates earlier root-level drafts:
 - `16-学习行为数据模型.md`
 
 Those drafts are archived in the local total project knowledge base, not copied wholesale here.
-

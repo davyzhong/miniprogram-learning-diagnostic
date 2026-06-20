@@ -19,9 +19,9 @@
       </view>
     </view>
 
-    <view class="hero-card">
-      <image class="hero-image" src="/assets/images/math-diagnostic-guide.jpg" mode="aspectFill"></image>
-      <view class="hero-copy">
+    <view class="personal-hero-card" catchtap="onTraceableUrlTap" data-url="{{home.personalHero.url}}">
+      <image class="personal-hero-image" src="/assets/images/student-profile-hero.png" mode="aspectFill"></image>
+      <view class="personal-hero-copy">
         <view class="student-line">
           <view class="mini-avatar">{{home.avatarText}}</view>
           <view class="student-copy">
@@ -29,199 +29,89 @@
             <text class="student-meta">{{home.gradeText}}<text wx:if="{{home.gradeText}}"> · </text>最近更新：{{home.recentUpdateText}}</text>
           </view>
         </view>
-        <text class="section-kicker">当前综合摘要</text>
-        <text class="hero-title">{{home.headline}}</text>
-        <text class="hero-summary">{{home.summary}}</text>
+        <text class="section-kicker">个人学习工作台</text>
+        <text class="personal-hero-title">{{home.personalHero.title}}</text>
+        <text class="personal-hero-summary">{{home.personalHero.summary}}</text>
+        <text class="personal-hero-action">{{home.personalHero.actionText}} ›</text>
       </view>
     </view>
 
-    <view class="primary-report-card" wx:if="{{home.primaryReport}}" bindtap="onPrimaryReportTap">
-      <view class="report-mark report-{{home.primaryReport.kind}}">{{home.primaryReport.icon}}</view>
+    <view class="personal-primary-action" catchtap="onTraceableUrlTap" data-url="{{home.primaryActionCard.url}}">
+      <view class="personal-action-badge">今日行动</view>
+      <view class="personal-primary-copy">
+        <text class="personal-primary-title">{{home.primaryActionCard.title}}</text>
+        <text class="personal-primary-summary">{{home.primaryActionCard.summary}}</text>
+      </view>
+      <text class="personal-primary-link">{{home.primaryActionCard.actionText}} ›</text>
+    </view>
+
+    <view class="personal-report-card report-{{home.reportPanel.kind}}" wx:if="{{home.reportPanel.visible}}" catchtap="onTraceableUrlTap" data-url="{{home.reportPanel.url}}">
+      <view class="report-mark report-{{home.reportPanel.kind}}">{{home.reportPanel.icon}}</view>
       <view class="primary-report-copy">
         <view class="report-title-line">
           <view class="report-title-copy">
-            <text class="primary-report-title">{{home.primaryReport.title}}</text>
-            <text class="primary-report-time" wx:if="{{home.primaryReport.generatedAtText}}">生成于 {{home.primaryReport.generatedAtText}}</text>
+            <text class="primary-report-title">{{home.reportPanel.title}}</text>
+            <text class="primary-report-time" wx:if="{{home.reportPanel.generatedAtText}}">生成于 {{home.reportPanel.generatedAtText}}</text>
           </view>
-          <text class="report-action">{{home.primaryReport.actionText}}</text>
+          <text class="report-action">{{home.reportPanel.actionText}} ›</text>
         </view>
-        <text class="primary-report-finding" wx:if="{{home.primaryReport.findingText}}">{{home.primaryReport.findingText}}</text>
-        <text class="primary-report-summary">{{home.primaryReport.summary}}</text>
-        <view class="report-info-grid" wx:if="{{home.primaryReport.generatedAtText || home.primaryReport.evidenceTimeText}}">
-          <view class="report-info-cell" wx:if="{{home.primaryReport.generatedAtText}}">
+        <text class="primary-report-finding" wx:if="{{home.reportPanel.findingText}}">{{home.reportPanel.findingText}}</text>
+        <text class="primary-report-summary">{{home.reportPanel.summary}}</text>
+        <view class="report-info-grid" wx:if="{{home.reportPanel.generatedAtText || home.reportPanel.evidenceTimeText}}">
+          <view class="report-info-cell" wx:if="{{home.reportPanel.generatedAtText}}">
             <text class="report-info-label">报告生成</text>
-            <text class="report-info-value">{{home.primaryReport.generatedAtText}}</text>
+            <text class="report-info-value">{{home.reportPanel.generatedAtText}}</text>
           </view>
-          <view class="report-info-cell" wx:if="{{home.primaryReport.evidenceTimeText}}">
+          <view class="report-info-cell" wx:if="{{home.reportPanel.evidenceTimeText}}">
             <text class="report-info-label">证据时间</text>
-            <text class="report-info-value">{{home.primaryReport.evidenceTimeText}}</text>
+            <text class="report-info-value">{{home.reportPanel.evidenceTimeText}}</text>
           </view>
         </view>
         <view class="report-chip-row">
-          <text class="report-chip report-chip-main" wx:if="{{home.primaryReport.bottleneckText}}">{{home.primaryReport.bottleneckText}}</text>
-          <text class="report-chip" wx:if="{{home.primaryReport.evidenceText}}">{{home.primaryReport.evidenceText}}</text>
+          <text class="report-chip report-chip-main" wx:if="{{home.reportPanel.bottleneckText}}">{{home.reportPanel.bottleneckText}}</text>
+          <text class="report-chip" wx:if="{{home.reportPanel.evidenceText}}">{{home.reportPanel.evidenceText}}</text>
         </view>
       </view>
-      <text class="arrow">›</text>
     </view>
 
-    <view class="section-block bottleneck-board" wx:if="{{home.hasBottleneckBoard}}">
+    <view class="section-block personal-action-section">
       <view class="section-heading between">
-        <view>
-          <text>当前学习卡点</text>
-          <text class="section-subtitle">优先处理最近仍在影响作答的观察</text>
-        </view>
-        <text class="link-text" bindtap="onViewAllBottlenecks">查看全部</text>
+        <text>接下来可以做什么</text>
+        <text class="section-subtitle-inline">每块都可点击</text>
       </view>
-      <view class="bottleneck-stats">
-        <view class="bottleneck-stat">
-          <text class="stat-value">{{home.bottleneckStats.activeCount}}</text>
-          <text class="stat-label">待跟进</text>
-        </view>
-        <view class="bottleneck-stat">
-          <text class="stat-value">{{home.bottleneckStats.persistingCount}}</text>
-          <text class="stat-label">持续出现</text>
-        </view>
-        <view class="bottleneck-stat">
-          <text class="stat-value">{{home.bottleneckStats.improvedCount}}</text>
-          <text class="stat-label">已改善</text>
-        </view>
-      </view>
-      <view class="bottleneck-list">
+      <view class="personal-action-queue">
         <view
-          class="bottleneck-card bottleneck-{{item.statusClass}}"
-          wx:for="{{home.priorityBottlenecks}}"
-          wx:key="viewId"
-          bindtap="onBottleneckTap"
-          data-subject="{{item.subject}}"
-          data-lp-code="{{item.lpCode}}"
-          data-bottleneck-id="{{item.bottleneckId}}"
-          data-view-id="{{item.viewId}}"
+          class="personal-action-card personal-action-{{item.key}}"
+          wx:for="{{home.personalActionQueue}}"
+          wx:key="key"
+          catchtap="onTraceableUrlTap"
+          data-url="{{item.url}}"
         >
-          <view class="bottleneck-icon">{{item.statusIcon}}</view>
-          <view class="bottleneck-copy">
-            <view class="bottleneck-title-line">
-              <text class="bottleneck-name">{{item.displayName}}</text>
-              <text class="bottleneck-subject">{{item.subjectName}}</text>
-            </view>
-            <text class="bottleneck-evidence">{{item.evidenceText}}</text>
-            <text class="bottleneck-time" wx:if="{{item.timeText}}">{{item.timeText}}</text>
-            <view class="bottleneck-chip-row">
-              <text class="bottleneck-chip priority-{{item.priorityClass}}">{{item.priorityText}}</text>
-              <text class="bottleneck-chip state-{{item.statusClass}}">{{item.statusText}}</text>
-            </view>
-          </view>
-          <view
-            class="bottleneck-action"
-            catchtap="onBottleneckAction"
-            data-subject="{{item.subject}}"
-            data-lp-code="{{item.lpCode}}"
-          >{{item.actionText}}</view>
+          <text class="personal-action-title">{{item.title}}</text>
+          <text class="personal-action-summary">{{item.summary}}</text>
+          <text class="personal-action-link">{{item.actionText}} ›</text>
         </view>
       </view>
     </view>
 
-    <view class="coverage-card">
-      <view class="coverage-icon">i</view>
-      <view class="coverage-copy">
-        <text class="coverage-label">样本覆盖</text>
-        <text class="coverage-text">{{home.sampleCoverageText}}</text>
-      </view>
-    </view>
-
-    <view class="metric-strip">
-      <view class="metric-cell metric-{{item.tone}}" wx:for="{{home.metrics}}" wx:key="label">
-        <text class="metric-value">{{item.value}}</text>
-        <text class="metric-label">{{item.label}}</text>
-      </view>
-    </view>
-
-    <view class="map-compact-bar" wx:if="{{home.knowledgeMapCard.visible}}"
-          bindtap="onKnowledgeMapTap">
-      <view class="map-compact-left">
-        <text class="map-compact-icon">🗺️</text>
-        <view class="map-compact-info">
-          <text class="map-compact-title">学习地图</text>
-          <text class="map-compact-summary">{{home.knowledgeMapCard.summary}}</text>
-        </view>
-      </view>
-      <view class="map-compact-action">
-        <text class="map-compact-action-text">查看</text>
-        <text class="map-compact-action-arrow">›</text>
-      </view>
-    </view>
-
-    <view class="section-block" wx:if="{{home.priorityHighlights.length > 0}}">
-      <view class="section-heading">重点提示</view>
-      <view class="surface">
+    <view class="section-block personal-subject-section">
+      <view class="section-heading">三科学习入口</view>
+      <view class="personal-subject-list">
         <view
-          class="highlight-row"
-          wx:for="{{home.priorityHighlights}}"
-          wx:key="subject"
-          bindtap="onHighlightTap"
-          data-subject="{{item.subject}}"
-        >
-          <view class="subject-pill">{{item.subjectShortName}}</view>
-          <view class="row-copy">
-            <text class="row-title">{{item.title}}</text>
-            <text class="row-desc">{{item.summary}}</text>
-            <text class="row-meta" wx:if="{{item.metaText}}">{{item.metaText}}</text>
-          </view>
-          <text class="state-tag state-{{item.statusClass}}">{{item.statusText}}</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="section-block">
-      <view class="section-heading between">
-        <text>学习记录</text>
-        <text class="link-text" bindtap="onViewAllRecords">查看全部</text>
-      </view>
-      <view class="surface" wx:if="{{home.recentRecords.length > 0}}">
-        <view
-          class="record-row"
-          wx:for="{{home.recentRecords}}"
-          wx:key="title"
-          bindtap="onRecordTap"
-          data-index="{{index}}"
-        >
-          <view class="record-icon record-{{item.kind}}">{{item.icon}}</view>
-          <view class="row-copy">
-            <text class="row-title">{{item.title}}</text>
-            <text class="row-desc">{{item.summary}}</text>
-          </view>
-          <text class="arrow">›</text>
-        </view>
-      </view>
-      <view class="surface empty-records" wx:else>
-        <text>暂无学习记录，上传试卷后会自动整理。</text>
-      </view>
-    </view>
-
-    <view class="section-block">
-      <view class="section-heading">下一步建议</view>
-      <view class="next-card">
-        <text class="next-title">{{home.nextAction.title}}</text>
-        <text class="next-desc">{{home.nextAction.summary}}</text>
-        <view class="action-grid">
-          <view class="primary-action" bindtap="onPrimaryAction">{{home.nextAction.primaryText}}</view>
-          <view class="secondary-action" wx:if="{{home.nextAction.secondaryText}}" bindtap="onSecondaryAction">{{home.nextAction.secondaryText}}</view>
-        </view>
-      </view>
-    </view>
-
-    <view class="section-block">
-      <view class="section-heading">学科入口</view>
-      <view class="subject-grid">
-        <view
-          class="subject-entry subject-{{item.key}}"
+          class="personal-subject-row personal-subject-{{item.key}}"
           wx:for="{{home.subjects}}"
           wx:key="key"
-          bindtap="onSubjectTap"
-          data-subject="{{item.key}}"
+          catchtap="onTraceableUrlTap"
+          data-url="{{item.url}}"
         >
-          <text class="subject-name">{{item.name}}</text>
-          <text class="subject-status">{{item.statusText}}</text>
+          <view class="personal-subject-copy">
+            <text class="personal-subject-name">{{item.name}}</text>
+            <text class="personal-subject-summary">{{item.summary}}</text>
+          </view>
+          <view class="personal-subject-right">
+            <text class="personal-subject-status">{{item.statusText}}</text>
+            <text class="personal-subject-action">{{item.actionText}} ›</text>
+          </view>
         </view>
       </view>
     </view>
