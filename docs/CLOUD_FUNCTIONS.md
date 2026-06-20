@@ -967,7 +967,7 @@ wx.cloud.callFunction({
 2. **Prompt 防注入**：学生姓名、paperKey 等均经 `cleanPromptText` 清洗（去换行、去尖括号、截断）。
 3. **题目数量校验**：先过滤缺少题干或答案的不完整题；完整题数量不足期望值时抛错，若 AI 多生成则截取前 N 道。
 4. **预览模式**：`preview=true` 时 PDF 仍会上传云存储，但不写 papers 记录，适合即时预览。
-5. 验证试卷题目数 = `targets.length × 5`，每个目标固定为 3 道核心验证题 + 2 道迁移延展题。
+5. 验证试卷题目数 = `Σ questionsForWeight(weight)`：高置信目标 3 题、中置信目标 2 题、低置信目标 1 题；不再使用固定倍数公式。
 6. 数学细卡点较多时，前端可传入 `targetPlan.pages`；后端会把同一家族/同一粗类的细卡点安排到同一任务页，并在 `verificationPack.pages` 中保存 `pageType/categoryTitle/familyTitle/targetIds/questionIds`。
 7. PDF 学生页会打印唯一 `pageCode`，孩子可以批量打印、分批作答；上传照片后可按页追踪验证效果。
 8. PDF 分页阈值 y > 700，每题预留答题空白区。

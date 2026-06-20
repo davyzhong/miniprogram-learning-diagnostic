@@ -1938,6 +1938,103 @@ test('report passes its subject name into verification paper generation', async 
   assert.match(nav.payload.url, /paperId=paper-1/)
 })
 
+test('report verification entry drives a zero-progress generating paper without crashing', async () => {
+  const wx = createWxMock()
+  const generateCalls = []
+  const regenerateCalls = []
+  const cloud = {
+    getActiveVerificationPaper: async () => ({
+      status: 'generating',
+      paper: {
+        _id: 'paper-generating',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'verification',
+        bottleneckTargets: ['BN-001'],
+        questions: [],
+        generationProgress: { completedBatches: 0, totalBatches: 1, succeededBatches: 0 }
+      }
+    }),
+    callGeneratePaper: async payload => {
+      generateCalls.push(payload)
+      return { success: true, paperId: 'paper-generating' }
+    },
+    regenerateVerificationPaper: async payload => {
+      regenerateCalls.push(payload)
+      return { success: true }
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {} }) },
+      './report-presenter': { buildReportView: () => ({}) }
+    }
+  })
+  page.setData({
+    reportId: 'report-1',
+    report: {
+      studentId: 'student-1',
+      subject: 'math',
+      bottlenecks: [{ lpCode: 'LP-001' }]
+    },
+    canGeneratePaper: true
+  })
+
+  await assert.doesNotReject(() => page.onGenerateVerification())
+
+  assert.equal(generateCalls[0]._appendToPaperId, 'paper-generating')
+  assert.equal(generateCalls[1]._regeneratePdf, true)
+  assert.ok(regenerateCalls.some(call => call.action === 'finalize'))
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paperId=paper-generating/)
+})
+
+test('report verification entry marks paper failed when any driven batch fails', async () => {
+  const wx = createWxMock()
+  const regenerateCalls = []
+  const cloud = {
+    getActiveVerificationPaper: async () => ({ status: 'none', paper: null }),
+    regenerateVerificationPaper: async payload => {
+      regenerateCalls.push(payload)
+      if (payload.action === 'start') {
+        return { success: true, paperId: 'paper-new', batches: [['BN-001']], totalBatches: 1 }
+      }
+      return { success: true }
+    },
+    callGeneratePaper: async payload => {
+      if (payload._appendToPaperId) throw new Error('批次 1 生成失败')
+      return { success: true }
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {} }) },
+      './report-presenter': { buildReportView: () => ({}) }
+    }
+  })
+  page.setData({
+    reportId: 'report-1',
+    report: {
+      studentId: 'student-1',
+      subject: 'math',
+      bottlenecks: [{ lpCode: 'LP-001' }]
+    },
+    canGeneratePaper: true
+  })
+
+  await page.onGenerateVerification()
+
+  assert.ok(regenerateCalls.some(call => call.action === 'fail'))
+  assert.equal(regenerateCalls.some(call => call.action === 'finalize'), false)
+  assert.equal(wx.calls.some(call => call.name === 'navigateTo'), false)
+  assert.match(wx.calls.filter(call => call.name === 'showToast').at(-1).payload.title, /生成失败/)
+})
+
 test('report retry treats a cloud timeout as background analysis and resumes polling', async () => {
   const timeout = new Error('timeout')
   let pollStarts = 0
