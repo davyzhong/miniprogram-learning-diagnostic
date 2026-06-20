@@ -178,10 +178,12 @@
         <view
           class="bottleneck-card bottleneck-{{item.statusClass}}"
           wx:for="{{home.priorityBottlenecks}}"
-          wx:key="lpCode"
+          wx:key="viewId"
           bindtap="onBottleneckTap"
           data-subject="{{item.subject}}"
           data-lp-code="{{item.lpCode}}"
+          data-bottleneck-id="{{item.bottleneckId}}"
+          data-view-id="{{item.viewId}}"
         >
           <view class="bottleneck-icon">{{item.statusIcon}}</view>
           <view class="bottleneck-copy">
@@ -221,20 +223,18 @@
       </view>
     </view>
 
-    <view class="section-block" wx:if="{{home.knowledgeMapCard.visible}}"
+    <view class="map-compact-bar" wx:if="{{home.knowledgeMapCard.visible}}"
           bindtap="onKnowledgeMapTap">
-      <view class="section-heading">🗺️ {{home.knowledgeMapCard.title}} <text class="section-more">查看详情 ›</text></view>
-      <view class="surface map-card">
-        <text class="map-summary">{{home.knowledgeMapCard.summary}}</text>
-        <view class="map-domains">
-          <view class="map-domain" wx:for="{{home.knowledgeMapCard.domains}}" wx:key="name">
-            <text class="domain-icon">{{item.icon}}</text>
-            <text class="domain-name">{{item.name}}</text>
-            <text class="domain-badge {{item.status === 'active' ? 'active' : item.status === 'mastered' ? 'mastered' : ''}}">
-              {{item.status === 'active' ? item.pendingCount + '待修' : item.status === 'mastered' ? '✓' : '—'}}
-            </text>
-          </view>
+      <view class="map-compact-left">
+        <text class="map-compact-icon">🗺️</text>
+        <view class="map-compact-info">
+          <text class="map-compact-title">学习地图</text>
+          <text class="map-compact-summary">{{home.knowledgeMapCard.summary}}</text>
         </view>
+      </view>
+      <view class="map-compact-action">
+        <text class="map-compact-action-text">查看</text>
+        <text class="map-compact-action-arrow">›</text>
       </view>
     </view>
 

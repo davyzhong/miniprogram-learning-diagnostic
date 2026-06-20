@@ -747,6 +747,21 @@ exports.main = async (event) => {
       ...artifacts,
     });
 
+    // 验证报告完成后，回写验证卷状态为 completed（修复断裂 C）
+    if (mode === 'verification' && report && report.paperId) {
+      try {
+        await db.collection('papers').doc(report.paperId).update({
+          data: {
+            verificationStatus: 'completed',
+            verificationReportId: reportId,
+            verifiedAt: new Date(),
+          },
+        });
+      } catch (e) {
+        console.warn('[analyzePhotos] 回写 paper.verificationStatus 失败:', e.message);
+      }
+    }
+
     await markAnalysisTaskCompleted(taskId, artifacts);
 
     // 诊断报告完成后，自动触发验证卷生成（fire-and-forget，失败不影响主流程）

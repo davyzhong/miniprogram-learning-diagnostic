@@ -55,10 +55,29 @@ function buildExternalResourceCards(externalResources = []) {
     .sort((a, b) => a.priority - b.priority)
 }
 
+// 把 blocks 数组拆分成结构化字段，供 wxml 精准渲染
+function extractBlocks(blocks = []) {
+  const find = (type) => blocks.find(b => b.type === type) || null
+  const practiceBlock = find('practice')
+  // 给每道练习题加 revealed: false 初始状态（答案默认折叠）
+  if (practiceBlock && Array.isArray(practiceBlock.questions)) {
+    practiceBlock.questions = practiceBlock.questions.map(q => ({ ...q, revealed: false }))
+  }
+  return {
+    summaryBlock: find('summary'),
+    conceptBlock: find('concept'),
+    workedExampleBlock: find('worked_example'),
+    commonMistakeBlock: find('common_mistake'),
+    practiceBlock: practiceBlock,
+    masteryBlock: find('mastery_check'),
+  }
+}
+
 function buildLearningResourceView(pack = {}) {
   const blocks = Array.isArray(pack.blocks) ? pack.blocks : []
-  const practiceBlock = blocks.find(block => block.type === 'practice')
-  const practiceCount = Array.isArray(practiceBlock && practiceBlock.questions)
+  const extracted = extractBlocks(blocks)
+  const practiceBlock = extracted.practiceBlock
+  const practiceCount = practiceBlock && Array.isArray(practiceBlock.questions)
     ? practiceBlock.questions.length
     : 0
   const externalResources = Array.isArray(pack.externalResources) ? pack.externalResources : []
@@ -71,14 +90,22 @@ function buildLearningResourceView(pack = {}) {
     title: pack.title || '学习任务包',
     status: pack.status || 'ready',
     timeText: estimatedMinutes ? `约 ${estimatedMinutes} 分钟` : '5-10 分钟',
-    blocks,
+    // 结构化板块（每个都是独立字段，wxml 用 wx:if 精准渲染）
+    summaryBlock: extracted.summaryBlock,
+    conceptBlock: extracted.conceptBlock,
+    workedExampleBlock: extracted.workedExampleBlock,
+    commonMistakeBlock: extracted.commonMistakeBlock,
+    practiceBlock: extracted.practiceBlock,
+    masteryBlock: extracted.masteryBlock,
     practiceCount,
     parentResourceText: resourceCards.length ? `家长参考 ${resourceCards.length} 个` : '',
     resourceCards,
     hasExternalResources: resourceCards.length > 0,
     canComplete: !completed,
-    completed
+    completed,
+    // 标记是否有任何实质内容（用于空状态判断）
+    hasContent: !!(extracted.summaryBlock || extracted.conceptBlock || extracted.practiceBlock),
   }
 }
 
-module.exports = { buildLearningResourceView, buildExternalResourceCards }
+module.exports = { buildLearningResourceView, buildExternalResourceCards, extractBlocks }

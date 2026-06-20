@@ -48,10 +48,10 @@ Page({
     allQuestionsExpanded: false,
     workbenchStatus: 'waiting',
     workbenchStatusText: '等待打印作答',
-    workbenchStatusDesc: '下载或分享打印后，让孩子在纸面完成作答，再回到这里上传验证。',
+    workbenchStatusDesc: '下载 PDF 打印后让孩子纸面作答，完成后回到这里拍照上传验证。',
     lifecycleSteps: [],
     primaryActionType: 'download',
-    primaryActionText: '下载 PDF，准备打印',
+    primaryActionText: '下载 PDF 并打印',
     primaryActionUrl: '',
     feedback: {
       hasFeedback: false,
@@ -146,11 +146,9 @@ Page({
       wx.showToast({ title: 'PDF 未生成', icon: 'none' })
       return
     }
-    if (this.data.pdfDownloaded) {
-      wx.showToast({ title: 'PDF 已下载', icon: 'none' })
-      return
-    }
     if (this.data.downloading) return
+
+    // 不再阻止重复下载：用户可能找不到文件需要重新下载
 
     this.setData({ downloading: true })
     wx.showLoading({ title: '下载中...' })
@@ -178,11 +176,6 @@ Page({
     } finally {
       this.setData({ downloading: false })
     }
-  },
-
-  // 分享打印
-  onSharePrint() {
-    wx.showToast({ title: '请点击右上角分享', icon: 'none' })
   },
 
   onShareAppMessage() {

@@ -43,15 +43,23 @@ function activeBottlenecks(profile = {}) {
 }
 
 function allSubjectBottleneckViews(profileBySubject) {
-  const rawItems = SUBJECTS.flatMap(subject => {
+  // 按学科分别构建（数学展开细卡点 BN，与其他页面保持一致的粒度）
+  const views = []
+  for (const subject of SUBJECTS) {
     const profile = profileBySubject.get(subject.key) || {}
-    return profileBottlenecks(profile).map(item => ({
+    const rawItems = profileBottlenecks(profile).map(item => ({
       ...item,
       subject: subject.key,
       subjectName: subject.name
     }))
-  })
-  return buildBottleneckViews(rawItems)
+    const subjectViews = buildBottleneckViews(rawItems, {
+      subject: subject.key,
+      subjectName: subject.name,
+      expandCandidates: subject.key === 'math',  // 数学展开细卡点，与学科首页/报告页一致
+    })
+    views.push(...subjectViews)
+  }
+  return views
 }
 
 function hasSubjectEvidence(subject, profile, reports) {
@@ -326,11 +334,12 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
   const missingSubjects = SUBJECTS.filter(subject =>
     !analyzedSubjects.some(item => item.key === subject.key)
   )
-  const allCurrentBottlenecks = SUBJECTS.flatMap(subject =>
-    profileBottlenecks(profileBySubject.get(subject.key) || {})
-  )
-  const pendingBottlenecks = allCurrentBottlenecks.filter(item => item.status !== 'improved')
-  const improvedBottlenecks = allCurrentBottlenecks.filter(item => item.status === 'improved')
+  const priorityHighlights = buildPriorityHighlights(profileBySubject)
+  const bottleneckViews = allSubjectBottleneckViews(profileBySubject)
+  const bottleneckStats = buildBottleneckStats(bottleneckViews)
+  // pending/improved 统一从展开后的 bottleneckViews 取（与学科首页/报告页同口径）
+  const pendingBottlenecks = bottleneckViews.filter(item => item.status !== 'improved')
+  const improvedBottlenecks = bottleneckViews.filter(item => item.status === 'improved')
   const effectiveReports = reports.filter(report =>
     report.status === 'completed' && (report.isEffective === undefined || report.isEffective === true)
   )
@@ -341,9 +350,6 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
   ])
   const latestText = latest ? formatRelativeTime(latest) : '暂无'
 
-  const priorityHighlights = buildPriorityHighlights(profileBySubject)
-  const bottleneckViews = allSubjectBottleneckViews(profileBySubject)
-  const bottleneckStats = buildBottleneckStats(bottleneckViews)
   const primarySubject = priorityHighlights[0] && subjectByKey[priorityHighlights[0].subject]
   const pendingNames = formatBottleneckDisplayList(pendingBottlenecks)
   const hasPending = pendingBottlenecks.length > 0

@@ -76,8 +76,8 @@ test('verification PDF uses bundled Chinese font and renders grouped student and
   const texts = operations.filter(item => item[0] === 'text').map(item => item[1])
   // 标题栏：试卷编号 + 页面编码，不再显示"学习卡点验证卷"
   assert.ok(texts.some(t => t.includes('数学-20260613-01')), '标题栏应含试卷编号')
-  assert.ok(texts.includes('A. 计算错误'))
-  assert.ok(texts.includes('B. 审题错误'))
+  assert.ok(texts.includes('计算错误'), '应显示卡点名"计算错误"')
+  assert.ok(texts.includes('审题错误'), '应显示卡点名"审题错误"')
   assert.equal(texts.some(text => /^LP-\d+/.test(text)), false)
   assert.ok(texts.includes('学习卡点验证卷 · 参考答案'))
   assert.ok(texts.includes('供家长 / 教师使用'))

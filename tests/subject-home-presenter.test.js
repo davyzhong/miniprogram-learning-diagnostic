@@ -89,7 +89,8 @@ test('math workbench expands coarse bottlenecks into fine-grained candidate bott
   assert.match(view.taskQueue[0].evidenceText, /归属计算基础/)
   assert.match(view.taskQueue[0].evidenceText, /推荐资源 1 个/)
   assert.equal(view.taskQueue[0].viewId, 'LP-001:BN-DEC-MUL-POINT-COUNT')
-  assert.equal(view.pendingCount, 0)
+  // 统一口径：pendingCount = status !== 'improved'（persisting 也算待修复）
+  assert.equal(view.pendingCount, 2)
   assert.equal(view.persistingCount, 2)
 })
 

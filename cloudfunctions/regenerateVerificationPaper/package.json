@@ -1,0 +1,9 @@
+{
+  "name": "regenerateVerificationPaper",
+  "version": "1.0.0",
+  "description": "手动重新生成验证卷（none/failed 兜底），分批追加 + 最终 regeneratePdf",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

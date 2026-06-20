@@ -561,3 +561,55 @@
   font-size: 30rpx;
   font-weight: 850;
 }
+
+/* 置信度仪表盘 */
+.confidence-card {
+  margin: 16rpx 0;
+  padding: 24rpx;
+  background: #f7fafc;
+  border-radius: 16rpx;
+  border-left: 6rpx solid #3182ce;
+}
+.confidence-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10rpx;
+}
+.confidence-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1a365d;
+}
+.confidence-level {
+  font-size: 26rpx;
+  font-weight: 600;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+}
+.confidence-level.high { color: #c53030; background: #fed7d7; }
+.confidence-level.medium { color: #b7791f; background: #fefcbf; }
+.confidence-level.low { color: #718096; background: #e2e8f0; }
+.confidence-detail {
+  display: block;
+  font-size: 24rpx;
+  color: #4a5568;
+  line-height: 1.5;
+}
+.confidence-trend {
+  display: block;
+  font-size: 22rpx;
+  color: #718096;
+  margin-top: 6rpx;
+}
+
+/* 报告页置信度标签 */
+.confidence-tag {
+  font-size: 20rpx;
+  padding: 2rpx 8rpx;
+  border-radius: 4rpx;
+  margin-right: 8rpx;
+}
+.confidence-tag.high { color: #c53030; background: #fed7d7; }
+.confidence-tag.medium { color: #b7791f; background: #fefcbf; }
+.confidence-tag.low { color: #718096; background: #e2e8f0; }

@@ -43,7 +43,7 @@
     </view>
   </view>
 
-  <view class="section-title range-title">出题范围（{{selectedCount}}/{{paperConfig.maxTargets || 60}}）</view>
+  <view class="section-title range-title">出题范围（已选 {{selectedCount}} 个卡点）</view>
   <view class="bottleneck-list">
     <view
       class="bottleneck-item {{item.selected ? 'selected' : ''}}"
@@ -58,10 +58,8 @@
       <view class="bottleneck-info">
         <view class="bottleneck-header">
           <text class="lp-name">{{item.displayName}}</text>
-          <view class="severity-badge severity-{{item.severity}}">
-            <text wx:if="{{item.severity === 'high'}}">高</text>
-            <text wx:elif="{{item.severity === 'medium'}}">中</text>
-            <text wx:else>低</text>
+          <view class="confidence-badge confidence-{{item.confidenceClass}}">
+            <text>{{item.confidenceLabel}}·{{item.expectedQuestions}}题</text>
           </view>
         </view>
         <text class="bottleneck-date">{{item.rangeText}}</text>

@@ -115,7 +115,8 @@ function summarizeBottleneckName(value) {
     }
   }
 
-  return text.length > 10 ? `${text.slice(0, 10)}…` : text;
+  // 双栏宽度约 253pt，20 个中文字符约 240pt，完整展示不截断
+  return text.length > 20 ? `${text.slice(0, 20)}…` : text;
 }
 
 function uniqueBottleneckSummaries(items = []) {

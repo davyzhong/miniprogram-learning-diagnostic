@@ -88,6 +88,18 @@ Page({
     }
   },
 
+  // 练习题答案展开/收起：让学习者先想一想再点开
+  onPracticeToggle(e) {
+    const questionId = e.currentTarget.dataset.questionId
+    if (!questionId) return
+    const view = this.data.view
+    if (!view || !view.practiceBlock || !view.practiceBlock.questions) return
+    const questions = view.practiceBlock.questions.map(q =>
+      q.questionId === questionId ? { ...q, revealed: !q.revealed } : q
+    )
+    this.setData({ 'view.practiceBlock.questions': questions })
+  },
+
   onExternalResourceTap(e) {
     const { url, platform, canJump } = e.currentTarget.dataset
     if (!url) {

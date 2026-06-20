@@ -261,6 +261,15 @@ async function callGeneratePaper(params) {
 }
 
 /**
+ * 调用云函数：手动重新生成验证卷（none/failed 兜底）。
+ * 云函数内部 fire-and-forget 分批生成，立即返回 paperId，前端轮询 getActiveVerificationPaper。
+ * @param {object} params - { studentId, subject, reportId }
+ */
+async function regenerateVerificationPaper(params) {
+  return callFunction('regenerateVerificationPaper', params, { timeout: 20000 })
+}
+
+/**
  * 调用云函数：生成报告 PDF
  * PDFKit 渲染耗时较长，前端匹配云函数超时（60 秒）。
  * @param {object} params - { reportId }
@@ -338,8 +347,8 @@ async function getPaperDetail(paperId) {
  * 查询当前激活的验证卷状态（自动生成场景）
  * @returns { paper: object|null, status: 'ready'|'generating'|'failed'|'none' }
  */
-async function getActiveVerificationPaper(studentId, subject) {
-  return callFunction('studentData', { action: 'getActiveVerificationPaper', studentId, subject })
+async function getActiveVerificationPaper(studentId, subject, reportId) {
+  return callFunction('studentData', { action: 'getActiveVerificationPaper', studentId, subject, reportId })
 }
 
 async function createReportFeedback(payload) {
@@ -352,7 +361,9 @@ async function getReportFeedback(reportId) {
 }
 
 async function generateLearningResourcePack(payload = {}) {
-  return callFunction('learningResource', { action: 'generatePack', ...payload })
+  // generatePack 内部调用 LLM 增强讲解内容，可能需要 20-40 秒，
+  // 必须显式突破 wx.cloud.callFunction 默认的 20 秒超时。
+  return callFunction('learningResource', { action: 'generatePack', ...payload }, { timeout: 60000 })
 }
 
 async function getLearningResourcePack(packId) {
@@ -438,6 +449,7 @@ module.exports = {
   callUploadAndAnalyze,
   callAnalyzePhotos,
   callGeneratePaper,
+  regenerateVerificationPaper,
   callGenerateReportPDF,
   getAnalysisProgress,
   getAccessibleStudents,

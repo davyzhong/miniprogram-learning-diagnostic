@@ -323,7 +323,7 @@ test('diagnosis report builds parent-facing explanation with evidence uncertaint
   assert.match(view.explanationEvidence, /2 个学习卡点/)
   assert.match(view.explanationUncertainty, /样本不足/)
   assert.match(view.explanationUncertainty, /部分照片较模糊/)
-  assert.equal(view.explanationActionText, '生成纸面验证卷')
+  assert.equal(view.explanationActionText, '查看验证卷')
   assert.equal(view.explanationActionType, 'generate-verification')
 })
 
@@ -538,4 +538,70 @@ test('math diagnosis report exposes grouped bottleneck sections for parent-facin
     '小数乘法中积的小数位数判断错误',
     '小数乘法后缺少数量级估算检查'
   ])
+})
+
+// === 诊断报告展示全量卡点（profile 级别，而非单次 report 级别）===
+
+test('诊断报告优先展示 profile.currentBottlenecks（全量合并卡点），而非 report.bottlenecks（单次）', () => {
+  // 模拟：单次报告只有 2 个卡点，但 profile 合并了 5 个
+  const report = {
+    type: 'diagnosis',
+    subject: 'math',
+    bottlenecks: [
+      { lpCode: 'LP-001', lpName: '卡点A', errorCount: 1 },
+      { lpCode: 'LP-002', lpName: '卡点B', errorCount: 1 },
+    ]
+  }
+  const profile = {
+    currentBottlenecks: [
+      { lpCode: 'LP-001', lpName: '卡点A', status: 'persisting', errorCount: 1 },
+      { lpCode: 'LP-002', lpName: '卡点B', status: 'needs_verification', errorCount: 1 },
+      { lpCode: 'LP-003', lpName: '卡点C', status: 'needs_verification', errorCount: 0 },
+      { lpCode: 'LP-004', lpName: '卡点D', status: 'needs_verification', errorCount: 0 },
+      { lpCode: 'LP-005', lpName: '卡点E', status: 'improved', errorCount: 0 },
+    ]
+  }
+  const view = buildReportView(report, { profile })
+  assert.equal(view.bottleneckCount, 5, '应展示全量 5 个卡点，而非单次报告的 2 个')
+  assert.equal(view.hasBottlenecks, true)
+})
+
+test('诊断报告无 profile 时 fallback 到 report.bottlenecks（不崩溃）', () => {
+  const report = {
+    type: 'diagnosis',
+    subject: 'math',
+    bottlenecks: [
+      { lpCode: 'LP-001', lpName: '卡点A', errorCount: 2 },
+    ]
+  }
+  const view = buildReportView(report) // 不传 profile
+  assert.equal(view.bottleneckCount, 1, '无 profile 时应用 report.bottlenecks')
+})
+
+test('诊断报告 profile.currentBottlenecks 为空时 fallback 到 report.bottlenecks', () => {
+  const report = {
+    type: 'diagnosis',
+    subject: 'math',
+    bottlenecks: [{ lpCode: 'LP-001', lpName: '卡点A', errorCount: 1 }]
+  }
+  const profile = { currentBottlenecks: [] } // 空数组
+  const view = buildReportView(report, { profile })
+  assert.equal(view.bottleneckCount, 1, 'profile 卡点为空时应用 report.bottlenecks')
+})
+
+test('验证报告（verification）不用 profile 卡点，只用单次报告卡点', () => {
+  const report = {
+    type: 'verification',
+    subject: 'math',
+    bottlenecks: [{ lpCode: 'LP-001', lpName: '卡点A', errorCount: 1 }]
+  }
+  const profile = {
+    currentBottlenecks: [
+      { lpCode: 'LP-001', lpName: '卡点A', status: 'persisting' },
+      { lpCode: 'LP-002', lpName: '卡点B', status: 'needs_verification' },
+      { lpCode: 'LP-003', lpName: '卡点C', status: 'needs_verification' },
+    ]
+  }
+  const view = buildReportView(report, { profile })
+  assert.equal(view.bottleneckCount, 1, '验证报告只用单次报告的 1 个卡点，不用 profile 全量')
 })

@@ -106,4 +106,5 @@ module.exports = {
   canOperateLearning,
   canManageFamily,
   permissionsForRole,
+  isMissingCollectionError,
 };

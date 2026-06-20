@@ -1,4 +1,5 @@
-const DEFAULT_MATH_TARGETS_PER_PAGE = 3
+// 每页放 5 个 target（= 10 道题），和标准验证卷格式一致（双栏高密度排版）
+const DEFAULT_MATH_TARGETS_PER_PAGE = 5
 const DEFAULT_CHINESE_REVIEW_TARGETS_PER_PAGE = 8
 
 const SUBJECT_CODES = {

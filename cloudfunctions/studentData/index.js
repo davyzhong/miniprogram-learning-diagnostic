@@ -3,6 +3,7 @@ const {
   getStudentAccess,
   canManageFamily,
   permissionsForRole,
+  isMissingCollectionError,
 } = require('./access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
@@ -134,12 +135,21 @@ async function getLearningResourcePacks(studentId, subject, limit = 50, cursor =
   const filter = subject
     ? { studentId, subject, ...resourceCursorFilter(cursor) }
     : { studentId, ...resourceCursorFilter(cursor) };
-  const res = await db.collection('learningResourcePacks')
-    .where(filter)
-    .orderBy('updatedAt', 'desc')
-    .limit(limit)
-    .get();
-  return res.data || [];
+  try {
+    const res = await db.collection('learningResourcePacks')
+      .where(filter)
+      .orderBy('updatedAt', 'desc')
+      .limit(limit)
+      .get();
+    return res.data || [];
+  } catch (error) {
+    // 集合首次访问时 CloudBase 抛 -502005，建空集合后返回 []，避免时间线崩溃
+    if (isMissingCollectionError(error) && db.createCollection) {
+      try { await db.createCollection('learningResourcePacks') } catch (_) {}
+      return [];
+    }
+    throw error;
+  }
 }
 
 function bottleneckSummaryFrom(items = []) {
@@ -632,18 +642,34 @@ async function getPaperDetail(openId, paperId) {
   });
 }
 
-async function getActiveVerificationPaper(openId, studentId, subject) {
+async function getActiveVerificationPaper(openId, studentId, subject, reportId) {
   if (!studentId) return failure('缺少 studentId');
   const access = await getAccess(studentId, openId);
   if (!access.allowed) return failure('无权访问该学生');
 
+  // 构建查询条件：如果有 reportId，优先查该报告关联的验证卷（paper.triggeredByReport）
+  const where = { studentId, subject, type: 'verification' };
+  if (reportId) {
+    where.triggeredByReport = reportId;
+  }
+
   // 查最近 5 份验证卷，按优先级返回状态
   const res = await db.collection('papers')
-    .where({ studentId, subject, type: 'verification' })
+    .where(where)
     .orderBy('createdAt', 'desc')
     .limit(5)
     .get();
   const papers = res.data || [];
+
+  // 如果按 reportId 查不到，且传了 reportId，回退到学科维度（兼容旧数据）
+  if (papers.length === 0 && reportId) {
+    const fallbackRes = await db.collection('papers')
+      .where({ studentId, subject, type: 'verification' })
+      .orderBy('createdAt', 'desc')
+      .limit(5)
+      .get();
+    papers.push(...(fallbackRes.data || []));
+  }
 
   const ready = papers.find(p => p.generationStatus === 'ready' || (!p.generationStatus && p.pdfFileId));
   if (ready) return withAccess(access, { paper: ready, status: 'ready' });
@@ -692,7 +718,7 @@ exports.main = async (event = {}) => {
       return getPaperDetail(openId, event.paperId);
     }
     if (action === 'getActiveVerificationPaper') {
-      return getActiveVerificationPaper(openId, event.studentId, event.subject);
+      return getActiveVerificationPaper(openId, event.studentId, event.subject, event.reportId);
     }
     if (action === 'cleanupStaleLearningRecords') {
       return cleanupStaleLearningRecords(openId, event.studentId, event.subject, event.dryRun === true);
