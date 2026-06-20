@@ -33,7 +33,7 @@ const automator = loadAutomator()
 const projectPath = path.resolve(__dirname, '..')
 const cliPath = process.env.WECHAT_DEVTOOLS_CLI
   || (process.platform === 'darwin' ? '/Applications/wechatwebdevtools.app/Contents/MacOS/cli' : 'cli')
-const outputDir = path.join(projectPath, 'tmp', 'e2e-data-driven')
+const outputDir = path.join(projectPath, 'tmp', 'e2e', 'math-data')
 
 // === 从 seed JSON 动态加载真实数据 ===
 const dataRoot = path.join(projectPath, 'data/math')
@@ -321,7 +321,7 @@ async function main() {
     failed,
     results,
   }
-  const reportPath = path.join(outputDir, 'data-driven-report.json')
+  const reportPath = path.join(outputDir, 'report.json')
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2))
 
   console.log('')

@@ -4,10 +4,9 @@
 
 ## 流程
 
-```
-npm run test:e2e:doctor      # 1. 环境探测：DevTools CLI / automator / project.config
-   ↓
-npm run test:e2e:fullpage    # 2. 全量 17 页 + 6 场景回归
+```bash
+npm run test:e2e:doctor  # 1. 环境探测：DevTools CLI / automator / project.config
+npm run test:e2e:core    # 2. 全量 17 页 + 6 场景回归
 ```
 
 ## 前置条件
@@ -76,12 +75,12 @@ export WECHAT_DEVTOOLS_CLI=/path/to/cli
 通过: 21
 失败: 2
 截图: 2
-报告: tmp/e2e-fullpage/report.json
+报告: tmp/e2e/core/report.json
 ```
 
 ## 报告结构
 
-输出 `tmp/e2e-fullpage/report.json`：
+输出 `tmp/e2e/core/report.json`：
 
 ```json
 {
@@ -99,13 +98,13 @@ export WECHAT_DEVTOOLS_CLI=/path/to/cli
       ],
       "consoleErrors": ["..."],
       "realConsoleErrors": ["Cannot read property..."],
-      "screenshot": "tmp/e2e-fullpage/screenshots/...png"
+      "screenshot": "tmp/e2e/core/screenshots/...png"
     }
   ]
 }
 ```
 
-失败页面会自动截图到 `tmp/e2e-fullpage/screenshots/`。
+失败页面会自动截图到 `tmp/e2e/core/screenshots/`。
 
 ## 与现有脚本的关系
 
@@ -114,6 +113,6 @@ export WECHAT_DEVTOOLS_CLI=/path/to/cli
 | `devtools-fullpage-smoke.js` | 17 页加载不报错 | 弱（只采集 error） |
 | `devtools-parent-timeline-e2e.js` | 19 个交互场景 | 强（但只覆盖家长/时间线） |
 | `devtools-english-e2e.js` | 英语模块 | 强（专域） |
-| **`devtools-e2e-fullpage.js`（新）** | **17 页 + 6 跨页场景** | **强（每个页面都断言关键文本）** |
+| **`devtools-e2e-fullpage.js` / `npm run test:e2e:core`** | **17 页 + 6 跨页场景** | **强（每个页面都断言关键文本）** |
 
 `devtools-e2e-fullpage.js` 是 `devtools-fullpage-smoke.js` 的强化版（把 smoke 改成了"必须出现的文本"），不是替代品；smoke 仍适合做轻量回归。

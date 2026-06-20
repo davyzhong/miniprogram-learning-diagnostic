@@ -15,6 +15,7 @@
     "pages/learning-resource/learning-resource",
     "pages/english-practice/english-practice",
     "pages/english-dictation/english-dictation",
+    "pages/english-wrong-words/english-wrong-words",
     "pages/generate-verification/generate-verification",
     "pages/default-paper/default-paper",
     "pages/paper-preview/paper-preview"

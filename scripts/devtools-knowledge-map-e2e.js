@@ -33,7 +33,7 @@ const automator = loadAutomator()
 const projectPath = path.resolve(__dirname, '..')
 const cliPath = process.env.WECHAT_DEVTOOLS_CLI
   || (process.platform === 'darwin' ? '/Applications/wechatwebdevtools.app/Contents/MacOS/cli' : 'cli')
-const outputDir = path.join(projectPath, 'tmp', 'e2e-knowledge-map')
+const outputDir = path.join(projectPath, 'tmp', 'e2e', 'math-knowledge-map')
 
 const NOW = '2026-06-18T09:30:00+08:00'
 const student = { _id: 'student-km', name: '钟青羽', grade: 6, createdAt: NOW, avatarColor: 'blue' }
@@ -404,7 +404,7 @@ async function main() {
 
     // 写报告
     fs.mkdirSync(outputDir, { recursive: true })
-    const reportPath = path.join(outputDir, `report-${Date.now()}.json`)
+    const reportPath = path.join(outputDir, 'report.json')
     const passed = results.filter(r => r.status === 'PASS').length
     const failed = results.filter(r => r.status === 'FAIL').length
     fs.writeFileSync(reportPath, JSON.stringify({

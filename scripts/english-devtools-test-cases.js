@@ -9,6 +9,7 @@ const ENGLISH_FEATURE_KEYS = [
   'familiarity',
   'paper-dictation',
   'learning-records',
+  'wrong-words',
   'empty-state'
 ]
 

@@ -1,7 +1,7 @@
 const path = require('node:path')
 
 const DEFAULT_PROJECT_PATH = '/Users/qiming/Downloads/GoogleDrive/AI Learning/miniprogram-learning-diagnostic'
-const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_PROJECT_PATH, 'tmp', 'real-data-smoke')
+const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_PROJECT_PATH, 'tmp', 'e2e', 'real-data')
 
 const ROUTE_DEFINITIONS = {
   home: {

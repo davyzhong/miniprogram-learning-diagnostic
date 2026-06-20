@@ -399,6 +399,10 @@ Page({
       this.navigateToEnglishDictation()
       return
     }
+    if (actionType === 'englishWrongWords') {
+      this.navigateToEnglishWrongWords()
+      return
+    }
     if (actionType === 'importVocabulary') {
       this.importEnglishVocabulary()
       return
@@ -449,6 +453,13 @@ Page({
     const { studentId, studentName, grade } = this.data
     wx.navigateTo({
       url: `/pages/english-dictation/english-dictation?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&grade=${grade || ''}`
+    })
+  },
+
+  navigateToEnglishWrongWords() {
+    const { studentId, studentName, grade } = this.data
+    wx.navigateTo({
+      url: `/pages/english-wrong-words/english-wrong-words?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&grade=${grade || ''}`
     })
   },
 

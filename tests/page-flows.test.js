@@ -857,6 +857,9 @@ test('English subject home loads vocabulary summary and opens English practice',
 
   page.onEnglishActionTap({ currentTarget: { dataset: { actionType: 'englishDictation', disabled: false } } })
   assert.match(wx.calls.filter(call => call.name === 'navigateTo').at(-1).payload.url, /pages\/english-dictation\/english-dictation/)
+
+  page.onToolTap({ currentTarget: { dataset: { key: 'englishWrongWords' } } })
+  assert.match(wx.calls.filter(call => call.name === 'navigateTo').at(-1).payload.url, /pages\/english-wrong-words\/english-wrong-words/)
 })
 
 test('English subject home imports Zhong Qingyu personal vocabulary seed when empty', async () => {
@@ -1030,9 +1033,12 @@ test('English practice page generates a 20 word familiarity session without patt
   assert.equal(page.data.functionType, 'familiarity')
   assert.equal(page.data.queue.length, 20)
   assert.equal(page.data.currentItem.word, 'word1')
-  assert.match(page.data.currentItem.promptText, /说出英文单词/)
+  assert.match(page.data.currentItem.promptText, /看中文意思/)
+  assert.doesNotMatch(page.data.currentItem.promptText, /听中文/)
+  assert.equal(page.data.recordButtonText, '开始录音回答')
   assert.equal(page.data.queue[1].promptTypeText, '英文提示')
-  assert.match(page.data.queue[1].promptText, /说出中文意思/)
+  assert.match(page.data.queue[1].promptText, /看英文单词/)
+  assert.doesNotMatch(page.data.queue[1].promptText, /听英文/)
   assert.equal(page.data.patternItems.length, 0)
 })
 
@@ -1215,6 +1221,10 @@ test('English dictation page creates a paper session and uploads answer photos',
 
   assert.equal(page.data.sessionId, 'paper-session-1')
   assert.equal(page.data.queue.length, 20)
+  assert.equal(page.data.paperInstruction, '请按题号一行一个词写英文，保留修改痕迹。')
+  assert.match(page.data.queue[0].promptText, /看中文意思/)
+  assert.match(page.data.queue[1].promptText, /看英文单词/)
+  assert.doesNotMatch(page.data.queue[0].promptText, /AI 读词|听中文/)
   assert.equal(page.data.currentIndex, 1)
   assert.equal(page.data.currentItem.word, 'word2')
   assert.equal(uploaded.length, 2)
@@ -1277,6 +1287,47 @@ test('English dictation page supports optional voice next command and cleans res
   assert.equal(stopCount, 1)
   assert.equal(audio.stopped, true)
   assert.equal(audio.destroyed, true)
+})
+
+test('English wrong words page summarizes weak vocabulary and opens practice flows', async () => {
+  const wx = createWxMock()
+  const cloud = {
+    getEnglishVocabularySummary: async studentId => ({
+      studentId,
+      summary: {
+        totalWords: 505,
+        familiarity: { needsPracticeCount: 3, dueReviewCount: 2 },
+        spelling: { needsPracticeCount: 5, dueReviewCount: 4 },
+        overall: { masteredCount: 120 }
+      },
+      weakWords: [
+        { wordId: 'word-1', word: 'Wednesday', wrongCount: 3, meanings: ['星期三'] },
+        { wordId: 'word-2', word: 'science', wrongCount: 2, meanings: ['科学'] }
+      ]
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/english-wrong-words/english-wrong-words.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({
+    studentId: 'student-1',
+    studentName: encodeURIComponent('钟青羽'),
+    grade: '6'
+  })
+
+  assert.equal(page.data.studentName, '钟青羽')
+  assert.equal(page.data.summaryCards.find(item => item.key === 'weak').value, 8)
+  assert.equal(page.data.summaryCards.find(item => item.key === 'review').value, 6)
+  assert.equal(page.data.weakWords.length, 2)
+  assert.equal(page.data.weakWords[0].displayMeaning, '星期三')
+  assert.ok(page.data.groups.some(item => item.key === 'spellingWeak' && item.count === 5))
+
+  page.onPracticeTap()
+  assert.match(wx.calls.filter(call => call.name === 'navigateTo').at(-1).payload.url, /pages\/english-practice\/english-practice/)
+  page.onDictationTap()
+  assert.match(wx.calls.filter(call => call.name === 'navigateTo').at(-1).payload.url, /pages\/english-dictation\/english-dictation/)
 })
 
 test('upload selection warns about duplicate filenames but keeps the images', () => {

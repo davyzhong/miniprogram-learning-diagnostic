@@ -4,7 +4,7 @@
     <view class="hero-copy">
       <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
       <text class="title">纸面听写</text>
-      <text class="subtitle">AI 逐个读词，孩子写在纸上，完成后拍照上传。</text>
+      <text class="subtitle">看提示在纸上写英文，完成后拍照上传识别。</text>
     </view>
   </view>
 
@@ -29,8 +29,8 @@
         <text class="prompt-pill">{{currentItem.promptTypeText}}</text>
       </view>
       <text class="prompt-title">{{currentItem.promptText}}</text>
-      <text class="prompt-desc">请在纸上完整写出英文单词，保留修改痕迹和拼写过程。</text>
-      <button class="play-btn" bindtap="onPlayPromptTap">播放提示</button>
+      <text class="prompt-desc">{{paperInstruction}}</text>
+      <button class="play-btn" bindtap="onPlayPromptTap">辅助播放提示</button>
       <text class="voice-hint" wx:if="{{voiceUnavailableText}}">{{voiceUnavailableText}}</text>
     </view>
 

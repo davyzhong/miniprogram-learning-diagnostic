@@ -330,6 +330,13 @@ function buildTools(latestReport, permissions = {}, options = {}) {
     const hasVocabularyReady = hasEnglishVocabulary(options)
     return [
       {
+        key: 'englishWrongWords',
+        title: '错词本',
+        desc: hasVocabularyReady ? '薄弱词、待复测和会认不会写' : '词库准备后自动生成',
+        icon: '!',
+        actionType: 'englishWrongWords'
+      },
+      {
         key: 'history',
         title: '学习记录',
         desc: '认词、听写和照片证据',

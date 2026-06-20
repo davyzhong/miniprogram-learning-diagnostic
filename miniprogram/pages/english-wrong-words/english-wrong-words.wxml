@@ -1,0 +1,62 @@
+<view class="page">
+  <view class="hero">
+    <view class="back" bindtap="onBack">‹</view>
+    <view class="hero-copy">
+      <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
+      <text class="title">错词本</text>
+      <text class="subtitle">把不熟、写错和到期复测的单词集中处理。</text>
+    </view>
+  </view>
+
+  <view class="state-card" wx:if="{{loading}}">
+    <text class="state-title">正在整理错词</text>
+    <text class="state-desc">从认词和纸面听写记录中汇总薄弱词。</text>
+  </view>
+
+  <view class="state-card error" wx:elif="{{error}}">
+    <text class="state-title">暂时无法加载</text>
+    <text class="state-desc">{{error}}</text>
+  </view>
+
+  <view wx:else class="content">
+    <view class="summary-grid">
+      <view class="summary-card" wx:for="{{summaryCards}}" wx:key="key">
+        <text class="summary-value">{{item.value}}</text>
+        <text class="summary-label">{{item.label}}</text>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">分组处理</text>
+      <view class="group-list">
+        <view class="group-row" wx:for="{{groups}}" wx:key="key">
+          <view class="group-count">{{item.count}}</view>
+          <view class="group-copy">
+            <text class="group-title">{{item.title}}</text>
+            <text class="group-desc">{{item.desc}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="section">
+      <text class="section-title">最近需要多见几次</text>
+      <view class="empty-card" wx:if="{{weakWords.length === 0}}">
+        <text class="empty-title">暂时没有高频错词</text>
+        <text class="empty-desc">完成认词练习或纸面听写后，这里会自动出现需要加强的词。</text>
+      </view>
+      <view class="word-card" wx:for="{{weakWords}}" wx:key="wordId">
+        <view class="word-main">
+          <text class="word-title">{{item.word}}</text>
+          <text class="word-meaning">{{item.displayMeaning}}</text>
+        </view>
+        <text class="word-tag">{{item.tagText}}</text>
+      </view>
+    </view>
+
+    <view class="action-row">
+      <button class="secondary-btn" bindtap="onPracticeTap">去认词练习</button>
+      <button class="primary-btn" bindtap="onDictationTap">去纸面听写</button>
+    </view>
+  </view>
+</view>

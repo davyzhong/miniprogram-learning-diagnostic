@@ -218,6 +218,7 @@ test('English workbench uses vocabulary summary as the primary learning asset', 
   assert.equal(view.englishActionCards.find(item => item.key === 'englishPractice').recommended, true)
   assert.equal(view.englishActionCards.find(item => item.key === 'englishDictation').disabled, false)
   assert.ok(view.tools.some(item => item.key === 'history'))
+  assert.ok(view.tools.some(item => item.key === 'englishWrongWords'))
   assert.ok(view.tools.every(item => item.key !== 'englishPractice'))
   assert.ok(view.tools.every(item => item.key !== 'englishDictation'))
   assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))

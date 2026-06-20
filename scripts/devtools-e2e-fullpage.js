@@ -11,7 +11,7 @@
  *
  * 用法：
  *   WECHAT_DEVTOOLS_CLI=/path/to/cli node scripts/devtools-e2e-fullpage.js
- *   npm run test:e2e:fullpage
+ *   npm run test:e2e:core
  *
  * 退出码：0 全过；1 有失败；2 启动失败
  */
@@ -29,7 +29,7 @@ const automator = loadAutomator()
 const projectPath = path.resolve(__dirname, '..')
 const cliPath = process.env.WECHAT_DEVTOOLS_CLI
   || (process.platform === 'darwin' ? '/Applications/wechatwebdevtools.app/Contents/MacOS/cli' : 'cli')
-const outputDir = path.join(projectPath, 'tmp', 'e2e-fullpage')
+const outputDir = path.join(projectPath, 'tmp', 'e2e', 'core')
 
 const NOW = '2026-06-17T09:30:00+08:00'
 const student = { _id: 'student-e2e', name: '钟青羽', grade: 6, createdAt: NOW, avatarColor: 'blue' }

@@ -3,13 +3,13 @@
     <view class="back" bindtap="onBack">‹</view>
     <view class="hero-copy">
       <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
-      <text class="title">单词熟悉度</text>
-      <text class="subtitle">中文和英文提示各一半，AI 自动判断是否熟悉这个词。</text>
+      <text class="title">认词练习</text>
+      <text class="subtitle">看中文或英文提示，录音说出对应内容。</text>
     </view>
   </view>
 
   <view class="state-card" wx:if="{{loading}}">
-    <text class="state-title">正在准备单词熟悉度练习</text>
+      <text class="state-title">正在准备认词练习</text>
     <text class="state-desc">优先抽取薄弱词、待复测词和未测词。</text>
   </view>
 
@@ -21,7 +21,7 @@
 
   <view wx:elif="{{finished}}" class="finish-card">
     <text class="finish-mark">✓</text>
-    <text class="finish-title">本轮熟悉度练习完成</text>
+      <text class="finish-title">本轮认词练习完成</text>
     <text class="finish-desc">不熟悉和听不清的单词已经记录，后续会提高出现频率。</text>
     <button class="primary-btn" bindtap="onFinishTap">完成并返回</button>
   </view>
@@ -38,16 +38,16 @@
       <text class="retry-pill" wx:if="{{currentItem.retryCount > 0}}">第 {{currentItem.retryCount + 1}} 次出现</text>
     </view>
     <text class="prompt-title">{{currentItem.promptText}}</text>
-      <text class="prompt-desc">听到提示后，说出对应的英文单词或中文意思。系统会把不熟的词安排稍后再出现。</text>
-      <button class="play-btn" bindtap="onPlayPromptTap">播放提示</button>
+      <text class="prompt-desc">看清提示后，点击录音按钮说出对应的英文单词或中文意思。系统会把不熟的词安排稍后再出现。</text>
+      <button class="play-btn" bindtap="onPlayPromptTap">辅助播放提示</button>
     </view>
 
     <view class="voice-card">
       <button class="record-btn {{recording ? 'recording' : ''}}" loading="{{submitting}}" bindtap="onRecordTap">
-        {{recording ? '停止录音并识别' : '开始回答'}}
+        {{recordButtonText}}
       </button>
       <text class="voice-hint" wx:if="{{voiceUnavailableText}}">{{voiceUnavailableText}}</text>
-      <text class="voice-hint" wx:else>读完后再次点击按钮，系统会自动识别并判断。</text>
+      <text class="voice-hint" wx:else>{{recording ? '正在录音，回答完后再次点击识别。' : '准备好后点击按钮开始录音。'}}</text>
     </view>
 
     <view class="result-card result-{{lastResult.status}}" wx:if="{{lastResult}}">

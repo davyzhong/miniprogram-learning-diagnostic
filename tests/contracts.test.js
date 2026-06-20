@@ -9,6 +9,10 @@ function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8')
 }
 
+function packageScripts() {
+  return JSON.parse(read('package.json')).scripts
+}
+
 // ── Cloud SDK & environment ──
 
 test('cloud SDK is initialized before database access', () => {
@@ -244,6 +248,63 @@ test('analysis status pages use the shared analysis poller wrapper', () => {
     assert.match(source, /analysis-poller/)
     assert.doesNotMatch(source, /utils\/poller/)
   }
+})
+
+// ── Test framework contracts ──
+
+test('E2E test framework V2 package scripts expose unit and subject CLI suites', () => {
+  const scripts = packageScripts()
+
+  assert.equal(scripts.test, 'npm run test:unit')
+  assert.match(scripts['test:unit'], /^node --test --test-concurrency=1 /)
+  assert.match(scripts['test:coverage'], /--experimental-test-coverage/)
+
+  assert.equal(scripts['test:e2e:doctor'], 'node scripts/devtools-cli-doctor.js')
+  assert.equal(scripts['test:e2e:core'], 'node scripts/devtools-e2e-fullpage.js')
+  assert.match(scripts['test:e2e:math'], /test:e2e:data-driven/)
+  assert.match(scripts['test:e2e:math'], /test:e2e:knowledge-map/)
+  assert.equal(scripts['test:e2e:chinese'], 'node scripts/devtools-e2e-chinese.js')
+  assert.equal(scripts['test:e2e:english'], 'node scripts/devtools-english-e2e.js')
+  assert.match(scripts['test:e2e:all'], /test:e2e:core/)
+  assert.match(scripts['test:e2e:all'], /test:e2e:math/)
+  assert.match(scripts['test:e2e:all'], /test:e2e:english/)
+  assert.match(scripts['test:e2e:all'], /e2e-report-aggregator/)
+
+  assert.equal(scripts['test:e2e:real-data'], 'node scripts/devtools-real-data-smoke.js')
+  assert.equal(scripts['test:e2e:real-image'], 'node tests/e2e-real-image.test.js')
+  assert.equal(scripts['test:e2e:real-cloud'], 'RUN_REAL_CLOUD=1 node --test tests/e2e-real-cloud.test.js')
+
+  assert.equal(scripts['test:devtools-english'], 'npm run test:e2e:english')
+  assert.equal(scripts['test:devtools-parent-timeline'], 'node scripts/devtools-parent-timeline-e2e.js')
+  assert.equal(scripts['test:real-data-smoke'], 'npm run test:e2e:real-data')
+  assert.equal(scripts['test:e2e-real-image'], 'npm run test:e2e:real-image')
+  assert.equal(scripts['test:real-cloud'], 'npm run test:e2e:real-cloud')
+})
+
+test('E2E test framework V2 aggregator reads standardized tmp/e2e suite reports', () => {
+  const source = read('scripts/e2e-report-aggregator.js')
+
+  for (const expected of [
+    'tmp/e2e/core',
+    'tmp/e2e/math-data',
+    'tmp/e2e/math-knowledge-map',
+    'tmp/e2e/english',
+    'tmp/e2e/real-data'
+  ]) {
+    assert.match(source, new RegExp(expected.replace(/\//g, '\\/')), `aggregator should read ${expected}`)
+  }
+
+  for (const historical of [
+    'tmp/e2e-english',
+    'tmp/e2e-parent-timeline',
+    'tmp/e2e-real-data-smoke'
+  ]) {
+    assert.doesNotMatch(source, new RegExp(historical.replace(/\//g, '\\/')), `aggregator should not depend on historical path ${historical}`)
+  }
+
+  assert.match(source, /report\.json/)
+  assert.match(source, /results\.json/)
+  assert.match(source, /data-driven-report\.json/)
 })
 
 // ── Analysis pipeline reliability ──

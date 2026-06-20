@@ -11,7 +11,7 @@
       "feature": "workbench",
       "name": "英语工作台展示个人词库和双任务入口",
       "route": "/pages/subject-home/subject-home?studentId=student-english-e2e&subject=english&subjectName=%E8%8B%B1%E8%AF%AD&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6",
-      "expectedTexts": ["今日建议", "开始今日练习", "英语学习进度", "词已准备", "今日待练", "已熟悉", "拼写薄弱", "真正掌握", "最近需要多见几次", "单词熟悉度", "纸面听写", "学习记录"],
+      "expectedTexts": ["今日建议", "英语词汇掌握", "开始认词", "开始听写", "个人词库摘要", "505 个词已进入个人词库", "今日待练", "已熟悉", "拼写薄弱", "真正掌握", "最近需要多见几次", "认词练习", "纸面听写", "错词本", "学习记录"],
       "forbiddenTexts": ["拍照诊断", "默认试卷", "学习卡点"]
     },
     {
@@ -19,7 +19,7 @@
       "feature": "auto-import",
       "name": "英语词库为空时自动导入 PEP 个人词库",
       "route": "/pages/subject-home/subject-home?studentId=student-english-e2e-empty&subject=english&subjectName=%E8%8B%B1%E8%AF%AD&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6",
-      "expectedTexts": ["今日建议", "开始今日练习", "英语学习进度", "505", "今日待练", "纸面听写"],
+      "expectedTexts": ["今日建议", "英语词汇掌握", "开始认词", "开始听写", "个人词库摘要", "505", "今日待练", "纸面听写"],
       "forbiddenTexts": ["导入个人词库 ›", "词库维护", "拍照诊断", "默认试卷"]
     },
     {
@@ -27,16 +27,16 @@
       "feature": "familiarity",
       "name": "单词熟悉度生成 20 词并提交一次 AI 判定",
       "route": "/pages/english-practice/english-practice?studentId=student-english-e2e&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6",
-      "expectedTexts": ["单词熟悉度", "当前进度", "1 / 20", "播放提示", "开始回答"],
-      "forbiddenTexts": ["句型", "时态"]
+      "expectedTexts": ["认词练习", "当前进度", "1 / 20", "看中文意思", "辅助播放提示", "开始录音回答"],
+      "forbiddenTexts": ["听中文", "句型", "时态"]
     },
     {
       "id": "ENG-DICT-001",
       "feature": "paper-dictation",
       "name": "纸面听写生成 20 词、支持语音下一个并上传批改",
       "route": "/pages/english-dictation/english-dictation?studentId=student-english-e2e&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6",
-      "expectedTexts": ["纸面听写", "当前词", "1 / 20", "播放提示", "说“下一个”", "拍照上传"],
-      "forbiddenTexts": ["下一阶段会接入 OCR", "时态"]
+      "expectedTexts": ["纸面听写", "当前词", "1 / 20", "看提示在纸上写英文", "辅助播放提示", "说“下一个”", "拍照上传"],
+      "forbiddenTexts": ["下一阶段会接入 OCR", "AI 逐个读词", "时态"]
     },
     {
       "id": "ENG-RECORD-001",
@@ -47,11 +47,19 @@
       "forbiddenTexts": ["数学诊断报告", "LP-"]
     },
     {
+      "id": "ENG-WRONG-001",
+      "feature": "wrong-words",
+      "name": "错词本展示薄弱词和复练入口",
+      "route": "/pages/english-wrong-words/english-wrong-words?studentId=student-english-e2e&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6",
+      "expectedTexts": ["错词本", "高频错词", "会认不会写", "不熟词", "待复测", "science", "museum", "去认词练习", "去纸面听写"],
+      "forbiddenTexts": ["学习卡点", "默认试卷", "拍照诊断"]
+    },
+    {
       "id": "ENG-EMPTY-001",
       "feature": "empty-state",
       "name": "无词库时单词熟悉度页面给出可恢复空态",
       "route": "/pages/english-practice/english-practice?studentId=student-english-e2e-no-words&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6",
-      "expectedTexts": ["单词熟悉度", "暂无可练习单词", "请先导入钟青羽的个人英语词库", "重新生成"],
+      "expectedTexts": ["认词练习", "暂无可练习单词", "请先导入钟青羽的个人英语词库", "重新生成"],
       "forbiddenTexts": ["1 / 20", "时态"]
     }
   ]

@@ -63,7 +63,7 @@ npm run check:deployment && npm run verify && npm run test:coverage
 部署后至少执行一次真实数据烟测：
 
 ```bash
-REAL_DATA_STUDENT_ID=student-id REAL_DATA_STUDENT_NAME=钟青羽 npm run test:real-data-smoke
+REAL_DATA_STUDENT_ID=student-id REAL_DATA_STUDENT_NAME=钟青羽 npm run test:e2e:real-data
 ```
 
 ## 4. 发布后验收
