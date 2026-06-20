@@ -1,6 +1,5 @@
 <view class="page">
   <view class="hero">
-    <view class="back" bindtap="onBack">‹</view>
     <view class="hero-copy">
       <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
       <text class="title">认词练习</text>
@@ -39,15 +38,15 @@
     </view>
     <text class="prompt-title">{{currentItem.promptText}}</text>
       <text class="prompt-desc">看清提示后，点击录音按钮说出对应的英文单词或中文意思。系统会把不熟的词安排稍后再出现。</text>
-      <button class="play-btn" bindtap="onPlayPromptTap">辅助播放提示</button>
+      <button class="play-btn" wx:if="{{currentItem.canPlayPrompt}}" bindtap="onPlayPromptTap">辅助播放提示</button>
     </view>
 
     <view class="voice-card">
-      <button class="record-btn {{recording ? 'recording' : ''}}" loading="{{submitting}}" bindtap="onRecordTap">
+      <button class="record-btn {{recording ? 'recording' : ''}}" loading="{{submitting}}" disabled="{{submitting || recognizing}}" bindtap="onRecordTap">
         {{recordButtonText}}
       </button>
       <text class="voice-hint" wx:if="{{voiceUnavailableText}}">{{voiceUnavailableText}}</text>
-      <text class="voice-hint" wx:else>{{recording ? '正在录音，回答完后再次点击识别。' : '准备好后点击按钮开始录音。'}}</text>
+      <text class="voice-hint" wx:else>{{recording ? '正在录音，回答完后再次点击识别。' : (recognizing ? '正在识别刚才的回答，请稍等。' : '准备好后点击按钮开始录音。')}}</text>
     </view>
 
     <view class="result-card result-{{lastResult.status}}" wx:if="{{lastResult}}">

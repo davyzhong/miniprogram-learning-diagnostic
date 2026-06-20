@@ -34,6 +34,9 @@ function validateEnglishDevtoolsTestCases(library = {}) {
     if (!String(item.route || '').startsWith('/pages/')) throw new Error(`英语测试用例路由不合法：${item.id}`)
     if (!Array.isArray(item.expectedTexts) || item.expectedTexts.length < 2) throw new Error(`英语测试用例缺少预期文案：${item.id}`)
     if (!Array.isArray(item.forbiddenTexts)) throw new Error(`英语测试用例缺少禁止文案：${item.id}`)
+    if (!Array.isArray(item.steps) || item.steps.length < 1) throw new Error(`英语测试用例缺少 E2E 操作步骤：${item.id}`)
+    if (!Array.isArray(item.dataAssertions) || item.dataAssertions.length < 1) throw new Error(`英语测试用例缺少数据断言：${item.id}`)
+    if (!Array.isArray(item.artifacts) || !item.artifacts.includes('screenshot')) throw new Error(`英语测试用例缺少截图产物声明：${item.id}`)
     features.add(item.feature)
   }
 

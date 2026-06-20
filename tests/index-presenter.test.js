@@ -79,6 +79,24 @@ test('child workbench cards combine pending actions and subject rows for multipl
   assert.equal(cards[1].statusText, '无待办')
 })
 
+test('child workbench cards put sixth-grade Qingyu before Xiaoyu regardless source order', () => {
+  const cards = buildChildWorkbenchCards({
+    students: [{
+      _id: 'student-xiaoyu',
+      name: '钟筱雨',
+      grade: 2,
+      createdAt: '2026-06-20T10:00:00+08:00'
+    }, {
+      _id: 'student-qingyu',
+      name: '钟青宇',
+      grade: 6,
+      createdAt: '2026-06-19T10:00:00+08:00'
+    }]
+  }, relative)
+
+  assert.deepEqual(cards.map(card => card.name), ['钟青宇', '钟筱雨'])
+})
+
 test('learning profile home summarizes a math-only diagnosis', () => {
   const view = buildLearningProfileHomeView({
     student: { _id: 'student-1', name: '钟青羽', grade: 6 },

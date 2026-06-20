@@ -66,6 +66,20 @@ async function tapByText(page, selector, text) {
   throw new Error(`cannot find ${selector} containing text "${text}"`)
 }
 
+async function screenshot(miniProgram, outputDir, caseId, suffix) {
+  const screenshotPath = path.join(outputDir, `${safeFileName(caseId)}-${suffix}.png`)
+  await miniProgram.screenshot({ path: screenshotPath })
+  return screenshotPath
+}
+
+async function assertCurrentRouteIncludes(miniProgram, expected) {
+  const currentPage = await miniProgram.currentPage()
+  const actual = currentPage && currentPage.path ? currentPage.path : ''
+  const normalizedExpected = String(expected || '').replace(/^\//, '')
+  assert(actual.includes(normalizedExpected), `expected current route to include "${expected}", actual: ${actual}`)
+  return currentPage
+}
+
 async function installEnglishMocks(miniProgram) {
   await miniProgram.evaluate(() => {
     const now = '2026-06-16T09:00:00+08:00'
@@ -304,10 +318,24 @@ async function runCase(miniProgram, caseDef, outputDir) {
   }
   let text = await pageText(page)
   assertTexts(caseDef, text)
+  const screenshotPaths = [await screenshot(miniProgram, outputDir, caseDef.id, 'initial')]
 
   if (caseDef.feature === 'auto-import') {
     const state = await miniProgram.evaluate(() => globalThis.__englishE2EState)
     assert.equal(state.seedCount, 1, 'empty English workbench should seed the personal vocabulary once')
+  }
+
+  if (caseDef.feature === 'workbench') {
+    const data = await page.data()
+    assert.equal(data.englishVocabularyStats.totalWords, 505)
+    assert(data.englishActionCards.some(item => item.actionType === 'englishPractice'))
+    assert(data.englishActionCards.some(item => item.actionType === 'englishDictation'))
+    assert(data.tools.some(item => item.actionType === 'englishWrongWords'))
+    assert(data.tools.some(item => item.actionType === 'history'))
+    await tapByText(page, '.english-action-card', '开始认词')
+    await page.waitFor(800)
+    await assertCurrentRouteIncludes(miniProgram, '/pages/english-practice/english-practice')
+    screenshotPaths.push(await screenshot(miniProgram, outputDir, caseDef.id, 'after-tap'))
   }
 
   if (caseDef.feature === 'familiarity') {
@@ -321,13 +349,25 @@ async function runCase(miniProgram, caseDef, outputDir) {
     const state = await miniProgram.evaluate(() => globalThis.__englishE2EState)
     assert.equal(state.recognitionAttempts.length, 1)
     assert(state.recognitionAttempts[0].durationMs > 0)
+    screenshotPaths.push(await screenshot(miniProgram, outputDir, caseDef.id, 'after-judgment'))
   }
 
   if (caseDef.feature === 'paper-dictation') {
-    await page.callMethod('handleVoiceNextCommand', '好了，下一个')
+    assert(text.includes('本轮词单'), 'paper dictation should show the preview list before start')
+    assert(text.includes('开始听写'), 'paper dictation should expose a start action')
+    await page.callMethod('onStartTap')
+    await page.waitFor(500)
+    await page.callMethod('handleVoiceNextCommand', 'OK')
     await page.waitFor(500)
     let data = await page.data()
-    assert.equal(data.currentIndex, 1, 'voice next command should advance to the next word')
+    assert.equal(data.dictationPhase, 'running', 'paper dictation should enter running phase after start')
+    assert.equal(data.currentIndex, 1, 'OK command should advance to the next word')
+    for (let i = 0; i < 19; i++) {
+      await page.callMethod('advanceToNextWord')
+    }
+    await page.waitFor(500)
+    data = await page.data()
+    assert.equal(data.dictationPhase, 'finished', 'paper dictation should finish before upload')
     await tapByText(page, 'button', '拍照上传')
     await page.waitFor(1600)
     text = await pageText(page)
@@ -341,10 +381,22 @@ async function runCase(miniProgram, caseDef, outputDir) {
     assert.equal(state.dictationUploads.length, 1)
     assert(state.dictationUploads[0].durationMs > 0)
     assert.equal(state.analyzedSessions[0], 'paper-dictation-session-e2e')
+    screenshotPaths.push(await screenshot(miniProgram, outputDir, caseDef.id, 'after-upload'))
   }
 
-  const screenshotPath = path.join(outputDir, `${safeFileName(caseDef.id)}.png`)
-  await miniProgram.screenshot({ path: screenshotPath })
+  if (caseDef.feature === 'wrong-words') {
+    const data = await page.data()
+    assert.equal(data.summaryCards[0].value, 18)
+    assert.equal(data.summaryCards[1].value, 16)
+    assert.equal(data.summaryCards[2].value, 140)
+    assert(data.groups.some(group => group.key === 'highFrequency' && group.count === 18))
+    assert(data.weakWords.some(word => word.word === 'science'))
+    await tapByText(page, 'button', '去认词练习')
+    await page.waitFor(800)
+    await assertCurrentRouteIncludes(miniProgram, '/pages/english-practice/english-practice')
+    screenshotPaths.push(await screenshot(miniProgram, outputDir, caseDef.id, 'after-tap'))
+  }
+
   return {
     id: caseDef.id,
     feature: caseDef.feature,
@@ -352,7 +404,12 @@ async function runCase(miniProgram, caseDef, outputDir) {
     route: caseDef.route,
     status: 'PASS',
     durationMs: Date.now() - started,
-    screenshotPath
+    steps: caseDef.steps || [],
+    dataAssertions: caseDef.dataAssertions || [],
+    artifacts: {
+      screenshots: screenshotPaths,
+      reportJson: path.join(outputDir, 'report.json')
+    }
   }
 }
 

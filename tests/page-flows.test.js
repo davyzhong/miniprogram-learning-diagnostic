@@ -1,7 +1,11 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 const util = require('../miniprogram/utils/util')
+
+const ROOT = path.resolve(__dirname, '..')
 
 
 
@@ -1042,6 +1046,13 @@ test('English practice page generates a 20 word familiarity session without patt
   assert.equal(page.data.patternItems.length, 0)
 })
 
+test('English practice page avoids duplicate back controls and hides Chinese prompt playback', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-practice/english-practice.wxml'), 'utf8')
+
+  assert.doesNotMatch(source, /class="back"/)
+  assert.match(source, /wx:if="\{\{currentItem\.canPlayPrompt\}\}"/)
+})
+
 test('English practice page explains when no vocabulary words are available', async () => {
   const cloud = {
     generateEnglishRecognitionSession: async () => ({
@@ -1161,6 +1172,52 @@ test('English practice page cleans voice and prompt audio resources', async () =
   assert.equal(audio.destroyed, true)
 })
 
+test('English practice page gives immediate feedback when stopping recording', async () => {
+  let stopCount = 0
+  const manager = {
+    onStop: handler => { manager.stopHandler = handler },
+    onError: () => {},
+    start: () => {},
+    stop: () => { stopCount += 1 }
+  }
+  const cloud = {
+    generateEnglishRecognitionSession: async () => ({
+      sessionId: 'session-1',
+      functionType: 'familiarity',
+      wordItems: [{
+        queueKey: 'word-1:0',
+        wordId: 'word-1',
+        word: 'science',
+        meanings: ['科学'],
+        promptType: 'chinese'
+      }],
+      patternItems: []
+    }),
+    submitEnglishRecognitionAttempt: async () => ({
+      judgment: { status: 'correct', reason: '正确' },
+      shouldRepeat: false
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    requirePlugin: () => ({ getRecordRecognitionManager: () => manager }),
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({ studentId: 'student-1' })
+  page.onRecordTap()
+  assert.equal(page.data.recording, true)
+
+  page.onRecordTap()
+  assert.equal(stopCount, 1)
+  assert.equal(page.data.recording, false)
+  assert.equal(page.data.recognizing, true)
+  assert.equal(page.data.recordButtonText, '正在识别...')
+
+  await manager.stopHandler({ result: 'science', tempFilePath: '/tmp/audio.mp3' })
+  assert.equal(page.data.recognizing, false)
+  assert.equal(page.data.recordButtonText, '开始录音回答')
+})
+
 test('English dictation page creates a paper session and uploads answer photos', async () => {
   const uploaded = []
   const submitted = []
@@ -1236,6 +1293,94 @@ test('English dictation page creates a paper session and uploads answer photos',
   assert.equal(page.data.analysisStatus, 'completed')
   assert.equal(page.data.dictationResults.length, 2)
   assert.equal(page.data.uploadedPhotoCount, 2)
+  assert.equal(page.data.dictationPhase, 'reviewed')
+})
+
+test('English dictation page starts in ready phase with a 20-word preview list', async () => {
+  const cloud = {
+    generateEnglishPaperDictationSession: async () => ({
+      sessionId: 'paper-session-1',
+      functionType: 'spelling',
+      wordItems: Array.from({ length: 20 }, (_, index) => ({
+        queueKey: `word-${index + 1}:0`,
+        wordId: `word-${index + 1}`,
+        word: `word${index + 1}`,
+        meanings: [`词义${index + 1}`],
+        unit: `Unit ${Math.floor(index / 5) + 1}`,
+        promptType: index % 2 === 0 ? 'chinese' : 'english',
+        spellingStatus: index % 3 === 0 ? 'needs_practice' : 'untested'
+      }))
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/english-dictation/english-dictation.js', {
+    wx: createWxMock(),
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({ studentId: 'student-1', studentName: encodeURIComponent('钟青羽'), grade: '6' })
+
+  assert.equal(page.data.dictationPhase, 'ready')
+  assert.equal(page.data.playbackState, 'idle')
+  assert.equal(page.data.queue.length, 20)
+  assert.equal(page.data.wordListExpanded, true)
+  assert.match(page.data.commandHint, /开始/)
+  assert.equal(page.data.queue[0].word, 'word1')
+  assert.equal(page.data.queue[0].meaningText, '词义1')
+})
+
+test('English dictation page auto-plays after start and advances on OK style commands', async () => {
+  const spoken = []
+  const timers = []
+  const cloud = {
+    generateEnglishPaperDictationSession: async () => ({
+      sessionId: 'paper-session-1',
+      functionType: 'spelling',
+      wordItems: [
+        { queueKey: 'word-1:0', wordId: 'word-1', word: 'science', meanings: ['科学'], promptType: 'chinese' },
+        { queueKey: 'word-2:0', wordId: 'word-2', word: 'museum', meanings: ['博物馆'], promptType: 'english' }
+      ]
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/english-dictation/english-dictation.js', {
+    wx: createWxMock({
+      createInnerAudioContext: () => ({
+        src: '',
+        play: () => {},
+        stop: () => {},
+        destroy: () => {}
+      })
+    }),
+    setTimeout: (fn, ms) => {
+      timers.push({ fn, ms })
+      return timers.length
+    },
+    requirePlugin: () => ({
+      getRecordRecognitionManager: () => ({ onStop: () => {}, onError: () => {}, start: () => {}, stop: () => {} }),
+      textToSpeech: options => {
+        spoken.push({ lang: options.lang, content: options.content })
+        options.success({ filename: '/tmp/prompt.mp3' })
+      }
+    }),
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({ studentId: 'student-1' })
+  page.onStartTap()
+
+  assert.equal(page.data.dictationPhase, 'running')
+  assert.equal(page.data.playbackState, 'writing')
+  assert.equal(page.data.wordListExpanded, false)
+  assert.deepEqual(spoken[0], { lang: 'zh_CN', content: '科学' })
+  assert.equal(timers[0].ms, 7000)
+
+  timers[0].fn()
+  assert.equal(page.data.playbackState, 'waitingCommand')
+  assert.match(page.data.commandHint, /好了/)
+
+  page.handleVoiceNextCommand('OK')
+  assert.equal(page.data.currentIndex, 1)
+  assert.equal(page.data.dictationPhase, 'running')
+  assert.deepEqual(spoken[1], { lang: 'en_US', content: 'museum' })
 })
 
 test('English dictation page supports optional voice next command and cleans resources', async () => {
@@ -1277,6 +1422,7 @@ test('English dictation page supports optional voice next command and cleans res
 
   await page.onLoad({ studentId: 'student-1' })
   page.onPlayPromptTap()
+  page.onStartTap()
   page.onVoiceNextTap()
   onStopHandler({ result: '好了，下一个' })
 

@@ -54,7 +54,7 @@ E2E 套件：
 | `npm run test:e2e:core` | 通用核心页面 | 17 页面 + 基础跨页流程 | `tmp/e2e/core/` |
 | `npm run test:e2e:math` | 数学 | 数据驱动诊断、细卡点、知识地图、学习资源 | `tmp/e2e/math-data/`、`tmp/e2e/math-knowledge-map/` |
 | `npm run test:e2e:chinese` | 语文 | 语文工作台、诊断报告、错项复测出卷页 | `tmp/e2e/chinese/` |
-| `npm run test:e2e:english` | 英语 | 工作台、词库、熟悉度、纸面听写、学习记录 | `tmp/e2e/english/` |
+| `npm run test:e2e:english` | 英语 | 工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 | `tmp/e2e/english/` |
 | `npm run test:e2e:all` | 聚合套件 | core + math + english + 聚合报告 | `tmp/e2e/aggregate/` |
 | `npm run test:e2e:real-data` | 真实数据烟测 | 指定真实学生页面打开和截图 | `tmp/e2e/real-data/` |
 | `npm run test:e2e:real-image` | 真实图片链路 | mock、单图或 manifest 图片诊断 | `tmp/e2e-real-image-report.json` |
@@ -103,7 +103,49 @@ REAL_IMAGE_MANIFEST=/absolute/path/to/private-manifest.json npm run test:e2e:rea
 
 真实图片和真实学生数据不得提交到仓库。`tmp/` 下的截图和报告只用于本机验收。
 
-## 5. Harness 使用指南
+## 5. 英语 E2E 流程
+
+英语学科有独立的 DevTools E2E 用例库：
+
+```text
+tests/fixtures/english-devtools-test-cases.json
+```
+
+配套说明文档：
+
+```text
+docs/test-cases/钟青羽英语学科测试用例库.md
+```
+
+这套流程使用微信开发者工具模拟器执行真实页面级动作：
+
+- 打开英语工作台，校验 505 词个人词库摘要、认词/听写/错词本/学习记录入口，并点击“开始认词”确认跳转。
+- 打开空词库学生工作台，校验自动导入 PEP 个人词库。
+- 打开认词练习页，提交一次 AI 识别结果，校验错词重新入队和 `durationMs`。
+- 打开纸面听写页，模拟“下一个”语音指令，点击拍照上传，校验 OCR 批改结果。
+- 打开学习记录页，校验英语认词、纸面听写、听写纸照片证据进入时间线。
+- 打开错词本，校验薄弱词、待复测、已稳定统计和错词列表，并点击“去认词练习”确认跳转。
+- 打开无词库认词页，校验可恢复空态。
+
+执行命令：
+
+```bash
+npm run test:e2e:english
+```
+
+输出目录：
+
+```text
+tmp/e2e/english/
+```
+
+输出内容：
+
+- `report.json`：结构化记录每个用例的 `steps`、`dataAssertions`、执行状态、耗时和截图路径。
+- `ENG-*-initial.png`：每个用例初始页面截图。
+- `ENG-*-after-*.png`：点击、判定、上传等交互后的截图。
+
+## 6. Harness 使用指南
 
 两个核心 harness 位于 `tests/helpers/`：
 
@@ -112,7 +154,7 @@ REAL_IMAGE_MANIFEST=/absolute/path/to/private-manifest.json npm run test:e2e:rea
 | `cloud-function-harness.js` | 在 Node 进程中执行真实云函数，注入内存数据库、`wx-server-sdk` 替身、CloudBase AI mock 和 PDF mock |
 | `page-harness.js` | 在 Node 进程中执行小程序页面控制器，注入 `wx.*` 和页面依赖模块 |
 
-### 5.1 云函数测试模板
+### 6.1 云函数测试模板
 
 ```js
 const db = createDatabase({
@@ -129,7 +171,7 @@ assert.equal(result.success, true)
 assert.equal(db.dump('reports')[0].status, 'done')
 ```
 
-### 5.2 页面测试模板
+### 6.2 页面测试模板
 
 ```js
 const wx = createWxMock()
@@ -148,7 +190,7 @@ assert.equal(page.data.loading, false)
 assert.ok(wx.calls.some(call => call.name === 'setNavigationBarTitle'))
 ```
 
-## 6. Mock 策略
+## 7. Mock 策略
 
 | 依赖 | 策略 |
 |---|---|
@@ -159,7 +201,7 @@ assert.ok(wx.calls.some(call => call.name === 'setNavigationBarTitle'))
 
 原则：只 mock 无法在 Node 进程里稳定运行的外部依赖，其余尽量跑真实代码。
 
-## 7. 新增测试纪律
+## 8. 新增测试纪律
 
 新增测试前必须回答：这个测试保护什么风险？
 
@@ -171,7 +213,7 @@ assert.ok(wx.calls.some(call => call.name === 'setNavigationBarTitle'))
 - 单个测试文件过大时，按业务域拆分。
 - 发现 bug 后先写失败测试，再修复。
 
-## 8. CI 与发布
+## 9. CI 与发布
 
 最小 CI 只需要跑：
 

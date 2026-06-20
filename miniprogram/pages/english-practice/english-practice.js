@@ -2,12 +2,16 @@ const cloud = require('../../utils/cloud')
 const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
 
 function withDisplayFields(item) {
-  return _withDisplayFields(item, {
+  const view = _withDisplayFields(item, {
     englishLabel: '英文提示',
     chineseLabel: '中文提示',
     englishPrompt: '看英文单词，然后说出中文意思',
     chinesePrefix: '看中文意思，然后说出英文单词：'
   })
+  return {
+    ...view,
+    canPlayPrompt: view.promptType === 'english'
+  }
 }
 
 Page({
@@ -28,6 +32,7 @@ Page({
     lastResult: null,
     finished: false,
     recording: false,
+    recognizing: false,
     recordButtonText: '开始录音回答',
     voiceReady: false,
     voiceUnavailableText: '',
@@ -53,9 +58,9 @@ Page({
       const plugin = requirePlugin('WechatSI')
       const manager = plugin && plugin.getRecordRecognitionManager ? plugin.getRecordRecognitionManager() : null
       if (!manager) throw new Error('WechatSI unavailable')
-      manager.onStop(res => {
-        this.setData({ recording: false, recordButtonText: '开始录音回答' })
-        this.onRecognitionResult({
+      manager.onStop(async res => {
+        this.setData({ recording: false })
+        await this.onRecognitionResult({
           recognizedText: res && (res.result || res.text || ''),
           audioFileID: res && (res.tempFilePath || res.fileID || '')
         })
@@ -63,6 +68,7 @@ Page({
       manager.onError(() => {
         this.setData({
           recording: false,
+          recognizing: false,
           recordButtonText: '开始录音回答',
           lastResult: { status: 'unclear', reason: '语音识别失败，请再读一次。' }
         })
@@ -136,7 +142,7 @@ Page({
 
   onRecordTap() {
     // 提交判定期间禁止录音，避免并发导致 _answerStartedAt 被覆盖、currentItem 错位
-    if (this.data.submitting) return
+    if (this.data.submitting || this.data.recognizing) return
     if (this.data.recording) {
       this.stopRecord()
     } else {
@@ -150,7 +156,7 @@ Page({
       return
     }
     this._answerStartedAt = Date.now()
-    this.setData({ recording: true, recordButtonText: '停止录音并识别', lastResult: null })
+    this.setData({ recording: true, recognizing: false, recordButtonText: '停止录音并识别', lastResult: null })
     this._voiceManager.start({ lang: this.getRecognitionLang(this.data.currentItem) })
   },
 
@@ -168,14 +174,31 @@ Page({
 
   stopRecord() {
     if (!this._voiceManager) return
-    this._voiceManager.stop()
+    try {
+      this._voiceManager.stop()
+      this.setData({
+        recording: false,
+        recognizing: true,
+        recordButtonText: '正在识别...'
+      })
+    } catch (error) {
+      this.setData({
+        recording: false,
+        recognizing: false,
+        recordButtonText: '开始录音回答',
+        lastResult: { status: 'unclear', reason: '停止录音失败，请再试一次。' }
+      })
+    }
   },
 
   async onRecognitionResult(result = {}) {
     const current = this.data.currentItem
-    if (!current || this.data.submitting) return
+    if (!current || this.data.submitting) {
+      this.setData({ recognizing: false, recordButtonText: '开始录音回答' })
+      return
+    }
     const durationMs = Math.max(1, Date.now() - (this._answerStartedAt || this._sessionStartedAt || Date.now()))
-    this.setData({ submitting: true })
+    this.setData({ submitting: true, recognizing: false })
     try {
       const response = await cloud.submitEnglishRecognitionAttempt({
         studentId: this.data.studentId,
@@ -209,12 +232,16 @@ Page({
         lastAnsweredItem: current,
         currentIndex: nextIndex,
         currentItem: queue[nextIndex] || null,
-        finished: nextIndex >= queue.length
+        finished: nextIndex >= queue.length,
+        recognizing: false,
+        recordButtonText: '开始录音回答'
       })
       this._answerStartedAt = Date.now()
     } catch (error) {
       this.setData({
         submitting: false,
+        recognizing: false,
+        recordButtonText: '开始录音回答',
         lastResult: {
           status: 'unclear',
           reason: error && error.message ? error.message : 'AI 判定失败，请稍后重试。'
@@ -250,7 +277,9 @@ Page({
       this._voiceManager.stop()
     }
     this.stopPromptAudio()
-    if (this.data.recording) this.setData({ recording: false, recordButtonText: '开始录音回答' })
+    if (this.data.recording || this.data.recognizing) {
+      this.setData({ recording: false, recognizing: false, recordButtonText: '开始录音回答' })
+    }
   },
 
   onHide() {

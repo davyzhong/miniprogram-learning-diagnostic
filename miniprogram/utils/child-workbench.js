@@ -30,6 +30,28 @@ function newestDate(values = []) {
     .sort((a, b) => b - a)[0] || null
 }
 
+function isSixthGradeQingyu(student = {}) {
+  const name = String(student.name || '').trim()
+  const grade = String(student.grade || '').trim()
+  const isQingyu = name === '钟青羽' || name === '钟青宇'
+  const isSixthGrade = grade === '6' || grade.includes('六')
+  return isQingyu && isSixthGrade
+}
+
+function familyStudentOrder(student = {}) {
+  if (isSixthGradeQingyu(student)) return 0
+  if (String(student.name || '').trim() === '钟筱雨') return 1
+  return 10
+}
+
+function sortFamilyStudents(students = []) {
+  return [...students].sort((a, b) => {
+    const orderDiff = familyStudentOrder(a) - familyStudentOrder(b)
+    if (orderDiff !== 0) return orderDiff
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+  })
+}
+
 function latestCompletedReport(reports = []) {
   return reports
     .filter(report => report.status === 'completed' && (report.isEffective === undefined || report.isEffective === true))
@@ -170,7 +192,7 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
   const papersByStudentId = input.papersByStudentId || {}
   const subjectByKey = Object.fromEntries(SUBJECTS.map(key => [key, { key, name: SUBJECT_NAMES[key] }]))
 
-  return students.map(student => {
+  return sortFamilyStudents(students).map(student => {
     const profiles = listFor(profilesByStudentId, student._id)
     const reports = listFor(reportsByStudentId, student._id)
     const papers = listFor(papersByStudentId, student._id)

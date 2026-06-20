@@ -40,7 +40,15 @@ Page({
     resultSummary: null,
     voiceReady: false,
     recordingCommand: false,
-    voiceUnavailableText: ''
+    voiceUnavailableText: '',
+    dictationPhase: 'ready',
+    playbackState: 'idle',
+    playbackStateText: '待开始',
+    writingWaitSeconds: 7,
+    writingCountdown: 0,
+    commandHint: '点击开始听写，或说“开始”。',
+    wordListExpanded: true,
+    uploadProgress: ''
   },
 
   async onLoad(options = {}) {
@@ -84,7 +92,20 @@ Page({
 
   async generateSession() {
     if (!this.data.studentId) return
-    this.setData({ loading: true, error: '', analysisStatus: '', uploadedPhotoCount: 0, resultSummary: null })
+    this.clearWritingTimer()
+    this.setData({
+      loading: true,
+      error: '',
+      analysisStatus: '',
+      uploadedPhotoCount: 0,
+      resultSummary: null,
+      dictationPhase: 'ready',
+      playbackState: 'idle',
+      playbackStateText: '待开始',
+      writingCountdown: 0,
+      commandHint: '点击开始听写，或说“开始”。',
+      wordListExpanded: true
+    })
     wx.showLoading({ title: '加载中...' })
     try {
       const result = await cloud.generateEnglishPaperDictationSession({
@@ -99,6 +120,12 @@ Page({
         queue,
         currentIndex: 0,
         currentItem: queue[0] || null,
+        dictationPhase: 'ready',
+        playbackState: 'idle',
+        playbackStateText: '待开始',
+        writingCountdown: 0,
+        commandHint: queue.length > 0 ? '点击开始听写，或说“开始”。' : '',
+        wordListExpanded: true,
         error: queue.length > 0 ? '' : '还没有可听写单词，请先导入钟青羽的个人英语词库。'
       })
       this._sessionStartedAt = Date.now()
@@ -125,6 +152,10 @@ Page({
   },
 
   onNextTap() {
+    if (this.data.dictationPhase === 'running') {
+      this.advanceToNextWord()
+      return
+    }
     const nextIndex = Math.min(this.data.queue.length - 1, this.data.currentIndex + 1)
     this.setData({
       currentIndex: nextIndex,
@@ -132,13 +163,131 @@ Page({
     })
   },
 
+  onToggleWordList() {
+    this.setData({ wordListExpanded: !this.data.wordListExpanded })
+  },
+
+  onStartTap() {
+    this.startDictation()
+  },
+
+  startDictation() {
+    if (!this.data.queue.length || this.data.dictationPhase === 'running') return
+    const currentIndex = this.data.currentIndex || 0
+    this.setData({
+      dictationPhase: 'running',
+      playbackState: 'speaking',
+      playbackStateText: '正在播放',
+      currentIndex,
+      currentItem: this.data.queue[currentIndex] || null,
+      wordListExpanded: false,
+      commandHint: '正在播放提示。'
+    })
+    this.playCurrentPrompt()
+  },
+
+  playCurrentPrompt() {
+    const current = this.data.currentItem
+    if (!current) return
+    this.clearWritingTimer()
+    this.stopPromptAudio()
+    this.setData({
+      playbackState: 'speaking',
+      playbackStateText: '正在播放',
+      commandHint: '正在播放提示。'
+    })
+    const content = current.promptType === 'english' ? current.word : current.meaningText
+    const lang = current.promptType === 'english' ? 'en_US' : 'zh_CN'
+    if (!this._voicePlugin || !this._voicePlugin.textToSpeech || !content) {
+      this.enterWritingWait()
+      return
+    }
+    this._voicePlugin.textToSpeech({
+      lang,
+      tts: true,
+      content,
+      success: res => {
+        if (res && res.filename) {
+          const audio = wx.createInnerAudioContext()
+          audio.src = res.filename
+          this._promptAudio = audio
+          audio.play()
+        }
+        this.enterWritingWait()
+      },
+      fail: () => {
+        wx.showToast({ title: '播放失败，请直接看提示', icon: 'none' })
+        this.enterWritingWait()
+      }
+    })
+  },
+
+  enterWritingWait() {
+    this.clearWritingTimer()
+    this.setData({
+      playbackState: 'writing',
+      playbackStateText: '请书写',
+      writingCountdown: this.data.writingWaitSeconds,
+      commandHint: `请书写，约 ${this.data.writingWaitSeconds} 秒后说“好了”。`
+    })
+    this._writingTimer = setTimeout(() => {
+      this.enterWaitingCommand()
+    }, this.data.writingWaitSeconds * 1000)
+  },
+
+  enterWaitingCommand() {
+    this.clearWritingTimer()
+    this.setData({
+      playbackState: 'waitingCommand',
+      playbackStateText: '等待口令',
+      writingCountdown: 0,
+      commandHint: '写好了就说“好了”“OK”或“下一个”。'
+    })
+  },
+
+  clearWritingTimer() {
+    if (!this._writingTimer) return
+    clearTimeout(this._writingTimer)
+    this._writingTimer = null
+  },
+
+  advanceToNextWord() {
+    if (!this.data.queue.length) return
+    const isLast = this.data.currentIndex + 1 >= this.data.queue.length
+    if (isLast) {
+      this.clearWritingTimer()
+      this.setData({
+        dictationPhase: 'finished',
+        playbackState: 'idle',
+        playbackStateText: '已完成',
+        commandHint: '本轮听写已完成，请拍照上传听写纸。',
+        wordListExpanded: false
+      })
+      return
+    }
+    const nextIndex = this.data.currentIndex + 1
+    this.setData({
+      currentIndex: nextIndex,
+      currentItem: this.data.queue[nextIndex] || null,
+      dictationPhase: 'running',
+      playbackState: 'speaking',
+      playbackStateText: '正在播放',
+      commandHint: '正在播放下一题。'
+    })
+    this.playCurrentPrompt()
+  },
+
   onPlayPromptTap() {
+    if (this.data.dictationPhase === 'running' || this.data.dictationPhase === 'paused') {
+      this.playCurrentPrompt()
+      return
+    }
     _onPlayPromptTap.call(this, '请按提示完成听写')
   },
 
   onVoiceNextTap() {
     if (!this._voiceManager) {
-      wx.showToast({ title: '可以直接点击下一个', icon: 'none' })
+      wx.showToast({ title: this.data.dictationPhase === 'ready' ? '可以直接点击开始听写' : '可以直接点击下一个', icon: 'none' })
       return
     }
     if (this.data.recordingCommand) {
@@ -163,11 +312,36 @@ Page({
 
   handleVoiceNextCommand(text = '') {
     const command = String(text || '').trim()
-    if (/下一个|下一题|好了|好啦|完成|next/i.test(command)) {
-      this.onNextTap()
-    } else if (command) {
-      wx.showToast({ title: '没有听到“下一个”', icon: 'none' })
+    if (!command) return
+    if (/开始|start/i.test(command) && this.data.dictationPhase === 'ready') {
+      this.startDictation()
+      return
     }
+    if (/重读|再读|repeat/i.test(command) && this.data.dictationPhase === 'running') {
+      this.playCurrentPrompt()
+      return
+    }
+    if (/暂停|停一下|pause/i.test(command) && this.data.dictationPhase === 'running') {
+      this.clearWritingTimer()
+      this.setData({
+        dictationPhase: 'paused',
+        playbackState: 'idle',
+        playbackStateText: '已暂停',
+        commandHint: '已暂停，点击继续或说“继续”。'
+      })
+      return
+    }
+    if (/继续|resume/i.test(command) && this.data.dictationPhase === 'paused') {
+      this.setData({ dictationPhase: 'running' })
+      this.playCurrentPrompt()
+      return
+    }
+    if (/ok|okay|下一个|下一题|好了|好啦|完成|next/i.test(command)) {
+      if (this.data.dictationPhase === 'ready') this.startDictation()
+      else if (this.data.dictationPhase === 'running') this.advanceToNextWord()
+      return
+    }
+    wx.showToast({ title: '没有听到有效口令', icon: 'none' })
   },
 
   async onChoosePhotoTap() {
@@ -220,8 +394,11 @@ Page({
         this.setData({
           analysisStatus: analysis.analysisStatus || 'completed',
           dictationResults: analysis.results || [],
-          resultSummary: summarizeDictationResults(analysis.results || [])
+          resultSummary: summarizeDictationResults(analysis.results || []),
+          dictationPhase: 'reviewed'
         })
+      } else {
+        this.setData({ dictationPhase: 'finished' })
       }
       this.setData({ uploading: false, uploadProgress: '' })
       wx.showToast({ title: '已上传听写纸', icon: 'success' })
@@ -237,6 +414,7 @@ Page({
   stopPromptAudio,
 
   cleanupVoice() {
+    this.clearWritingTimer()
     if (this._voiceCommandStarted && this._voiceManager && typeof this._voiceManager.stop === 'function') {
       this._voiceManager.stop()
       this._voiceCommandStarted = false

@@ -31,7 +31,7 @@ npm run test:e2e:english    # 英语页面 E2E
 | 验证卷生成、分页、PDF、失败状态 | `verification-pack.test.js`、`generate-paper-pdf.test.js`、`auto-verification.test.js`、`cloud-functions.test.js` | `test:e2e:math` 覆盖页面入口 | 已覆盖；真实打印需人工验收 |
 | 验证反馈、页面编号、证据回传 | `verification-evidence.test.js`、`report-paper-feedback-loop.test.js`、`analyze-batch-result.test.js` | 后续补数学作答页完整 E2E | 单元层已覆盖 |
 | 语文具体错项复习 | `chinese-review-targets.test.js`、`profile-summary.test.js`、`subject-home-presenter.test.js` | `test:e2e:chinese` | 轻量页面链路已建，完整作答回传待扩展 |
-| 英语个人词库、熟悉度、纸面听写 | `english-vocabulary.test.js`、`english-vocabulary-cloud.test.js`、`english-devtools-cases.test.js` | `test:e2e:english` | 已覆盖 |
+| 英语个人词库、认词练习、纸面听写、错词本 | `english-vocabulary.test.js`、`english-vocabulary-cloud.test.js`、`english-devtools-cases.test.js` | `test:e2e:english` 覆盖工作台、自动导入、认词、听写、学习记录、错词本、空态 | 已覆盖 |
 | 学习记录和证据时间线 | `learning-records.test.js`、`student-data-access.test.js`、`page-flows.test.js` | `test:e2e:core`、`test:e2e:english` | 已覆盖 |
 | 数据归属、参数白名单、无堆栈返回 | `contracts.test.js`、`student-access.test.js`、`student-data-access.test.js` | 第二微信账号需人工验收 | 已覆盖主要入口 |
 | E2E 命令和输出目录契约 | `contracts.test.js` | `scripts/e2e-report-aggregator.js` 聚合 | 已覆盖 |
