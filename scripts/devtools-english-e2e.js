@@ -17,7 +17,7 @@ function loadAutomator() {
 }
 
 const DEFAULT_PROJECT_PATH = path.resolve(__dirname, '..')
-const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_PROJECT_PATH, 'tmp', 'english-devtools-e2e')
+const DEFAULT_OUTPUT_DIR = path.join(DEFAULT_PROJECT_PATH, 'tmp', 'e2e', 'english')
 const DEFAULT_CLI_PATH = '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
 
 function parseArgs(argv = process.argv.slice(2), env = process.env) {
@@ -416,7 +416,7 @@ async function main() {
     consoleCount: logs.length,
     exceptionCount: exceptions.length
   }
-  const reportPath = path.join(options.outputDir, 'results.json')
+  const reportPath = path.join(options.outputDir, 'report.json')
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
   const failed = results.filter(item => item.status !== 'PASS')
   console.log(`\nEnglish DevTools E2E report: ${reportPath}`)

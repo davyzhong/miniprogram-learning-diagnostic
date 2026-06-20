@@ -11,7 +11,7 @@ test('English DevTools test case library covers every MVP English feature', () =
   const library = loadEnglishDevtoolsTestCases()
   const summary = validateEnglishDevtoolsTestCases(library)
 
-  assert.equal(summary.caseCount, 6)
+  assert.equal(summary.caseCount, ENGLISH_FEATURE_KEYS.length)
   assert.deepEqual(summary.features.sort(), [...ENGLISH_FEATURE_KEYS].sort())
 })
 

@@ -3,7 +3,7 @@
  * E2E 结果聚合报告
  *
  * 把所有 E2E 脚本的结果聚合成一份结构化报告，便于发布前快速判断。
- * 读取 tmp/ 下各 E2E 脚本的输出 JSON，汇总到 tmp/e2e-report/aggregate-report.md
+ * 读取 tmp/e2e/<suite>/ 下各 E2E 脚本的输出 JSON，汇总到 tmp/e2e/aggregate/aggregate-report.md
  *
  * 用法：node scripts/e2e-report-aggregator.js
  *       npm run test:e2e:all（聚合会自动在最后跑）
@@ -14,44 +14,38 @@ const path = require('node:path')
 
 const projectPath = path.resolve(__dirname, '..')
 const tmpRoot = path.join(projectPath, 'tmp')
-const outputDir = path.join(tmpRoot, 'e2e-report')
+const outputDir = path.join(tmpRoot, 'e2e', 'aggregate')
 
 // 各 E2E 脚本的输出位置
 const SOURCES = [
   {
-    name: 'DevTools 环境探测',
-    script: 'devtools-cli-doctor',
-    output: null, // doctor 输出到 stdout，不生成 JSON
-    type: 'prerequisite',
+    name: '全量核心页面回归',
+    script: 'devtools-e2e-fullpage',
+    output: 'tmp/e2e/core',
+    type: 'core',
   },
   {
-    name: '全量页面回归',
-    script: 'devtools-e2e-fullpage',
-    output: 'tmp/e2e-fullpage',
-    type: 'page',
+    name: '数学数据驱动 E2E',
+    script: 'devtools-e2e-data-driven',
+    output: 'tmp/e2e/math-data',
+    type: 'math',
+  },
+  {
+    name: '数学知识地图 E2E',
+    script: 'devtools-knowledge-map-e2e',
+    output: 'tmp/e2e/math-knowledge-map',
+    type: 'math',
   },
   {
     name: '英语 E2E',
     script: 'devtools-english-e2e',
-    output: 'tmp/e2e-english',
-    type: 'page',
-  },
-  {
-    name: '家长时间线 E2E',
-    script: 'devtools-parent-timeline-e2e',
-    output: 'tmp/e2e-parent-timeline',
-    type: 'page',
-  },
-  {
-    name: '数据驱动 E2E',
-    script: 'devtools-e2e-data-driven',
-    output: 'tmp/e2e-data-driven',
-    type: 'data-driven',
+    output: 'tmp/e2e/english',
+    type: 'english',
   },
   {
     name: '真实数据冒烟',
     script: 'devtools-real-data-smoke',
-    output: 'tmp/e2e-real-data-smoke',
+    output: 'tmp/e2e/real-data',
     type: 'smoke',
   },
 ]
@@ -60,8 +54,14 @@ function readJsonResult(outputRelPath) {
   if (!outputRelPath) return null
   const dir = path.join(projectPath, outputRelPath)
   if (!fs.existsSync(dir)) return null
-  // 找目录下的 JSON 报告文件
-  const jsons = fs.readdirSync(dir).filter(f => f.endsWith('.json') && f.includes('report'))
+  const entries = fs.readdirSync(dir)
+  const jsons = [
+    'report.json',
+    'results.json',
+    'data-driven-report.json',
+    ...entries.filter(f => /^report-\d+\.json$/.test(f)).sort().reverse(),
+    ...entries.filter(f => f.endsWith('.json') && f.includes('report')).sort(),
+  ].filter((fileName, index, list) => list.indexOf(fileName) === index && entries.includes(fileName))
   if (jsons.length === 0) return null
   try {
     return JSON.parse(fs.readFileSync(path.join(dir, jsons[0]), 'utf8'))

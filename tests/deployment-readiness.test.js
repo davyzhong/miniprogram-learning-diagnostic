@@ -140,7 +140,12 @@ test('deployment workflow is documented and exposed as a package script', () => 
   assert.match(read('docs/DEPLOYMENT.md'), /微信开发者工具 CLI/)
   assert.match(read('docs/DEPLOYMENT.md'), /uploadAndAnalyze/)
   assert.equal(pkg.scripts['check:deployment'], 'node --test tests/deployment-readiness.test.js')
-  assert.match(pkg.scripts.test, /tests\/deployment-readiness\.test\.js/)
+  assert.ok(
+    /tests\/deployment-readiness\.test\.js/.test(pkg.scripts.test) ||
+      (pkg.scripts.test === 'npm run test:unit' &&
+        /tests\/deployment-readiness\.test\.js/.test(pkg.scripts['test:unit'] || '')),
+    'npm test or npm run test:unit should include deployment readiness tests'
+  )
 })
 
 test('release and rollback workflow is documented and exposed as a package script', () => {

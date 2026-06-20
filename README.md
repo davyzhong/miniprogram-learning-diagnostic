@@ -383,7 +383,7 @@ miniprogram-learning-diagnostic/
 │   └── analyzePhotos/           #   照片分析主流程 + auto-verification.js（验证卷自动生成）
 ├── services/skills/             # P0 Skill 能力内核
 ├── cli/ldx.js                   # 本地 CLI 入口
-├── tests/                       # 自动化测试（460 个用例 + 真实图片 E2E 脚本）
+├── tests/                       # 单元自动化测试（545 个用例 + 真实图片 E2E 脚本）
 ├── scripts/                     # check-js.js、preview-pdf.js（PDF预览）、DevTools E2E、指标导出
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
@@ -440,41 +440,44 @@ cd miniprogram-learning-diagnostic
 
 ## 测试
 
-本项目采用四层测试金字塔，全部基于 Node.js 内置 runner（`node --test`），零第三方依赖：
+本项目测试体系分为两大类：本地可重复的**单元自动化测试**，以及通过微信开发者工具 CLI 驱动的**页面级 E2E 测试**。单元层全部基于 Node.js 内置 runner（`node --test`），零第三方测试框架依赖。
 
-| 层级 | 说明 | 命令 |
+| 类别 | 说明 | 命令 |
 |------|------|------|
-| **L0 单元** | 460 个函数级测试（云函数/Presenter/工具/数据层），<3 秒 | `npm test` |
-| **L1 数据守护** | 四库交叉引用完整性（18 断言）、部署就绪、合约红线 | `npm test`（自动包含）|
-| **L2 诊断回归** | 41 条历史证据验证 enricher、28 卡点归组回归 | `npm test`（自动包含）|
-| **L3 DevTools E2E** | 17 页面 + 数据驱动场景 + 结果聚合 | `npm run test:e2e:all` |
-| **L4 真实云** | 发布前验证云函数部署可用性（默认跳过） | `RUN_REAL_CLOUD=1 npm run test:real-cloud` |
+| **单元自动化测试** | 545 个离线用例：云函数、Presenter、工具、数据层、合同、知识库一致性和诊断回归 | `npm run test:unit` 或 `npm test` |
+| **CLI E2E 核心页** | 微信开发者工具 CLI 驱动 17 页面和基础跨页流程 | `npm run test:e2e:core` |
+| **CLI E2E 数学** | 数学数据驱动场景、细卡点、知识地图和学习资源链路 | `npm run test:e2e:math` |
+| **CLI E2E 语文** | 语文工作台、诊断报告、错项复测出卷轻量链路 | `npm run test:e2e:chinese` |
+| **CLI E2E 英语** | 英语工作台、词库、熟悉度、纸面听写和学习记录 | `npm run test:e2e:english` |
+| **真实数据/真实图片** | 真实学生数据页面烟测、真实图片诊断、真实云函数可用性 | `npm run test:e2e:real-data` / `npm run test:e2e:real-image` / `npm run test:e2e:real-cloud` |
 
 ```bash
-# 日常开发：运行全部单元 + 数据守护 + 诊断回归（460 用例，<3 秒）
+# 日常开发：运行全部单元自动化测试
 npm test
 
 # 带覆盖率报告（行/函数 80% 门槛）
 npm run test:coverage
 
-# 完整验证（测试 + JS 语法检查 162 文件）
+# 完整本地验证（单元自动化 + JS 语法检查）
 npm run verify
 
 # PDF 格式本地预览（不用上传云函数）
 node scripts/preview-pdf.js
 open tmp/preview-verification.pdf
 
-# DevTools 页面级 E2E（需先开微信开发者工具）
+# CLI E2E（需先打开微信开发者工具并开启服务端口）
 npm run test:e2e:doctor       # 环境探测
-npm run test:e2e:fullpage      # 17 页面回归
-npm run test:e2e:data-driven   # 数据驱动 E2E
+npm run test:e2e:core         # 17 页面核心回归
+npm run test:e2e:math         # 数学专项 E2E（当前最完整）
+npm run test:e2e:chinese      # 语文轻量专项 E2E
+npm run test:e2e:english      # 英语专项 E2E
 npm run test:e2e:all           # 聚合所有 E2E + 报告
 
 # 发布前
 npm run release:check          # 部署 + 全测试 + 覆盖率
 ```
 
-> 完整测试框架设计见 [docs/TEST_FRAMEWORK_DESIGN.md](./docs/TEST_FRAMEWORK_DESIGN.md)。
+> 完整测试框架设计见 [docs/TEST_FRAMEWORK_DESIGN.md](./docs/TEST_FRAMEWORK_DESIGN.md)，本次 V2 计划见 [docs/TEST_STRATEGY_V2.md](./docs/TEST_STRATEGY_V2.md)。
 
 ---
 
@@ -489,7 +492,7 @@ npm run release:check          # 部署 + 全测试 + 覆盖率
 | [docs/METRICS.md](./docs/METRICS.md) | 单个孩子运营指标：分析完成率、报告质量、验证通过率、反馈率和周趋势 |
 | [docs/RELEASE_CHECKLIST.md](./docs/RELEASE_CHECKLIST.md) | 发布门禁、云函数部署核对、真实数据烟测和回滚流程 |
 | [docs/TEST_MATRIX.md](./docs/TEST_MATRIX.md) | 测试矩阵与验收清单 |
-| [docs/TEST_FRAMEWORK_DESIGN.md](./docs/TEST_FRAMEWORK_DESIGN.md) | 四层测试框架设计（L0-L4 分层、DevTools E2E、数据守护） |
+| [docs/TEST_FRAMEWORK_DESIGN.md](./docs/TEST_FRAMEWORK_DESIGN.md) | 测试框架 V2 设计：单元自动化测试 + CLI E2E 分学科测试 |
 | [docs/CLOUD_FUNCTIONS.md](./docs/CLOUD_FUNCTIONS.md) | 云函数 API 参考（入参/出参/错误处理/依赖关系） |
 | [CHANGELOG.md](./CHANGELOG.md) | 版本变更记录 |
 

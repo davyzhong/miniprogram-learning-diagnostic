@@ -3,10 +3,10 @@ const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio
 
 function withDisplayFields(item) {
   return _withDisplayFields(item, {
-    englishLabel: '英文发音',
+    englishLabel: '英文提示',
     chineseLabel: '中文释义',
-    englishPrompt: '听英文发音，在纸上写出这个英文单词',
-    chinesePrefix: '听中文意思，在纸上写出英文单词：'
+    englishPrompt: '看英文单词，在纸上抄写并确认拼写',
+    chinesePrefix: '看中文意思，在纸上写出英文单词：'
   })
 }
 
@@ -33,6 +33,7 @@ Page({
     queue: [],
     currentIndex: 0,
     currentItem: null,
+    paperInstruction: '请按题号一行一个词写英文，保留修改痕迹。',
     uploadedPhotoCount: 0,
     analysisStatus: '',
     dictationResults: [],

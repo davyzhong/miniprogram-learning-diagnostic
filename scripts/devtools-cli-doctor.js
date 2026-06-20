@@ -229,7 +229,7 @@ async function main() {
     console.log('[33m环境基本就绪，但有警告；可继续跑 E2E，注意观察。[0m')
     process.exit(0)
   }
-  console.log('[32m环境就绪，可以跑 npm run test:e2e:fullpage。[0m')
+  console.log('[32m环境就绪，可以跑 npm run test:e2e:core。[0m')
   process.exit(0)
 }
 

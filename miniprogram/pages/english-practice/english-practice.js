@@ -5,8 +5,8 @@ function withDisplayFields(item) {
   return _withDisplayFields(item, {
     englishLabel: '英文提示',
     chineseLabel: '中文提示',
-    englishPrompt: '听英文发音，然后说出中文意思',
-    chinesePrefix: '听中文意思，然后说出英文单词：'
+    englishPrompt: '看英文单词，然后说出中文意思',
+    chinesePrefix: '看中文意思，然后说出英文单词：'
   })
 }
 
@@ -28,6 +28,7 @@ Page({
     lastResult: null,
     finished: false,
     recording: false,
+    recordButtonText: '开始录音回答',
     voiceReady: false,
     voiceUnavailableText: '',
     patternItems: []
@@ -53,7 +54,7 @@ Page({
       const manager = plugin && plugin.getRecordRecognitionManager ? plugin.getRecordRecognitionManager() : null
       if (!manager) throw new Error('WechatSI unavailable')
       manager.onStop(res => {
-        this.setData({ recording: false })
+        this.setData({ recording: false, recordButtonText: '开始录音回答' })
         this.onRecognitionResult({
           recognizedText: res && (res.result || res.text || ''),
           audioFileID: res && (res.tempFilePath || res.fileID || '')
@@ -62,6 +63,7 @@ Page({
       manager.onError(() => {
         this.setData({
           recording: false,
+          recordButtonText: '开始录音回答',
           lastResult: { status: 'unclear', reason: '语音识别失败，请再读一次。' }
         })
       })
@@ -148,7 +150,7 @@ Page({
       return
     }
     this._answerStartedAt = Date.now()
-    this.setData({ recording: true, lastResult: null })
+    this.setData({ recording: true, recordButtonText: '停止录音并识别', lastResult: null })
     this._voiceManager.start({ lang: this.getRecognitionLang(this.data.currentItem) })
   },
 
@@ -248,7 +250,7 @@ Page({
       this._voiceManager.stop()
     }
     this.stopPromptAudio()
-    if (this.data.recording) this.setData({ recording: false })
+    if (this.data.recording) this.setData({ recording: false, recordButtonText: '开始录音回答' })
   },
 
   onHide() {

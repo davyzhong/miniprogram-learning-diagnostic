@@ -95,7 +95,7 @@ async function main() {
     exceptionCount: exceptions.length
   }
 
-  const reportPath = path.join(config.outputDir, 'results.json')
+  const reportPath = path.join(config.outputDir, 'report.json')
   fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
 
   const failed = results.filter(item => item.status !== 'PASS')
