@@ -200,6 +200,7 @@ test('every WXML event handler exists on its page controller', () => {
 test('brand illustration and logo assets exist', () => {
   const assets = [
     'miniprogram/assets/images/math-diagnostic-guide.jpg',
+    'miniprogram/assets/images/student-profile-hero.png',
     'miniprogram/assets/images/app-logo-share.jpg',
     'brand-assets/app-logo.png'
   ]

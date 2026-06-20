@@ -1,4 +1,4 @@
-const { formatBottleneckDisplayList } = require('./util')
+const { formatBottleneckDisplayName, formatBottleneckDisplayList } = require('./util')
 const { buildPaperDisplay } = require('./paper-display')
 const { profileBottlenecks } = require('./bottleneck-view')
 const {
@@ -64,6 +64,59 @@ function latestMainPaper(papers = []) {
     .sort((a, b) => new Date(b.generatedAt || b.createdAt || 0) - new Date(a.generatedAt || a.createdAt || 0))[0] || null
 }
 
+function compactPaperCoverageText(display = {}) {
+  const summaries = Array.isArray(display.bottleneckSummaries) ? display.bottleneckSummaries.filter(Boolean) : []
+  if (summaries.length === 0) return ''
+  if (summaries.length <= 3) return `覆盖 ${summaries.join('、')}`
+  return `覆盖 ${summaries.length} 个训练点`
+}
+
+function compactTextFromList(values = [], maxCount = 3) {
+  const names = []
+  const seen = new Set()
+  values.forEach(value => {
+    const formatted = typeof value === 'string'
+      ? String(value || '').trim()
+      : formatBottleneckDisplayName(value)
+    const explicit = typeof value === 'object' && value !== null
+      ? String(value.summary || value.name || value.title || value.displayName || value.label || value.lpName || '').trim()
+      : ''
+    const name = explicit && !/[（(]/.test(explicit) && !/[错误失败混淆不足偏差]$/.test(explicit)
+      ? explicit
+      : formatted
+    if (!name || seen.has(name)) return
+    seen.add(name)
+    names.push(name)
+  })
+  return names.slice(0, maxCount).join('、')
+}
+
+function compactBottleneckText(items = [], maxCount = 3) {
+  return compactTextFromList(items, maxCount)
+}
+
+function subjectMeta(key) {
+  return {
+    key,
+    name: SUBJECT_NAMES[key],
+    shortName: SUBJECT_SHORT_NAMES[key]
+  }
+}
+
+function paperShortSummary(paper, subjectName = '') {
+  if (!paper) return ''
+  const display = buildPaperDisplay(paper, subjectName || SUBJECT_NAMES[paper.subject] || paper.subjectName || '学习')
+  return [
+    display.paperCode,
+    display.totalPages ? `${display.totalPages}页` : '',
+    display.questionCount ? `${display.questionCount}题` : ''
+  ].filter(Boolean).join(' · ')
+}
+
+function knowledgeMapUrl(student, subject = 'math') {
+  return `/pages/knowledge-map/knowledge-map?studentId=${encodeURIComponent(student._id || '')}&studentName=${encodeURIComponent(student.name || '')}&subject=${encodeURIComponent(subject)}`
+}
+
 function subjectAction(student, subject, filter = '') {
   return {
     type: filter ? 'bottleneck-center' : 'subject-home',
@@ -86,30 +139,35 @@ function statusItem(key, label, value, tone, action) {
   }
 }
 
+function subjectActionText(key, hidden) {
+  if (hidden) return '查看说明 ›'
+  if (key === 'english') return '开始练习 ›'
+  return '进入学科 ›'
+}
+
 function buildSubjectRows(student, profilesBySubject) {
   return SUBJECTS.map(key => {
-    const subject = {
-      key,
-      name: SUBJECT_NAMES[key],
-      shortName: SUBJECT_SHORT_NAMES[key]
-    }
+    const subject = subjectMeta(key)
     const profile = profilesBySubject.get(key) || {}
     const hidden = Boolean(profile.hidden || profile.visible === false)
     const active = activeBottlenecks(profile)
     const improved = improvedBottlenecks(profile)
     const summary = active.length > 0
-      ? formatBottleneckDisplayList(active)
+      ? compactBottleneckText(active)
       : improved.length > 0
-        ? `已改善：${formatBottleneckDisplayList(improved)}`
+        ? `已改善：${compactBottleneckText(improved)}`
         : hidden
           ? '暂未开启持续诊断'
-          : (profile.totalReports > 0 ? `${profile.totalReports} 份记录` : '未开始')
+          : key === 'english'
+            ? (profile.totalReports > 0 ? `${profile.totalReports} 份记录` : '未开始，可从认词练习进入')
+            : (profile.totalReports > 0 ? `${profile.totalReports} 份记录` : '未开始')
     return {
       key,
       name: subject.name,
       shortName: subject.shortName,
       summary,
       statusText: hidden ? '隐藏' : (active.length > 0 ? `${active.length} 待办` : (improved.length > 0 ? '有改善' : `${profile.totalReports || 0} 记录`)),
+      actionText: subjectActionText(key, hidden),
       hidden,
       url: buildTraceableUrl(hidden
         ? {
@@ -130,13 +188,14 @@ function buildLatestValue(student, reports, papers, subjectByKey) {
   if (paper && (!report || new Date(paper.generatedAt || paper.createdAt || 0) >= new Date(report.createdAt || 0))) {
     const subjectName = SUBJECT_NAMES[paper.subject] || paper.subjectName || '学习'
     const display = buildPaperDisplay(paper, subjectName)
+    const coverageText = compactPaperCoverageText(display)
     return {
       kind: 'paper',
       title: `${subjectName}验证试卷`,
       summary: [
         display.paperCode ? `编号 ${display.paperCode}` : '',
         display.questionCount ? `${display.questionCount} 题` : '',
-        display.bottleneckText ? `覆盖 ${display.bottleneckText}` : ''
+        coverageText
       ].filter(Boolean).join(' · ') || '查看验证试卷',
       code: display.paperCode,
       url: buildTraceableUrl({ type: 'paper-workbench', id: paper._id })
@@ -185,6 +244,152 @@ function buildNextAction(student, profiles, papers) {
   }
 }
 
+function activeSubjectEntries(profiles = []) {
+  return SUBJECTS
+    .map(key => {
+      const profile = profiles.find(item => item.subject === key) || { subject: key }
+      return {
+        key,
+        subject: subjectMeta(key),
+        profile,
+        active: activeBottlenecks(profile)
+      }
+    })
+    .filter(item => item.active.length > 0)
+}
+
+function buildPriorityAction(student, profiles = [], papers = []) {
+  const paper = latestMainPaper(papers)
+  if (paper) {
+    const subjectName = SUBJECT_NAMES[paper.subject] || paper.subjectName || '数学'
+    const summary = paperShortSummary(paper, subjectName)
+    return {
+      type: 'current-paper',
+      subject: paper.subject || 'math',
+      title: `上传${subjectName}验证卷作答照片`,
+      summary: summary
+        ? `${summary}。可以分批做，任意页完成后先拍照上传。`
+        : '验证卷已生成，可以分批完成后拍照上传。',
+      actionText: '进入试卷',
+      tone: 'paper',
+      url: buildTraceableUrl({ type: 'paper-workbench', id: paper._id })
+    }
+  }
+
+  const activeEntry = activeSubjectEntries(profiles)[0]
+  if (activeEntry) {
+    return {
+      type: 'generate-verification',
+      subject: activeEntry.key,
+      title: `生成${activeEntry.subject.name}验证卷`,
+      summary: `${compactBottleneckText(activeEntry.active)}等待验证，先生成一组纸面题。`,
+      actionText: '生成试卷',
+      tone: 'verification',
+      url: buildTraceableUrl({
+        type: 'generate-verification',
+        studentId: student._id || '',
+        studentName: student.name || '',
+        grade: student.grade || '',
+        subject: activeEntry.key,
+        subjectName: activeEntry.subject.name
+      })
+    }
+  }
+
+  return {
+    type: 'first-upload',
+    subject: 'math',
+    title: '上传第一份作业',
+    summary: '先上传一份数学或语文作业，建立可追踪的学习档案。',
+    actionText: '开始上传',
+    tone: 'upload',
+    url: buildTraceableUrl({
+      type: 'upload',
+      studentId: student._id || '',
+      studentName: student.name || '',
+      grade: student.grade || '',
+      subject: 'math',
+      subjectName: SUBJECT_NAMES.math
+    })
+  }
+}
+
+function buildSecondaryActions(student, profiles = [], primaryAction = {}) {
+  const primarySubject = primaryAction.subject || ''
+  return SUBJECTS
+    .filter(key => key !== primarySubject)
+    .slice(0, 2)
+    .map(key => {
+      const subject = subjectMeta(key)
+      const profile = profiles.find(item => item.subject === key) || {}
+      const active = activeBottlenecks(profile)
+      const hasActive = active.length > 0
+      const isEnglishStart = key === 'english' && !hasActive
+      return {
+        type: hasActive ? 'subject-bottlenecks' : 'subject-entry',
+        subject: key,
+        title: hasActive
+          ? `${subject.name}复习/复测`
+          : (isEnglishStart ? '英语认词/听写入口' : `${subject.name}学习入口`),
+        summary: hasActive
+          ? `重点：${compactBottleneckText(active)}`
+          : (isEnglishStart ? '进入英语工作台，开始认词或纸面听写。' : `进入${subject.name}工作台，补充第一批学习证据。`),
+        url: buildTraceableUrl(subjectAction(student, subject))
+      }
+    })
+}
+
+function buildQuickLinks(student, reports = [], papers = []) {
+  const latestReport = latestCompletedReport(reports)
+  const paper = latestMainPaper(papers)
+  const reportSubjectName = latestReport ? (SUBJECT_NAMES[latestReport.subject] || latestReport.subjectName || '学习') : ''
+  const paperSubjectName = paper ? (SUBJECT_NAMES[paper.subject] || paper.subjectName || '数学') : ''
+
+  return [{
+    key: 'latestReport',
+    title: '最新诊断',
+    summary: latestReport ? `${reportSubjectName} · ${latestReport.type === 'verification' ? '验证反馈' : '诊断报告'}` : '暂无诊断，先上传作业',
+    url: latestReport
+      ? buildTraceableUrl({ type: 'report-detail', id: latestReport._id })
+      : buildTraceableUrl({
+          type: 'upload',
+          studentId: student._id || '',
+          studentName: student.name || '',
+          grade: student.grade || '',
+          subject: 'math',
+          subjectName: SUBJECT_NAMES.math
+        })
+  }, {
+    key: 'currentPaper',
+    title: '当前试卷',
+    summary: paper ? paperShortSummary(paper, paperSubjectName) : '暂无试卷，先进入学科',
+    url: paper
+      ? buildTraceableUrl({ type: 'paper-workbench', id: paper._id })
+      : buildTraceableUrl({
+          type: 'subject-home',
+          studentId: student._id || '',
+          studentName: student.name || '',
+          grade: student.grade || '',
+          subject: 'math',
+          subjectName: SUBJECT_NAMES.math
+        })
+  }, {
+    key: 'knowledgeMap',
+    title: '知识地图',
+    summary: '查看知识节点、卡点和资源',
+    url: knowledgeMapUrl(student, 'math')
+  }, {
+    key: 'learningRecords',
+    title: '学习记录',
+    summary: '查看完整时间线',
+    url: buildTraceableUrl({
+      type: 'upload-history',
+      studentId: student._id || '',
+      studentName: student.name || ''
+    })
+  }]
+}
+
 function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
   const students = input.students || []
   const profilesByStudentId = input.profilesByStudentId || {}
@@ -210,25 +415,25 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
       ...papers.map(paper => paper.generatedAt || paper.createdAt)
     ])
     const statusItems = [
-      statusItem('analyzing', '分析中', analyzingCount, 'warning', {
+      statusItem('analyzing', '分析中点', analyzingCount, 'warning', {
         type: 'learning-records',
         studentId: student._id,
         studentName: student.name,
         filter: 'analyzing'
       }),
-      statusItem('pendingVerification', '待验证', allActive.length, 'primary', {
+      statusItem('pendingVerification', '待验证点', allActive.length, 'primary', {
         type: 'bottleneck-center',
         studentId: student._id,
         studentName: student.name,
         filter: 'active'
       }),
-      statusItem('pendingUpload', '待上传', pendingUploadCount, 'danger', {
+      statusItem('pendingUpload', '待上传点', pendingUploadCount, 'danger', {
         type: 'learning-records',
         studentId: student._id,
         studentName: student.name,
         filter: 'pending-upload'
       }),
-      statusItem('improved', '已改善', allImproved.length, 'success', {
+      statusItem('improved', '已改善点', allImproved.length, 'success', {
         type: 'bottleneck-center',
         studentId: student._id,
         studentName: student.name,
@@ -238,6 +443,9 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
     const todoCount = analyzingCount + allActive.length + pendingUploadCount
     const latestValue = buildLatestValue(student, reports, papers, subjectByKey)
     const nextAction = buildNextAction(student, profiles, papers)
+    const priorityAction = buildPriorityAction(student, profiles, papers)
+    const secondaryActions = buildSecondaryActions(student, profiles, priorityAction)
+    const quickLinks = buildQuickLinks(student, reports, papers)
 
     return {
       id: student._id || '',
@@ -257,12 +465,63 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
       statusItems,
       subjectRows: buildSubjectRows(student, profileMap),
       latestValue,
-      nextAction
+      nextAction,
+      priorityAction,
+      secondaryActions,
+      quickLinks
     }
   })
 }
 
+function numericStatusValue(card, key) {
+  const item = (card.statusItems || []).find(status => status.key === key)
+  const value = Number(item && item.value)
+  return Number.isFinite(value) ? value : 0
+}
+
+function buildFamilyWorkbenchHero(cards = []) {
+  const visibleCards = Array.isArray(cards) ? cards.filter(Boolean) : []
+  if (visibleCards.length === 0) return null
+
+  const totalTodos = visibleCards.reduce((sum, card) => {
+    return sum
+      + numericStatusValue(card, 'analyzing')
+      + numericStatusValue(card, 'pendingVerification')
+      + numericStatusValue(card, 'pendingUpload')
+  }, 0)
+  const totalPendingVerification = visibleCards.reduce((sum, card) => {
+    return sum + numericStatusValue(card, 'pendingVerification')
+  }, 0)
+  const focusCard = visibleCards.find(card => numericStatusValue(card, 'pendingUpload') > 0)
+    || visibleCards.find(card => numericStatusValue(card, 'pendingVerification') > 0)
+    || visibleCards.find(card => numericStatusValue(card, 'analyzing') > 0)
+    || visibleCards[0]
+  const focusAction = focusCard.priorityAction || focusCard.nextAction || {}
+  const focusName = focusCard.name || '孩子'
+  const pendingText = totalPendingVerification > 0
+    ? `${totalPendingVerification} 个学习卡点等待处理`
+    : '当前没有待验证卡点'
+
+  return {
+    imageSrc: '/assets/images/math-diagnostic-guide.jpg',
+    title: totalTodos > 0
+      ? `今天先看${focusName}的学习行动`
+      : '今天的家庭学习状态很清爽',
+    summary: totalTodos > 0
+      ? `${pendingText}，可以从这里直接进入最需要处理的一步。`
+      : '没有堆积任务时，可以进入学习记录或学科工作台补充新的学习证据。',
+    actionText: totalTodos > 0 ? '处理今日优先行动' : '查看学习档案',
+    url: focusAction.url || focusCard.profileUrl || '',
+    stats: [
+      { label: '孩子', value: String(visibleCards.length) },
+      { label: '待办', value: String(totalTodos) },
+      { label: '待验证', value: String(totalPendingVerification) }
+    ]
+  }
+}
+
 module.exports = {
   buildChildWorkbenchCards,
+  buildFamilyWorkbenchHero,
   profileBottlenecks
 }

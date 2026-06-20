@@ -18,6 +18,7 @@ const {
   SUBJECT_NAMES,
   SUBJECT_SHORT_NAMES
 } = require('../../utils/constants')
+const { buildTraceableUrl } = require('../../utils/traceable-actions')
 
 const SUBJECTS = SUBJECT_KEYS.map(key => ({
   key,
@@ -224,9 +225,154 @@ function buildPrimaryReport(reports, subjectByKey, formatRelativeTime) {
     bottleneckText,
     evidenceText: evidenceParts.join(' · '),
     reportId: report._id,
+    url: buildTraceableUrl({ type: 'report-detail', id: report._id }),
     actionText: '阅读完整报告',
     createdAt: report.createdAt
   }
+}
+
+function compactSummary(text = '', maxLength = 58) {
+  const value = String(text || '').replace(/\s+/g, ' ').trim()
+  if (value.length <= maxLength) return value
+  return `${value.slice(0, maxLength - 1)}…`
+}
+
+function studentContext(student = {}) {
+  return {
+    studentId: student._id || '',
+    studentName: student.name || '',
+    grade: student.grade || ''
+  }
+}
+
+function subjectHomeUrl(student, subjectKey) {
+  return buildTraceableUrl({
+    type: 'subject-home',
+    ...studentContext(student),
+    subject: subjectKey,
+    subjectName: SUBJECT_NAMES[subjectKey] || subjectKey
+  })
+}
+
+function uploadUrl(student, subjectKey) {
+  return buildTraceableUrl({
+    type: 'upload',
+    ...studentContext(student),
+    subject: subjectKey,
+    subjectName: SUBJECT_NAMES[subjectKey] || subjectKey
+  })
+}
+
+function learningRecordsUrl(student, filter = '') {
+  return buildTraceableUrl({
+    type: 'upload-history',
+    ...studentContext(student),
+    filter
+  })
+}
+
+function bottleneckCenterUrl(student, filter = 'active') {
+  return buildTraceableUrl({
+    type: 'bottleneck-center',
+    ...studentContext(student),
+    filter
+  })
+}
+
+function knowledgeMapUrl(student) {
+  return `/pages/knowledge-map/knowledge-map?studentId=${encodeURIComponent(student._id || '')}&studentName=${encodeURIComponent(student.name || '')}&subject=math`
+}
+
+function generateVerificationUrl(student, subjectKey) {
+  return buildTraceableUrl({
+    type: 'generate-verification',
+    ...studentContext(student),
+    subject: subjectKey,
+    subjectName: SUBJECT_NAMES[subjectKey] || subjectKey
+  })
+}
+
+function buildPrimaryActionCard(nextAction, student, canWriteActions) {
+  const subject = (nextAction && nextAction.subject) || 'math'
+  const primaryText = (nextAction && nextAction.primaryText) || '查看学习记录'
+  let url = learningRecordsUrl(student)
+
+  if (primaryText === '生成纸面验证卷') {
+    url = generateVerificationUrl(student, subject)
+  } else if (primaryText === '上传新试卷' || primaryText === '上传第一份试卷') {
+    url = uploadUrl(student, subject)
+  } else if (!canWriteActions) {
+    url = learningRecordsUrl(student)
+  }
+
+  return {
+    key: 'todayAction',
+    title: (nextAction && nextAction.title) || '查看学习记录',
+    summary: compactSummary((nextAction && nextAction.summary) || '进入学习记录查看最近状态。', 72),
+    actionText: primaryText,
+    subject,
+    url
+  }
+}
+
+function buildReportPanel(primaryReport, student) {
+  if (primaryReport) {
+    return {
+      ...primaryReport,
+      visible: true,
+      url: primaryReport.url || buildTraceableUrl({ type: 'report-detail', id: primaryReport.reportId })
+    }
+  }
+
+  return {
+    visible: true,
+    kind: 'empty-report',
+    icon: '报',
+    title: '暂无诊断报告',
+    summary: '上传一份试卷或作业后，会在这里形成可追踪的诊断报告。',
+    findingText: '',
+    generatedAtText: '',
+    evidenceTimeText: '',
+    bottleneckText: '',
+    evidenceText: '',
+    actionText: '上传作业',
+    url: uploadUrl(student, 'math')
+  }
+}
+
+function buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowledgeMapCard, recentRecords) {
+  const activeCount = bottleneckStats.activeCount || bottleneckStats.pendingCount || 0
+  const persistingCount = bottleneckStats.persistingCount || 0
+  const improvedCount = bottleneckStats.improvedCount || 0
+  const latestRecord = recentRecords && recentRecords[0]
+
+  return [{
+    key: 'bottleneckCenter',
+    title: activeCount > 0 ? '学习卡点修复' : (improvedCount > 0 ? '已改善记录' : '学习卡点'),
+    summary: activeCount > 0
+      ? `待跟进 ${activeCount} 个${persistingCount > 0 ? ` · 持续出现 ${persistingCount} 个` : ''}`
+      : (improvedCount > 0 ? `${improvedCount} 个卡点已有改善` : '暂无待处理卡点，可继续补充样本'),
+    actionText: '查看卡点',
+    url: bottleneckCenterUrl(student, activeCount > 0 ? 'active' : (improvedCount > 0 ? 'improved' : ''))
+  }, {
+    key: 'uploadEvidence',
+    title: '上传新作业',
+    summary: '补充新的照片样本，让诊断和复测更准。',
+    actionText: '去上传',
+    url: uploadUrl(student, nextSubject || 'math')
+  }, {
+    key: 'knowledgeMap',
+    title: '数学知识地图',
+    summary: knowledgeMapCard.summary || '查看知识节点、卡点和学习资源。',
+    actionText: '看地图',
+    url: knowledgeMapUrl(student)
+  }, {
+    key: 'learningRecords',
+    title: '学习记录',
+    summary: latestRecord ? compactSummary(latestRecord.summary || latestRecord.title, 34) : '查看历史报告、试卷和上传记录。',
+    actionText: '看记录',
+    url: learningRecordsUrl(student)
+  }]
 }
 
 function buildPaperRecord(paper, subjectName, formatRelativeTime, paperCodeById) {
@@ -319,12 +465,20 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
     const profile = profileBySubject.get(subject.key) || {}
     const active = activeBottlenecks(profile)
     const improved = profileBottlenecks(profile).filter(item => item.status === 'improved')
+    const summary = active.length > 0
+      ? `待处理：${formatBottleneckDisplayList(active)}`
+      : improved.length > 0
+        ? `已改善：${formatBottleneckDisplayList(improved)}`
+        : (profile.totalReports > 0 ? `${profile.totalReports} 份学习记录` : '暂无学习样本')
     return {
       key: subject.key,
       name: subject.name,
       shortName: subject.shortName,
       statusText: active.length > 0 || improved.length > 0 ? '已有观察' : '待采样',
-      totalReports: profile.totalReports || 0
+      totalReports: profile.totalReports || 0,
+      summary,
+      actionText: `进入${subject.name}工作台`,
+      url: subjectHomeUrl(student, subject.key)
     }
   })
 
@@ -405,6 +559,20 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
         subject: nextSubject
       }
 
+  const primaryReport = buildPrimaryReport(reports, subjectByKey, formatRelativeTime)
+  const recentRecords = buildRecentRecords(reports, papers, subjectByKey, formatRelativeTime)
+  const knowledgeMapCard = buildKnowledgeMapCard(subjects, bottleneckStats)
+  const primaryActionCard = buildPrimaryActionCard(nextAction, student, canWriteActions)
+  const reportPanel = buildReportPanel(primaryReport, student)
+  const personalActionQueue = buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowledgeMapCard, recentRecords)
+  const personalHero = {
+    imageSrc: '/assets/images/student-profile-hero.png',
+    title: headline,
+    summary: compactSummary(summary, 88),
+    actionText: primaryActionCard.actionText,
+    url: primaryActionCard.url
+  }
+
   return {
     studentId: student._id || '',
     studentName: student.name || '',
@@ -420,10 +588,14 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
     bottleneckStats,
     hasBottleneckBoard: bottleneckViews.length > 0,
     observations: priorityHighlights,
-    primaryReport: buildPrimaryReport(reports, subjectByKey, formatRelativeTime),
-    recentRecords: buildRecentRecords(reports, papers, subjectByKey, formatRelativeTime),
-    knowledgeMapCard: buildKnowledgeMapCard(subjects, bottleneckStats),
+    primaryReport,
+    reportPanel,
+    recentRecords,
+    knowledgeMapCard,
     nextAction,
+    personalHero,
+    primaryActionCard,
+    personalActionQueue,
     permissions,
     canWriteActions,
     subjects,

@@ -2,7 +2,7 @@
 const cloud = require('../../utils/cloud')
 const { formatRelativeTime } = require('../../utils/util')
 const { buildLearningProfileHomeView } = require('./index-presenter')
-const { buildChildWorkbenchCards } = require('../../utils/child-workbench')
+const { buildChildWorkbenchCards, buildFamilyWorkbenchHero } = require('../../utils/child-workbench')
 const { getSubjectName } = require('../../utils/constants')
 const { sharedNavigation, OWNER_PERMISSIONS } = require('../../utils/shared-navigation')
 
@@ -38,7 +38,8 @@ Page({
     hasStudents: false,
     homeMode: 'empty',
     home: null,
-    childCards: []
+    childCards: [],
+    familyHero: null
   },
 
   ...sharedNavigation,
@@ -103,6 +104,7 @@ Page({
           homeMode: 'empty',
           home: null,
           childCards: [],
+          familyHero: null,
           loading: false
         })
         this._lastHomeLoadedAt = Date.now()
@@ -176,6 +178,7 @@ Page({
             papersByStudentId
           }, formatRelativeTime)
         : []
+      const familyHero = hasMultipleChildren ? buildFamilyWorkbenchHero(childCards) : null
 
       const activeStudent = hasMultipleChildren ? null : viewModels[0]
       const activeProfiles = activeStudent ? (profileLists[activeStudent._id] || []) : []
@@ -201,9 +204,10 @@ Page({
         permissions,
         hasStudents: true,
         homeMode: hasMultipleChildren ? 'family-workbench' : 'single-profile',
-          home,
-          childCards,
-          loading: false
+        home,
+        childCards,
+        familyHero,
+        loading: false
       })
       this._lastHomeLoadedAt = Date.now()
     } catch (err) {
