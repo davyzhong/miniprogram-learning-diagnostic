@@ -36,6 +36,7 @@ Page({
     recentChanges: [],
     englishVocabularyStats: null,
     englishQuickStats: [],
+    englishActionCards: [],
     hasEnglishVocabulary: false,
     hasDiagnosis: false,
     isFirstUse: true,
@@ -61,7 +62,9 @@ Page({
       grade: grade || ''
     })
 
-    wx.setNavigationBarTitle({ title: `${decodedSubjectName}工作台` })
+    wx.setNavigationBarTitle({
+      title: subject === 'english' ? '英语词汇掌握' : `${decodedSubjectName}工作台`
+    })
     this.setNavColor()
   },
 
@@ -346,6 +349,15 @@ Page({
     const tool = (this.data.tools || []).find(item => item.key === key)
     if (!tool) return
     this.navigateByAction(tool.actionType, tool)
+  },
+
+  onEnglishActionTap(e) {
+    const { actionType, disabled } = e.currentTarget.dataset
+    if (disabled) {
+      wx.showToast({ title: '词库准备中，请稍后', icon: 'none' })
+      return
+    }
+    this.navigateByAction(actionType)
   },
 
   onQuickStatTap(e) {

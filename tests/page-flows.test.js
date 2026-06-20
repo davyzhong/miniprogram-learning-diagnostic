@@ -852,9 +852,10 @@ test('English subject home loads vocabulary summary and opens English practice',
   assert.deepEqual(calls, [['summary', 'student-1']])
   assert.equal(page.data.primaryTask.actionType, 'englishPractice')
   assert.equal(page.data.englishVocabularyStats.totalWords, 320)
+  assert.deepEqual(page.data.englishActionCards.map(item => item.key), ['englishPractice', 'englishDictation'])
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/english-practice\/english-practice/)
 
-  page.onToolTap({ currentTarget: { dataset: { key: 'englishDictation' } } })
+  page.onEnglishActionTap({ currentTarget: { dataset: { actionType: 'englishDictation', disabled: false } } })
   assert.match(wx.calls.filter(call => call.name === 'navigateTo').at(-1).payload.url, /pages\/english-dictation\/english-dictation/)
 })
 
@@ -917,7 +918,7 @@ test('English subject home imports Zhong Qingyu personal vocabulary seed when em
 
   assert.equal(page.data.englishVocabularyStats.totalWords, 505)
   assert.equal(page.data.primaryTask.actionType, 'englishPractice')
-  assert.ok(page.data.tools.every(item => item.key !== 'importVocabulary'))
+  assert.ok(page.data.englishActionCards.every(item => item.disabled === false))
 })
 
 test('subject home shows learning workflow tools for co-parent access', async () => {

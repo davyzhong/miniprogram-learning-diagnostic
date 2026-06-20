@@ -49,6 +49,10 @@
   background: #c05621;
 }
 
+.page-english .english-hero-card {
+  margin-bottom: 18rpx;
+}
+
 .workbench-copy {
   flex: 1;
   min-width: 0;
@@ -191,6 +195,104 @@
   background: #ffffff;
   border: 1rpx solid #fde7cc;
   box-shadow: 0 2rpx 10rpx rgba(154, 83, 28, .06);
+}
+
+.english-action-grid {
+  margin: 0 28rpx 24rpx;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16rpx;
+}
+
+.english-action-card {
+  min-height: 300rpx;
+  padding: 24rpx;
+  border-radius: 18rpx;
+  background: #ffffff;
+  border: 1rpx solid #f6d7bd;
+  box-shadow: 0 8rpx 22rpx rgba(154, 83, 28, .08);
+  display: flex;
+  flex-direction: column;
+}
+
+.english-action-card.is-recommended {
+  border-color: #c05621;
+  box-shadow: 0 10rpx 28rpx rgba(192, 86, 33, .15);
+}
+
+.english-action-card.is-disabled {
+  opacity: .68;
+}
+
+.english-action-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 48rpx;
+}
+
+.english-action-icon {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 14rpx;
+  background: #fff7ed;
+  color: #c05621;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 850;
+}
+
+.english-action-badge {
+  padding: 6rpx 12rpx;
+  border-radius: 999rpx;
+  background: #fed7aa;
+  color: #9a3412;
+  font-size: 19rpx;
+  font-weight: 800;
+}
+
+.english-action-title {
+  display: block;
+  color: #25364a;
+  font-size: 31rpx;
+  font-weight: 850;
+  margin-top: 18rpx;
+}
+
+.english-action-subtitle {
+  display: block;
+  color: #61748b;
+  font-size: 22rpx;
+  line-height: 1.4;
+  margin-top: 8rpx;
+}
+
+.english-action-meta {
+  display: block;
+  color: #8a6b55;
+  font-size: 20rpx;
+  line-height: 1.35;
+  margin-top: 12rpx;
+  min-height: 54rpx;
+}
+
+.english-action-button {
+  margin-top: auto;
+  min-height: 64rpx;
+  border-radius: 14rpx;
+  background: #c05621;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23rpx;
+  font-weight: 800;
+}
+
+.english-action-card.is-disabled .english-action-button {
+  background: #cbd5e1;
 }
 
 .english-vocab-status {

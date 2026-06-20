@@ -211,8 +211,8 @@ function buildEnglishPrimaryTask(options = {}, permissions = {}) {
   }
   if (totalWords === 0) {
     return {
-      title: '正在准备个人词库',
-      summary: '系统会自动导入钟青羽的 PEP 三年级到六年级个人单词表。完成后，这里会直接进入单词熟悉度和纸面听写。',
+      title: '正在准备词库',
+      summary: '系统会自动导入钟青羽的个人单词表。完成后，首页会直接显示认词练习和纸面听写入口。',
       actionText: '查看学习记录',
       actionType: 'history',
       recommendedMode: 'preparing'
@@ -223,23 +223,13 @@ function buildEnglishPrimaryTask(options = {}, permissions = {}) {
   const recommendSpelling = spellingLoad > familiarityLoad && spellingLoad > 0
   const recommendedMode = recommendSpelling ? 'spelling' : 'familiarity'
   const actionType = recommendSpelling ? 'englishDictation' : 'englishPractice'
-  const modeText = recommendSpelling ? '纸面听写' : '单词熟悉度'
+  const modeText = recommendSpelling ? '纸面听写' : '认词练习'
   return {
     title: '今日建议',
     summary: `从 ${totalWords} 个个人词库单词中安排 ${todayCount || 20} 个，今天建议先做${modeText}。`,
-    actionText: '开始今日练习',
+    actionText: recommendSpelling ? '开始纸面听写' : '开始认词练习',
     actionType,
     recommendedMode
-  }
-}
-
-function buildEnglishEmptyTask(permissions = {}) {
-  const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
-  return {
-    title: '先准备个人词库',
-    summary: '导入 PEP 单词表后，这里会按掌握度安排每日听写。',
-    actionText: canWrite ? '开始 20 词听写' : '查看学习记录',
-    actionType: canWrite ? 'englishPractice' : 'history'
   }
 }
 
@@ -272,6 +262,47 @@ function buildEnglishVocabularyStats(vocabulary = {}) {
   }
 }
 
+function buildEnglishActionCards(stats, primaryTask = {}, options = {}, permissions = {}) {
+  const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
+  const hasVocabularyReady = hasEnglishVocabulary(options)
+  const preparing = !hasVocabularyReady && primaryTask.recommendedMode === 'preparing'
+  const baseCards = [
+    {
+      key: 'englishPractice',
+      actionType: 'englishPractice',
+      title: '认词练习',
+      subtitle: '看中文或英文，说出对应内容',
+      meta: stats.familiarityNeedsPracticeCount > 0
+        ? `${stats.familiarityNeedsPracticeCount} 个不熟词优先出现`
+        : '默认 20 词，适合每天快速过一遍',
+      icon: 'Aa',
+      actionText: '开始认词',
+      recommended: primaryTask.actionType === 'englishPractice',
+      disabled: !canWrite || !hasVocabularyReady,
+      disabledText: preparing ? '词库准备中' : '暂无词库'
+    },
+    {
+      key: 'englishDictation',
+      actionType: 'englishDictation',
+      title: '纸面听写',
+      subtitle: '纸上写英文，完成后拍照识别',
+      meta: stats.spellingNeedsPracticeCount > 0
+        ? `${stats.spellingNeedsPracticeCount} 个拼写薄弱词优先出现`
+        : '默认 20 词，验证是否真正写得出',
+      icon: '✎',
+      actionText: '开始听写',
+      recommended: primaryTask.actionType === 'englishDictation',
+      disabled: !canWrite || !hasVocabularyReady,
+      disabledText: preparing ? '词库准备中' : '暂无词库'
+    }
+  ]
+
+  return baseCards.map(card => ({
+    ...card,
+    badgeText: card.recommended ? '今日建议' : ''
+  }))
+}
+
 function buildEnglishQuickStats(stats) {
   const scheduledCount = (
     stats.familiarityDueReviewCount +
@@ -295,30 +326,23 @@ function buildEnglishQuickStats(stats) {
 
 function buildTools(latestReport, permissions = {}, options = {}) {
   const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
-  const primaryActionType = options.primaryActionType || ''
   if (options.subject === 'english') {
+    const hasVocabularyReady = hasEnglishVocabulary(options)
     return [
-      canWrite && primaryActionType !== 'englishPractice' ? {
-        key: 'englishPractice',
-        title: '单词熟悉度',
-        desc: hasEnglishVocabulary(options) ? '听中文说英文，听英文说中文' : '词库导入后即可开始',
-        icon: 'Aa',
-        actionType: 'englishPractice'
-      } : null,
-      canWrite && primaryActionType !== 'englishDictation' ? {
-        key: 'englishDictation',
-        title: '纸面听写',
-        desc: hasEnglishVocabulary(options) ? 'AI 读词，孩子写在纸上' : '词库导入后即可开始',
-        icon: '✎',
-        actionType: 'englishDictation'
-      } : null,
       {
         key: 'history',
         title: '学习记录',
-        desc: '听写、词库和掌握变化',
+        desc: '认词、听写和照片证据',
         icon: '▧',
         actionType: 'history'
-      }
+      },
+      canWrite && !hasVocabularyReady ? {
+        key: 'importVocabulary',
+        title: '重试导入词库',
+        desc: '自动导入失败时使用',
+        icon: '↓',
+        actionType: 'importVocabulary'
+      } : null
     ].filter(Boolean)
   }
   return [
@@ -376,13 +400,12 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
       subject: options.subject,
       chineseReviewQueue
     })
-  const toolOptions = {
-    ...options,
-    primaryActionType: primaryTask.actionType
-  }
+  const englishActionCards = options.subject === 'english'
+    ? buildEnglishActionCards(englishVocabularyStats, primaryTask, options, permissions)
+    : []
 
   return {
-    subjectTitle: `${subjectName}工作台`,
+    subjectTitle: options.subject === 'english' ? '英语词汇掌握' : `${subjectName}工作台`,
     totalReports: profile.totalReports || reports.filter(item => item.status === 'completed').length,
     currentSummary: primaryTask.summary,
     nextAction: primaryTask.actionText,
@@ -393,7 +416,7 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
       : (options.subject === 'english' ? 0 : taskQueue.length),
     chineseReviewQueue,
     hasChineseReviewQueue: chineseReviewQueue.length > 0,
-    tools: buildTools(latestReport, permissions, toolOptions),
+    tools: buildTools(latestReport, permissions, options),
     permissions,
     canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
     latestReportId: latestReport ? latestReport._id : '',
@@ -407,6 +430,7 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     isFirstUse: options.subject === 'english' ? !hasEnglishVocabulary(options) : (!hasDiagnosis && !hasEnglishVocabulary(options)),
     englishVocabularyStats,
     englishQuickStats,
+    englishActionCards,
     hasEnglishVocabulary: hasEnglishVocabulary(options)
   }
 }

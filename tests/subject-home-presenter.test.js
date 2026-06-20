@@ -203,9 +203,9 @@ test('English workbench uses vocabulary summary as the primary learning asset', 
     }
   })
 
-  assert.equal(view.subjectTitle, '英语工作台')
+  assert.equal(view.subjectTitle, '英语词汇掌握')
   assert.equal(view.primaryTask.actionType, 'englishPractice')
-  assert.equal(view.primaryTask.actionText, '开始今日练习')
+  assert.equal(view.primaryTask.actionText, '开始认词练习')
   assert.equal(view.primaryTask.recommendedMode, 'familiarity')
   assert.match(view.primaryTask.summary, /320 个个人词库单词/)
   assert.match(view.primaryTask.summary, /安排 20 个/)
@@ -214,9 +214,12 @@ test('English workbench uses vocabulary summary as the primary learning asset', 
   assert.equal(view.englishVocabularyStats.spellingNeedsPracticeCount, 22)
   assert.equal(view.englishVocabularyStats.overallMasteredCount, 70)
   assert.deepEqual(view.englishQuickStats.map(item => item.label), ['今日待练', '已熟悉', '拼写薄弱', '真正掌握'])
-  assert.ok(view.tools.some(item => item.key === 'englishDictation'))
+  assert.deepEqual(view.englishActionCards.map(item => item.key), ['englishPractice', 'englishDictation'])
+  assert.equal(view.englishActionCards.find(item => item.key === 'englishPractice').recommended, true)
+  assert.equal(view.englishActionCards.find(item => item.key === 'englishDictation').disabled, false)
   assert.ok(view.tools.some(item => item.key === 'history'))
   assert.ok(view.tools.every(item => item.key !== 'englishPractice'))
+  assert.ok(view.tools.every(item => item.key !== 'englishDictation'))
   assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
 })
 
@@ -235,13 +238,14 @@ test('English workbench keeps learning actions primary while empty vocabulary is
     }
   })
 
-  assert.equal(view.subjectTitle, '英语工作台')
+  assert.equal(view.subjectTitle, '英语词汇掌握')
   assert.notEqual(view.primaryTask.actionType, 'importVocabulary')
   assert.equal(view.primaryTask.actionText, '查看学习记录')
   assert.match(view.primaryTask.summary, /系统会自动导入/)
-  assert.ok(view.tools.some(item => item.key === 'englishPractice'))
+  assert.deepEqual(view.englishActionCards.map(item => item.key), ['englishPractice', 'englishDictation'])
+  assert.ok(view.englishActionCards.every(item => item.disabled === true))
   assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
-  assert.ok(view.tools.every(item => item.key !== 'importVocabulary'))
+  assert.ok(view.tools.some(item => item.key === 'importVocabulary'))
 })
 
 test('English workbench recommends paper dictation when spelling has more weak words', () => {
@@ -275,9 +279,11 @@ test('English workbench recommends paper dictation when spelling has more weak w
   })
 
   assert.equal(view.primaryTask.actionType, 'englishDictation')
-  assert.equal(view.primaryTask.actionText, '开始今日练习')
+  assert.equal(view.primaryTask.actionText, '开始纸面听写')
   assert.equal(view.primaryTask.recommendedMode, 'spelling')
   assert.match(view.primaryTask.summary, /纸面听写/)
-  assert.ok(view.tools.some(item => item.key === 'englishPractice'))
+  assert.equal(view.englishActionCards.find(item => item.key === 'englishDictation').recommended, true)
+  assert.equal(view.englishActionCards.find(item => item.key === 'englishPractice').recommended, false)
+  assert.ok(view.tools.every(item => item.key !== 'englishPractice'))
   assert.ok(view.tools.every(item => item.key !== 'englishDictation'))
 })
