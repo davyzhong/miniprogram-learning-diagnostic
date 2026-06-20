@@ -46,6 +46,30 @@ function createTcbMock(text) {
   }
 }
 
+function loadGeneratePaperForTest(db, options = {}) {
+  const questions = options.questions || Array.from({ length: 3 }, (_, index) => ({
+    index: index + 1,
+    content: `计算题 ${index + 1}`,
+    answer: String(index + 1),
+    points: 10,
+    lpCode: 'LP-001',
+    lpName: '计算错误'
+  }))
+  const tcbText = options.tcbText || JSON.stringify({ title: '测试', questions })
+  return loadModule('cloudfunctions/generatePaper/index.js', {
+    'wx-server-sdk': createCloudMock({ db, openId: options.openId || 'owner-1' }),
+    '@cloudbase/node-sdk': createTcbMock(tcbText),
+    './pdf-renderer': {
+      generatePDF: options.generatePDF || (async () => ({
+        buffer: Buffer.from('pdf'),
+        studentPages: 1,
+        answerPages: 1,
+        totalPages: 2
+      }))
+    }
+  })
+}
+
 test('uploadAndAnalyze creates a report and starts analysis for an owned student', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
@@ -204,6 +228,71 @@ test('joined parent can perform learning workflow operations', async () => {
     paperId: 'paper-1'
   })
   assert.equal(verification.success, true)
+})
+
+test('generatePaper _regeneratePdf rejects callers without access to the paper student', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    papers: [{
+      _id: 'paper-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'verification',
+      questions: [{ index: 1, content: '1+1', answer: '2', lpCode: 'LP-001' }],
+      generationStatus: 'appending'
+    }]
+  })
+  let rendered = false
+  const handler = loadGeneratePaperForTest(db, {
+    openId: 'other-openid',
+    generatePDF: async () => {
+      rendered = true
+      return { buffer: Buffer.from('pdf'), studentPages: 1, answerPages: 1, totalPages: 2 }
+    }
+  })
+
+  const result = await handler.main({ _regeneratePdf: true, paperId: 'paper-1' })
+
+  assert.equal(result.success, false)
+  assert.equal(result.error, '无权执行该操作')
+  assert.equal(rendered, false)
+})
+
+test('generatePaper _appendToPaperId rejects paper/student mismatch before appending', async () => {
+  const db = createDatabase({
+    students: [
+      { _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 },
+      { _id: 'student-2', _openid: 'owner-2', name: '弟弟', grade: 5 },
+    ],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 'student-1',
+      subject: 'math',
+      pendingBottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误' }]
+    }],
+    papers: [{
+      _id: 'paper-other',
+      studentId: 'student-2',
+      subject: 'math',
+      type: 'verification',
+      questions: [],
+      bottleneckTargets: [],
+      generationStatus: 'generating'
+    }]
+  })
+  const handler = loadGeneratePaperForTest(db)
+
+  const result = await handler.main({
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'verification',
+    targets: ['LP-001'],
+    _appendToPaperId: 'paper-other'
+  })
+
+  assert.equal(result.success, false)
+  assert.equal(result.error, '验证卷归属不匹配')
+  assert.deepEqual(db.dump('papers')[0].questions, [])
 })
 
 test('viewer can read analysis progress for a joined child', async () => {

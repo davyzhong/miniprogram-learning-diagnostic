@@ -173,7 +173,7 @@ async function createGeneratingPaper(db, { studentId, subject, targets, reportId
  * 调用 generatePaper 云函数生成一批题目（追加到已有 paper）
  * 用 _appendToPaperId 模式：本批题目合并到 paper.questions，不重新生成 PDF。
  */
-async function appendBatch(cloud, { paperId, studentId, subject, targets }) {
+async function appendBatch({ cloud, paperId, studentId, subject, targets }) {
   const res = await cloud.callFunction({
     name: 'generatePaper',
     data: {
@@ -195,7 +195,7 @@ async function appendBatch(cloud, { paperId, studentId, subject, targets }) {
  * 调用 generatePaper 重新生成最终 PDF（所有批次追加完成后）
  * 用 _regeneratePdf 模式：读取 paper 全部题目，重建分页和 PDF。
  */
-async function regenerateFinalPdf(cloud, { paperId }) {
+async function regenerateFinalPdf({ cloud, paperId }) {
   const res = await cloud.callFunction({
     name: 'generatePaper',
     data: {
@@ -243,7 +243,7 @@ function chunkTargets(targets, size = BATCH_SIZE) {
  * 1. 按 weight 降序排 targets，每批 BATCH_SIZE 个
  * 2. 逐批调用 generatePaper(_appendToPaperId)，题目追加到 paper
  * 3. 全部批次完成后，调用 generatePaper(_regeneratePdf) 生成最终 PDF
- * 4. 单批失败独立重试，不影响其他批
+ * 4. 单批失败独立重试；任一批最终失败则整份验证卷标记 failed
  */
 async function generateInBatches(db, cloud, { paperId, studentId, subject, targets }) {
   const targetIds = targets.map(t => t.bottleneckId || t);
@@ -251,6 +251,7 @@ async function generateInBatches(db, cloud, { paperId, studentId, subject, targe
   const totalBatches = batches.length;
   let succeededBatches = 0;
   let totalAppended = 0;
+  const failedBatchDetails = [];
 
   console.log(`[auto-verification] 分批生成：${targetIds.length} 个卡点，分 ${totalBatches} 批`);
 
@@ -271,15 +272,48 @@ async function generateInBatches(db, cloud, { paperId, studentId, subject, targe
       }).catch(() => {});
     } catch (err) {
       console.warn(`[auto-verification] 批次 ${i + 1}/${totalBatches} 最终失败: ${err.message}`);
-      // 继续下一批，不中断整体流程
+      failedBatchDetails.push({
+        batchIndex: i + 1,
+        targets: batchTargets,
+        error: err.message || String(err),
+      });
+      await db.collection('papers').doc(paperId).update({
+        data: {
+          generationStatus: 'appending',
+          generationProgress: {
+            completedBatches: i + 1,
+            totalBatches,
+            succeededBatches,
+            failedBatches: failedBatchDetails.length,
+            failedBatchIndexes: failedBatchDetails.map(item => item.batchIndex),
+          },
+        },
+      }).catch(() => {});
     }
   }
 
-  if (succeededBatches === 0) {
-    throw new Error(`全部 ${totalBatches} 批次生成均失败`);
+  if (failedBatchDetails.length > 0) {
+    const message = succeededBatches === 0
+      ? `全部 ${totalBatches} 批次生成均失败`
+      : `部分批次生成失败：${failedBatchDetails.length}/${totalBatches}`;
+    await db.collection('papers').doc(paperId).update({
+      data: {
+        generationStatus: 'failed',
+        generationError: message,
+        generationProgress: {
+          completedBatches: succeededBatches,
+          totalBatches,
+          succeededBatches,
+          failedBatches: failedBatchDetails.length,
+          failedBatchIndexes: failedBatchDetails.map(item => item.batchIndex),
+          failedBatchDetails,
+        },
+      },
+    }).catch(() => {});
+    throw new Error(message);
   }
 
-  // 全部批次完成（或跳过失败批），重新生成最终 PDF
+  // 全部批次成功后，重新生成最终 PDF
   console.log(`[auto-verification] 批次完成 ${succeededBatches}/${totalBatches}，开始生成最终 PDF`);
   const pdfResult = await callWithRetry(regenerateFinalPdf, { cloud, paperId });
 

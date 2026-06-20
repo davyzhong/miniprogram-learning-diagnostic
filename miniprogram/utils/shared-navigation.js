@@ -227,8 +227,9 @@ async function navigateToVerificationPaper(cloudModule, { studentId, subject, re
   wx.showLoading({ title: '查看验证卷…' })
   let status = 'none'
   let paperId = ''
+  let result = null
   try {
-    const result = await cloudModule.getActiveVerificationPaper(studentId, subject, reportId)
+    result = await cloudModule.getActiveVerificationPaper(studentId, subject, reportId)
     status = result.status || 'none'
     paperId = result.paper && result.paper._id ? result.paper._id : ''
   } catch (e) {
@@ -286,32 +287,53 @@ async function navigateToVerificationPaper(cloudModule, { studentId, subject, re
     return { status: 'failed', paperId: '' }
   }
 
+  const markFailed = async (message) => {
+    const error = message || '验证卷生成失败'
+    await cloudModule.regenerateVerificationPaper({
+      studentId, subject, reportId, paperId: drivePaperId, action: 'fail', error
+    }).catch(() => {})
+    wx.hideLoading()
+    wx.showToast({ title: '验证卷生成失败，请稍后重试', icon: 'none' })
+    return { status: 'failed', paperId: drivePaperId }
+  }
+
   // 前端驱动逐批生成
   for (let i = 0; i < batches.length; i++) {
     wx.showLoading({ title: `生成中 ${i + 1}/${totalBatches} 批…` })
     try {
-      await cloudModule.callGeneratePaper({
+      const batchResult = await cloudModule.callGeneratePaper({
         studentId, subject, type: 'verification',
         targets: batches[i],
         _appendToPaperId: drivePaperId,
       })
+      if (!batchResult || batchResult.success === false) {
+        throw new Error((batchResult && batchResult.error) || `第 ${i + 1} 批生成失败`)
+      }
     } catch (batchErr) {
       console.warn(`批次 ${i + 1}/${totalBatches} 失败:`, batchErr && batchErr.message)
+      return markFailed((batchErr && batchErr.message) || `第 ${i + 1} 批生成失败`)
     }
   }
 
   // 重新生成 PDF
   wx.showLoading({ title: '生成 PDF…' })
   try {
-    await cloudModule.callGeneratePaper({ _regeneratePdf: true, paperId: drivePaperId })
+    const pdfResult = await cloudModule.callGeneratePaper({ _regeneratePdf: true, paperId: drivePaperId })
+    if (!pdfResult || pdfResult.success === false) {
+      throw new Error((pdfResult && pdfResult.error) || 'PDF 生成失败')
+    }
   } catch (pdfErr) {
     console.warn('PDF 重新生成失败:', pdfErr && pdfErr.message)
+    return markFailed((pdfErr && pdfErr.message) || 'PDF 生成失败')
   }
 
   // 标记完成
-  await cloudModule.regenerateVerificationPaper({
+  const finalizeResult = await cloudModule.regenerateVerificationPaper({
     studentId, subject, reportId, paperId: drivePaperId, action: 'finalize'
-  }).catch(() => {})
+  }).catch(err => ({ success: false, error: err && err.message }))
+  if (!finalizeResult || finalizeResult.success === false) {
+    return markFailed((finalizeResult && finalizeResult.error) || '验证卷生成完成状态写入失败')
+  }
 
   wx.hideLoading()
   wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${drivePaperId}` })

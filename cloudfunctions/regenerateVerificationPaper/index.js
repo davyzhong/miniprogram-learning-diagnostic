@@ -5,6 +5,7 @@
 // 全量细 BN + 置信度排序 + 分批追加 + 最终 regeneratePdf。
 // 因云函数独立打包无法跨函数 require，此处内联核心逻辑。
 const cloud = require('wx-server-sdk');
+const { getStudentAccess, canOperateLearning } = require('./access');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -93,18 +94,54 @@ function chunkTargets(targets, size = BATCH_SIZE) {
   return chunks;
 }
 
-exports.main = async (event = {}) => {
+async function requireStudentAccess(studentId, openId) {
+  const access = await getStudentAccess(db, studentId, openId);
+  if (!access.student) return { ok: false, error: '学生不存在' };
+  if (!canOperateLearning(access)) return { ok: false, error: '无权执行该操作' };
+  return { ok: true, access };
+}
+
+async function getValidatedPaper({ paperId, studentId, subject, openId }) {
+  const existing = await db.collection('papers').doc(paperId).get();
+  const paper = existing.data;
+  if (!paper) return { ok: false, error: '验证卷不存在' };
+  if (paper.studentId !== studentId || paper.subject !== subject || paper.type !== 'verification') {
+    return { ok: false, error: '验证卷归属不匹配' };
+  }
+  const access = await requireStudentAccess(paper.studentId, openId);
+  if (!access.ok) return access;
+  return { ok: true, paper };
+}
+
+async function validateReportOwnership(reportId, studentId, subject) {
+  if (!reportId) return { ok: true };
+  const reportRes = await db.collection('reports').doc(reportId).get();
+  const report = reportRes.data;
+  if (!report) return { ok: false, error: '报告不存在' };
+  if (report.studentId !== studentId || report.subject !== subject) {
+    return { ok: false, error: '报告归属不匹配' };
+  }
+  return { ok: true, report };
+}
 
 exports.main = async (event = {}) => {
   const { studentId, subject = 'math', reportId = '', action = 'start' } = event;
   const openId = cloud.getWXContext().OPENID;
 
   if (!studentId) return { success: false, error: '缺少 studentId' };
+  if (!['math', 'chinese', 'english'].includes(subject)) {
+    return { success: false, error: '学科参数无效' };
+  }
 
   // ===== start 模式：创建 generating 记录，返回 paperId + 分批信息 =====
   // 前端拿到后循环调 generatePaper(_appendToPaperId) 分批生成，最后调 _regeneratePdf
   if (action === 'start') {
     try {
+      const access = await requireStudentAccess(studentId, openId);
+      if (!access.ok) return { success: false, error: access.error };
+      const reportCheck = await validateReportOwnership(reportId, studentId, subject);
+      if (!reportCheck.ok) return { success: false, error: reportCheck.error };
+
       const profileRes = await db.collection('subjectProfiles')
         .where({ studentId })
         .get();
@@ -166,6 +203,14 @@ exports.main = async (event = {}) => {
     const { paperId } = event;
     if (!paperId) return { success: false, error: '缺少 paperId' };
     try {
+      const paperCheck = await getValidatedPaper({ paperId, studentId, subject, openId });
+      if (!paperCheck.ok) return { success: false, error: paperCheck.error };
+      const reportCheck = await validateReportOwnership(reportId, studentId, subject);
+      if (!reportCheck.ok) return { success: false, error: reportCheck.error };
+      const questions = Array.isArray(paperCheck.paper.questions) ? paperCheck.paper.questions : [];
+      if (questions.length === 0 || !paperCheck.paper.pdfFileId) {
+        return { success: false, error: '验证卷尚未生成完整题目或 PDF' };
+      }
       await db.collection('papers').doc(paperId).update({
         data: { generationStatus: 'ready', generationError: '' },
       }).catch(() => {});
@@ -185,6 +230,10 @@ exports.main = async (event = {}) => {
     const { paperId, error = '生成失败' } = event;
     if (!paperId) return { success: false, error: '缺少 paperId' };
     try {
+      const paperCheck = await getValidatedPaper({ paperId, studentId, subject, openId });
+      if (!paperCheck.ok) return { success: false, error: paperCheck.error };
+      const reportCheck = await validateReportOwnership(reportId, studentId, subject);
+      if (!reportCheck.ok) return { success: false, error: reportCheck.error };
       await db.collection('papers').doc(paperId).update({
         data: { generationStatus: 'failed', generationError: error },
       }).catch(() => {});

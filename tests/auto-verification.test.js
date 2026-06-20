@@ -86,6 +86,51 @@ test('extractPendingTargets 返回 bottleneckId 数组', () => {
   assert.deepEqual(targets, ['BN-1'])
 })
 
+test('generateInBatches marks paper failed when any batch cannot be generated', async () => {
+  const autoVerification = loadModule('cloudfunctions/analyzePhotos/auto-verification.js', {}, {
+    setTimeout: callback => {
+      callback()
+      return 0
+    }
+  })
+  const db = createDatabase({
+    papers: [{
+      _id: 'paper-1',
+      studentId: 's1',
+      subject: 'math',
+      type: 'verification',
+      questions: [],
+      generationStatus: 'generating',
+    }]
+  })
+  let pdfCalls = 0
+  const cloud = {
+    callFunction: async ({ data }) => {
+      if (data._regeneratePdf) {
+        pdfCalls += 1
+        return { result: { success: true, questionCount: 8 } }
+      }
+      if ((data.targets || []).includes('BN-009')) {
+        return { result: { success: false, error: 'AI 批次失败' } }
+      }
+      return { result: { success: true, appendedQuestionCount: (data.targets || []).length } }
+    }
+  }
+  const targets = Array.from({ length: 9 }, (_, index) => `BN-${String(index + 1).padStart(3, '0')}`)
+
+  await assert.rejects(
+    () => autoVerification.generateInBatches(db, cloud, { paperId: 'paper-1', studentId: 's1', subject: 'math', targets }),
+    /部分批次生成失败/
+  )
+
+  const paper = db.dump('papers')[0]
+  assert.equal(pdfCalls, 0)
+  assert.equal(paper.generationStatus, 'failed')
+  assert.equal(paper.generationProgress.succeededBatches, 1)
+  assert.equal(paper.generationProgress.failedBatches, 1)
+  assert.deepEqual(paper.generationProgress.failedBatchIndexes, [2])
+})
+
 // ========== supersedeOldPapers 单元测试 ==========
 
 test('supersedeOldPapers 覆盖未验证的旧卷', async () => {
@@ -146,6 +191,11 @@ function loadStudentData(db) {
   return loadModule('cloudfunctions/studentData/index.js', { 'wx-server-sdk': cloud })
 }
 
+function loadRegenerateVerificationPaper(db, openId = 'owner-1') {
+  const cloud = createCloudMock({ db, openId })
+  return loadModule('cloudfunctions/regenerateVerificationPaper/index.js', { 'wx-server-sdk': cloud })
+}
+
 test('getActiveVerificationPaper 返回 ready 状态', async () => {
   const db = createDatabase({
     students: [{ _id: 's1', _openid: 'owner-1', name: '钟青羽' }],
@@ -185,6 +235,79 @@ test('getActiveVerificationPaper 返回 none 状态（无任何卷）', async ()
   const result = await handler.main({ action: 'getActiveVerificationPaper', studentId: 's1', subject: 'math' })
   assert.equal(result.status, 'none')
   assert.equal(result.paper, null)
+})
+
+test('regenerateVerificationPaper start rejects callers without access to the student', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '钟青羽' }],
+    subjectProfiles: [{
+      _id: 'profile-1',
+      studentId: 's1',
+      subject: 'math',
+      currentBottlenecks: [{
+        lpCode: 'LP-001',
+        severity: 'high',
+        candidateBottlenecks: [{ bottleneckId: 'BN-001', title: '小数点定位' }]
+      }]
+    }],
+    papers: [],
+    reports: [],
+  })
+  const handler = loadRegenerateVerificationPaper(db, 'other-openid')
+
+  const result = await handler.main({ action: 'start', studentId: 's1', subject: 'math', reportId: 'report-1' })
+
+  assert.equal(result.success, false)
+  assert.equal(result.error, '无权执行该操作')
+  assert.equal(db.dump('papers').length, 0)
+})
+
+test('regenerateVerificationPaper finalize rejects paper/student mismatch', async () => {
+  const db = createDatabase({
+    students: [
+      { _id: 's1', _openid: 'owner-1', name: '钟青羽' },
+      { _id: 's2', _openid: 'owner-2', name: '弟弟' },
+    ],
+    papers: [{
+      _id: 'paper-other',
+      studentId: 's2',
+      subject: 'math',
+      type: 'verification',
+      questions: [{ content: '1+1', answer: '2' }],
+      pdfFileId: 'cloud://paper.pdf',
+      generationStatus: 'generating',
+    }],
+    reports: [],
+  })
+  const handler = loadRegenerateVerificationPaper(db, 'owner-1')
+
+  const result = await handler.main({ action: 'finalize', studentId: 's1', subject: 'math', paperId: 'paper-other' })
+
+  assert.equal(result.success, false)
+  assert.equal(result.error, '验证卷归属不匹配')
+  assert.equal(db.dump('papers')[0].generationStatus, 'generating')
+})
+
+test('regenerateVerificationPaper finalize rejects incomplete generated papers', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '钟青羽' }],
+    papers: [{
+      _id: 'paper-empty',
+      studentId: 's1',
+      subject: 'math',
+      type: 'verification',
+      questions: [],
+      generationStatus: 'generating',
+    }],
+    reports: [],
+  })
+  const handler = loadRegenerateVerificationPaper(db, 'owner-1')
+
+  const result = await handler.main({ action: 'finalize', studentId: 's1', subject: 'math', paperId: 'paper-empty' })
+
+  assert.equal(result.success, false)
+  assert.equal(result.error, '验证卷尚未生成完整题目或 PDF')
+  assert.equal(db.dump('papers')[0].generationStatus, 'generating')
 })
 
 // ========== generatePaper _autoPaperId 模式测试 ==========

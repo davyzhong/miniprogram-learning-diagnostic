@@ -53,6 +53,25 @@ function confidenceLabel(weight) {
   return '低置信';
 }
 
+async function getPaperAccessForWrite(paperId, openId, expected = {}) {
+  const existing = await db.collection('papers').doc(paperId).get();
+  const paper = existing.data;
+  if (!paper) return { ok: false, error: '试卷不存在' };
+
+  if (
+    (expected.studentId && paper.studentId !== expected.studentId)
+    || (expected.subject && paper.subject !== expected.subject)
+    || (expected.type && paper.type !== expected.type)
+  ) {
+    return { ok: false, error: '验证卷归属不匹配' };
+  }
+
+  const access = await getStudentAccess(db, paper.studentId, openId);
+  if (!access.student) return { ok: false, error: '学生不存在' };
+  if (!canOperateLearning(access)) return { ok: false, error: '无权执行该操作' };
+  return { ok: true, paper, access };
+}
+
 // 验证卷按细分卡点（BN）出题，置信度分层。
 // 全量 BN 可达 30-50 个，允许上限调大到 80 个 target。
 const VERIFICATION_TASK_PACK_TARGET_LIMIT = 80;
@@ -481,9 +500,10 @@ exports.main = async (event) => {
   // 用于追加模式完成后，用合并的完整题目生成最终 PDF
   if (event._regeneratePdf && event.paperId) {
     try {
-      const existing = await db.collection('papers').doc(event.paperId).get();
-      const paper = existing.data;
-      if (!paper) return { success: false, error: '试卷不存在' };
+      const currentOpenId = cloud.getWXContext().OPENID;
+      const paperAccess = await getPaperAccessForWrite(event.paperId, currentOpenId);
+      if (!paperAccess.ok) return { success: false, error: paperAccess.error };
+      const paper = paperAccess.paper;
       const allQuestions = paper.questions || [];
       if (allQuestions.length === 0) return { success: false, error: '试卷无题目' };
 
@@ -679,6 +699,24 @@ exports.main = async (event) => {
     if (!canOperateLearning(access)) {
       return { success: false, error: '无权执行该操作' };
     }
+    let appendPaper = null;
+    if (_appendToPaperId) {
+      const appendAccess = await getPaperAccessForWrite(_appendToPaperId, currentOpenId, {
+        studentId,
+        subject,
+        type,
+      });
+      if (!appendAccess.ok) return { success: false, error: appendAccess.error };
+      appendPaper = appendAccess.paper;
+    }
+    if (_autoPaperId) {
+      const autoAccess = await getPaperAccessForWrite(_autoPaperId, currentOpenId, {
+        studentId,
+        subject,
+        type,
+      });
+      if (!autoAccess.ok) return { success: false, error: autoAccess.error };
+    }
 
     const profileRes = await db.collection('subjectProfiles')
       .where({ studentId })
@@ -721,6 +759,36 @@ exports.main = async (event) => {
       };
     }
     const bottleneckSummaries = buildBottleneckSummaries(questionsData.questions, targetCodes);
+
+    if (_appendToPaperId) {
+      const oldData = appendPaper || {};
+      const oldQuestions = Array.isArray(oldData.questions) ? oldData.questions : [];
+      const oldTargets = Array.isArray(oldData.bottleneckTargets) ? oldData.bottleneckTargets : [];
+      const oldSummaries = Array.isArray(oldData.bottleneckSummaries) ? oldData.bottleneckSummaries : [];
+      const mergedQuestions = [...oldQuestions, ...(questionsData.questions || [])];
+      const mergedTargets = Array.from(new Set([...oldTargets, ...targetCodes]));
+      const mergedSummaries = [...oldSummaries, ...(bottleneckSummaries || [])];
+      await db.collection('papers').doc(_appendToPaperId).update({
+        data: {
+          questions: mergedQuestions,
+          bottleneckTargets: mergedTargets,
+          bottleneckSummaries: mergedSummaries,
+          updatedAt: new Date(),
+          generationStatus: 'appending',
+        },
+      });
+      console.log('试卷追加完成：', _appendToPaperId, '总题数:', mergedQuestions.length);
+      return {
+        success: true,
+        paperId: _appendToPaperId,
+        pdfFileId: oldData.pdfFileId || '',
+        title: oldData.title || questionsData.title,
+        questionCount: mergedQuestions.length,
+        appendedQuestionCount: (questionsData.questions || []).length,
+        verificationPack: oldData.verificationPack || questionsData.verificationPack || null,
+        paperDate: normalizedPaperDate,
+      };
+    }
 
     // 2. 生成 PDF
     console.log('开始生成 PDF');
@@ -788,41 +856,8 @@ exports.main = async (event) => {
       generationStatus: 'ready',
     };
 
-    let paperId;
-    if (_appendToPaperId) {
-      // 追加模式：把本次生成的题目合并到已有 paper 里（不分批创建多份）
-      const existing = await db.collection('papers').doc(_appendToPaperId).get();
-      const oldData = existing.data || {};
-      const oldQuestions = Array.isArray(oldData.questions) ? oldData.questions : [];
-      const oldTargets = Array.isArray(oldData.bottleneckTargets) ? oldData.bottleneckTargets : [];
-      const oldSummaries = Array.isArray(oldData.bottleneckSummaries) ? oldData.bottleneckSummaries : [];
-      // 合并题目（追加到末尾）、合并 targets（去重）
-      const mergedQuestions = [...oldQuestions, ...(questionsData.questions || [])];
-      const mergedTargets = Array.from(new Set([...oldTargets, ...targetCodes]));
-      const mergedSummaries = [...oldSummaries, ...(bottleneckSummaries || [])];
-      // PDF 留到最后一批追加完后单独重新生成（避免每次追加都超时）
-      await db.collection('papers').doc(_appendToPaperId).update({
-        data: {
-          questions: mergedQuestions,
-          bottleneckTargets: mergedTargets,
-          bottleneckSummaries: mergedSummaries,
-          updatedAt: new Date(),
-          generationStatus: 'appending',
-        },
-      });
-      paperId = _appendToPaperId;
-      console.log('试卷追加完成：', paperId, '总题数:', mergedQuestions.length);
-      return {
-        success: true,
-        paperId,
-        pdfFileId: oldData.pdfFileId || pdfFileId,
-        title: oldData.title || questionsData.title,
-        questionCount: mergedQuestions.length,
-        appendedQuestionCount: (questionsData.questions || []).length,
-        verificationPack: oldData.verificationPack || questionsData.verificationPack || null,
-        paperDate: normalizedPaperDate,
-      };
-    } else if (_autoPaperId) {
+	    let paperId;
+	    if (_autoPaperId) {
       // 自动生成模式：更新已创建的 generating 记录
       await db.collection('papers').doc(_autoPaperId).update({ data: paperData });
       paperId = _autoPaperId;
