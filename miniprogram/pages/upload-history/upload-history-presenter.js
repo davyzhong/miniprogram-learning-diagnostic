@@ -296,7 +296,7 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     displayLevel: 'main',
     icon: '卷',
     url: paperUrl,
-    title: `生成${subjectName}纸面验证卷`,
+    title: `${subjectName}纸面验证卷`,
     timeText: timeText(eventTime),
     createdAt: eventTime,
     summary: bottleneckText

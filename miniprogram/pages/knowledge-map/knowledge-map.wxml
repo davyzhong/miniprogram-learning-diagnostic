@@ -13,9 +13,12 @@
 
   <view wx:else>
     <view class="hero">
-      <text class="hero-title">🗺️ {{view.title}}</text>
-      <text class="hero-summary">{{view.summary}}</text>
-      <text class="hero-hint">点击任意卡点直接开始学习，约 5-10 分钟讲清楚一个卡点</text>
+      <image class="hero-illustration" src="/assets/images/knowledge-map-hero.jpg" mode="aspectFill"></image>
+      <view class="hero-copy">
+        <text class="hero-title">🗺️ {{view.title}}</text>
+        <text class="hero-summary">{{view.summary}}</text>
+        <text class="hero-hint">点击任意卡点直接开始学习，约 5-10 分钟讲清楚一个卡点</text>
+      </view>
     </view>
 
     <!-- 优先卡点 CTA：把最该处理的卡点置顶放大 -->

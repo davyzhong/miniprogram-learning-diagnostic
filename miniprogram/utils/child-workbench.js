@@ -231,7 +231,7 @@ function buildNextAction(student, profiles, papers) {
   const activeSubject = SUBJECTS.find(key => activeBottlenecks(profiles.find(profile => profile.subject === key) || {}).length > 0) || 'math'
   return {
     title: '下一步',
-    summary: '上传试卷或生成纸面验证卷，继续补充学习证据。',
+    summary: '上传试卷或下载已自动准备的纸面验证卷，继续补充学习证据。',
     actionText: '进入学科',
     url: buildTraceableUrl({
       type: 'subject-home',
@@ -279,14 +279,14 @@ function buildPriorityAction(student, profiles = [], papers = []) {
   const activeEntry = activeSubjectEntries(profiles)[0]
   if (activeEntry) {
     return {
-      type: 'generate-verification',
+      type: 'verification-paper-status',
       subject: activeEntry.key,
-      title: `生成${activeEntry.subject.name}验证卷`,
-      summary: `${compactBottleneckText(activeEntry.active)}等待验证，先生成一组纸面题。`,
-      actionText: '生成试卷',
+      title: `查看${activeEntry.subject.name}验证卷`,
+      summary: `${compactBottleneckText(activeEntry.active)}等待验证，系统会自动准备纸面题，准备好后可下载打印。`,
+      actionText: '查看/下载',
       tone: 'verification',
       url: buildTraceableUrl({
-        type: 'generate-verification',
+        type: 'subject-home',
         studentId: student._id || '',
         studentName: student.name || '',
         grade: student.grade || '',

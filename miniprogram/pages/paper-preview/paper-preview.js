@@ -51,8 +51,11 @@ Page({
     workbenchStatusDesc: '下载 PDF 打印后让孩子纸面作答，完成后回到这里拍照上传验证。',
     lifecycleSteps: [],
     primaryActionType: 'download',
-    primaryActionText: '下载 PDF 并打印',
+    primaryActionText: '下载验证卷',
     primaryActionUrl: '',
+    secondaryActionType: 'upload',
+    secondaryActionText: '上传作答照片',
+    secondaryActionUrl: '',
     feedback: {
       hasFeedback: false,
       reportId: '',
@@ -220,6 +223,19 @@ Page({
     }
     if (primaryActionType === 'report' && primaryActionUrl) {
       wx.navigateTo({ url: primaryActionUrl })
+      return
+    }
+    wx.showToast({ title: '暂无下一步操作', icon: 'none' })
+  },
+
+  onSecondaryAction() {
+    const { secondaryActionType, secondaryActionUrl } = this.data
+    if (secondaryActionType === 'upload') {
+      this.onUpload()
+      return
+    }
+    if (secondaryActionType === 'report' && secondaryActionUrl) {
+      wx.navigateTo({ url: secondaryActionUrl })
       return
     }
     wx.showToast({ title: '暂无下一步操作', icon: 'none' })

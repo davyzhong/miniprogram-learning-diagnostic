@@ -5,9 +5,12 @@
 
   <view wx:else>
     <view class="header">
-      <text class="kicker">{{studentName || '学习档案'}}</text>
-      <text class="title">学习卡点中心</text>
-      <text class="summary">按学科和状态查看当前需要验证、持续观察和已经改善的卡点。</text>
+      <view class="header-copy">
+        <text class="kicker">{{studentName || '学习档案'}}</text>
+        <text class="title">学习卡点中心</text>
+        <text class="summary">按学科和状态查看当前需要验证、持续观察和已经改善的卡点。</text>
+      </view>
+      <image class="header-illustration" src="/assets/images/knowledge-map-hero.jpg" mode="aspectFill"></image>
     </view>
 
     <view class="stats-grid">

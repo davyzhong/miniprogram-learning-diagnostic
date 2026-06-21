@@ -10,8 +10,9 @@
 }
 
 .compact-header {
-  align-items: center;
+  align-items: stretch;
   display: flex;
+  flex-direction: column;
   gap: 20rpx;
   justify-content: space-between;
 }
@@ -22,17 +23,14 @@
 }
 
 .header-illustration {
-  align-items: center;
   background: linear-gradient(135deg, #e8f1ff 0%, #e9f8ef 100%);
   border: 1rpx solid #dbe8f4;
   border-radius: 22rpx;
   box-shadow: 0 6rpx 18rpx rgba(45, 108, 223, 0.08);
-  display: flex;
   flex-shrink: 0;
-  height: 88rpx;
-  justify-content: center;
-  position: relative;
-  width: 88rpx;
+  height: 390rpx;
+  width: 100%;
+  order: -1;
 }
 
 .header-illustration-main {

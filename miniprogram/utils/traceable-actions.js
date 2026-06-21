@@ -112,12 +112,12 @@ function buildTraceableUrl(action) {
   }
 
   if (type === 'generate-verification') {
-    return withQuery('/pages/generate-verification/generate-verification', {
+    return withQuery('/pages/subject-home/subject-home', {
       studentId,
       subject,
       subjectName,
       studentName,
-      targetCode: id || normalized.lpCode
+      grade
     })
   }
 

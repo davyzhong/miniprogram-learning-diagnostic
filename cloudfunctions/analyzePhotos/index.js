@@ -764,18 +764,22 @@ exports.main = async (event) => {
 
     await markAnalysisTaskCompleted(taskId, artifacts);
 
-    // 诊断报告完成后，自动触发验证卷生成（fire-and-forget，失败不影响主流程）
+    // 诊断报告完成后，自动触发验证卷生成；前端不再负责手动生成或分批推进。
     if (mode !== 'verification' && artifacts.profileSummary && artifacts.profileSummary.isEffective) {
       const pendingCount = (artifacts.profile && artifacts.profile.pendingBottlenecks || []).length;
       if (pendingCount > 0) {
         const currentOpenId = cloud.getWXContext().OPENID;
-        triggerAutoVerificationPaper(cloud, db, {
-          reportId,
-          studentId,
-          subject,
-          profile: artifacts.profile,
-          openId: currentOpenId,
-        }).catch(err => console.warn('[auto-verification] 异常:', err.message));
+        try {
+          await triggerAutoVerificationPaper(cloud, db, {
+            reportId,
+            studentId,
+            subject,
+            profile: artifacts.profile,
+            openId: currentOpenId,
+          });
+        } catch (err) {
+          console.warn('[auto-verification] 异常:', err.message);
+        }
       }
     }
 

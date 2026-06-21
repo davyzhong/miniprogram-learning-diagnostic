@@ -183,7 +183,7 @@ const pages = [
     },
   },
   {
-    name: 'generate-verification 生成验证卷',
+    name: 'verification-paper-download 验证卷下载入口',
     route: `/pages/generate-verification/generate-verification?${studentQ}&subject=math&subjectName=%E6%95%B0%E5%AD%A6`,
     expect: {
       text: ['出卷配置', '生成 A4 试卷'],

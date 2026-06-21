@@ -30,18 +30,6 @@
   min-width: 0;
 }
 
-.top-left:active {
-  opacity: 0.6;
-}
-
-.back-arrow {
-  font-size: 44rpx;
-  color: #2563eb;
-  font-weight: 600;
-  line-height: 1;
-  flex-shrink: 0;
-}
-
 .top-copy {
   flex: 1;
   min-width: 0;
@@ -454,8 +442,8 @@
 .family-hero-image {
   display: block;
   width: 100%;
-  height: 260rpx;
-  background: #dbeafe;
+  height: 390rpx;
+  background: linear-gradient(135deg, #dbeafe 0%, #f8fbff 100%);
 }
 
 .family-hero-copy {
@@ -546,8 +534,8 @@
 .personal-hero-image {
   display: block;
   width: 100%;
-  height: 300rpx;
-  background: #e0f2fe;
+  height: 390rpx;
+  background: linear-gradient(135deg, #e0f2fe 0%, #fff7ed 100%);
 }
 
 .personal-hero-copy {

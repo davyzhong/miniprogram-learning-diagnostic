@@ -261,8 +261,8 @@ async function callGeneratePaper(params) {
 }
 
 /**
- * 调用云函数：手动重新生成验证卷（none/failed 兜底）。
- * 云函数内部 fire-and-forget 分批生成，立即返回 paperId，前端轮询 getActiveVerificationPaper。
+ * 调用云函数：验证卷维护接口。
+ * 主流程由诊断完成后的后台自动生成负责；前端只查询状态和下载。
  * @param {object} params - { studentId, subject, reportId }
  */
 async function regenerateVerificationPaper(params) {

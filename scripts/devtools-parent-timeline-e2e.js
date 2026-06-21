@@ -459,7 +459,7 @@ async function main() {
     page = await miniProgram.currentPage()
     assert.equal(page.path, 'pages/subject-home/subject-home')
     text = await pageText(page)
-    requireText(text, ['下一步建议', '生成纸面验证卷', '待处理队列', '工具', '拍照诊断', '默认试卷', '学习记录', '完整报告'])
+    requireText(text, ['下一步建议', '查看/下载验证卷', '待处理队列', '工具', '拍照诊断', '默认试卷', '学习记录', '完整报告'])
     await miniProgram.screenshot({ path: screenshots.subject })
   })
 
@@ -487,7 +487,7 @@ async function main() {
     assert.equal(page.path, 'pages/upload-history/upload-history')
   })
 
-  await runCase('生成纸面验证卷页：卡点文字、配置和按钮可见', async () => {
+  await runCase('验证卷下载入口页：卡点范围、状态和按钮可见', async () => {
     const page = await relaunch(miniProgram, '/pages/generate-verification/generate-verification?studentId=student-e2e&subject=math&subjectName=%E6%95%B0%E5%AD%A6&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD', 1800)
     const text = await pageText(page)
     requireText(text, ['出卷配置', '数学纸质验证卷', '试卷配置', '计算基础', '审题理解', '预览 PDF', '生成 A4 试卷'])
@@ -517,15 +517,15 @@ async function main() {
     page = await miniProgram.currentPage()
     assert.equal(page.path, 'pages/bottleneck-detail/bottleneck-detail')
     text = await pageText(page)
-    requireText(text, ['数学学习卡点', '审题理解', '卡点证据链', '验证反馈', '验证试卷', '诊断报告', '数学-20260613-01', '已反馈', '生成验证卷'])
+    requireText(text, ['数学学习卡点', '审题理解', '卡点证据链', '验证反馈', '验证试卷', '诊断报告', '数学-20260613-01', '已反馈', '查看验证卷'])
     assert(!text.includes('相关报告'), 'bottleneck detail should not render a duplicate related report list')
     assert(!text.includes('相关验证卷'), 'bottleneck detail should not render a duplicate related paper list')
     assert(!text.includes('LP-008'), 'bottleneck detail should prefer text summaries over LP codes')
 
-    await tapByText(page, '.primary-action', '生成验证卷')
+    await tapByText(page, '.primary-action', '查看验证卷')
     await page.waitFor(1200)
     page = await miniProgram.currentPage()
-    assert.equal(page.path, 'pages/generate-verification/generate-verification')
+    assert.equal(page.path, 'pages/paper-preview/paper-preview')
   })
 
   await runCase('点击学习记录查看全部：进入时间线页面', async () => {

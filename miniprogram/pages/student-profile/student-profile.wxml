@@ -6,8 +6,7 @@
 
   <view class="profile-home" wx:elif="{{home}}">
     <view class="top-row">
-      <view class="top-left" bindtap="onBackHome">
-        <text class="back-arrow">‹</text>
+      <view class="top-left">
         <text class="page-title">{{home.studentName}} · 学习档案</text>
       </view>
       <view class="manage-actions">
@@ -19,7 +18,7 @@
       </view>
     </view>
 
-    <view class="personal-hero-card" catchtap="onTraceableUrlTap" data-url="{{home.personalHero.url}}">
+    <view class="personal-hero-card" catchtap="onPrimaryAction">
       <image class="personal-hero-image" src="/assets/images/student-profile-hero.png" mode="aspectFill"></image>
       <view class="personal-hero-copy">
         <view class="student-line">
@@ -36,7 +35,7 @@
       </view>
     </view>
 
-    <view class="personal-primary-action" catchtap="onTraceableUrlTap" data-url="{{home.primaryActionCard.url}}">
+    <view class="personal-primary-action" catchtap="onPrimaryAction">
       <view class="personal-action-badge">今日行动</view>
       <view class="personal-primary-copy">
         <text class="personal-primary-title">{{home.primaryActionCard.title}}</text>
@@ -121,6 +120,6 @@
     <image class="empty-logo" src="/assets/images/app-logo-share.jpg" mode="aspectFit" />
     <text class="text">没有找到学习档案</text>
     <text class="sub-text">请回到首页重新选择孩子。</text>
-    <view class="empty-action" bindtap="onBackHome">返回首页</view>
+    <view class="empty-action" bindtap="onBackHome">重新选择孩子</view>
   </view>
 </view>

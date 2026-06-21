@@ -2,11 +2,11 @@
 <view class="page">
   <!-- 顶部说明 -->
   <view class="tip-bar">
-    <text class="tip-icon">💡</text>
     <view class="tip-content">
       <text class="tip-title">{{pageTitle}}</text>
       <text class="tip-desc">{{pageDesc}}</text>
     </view>
+    <image class="tip-illustration" src="/assets/images/upload-photo-hero.jpg" mode="aspectFill"></image>
   </view>
 
   <view class="paper-context" wx:if="{{paperId}}">

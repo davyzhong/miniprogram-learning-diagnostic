@@ -2,7 +2,7 @@
  * 验证卷自动生成引擎
  *
  * 诊断报告完成后，如果有 pendingBottlenecks，自动触发验证卷生成。
- * 用户无需手动点击"生成验证卷"，只需预览/打印/上传作答。
+ * 用户无需手动点击"生成验证卷"，只需下载/打印/上传作答。
  *
  * 设计文档：docs/subject-design/验证卷自动生成设计文档.md
  */
@@ -245,7 +245,7 @@ function chunkTargets(targets, size = BATCH_SIZE) {
  * 3. 全部批次完成后，调用 generatePaper(_regeneratePdf) 生成最终 PDF
  * 4. 单批失败独立重试；任一批最终失败则整份验证卷标记 failed
  */
-async function generateInBatches(db, cloud, { paperId, studentId, subject, targets }) {
+async function generateInBatches(db, cloud, { paperId, studentId, subject, targets, reportId = '' }) {
   const targetIds = targets.map(t => t.bottleneckId || t);
   const batches = chunkTargets(targetIds);
   const totalBatches = batches.length;
@@ -310,6 +310,11 @@ async function generateInBatches(db, cloud, { paperId, studentId, subject, targe
         },
       },
     }).catch(() => {});
+    if (reportId) {
+      await db.collection('reports').doc(reportId).update({
+        data: { verificationPaperStatus: 'failed' },
+      }).catch(() => {});
+    }
     throw new Error(message);
   }
 
@@ -324,6 +329,11 @@ async function generateInBatches(db, cloud, { paperId, studentId, subject, targe
       generationProgress: { completedBatches: totalBatches, totalBatches, succeededBatches },
     },
   });
+  if (reportId) {
+    await db.collection('reports').doc(reportId).update({
+      data: { verificationPaperStatus: 'ready' },
+    }).catch(() => {});
+  }
 
   console.log(`[auto-verification] paper ${paperId} 生成成功：共 ${pdfResult.questionCount || totalAppended} 题`);
   return pdfResult;
@@ -352,13 +362,13 @@ async function triggerAutoVerificationPaper(cloud, db, { reportId, studentId, su
     console.log(`[auto-verification] 覆盖了 ${supersededCount} 份旧验证卷`);
   }
 
-  // 2. 创建 generating 状态记录（含批次信息，供前端驱动）
+  // 2. 创建 generating 状态记录（含批次信息，供前端和报告页展示进度）
   const batches = chunkTargets(targetIds);
   const paperId = await createGeneratingPaper(db, {
     studentId, subject, targets: targetIds, reportId, openId: openId || '',
   });
 
-  // 记录分批进度信息（generationProgress 标记 0/total，表示"待前端驱动生成"）
+  // 记录分批进度信息。
   await db.collection('papers').doc(paperId).update({
     data: {
       generationStatus: 'generating',
@@ -377,12 +387,32 @@ async function triggerAutoVerificationPaper(cloud, db, { reportId, studentId, su
     }
   }
 
-  // 注意：不再在云函数内异步生成（fire-and-forget 会被进程销毁）。
-  // 实际分批生成由前端报告页 navigateToVerificationPaper 驱动：
-  //   检测到 generating 且 questions 为空（0/total）时，自动驱动逐批 generatePaper + _regeneratePdf。
-  // 这里只负责创建记录和回写关联。
-
-  return { triggered: true, paperId, totalBatches: batches.length };
+  // 3. 后台推进生成：前端只负责查看状态和下载，不参与出题/PDF 生成。
+  try {
+    const result = await generateInBatches(db, cloud, {
+      paperId,
+      studentId,
+      subject,
+      targets: fineBottlenecks,
+      reportId,
+    });
+    return {
+      triggered: true,
+      paperId,
+      totalBatches: batches.length,
+      status: 'ready',
+      questionCount: result.questionCount,
+    };
+  } catch (err) {
+    console.warn('[auto-verification] 后台生成失败:', err.message);
+    return {
+      triggered: true,
+      paperId,
+      totalBatches: batches.length,
+      status: 'failed',
+      error: err.message || String(err),
+    };
+  }
 }
 
 module.exports = {

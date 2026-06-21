@@ -141,7 +141,7 @@
     </view>
 
     <block wx:if="{{homeMode === 'single-profile'}}">
-      <view class="personal-hero-card" catchtap="onTraceableUrlTap" data-url="{{home.personalHero.url}}">
+      <view class="personal-hero-card" catchtap="onPrimaryAction">
         <image class="personal-hero-image" src="/assets/images/student-profile-hero.png" mode="aspectFill"></image>
         <view class="personal-hero-copy">
           <view class="student-line">
@@ -158,7 +158,7 @@
         </view>
       </view>
 
-      <view class="personal-primary-action" catchtap="onTraceableUrlTap" data-url="{{home.primaryActionCard.url}}">
+      <view class="personal-primary-action" catchtap="onPrimaryAction">
         <view class="personal-action-badge">今日行动</view>
         <view class="personal-primary-copy">
           <text class="personal-primary-title">{{home.primaryActionCard.title}}</text>

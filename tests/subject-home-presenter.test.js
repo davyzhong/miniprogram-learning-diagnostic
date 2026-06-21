@@ -23,11 +23,11 @@ test('builds a subject workbench from current bottlenecks and latest reports', (
 
   assert.equal(view.subjectTitle, '数学工作台')
   assert.equal(view.primaryTask.actionType, 'verification')
-  assert.equal(view.primaryTask.actionText, '生成纸面验证卷')
-  assert.equal(view.primaryTask.summary, '2 个学习卡点等待验证，建议先做一张纸面验证卷。')
+  assert.equal(view.primaryTask.actionText, '查看/下载验证卷')
+  assert.equal(view.primaryTask.summary, '2 个学习卡点等待验证，验证卷准备好后可下载打印。')
   assert.deepEqual(view.taskQueue.map(item => item.displayName), ['审题理解', '计算基础'])
   assert.deepEqual(view.taskQueue.map(item => item.evidenceText), ['最近 2 道相关错题', '最近 4 道相关错题'])
-  assert.deepEqual(view.taskQueue.map(item => item.actionText), ['生成纸面验证卷', '生成纸面验证卷'])
+  assert.deepEqual(view.taskQueue.map(item => item.actionText), ['查看/下载验证卷', '查看/下载验证卷'])
   assert.equal(view.taskQueue[0].priorityText, '高优先级')
   assert.ok(view.taskQueue.every(item => item.status !== 'improved'))
   assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history', 'latestReport'])
@@ -153,7 +153,7 @@ test('Chinese workbench prioritizes concrete review items over coarse bottleneck
   }, [], relative, { subject: 'chinese', subjectName: '语文' })
 
   assert.equal(view.primaryTask.actionType, 'verification')
-  assert.equal(view.primaryTask.summary, '1 个具体错项等待复测，建议先生成语文错项复测卷。')
+  assert.equal(view.primaryTask.summary, '1 个具体错项等待复测，系统会根据诊断报告自动准备语文错项复测卷。')
   assert.equal(view.pendingTaskCount, 1)
   assert.equal(view.hasChineseReviewQueue, true)
   assert.equal(view.chineseReviewQueue[0].displayName, '莺')
@@ -170,6 +170,24 @@ test('empty profile exposes a first-use workbench action', () => {
   assert.equal(view.primaryTask.actionText, '拍照诊断')
   assert.equal(view.taskQueue.length, 0)
   assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history'])
+  assert.equal(view.subjectIllustration.imageSrc, '/assets/images/subject-math-hero.jpg')
+  assert.match(view.subjectIllustration.alt, /数学/)
+})
+
+test('subject workbench chooses subject-specific hero illustrations', () => {
+  const math = buildSubjectHomeView({}, [], relative, { subject: 'math', subjectName: '数学' })
+  const chinese = buildSubjectHomeView({}, [], relative, { subject: 'chinese', subjectName: '语文' })
+  const english = buildSubjectHomeView({}, [], relative, {
+    subject: 'english',
+    subjectName: '英语',
+    englishVocabulary: { summary: { totalWords: 20 } }
+  })
+
+  assert.equal(math.subjectIllustration.imageSrc, '/assets/images/subject-math-hero.jpg')
+  assert.equal(chinese.subjectIllustration.imageSrc, '/assets/images/subject-chinese-hero.jpg')
+  assert.equal(english.subjectIllustration.imageSrc, '/assets/images/subject-english-hero.jpg')
+  assert.notEqual(math.subjectIllustration.imageSrc, chinese.subjectIllustration.imageSrc)
+  assert.notEqual(chinese.subjectIllustration.imageSrc, english.subjectIllustration.imageSrc)
 })
 
 test('English workbench uses vocabulary summary as the primary learning asset', () => {

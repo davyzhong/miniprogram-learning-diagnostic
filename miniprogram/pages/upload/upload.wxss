@@ -9,7 +9,9 @@
 /* ========== 顶部说明 ========== */
 .tip-bar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 18rpx;
   background: #ebf8ff;
   border-radius: 0 0 20rpx 20rpx;
   padding: 24rpx 28rpx;
@@ -24,6 +26,17 @@
 
 .tip-content {
   flex: 1;
+  min-width: 0;
+}
+
+.tip-illustration {
+  width: 100%;
+  height: 390rpx;
+  border-radius: 16rpx;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, .68);
+  box-shadow: 0 6rpx 16rpx rgba(43, 108, 176, .12);
+  order: -1;
 }
 
 .tip-title {

@@ -1,18 +1,21 @@
 <!--pages/generate-verification/generate-verification.wxml-->
 <view class="page">
   <view class="config-hero">
-    <text class="config-kicker">出卷配置</text>
-    <text class="config-title">{{subjectName}}纸面验证卷</text>
-    <text class="config-desc">选择本次要验证的学习卡点，生成 A4 PDF 后打印作答，完成后拍照上传批复。</text>
+    <view class="config-hero-copy">
+      <text class="config-kicker">验证卷状态</text>
+      <text class="config-title">{{subjectName}}纸面验证卷</text>
+      <text class="config-desc">系统会根据最新诊断报告自动准备 A4 PDF。准备好后，只需要下载打印；完成纸面作答后再拍照上传。</text>
+    </view>
+    <image class="config-hero-image" src="/assets/images/verification-paper-hero.jpg" mode="aspectFill"></image>
   </view>
 
   <view class="config-card" wx:if="{{selectedCount > 0}}">
-    <view class="section-title">试卷配置</view>
+    <view class="section-title">覆盖范围</view>
     <text class="scope-text">{{paperConfig.scopeText}}</text>
     <text class="strategy-text">{{paperConfig.strategyText}}</text>
     <view class="task-pack" wx:if="{{paperConfig.taskPages.length > 0}}">
       <view class="task-pack-head">
-        <text class="task-pack-title">任务包预览</text>
+        <text class="task-pack-title">任务包范围</text>
         <text class="task-pack-meta">{{paperConfig.taskPageCount}} 个任务页，可批量打印，做完任意页后按页面编号拍照回传。</text>
       </view>
       <view class="task-page" wx:for="{{paperConfig.taskPages}}" wx:key="pageIndex">
@@ -43,13 +46,12 @@
     </view>
   </view>
 
-  <view class="section-title range-title">出题范围（已选 {{selectedCount}} 个卡点）</view>
+  <view class="section-title range-title">验证范围（{{selectedCount}} 个卡点）</view>
   <view class="bottleneck-list">
     <view
       class="bottleneck-item {{item.selected ? 'selected' : ''}}"
       wx:for="{{bottlenecks}}"
       wx:key="viewId"
-      bindtap="onToggleBottleneck"
       data-index="{{index}}"
     >
       <view class="checkbox {{item.selected ? 'checked' : ''}}">
@@ -74,15 +76,12 @@
   </view>
 
   <view class="bottom-bar">
-    <button class="btn-secondary" bindtap="onPreview" disabled="{{selectedCount === 0 || previewing}}">
-      {{previewing ? '预览生成中...' : '预览 PDF'}}
-    </button>
     <button
       class="btn-primary"
-      bindtap="onGenerate"
-      disabled="{{selectedCount === 0 || generating}}"
+      bindtap="onViewAutoPaper"
+      disabled="{{loading}}"
     >
-      {{generating ? '生成中...' : '生成 A4 试卷'}}
+      {{loading ? '状态读取中...' : '查看/下载验证卷'}}
     </button>
   </view>
 </view>

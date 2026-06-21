@@ -6,7 +6,9 @@
 .empty-cta { display: inline-block; padding: 18rpx 48rpx; background: #3182ce; color: #fff; border-radius: 32rpx; font-size: 28rpx; }
 .empty-cta:active { background: #2c5aa0; }
 
-.hero { text-align: center; padding: 32rpx 0 24rpx; }
+.hero { align-items: stretch; display: flex; flex-direction: column; gap: 22rpx; padding: 16rpx 0 24rpx; }
+.hero-illustration { background: #eef7ff; border-radius: 20rpx; box-shadow: 0 8rpx 22rpx rgba(26, 54, 93, .10); flex-shrink: 0; height: 390rpx; width: 100%; }
+.hero-copy { flex: 1; min-width: 0; }
 .hero-title { display: block; font-size: 38rpx; font-weight: 700; color: #1a365d; }
 .hero-summary { display: block; font-size: 26rpx; color: #718096; margin-top: 12rpx; }
 .hero-hint { display: block; font-size: 22rpx; color: #a0aec0; margin-top: 8rpx; }

@@ -5,10 +5,7 @@
       <text class="title">{{titleText}}</text>
       <text class="subtitle">诊断、验证卷和反馈按学习闭环整理。</text>
     </view>
-    <view class="header-illustration">
-      <text class="header-illustration-main">诊</text>
-      <text class="header-illustration-sub">卷</text>
-    </view>
+    <image class="header-illustration" src="/assets/images/learning-history-hero.jpg" mode="aspectFill"></image>
   </view>
 
   <view class="filter-card">

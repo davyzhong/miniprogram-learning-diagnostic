@@ -1,11 +1,14 @@
 <view class="page">
   <view class="header">
-    <view class="eyebrow">家庭成员</view>
-    <view class="title">{{student.name || '孩子档案'}}</view>
-    <view class="subtitle" wx:if="{{student.grade}}">{{student.grade}} 年级 · {{role === 'owner' ? '创建者' : '共同家长'}}</view>
+    <view class="header-copy">
+      <view class="eyebrow">家庭成员</view>
+      <view class="title">{{student.name || '孩子档案'}}</view>
+      <view class="subtitle" wx:if="{{student.grade}}">{{student.grade}} 年级 · {{role === 'owner' ? '创建者' : '共同家长'}}</view>
+    </view>
+    <image class="header-illustration" src="/assets/images/math-diagnostic-guide.jpg" mode="aspectFill"></image>
   </view>
 
-  <view class="notice" wx:if="{{role === 'viewer'}}">你可以参与孩子的学习诊断，查看资料、上传试卷和生成纸面验证卷；家庭成员管理由创建者操作。</view>
+  <view class="notice" wx:if="{{role === 'viewer'}}">你可以参与孩子的学习诊断，查看资料、上传试卷和下载纸面验证卷；家庭成员管理由创建者操作。</view>
   <view class="error" wx:if="{{error}}">{{error}}</view>
 
   <view class="card">

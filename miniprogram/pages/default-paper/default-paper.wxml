@@ -2,11 +2,11 @@
 <view class="page">
   <!-- 说明 -->
   <view class="tip-bar">
-    <text class="tip-icon">📄</text>
     <view class="tip-content">
       <text class="tip-title">默认诊断试卷</text>
       <text class="tip-desc">没有现成试卷？选一套标准题来做诊断</text>
     </view>
+    <image class="tip-illustration" src="/assets/images/verification-paper-hero.jpg" mode="aspectFill"></image>
   </view>
 
   <!-- 年级选择 -->

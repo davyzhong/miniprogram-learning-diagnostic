@@ -153,6 +153,72 @@ test('index and student profile render the redesigned personal action workbench'
   assert.match(wxss, /\.personal-report-card/)
   assert.match(wxss, /\.personal-action-card/)
   assert.match(wxss, /\.personal-subject-row/)
+  assert.match(indexWxml, /class="family-hero-image"[^>]*mode="aspectFill"/)
+  assert.match(indexWxml, /class="personal-hero-image"[^>]*mode="aspectFill"/)
+  assert.match(profileWxml, /class="personal-hero-image"[^>]*mode="aspectFill"/)
+  assert.doesNotMatch(profileWxml, /back-arrow/)
+  assert.doesNotMatch(profileWxml, /class="top-left" bindtap="onBackHome"/)
+  assert.doesNotMatch(profileWxml, /返回首页/)
+})
+
+test('theme illustrations are wired into downstream learning pages', () => {
+  const subjectHomeWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/subject-home/subject-home.wxml'), 'utf8')
+  const reportWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxml'), 'utf8')
+  const verificationWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/generate-verification/generate-verification.wxml'), 'utf8')
+  const knowledgeMapWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/knowledge-map/knowledge-map.wxml'), 'utf8')
+  const resourceWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/learning-resource/learning-resource.wxml'), 'utf8')
+  const uploadWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload/upload.wxml'), 'utf8')
+  const historyWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload-history/upload-history.wxml'), 'utf8')
+  const englishPracticeWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-practice/english-practice.wxml'), 'utf8')
+  const englishDictationWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-dictation/english-dictation.wxml'), 'utf8')
+  const englishWrongWordsWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-wrong-words/english-wrong-words.wxml'), 'utf8')
+  const defaultPaperWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/default-paper/default-paper.wxml'), 'utf8')
+  const paperPreviewWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/paper-preview/paper-preview.wxml'), 'utf8')
+  const bottleneckCenterWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/bottleneck-center/bottleneck-center.wxml'), 'utf8')
+  const bottleneckDetailWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/bottleneck-detail/bottleneck-detail.wxml'), 'utf8')
+  const addStudentWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/add-student/add-student.wxml'), 'utf8')
+  const joinStudentWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/join-student/join-student.wxml'), 'utf8')
+  const parentManagementWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/parent-management/parent-management.wxml'), 'utf8')
+
+  assert.match(subjectHomeWxml, /subjectIllustration\.imageSrc/)
+  assert.match(reportWxml, /heroIllustration\.imageSrc/)
+  assert.match(verificationWxml, /verification-paper-hero\.jpg/)
+  assert.match(knowledgeMapWxml, /knowledge-map-hero\.jpg/)
+  assert.match(resourceWxml, /learning-resource-hero\.jpg/)
+  assert.match(uploadWxml, /upload-photo-hero\.jpg/)
+  assert.match(historyWxml, /learning-history-hero\.jpg/)
+  assert.match(englishPracticeWxml, /english-practice-hero\.jpg/)
+  assert.match(englishDictationWxml, /english-dictation-hero\.jpg/)
+  assert.match(englishWrongWordsWxml, /english-wrong-words-hero\.jpg/)
+  assert.match(defaultPaperWxml, /verification-paper-hero\.jpg/)
+  assert.match(paperPreviewWxml, /verification-paper-hero\.jpg/)
+  assert.match(bottleneckCenterWxml, /knowledge-map-hero\.jpg/)
+  assert.match(bottleneckDetailWxml, /learning-resource-hero\.jpg/)
+  assert.match(addStudentWxml, /student-profile-hero\.png/)
+  assert.match(joinStudentWxml, /math-diagnostic-guide\.jpg/)
+  assert.match(parentManagementWxml, /math-diagnostic-guide\.jpg/)
+
+  for (const source of [
+    subjectHomeWxml,
+    reportWxml,
+    verificationWxml,
+    knowledgeMapWxml,
+    resourceWxml,
+    uploadWxml,
+    historyWxml,
+    englishPracticeWxml,
+    englishDictationWxml,
+    englishWrongWordsWxml,
+    defaultPaperWxml,
+    paperPreviewWxml,
+    bottleneckCenterWxml,
+    bottleneckDetailWxml,
+    addStudentWxml,
+    joinStudentWxml,
+    parentManagementWxml
+  ]) {
+    assert.match(source, /mode="aspectFill"/)
+  }
 })
 
 test('learning profile home loads the active student summary', async () => {
@@ -332,7 +398,8 @@ test('learning profile home uses shared access and lets co-parents operate learn
       }],
       recentReports: [{ _id: 'report-1', subject: 'math', status: 'completed', createdAt: '2026-06-12T10:00:00Z' }],
       recentPapers: []
-    })
+    }),
+    getActiveVerificationPaper: async () => ({ status: 'ready', paper: { _id: 'paper-1' } })
   }
   const { page } = loadPage('miniprogram/pages/index/index.js', {
     wx,
@@ -347,10 +414,10 @@ test('learning profile home uses shared access and lets co-parents operate learn
   assert.equal(page.data.homeMode, 'single-profile')
   assert.equal(page.data.permissions.canUpload, true)
   assert.equal(page.data.permissions.canManageParents, false)
-  assert.equal(page.data.home.nextAction.primaryText, '生成纸面验证卷')
+  assert.equal(page.data.home.nextAction.primaryText, '下载验证卷')
 
   await page.onPrimaryAction()
-  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /generate-verification/)
+  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paper-preview\/paper-preview\?paperId=paper-1/)
 })
 
 test('index shared dashboard path avoids duplicate legacy profile reads', async () => {
@@ -469,7 +536,7 @@ test('student profile page loads one child and keeps profile actions clickable',
   await page.onLoad({ studentId: 'student-1' })
 
   assert.equal(page.data.home.studentName, '钟青羽')
-  assert.equal(page.data.home.nextAction.primaryText, '生成纸面验证卷')
+  assert.equal(page.data.home.nextAction.primaryText, '下载验证卷')
   page.onPrimaryReportTap()
   page.onViewAllRecords()
   page.onSubjectTap({ currentTarget: { dataset: { subject: 'math' } } })
@@ -1092,10 +1159,59 @@ test('English practice page generates a 20 word familiarity session without patt
   assert.equal(page.data.patternItems.length, 0)
 })
 
-test('English practice page avoids duplicate back controls and hides Chinese prompt playback', () => {
+test('English practice pages avoid duplicate custom back controls', () => {
+  const sources = [
+    'miniprogram/pages/english-practice/english-practice.wxml',
+    'miniprogram/pages/english-dictation/english-dictation.wxml',
+    'miniprogram/pages/english-wrong-words/english-wrong-words.wxml'
+  ].map(file => fs.readFileSync(path.join(ROOT, file), 'utf8'))
+
+  for (const source of sources) {
+    assert.doesNotMatch(source, /class="back"/)
+    assert.doesNotMatch(source, /bindtap="onBack"/)
+  }
+})
+
+test('bottleneck detail uses forward action wording instead of duplicate return wording', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/bottleneck-detail/bottleneck-detail.wxml'), 'utf8')
+
+  assert.doesNotMatch(source, /返回卡点中心/)
+  assert.match(source, /查看全部卡点/)
+})
+
+test('legacy verification page is a download/status entry, not a manual generation action', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/generate-verification/generate-verification.wxml'), 'utf8')
+  const js = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/generate-verification/generate-verification.js'), 'utf8')
+
+  assert.doesNotMatch(wxml, /bindtap="onPreview"/)
+  assert.doesNotMatch(wxml, /预览\s*PDF/)
+  assert.doesNotMatch(wxml, /预览生成中/)
+  assert.doesNotMatch(wxml, /bindtap="onGenerate"/)
+  assert.match(wxml, /查看\/下载验证卷/)
+  assert.doesNotMatch(js, /async onPreview/)
+  assert.doesNotMatch(js, /previewing/)
+})
+
+test('verification paper user-facing entries are download-first, not manual generation-first', () => {
+  const files = [
+    'miniprogram/utils/child-workbench.js',
+    'miniprogram/pages/index/index-presenter.js',
+    'miniprogram/pages/subject-home/subject-home-presenter.js',
+    'miniprogram/utils/bottleneck-view.js',
+    'miniprogram/pages/generate-verification/generate-verification.wxml',
+    'miniprogram/pages/generate-verification/generate-verification.json'
+  ].map(file => fs.readFileSync(path.join(ROOT, file), 'utf8')).join('\n')
+
+  assert.doesNotMatch(files, /生成纸面验证卷/)
+  assert.doesNotMatch(files, /生成并预览试卷/)
+  assert.doesNotMatch(files, /生成试卷/)
+  assert.doesNotMatch(files, /选择本次要验证/)
+  assert.match(files, /下载验证卷|查看\/下载验证卷/)
+})
+
+test('English practice page hides Chinese prompt playback', () => {
   const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-practice/english-practice.wxml'), 'utf8')
 
-  assert.doesNotMatch(source, /class="back"/)
   assert.match(source, /wx:if="\{\{currentItem\.canPlayPrompt\}\}"/)
 })
 
@@ -2182,10 +2298,11 @@ test('report passes its subject name into verification paper generation', async 
   assert.match(nav.payload.url, /paperId=paper-1/)
 })
 
-test('report verification entry drives a zero-progress generating paper without crashing', async () => {
+test('report verification entry only polls a generating paper without front-end generation', async () => {
   const wx = createWxMock()
   const generateCalls = []
   const regenerateCalls = []
+  let pollStarts = 0
   const cloud = {
     getActiveVerificationPaper: async () => ({
       status: 'generating',
@@ -2213,7 +2330,7 @@ test('report verification entry drives a zero-progress generating paper without 
     modules: {
       '../../utils/cloud': cloud,
       '../../utils/util': { formatChineseDateTime: () => '' },
-      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {} }) },
+      '../../utils/poller': { createPoller: () => ({ start() { pollStarts += 1 }, stop() {} }) },
       './report-presenter': { buildReportView: () => ({}) }
     }
   })
@@ -2229,13 +2346,14 @@ test('report verification entry drives a zero-progress generating paper without 
 
   await assert.doesNotReject(() => page.onGenerateVerification())
 
-  assert.equal(generateCalls[0]._appendToPaperId, 'paper-generating')
-  assert.equal(generateCalls[1]._regeneratePdf, true)
-  assert.ok(regenerateCalls.some(call => call.action === 'finalize'))
-  assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paperId=paper-generating/)
+  assert.equal(generateCalls.length, 0)
+  assert.equal(regenerateCalls.length, 0)
+  require('../miniprogram/utils/shared-navigation').stopVerificationPoller()
+  assert.equal(wx.calls.some(call => call.name === 'navigateTo'), false)
+  assert.match(wx.calls.find(call => call.name === 'showToast').payload.title, /后台生成/)
 })
 
-test('report verification entry marks paper failed when any driven batch fails', async () => {
+test('report verification entry does not create a paper when no auto paper exists', async () => {
   const wx = createWxMock()
   const regenerateCalls = []
   const cloud = {
@@ -2273,10 +2391,9 @@ test('report verification entry marks paper failed when any driven batch fails',
 
   await page.onGenerateVerification()
 
-  assert.ok(regenerateCalls.some(call => call.action === 'fail'))
-  assert.equal(regenerateCalls.some(call => call.action === 'finalize'), false)
+  assert.equal(regenerateCalls.length, 0)
   assert.equal(wx.calls.some(call => call.name === 'navigateTo'), false)
-  assert.match(wx.calls.filter(call => call.name === 'showToast').at(-1).payload.title, /生成失败/)
+  assert.match(wx.calls.filter(call => call.name === 'showToast').at(-1).payload.title, /暂无验证卷/)
 })
 
 test('report retry treats a cloud timeout as background analysis and resumes polling', async () => {
@@ -2626,7 +2743,7 @@ test('learning records load all subjects when no subject filter is provided', as
   assert.equal(page.data.activeSubject, '')
   assert.equal(page.data.titleText, '钟青羽 · 学习记录')
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
-    '生成数学纸面验证卷',
+    '数学纸面验证卷',
     '数学诊断报告'
   ])
   assert.equal(page.data.filters.find(item => item.key === '').active, true)
@@ -2681,7 +2798,7 @@ test('learning records prefer shared timeline access before legacy collection qu
   assert.equal(seen.legacyReports, 0)
   assert.equal(seen.legacyPapers, 0)
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
-    '生成数学纸面验证卷',
+    '数学纸面验证卷',
     '数学诊断报告'
   ])
 })
@@ -3014,7 +3131,7 @@ test('learning records treat route subject as an initial filter on the complete 
 
   assert.equal(page.data.activeSubject, '')
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.days[0].events.map(event => event.title))), [
-    '生成英语纸面验证卷',
+    '英语纸面验证卷',
     '数学诊断报告',
     '语文诊断报告'
   ])

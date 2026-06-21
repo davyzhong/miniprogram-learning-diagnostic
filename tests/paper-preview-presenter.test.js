@@ -34,11 +34,13 @@ test('paper preview lifecycle starts with generated paper and download as the ne
   assert.equal(state.workbenchStatus, 'generated')
   assert.equal(state.workbenchStatusText, '试卷已生成')
   assert.equal(state.primaryActionType, 'download')
-  assert.equal(state.primaryActionText, '下载 PDF 并打印')
+  assert.equal(state.primaryActionText, '下载验证卷')
+  assert.equal(state.secondaryActionType, 'upload')
+  assert.equal(state.secondaryActionText, '上传作答照片')
   assert.deepEqual(state.lifecycleSteps.map(step => step.status), ['active', 'waiting', 'waiting'])
 })
 
-test('paper preview lifecycle moves downloaded paper to upload as the next action', () => {
+test('paper preview lifecycle keeps downloaded paper downloadable and exposes upload separately', () => {
   const state = buildPaperPreviewState({
     paper: basePaper(),
     detail: { student: { name: '钟青羽' } },
@@ -48,8 +50,10 @@ test('paper preview lifecycle moves downloaded paper to upload as the next actio
 
   assert.equal(state.workbenchStatus, 'downloaded')
   assert.equal(state.workbenchStatusText, '已下载，等待作答')
-  assert.equal(state.primaryActionType, 'upload')
-  assert.equal(state.primaryActionText, '作答完成，上传验证')
+  assert.equal(state.primaryActionType, 'download')
+  assert.equal(state.primaryActionText, '下载验证卷')
+  assert.equal(state.secondaryActionType, 'upload')
+  assert.equal(state.secondaryActionText, '上传作答照片')
   assert.deepEqual(state.lifecycleSteps.map(step => step.status), ['completed', 'active', 'waiting'])
 })
 
@@ -69,10 +73,12 @@ test('paper preview lifecycle links in-progress feedback to the analyzing report
   })
 
   assert.equal(state.workbenchStatus, 'analyzing')
-  assert.equal(state.primaryActionType, 'report')
-  assert.equal(state.primaryActionText, '查看分析进度')
+  assert.equal(state.primaryActionType, 'download')
+  assert.equal(state.primaryActionText, '下载验证卷')
+  assert.equal(state.secondaryActionType, 'report')
+  assert.equal(state.secondaryActionText, '查看分析进度')
   assert.match(state.statusUrl, /report-analyzing/)
-  assert.match(state.primaryActionUrl, /report-analyzing/)
+  assert.match(state.secondaryActionUrl, /report-analyzing/)
   assert.deepEqual(state.lifecycleSteps.map(step => step.status), ['completed', 'completed', 'active'])
 })
 
@@ -94,9 +100,11 @@ test('paper preview lifecycle keeps failed feedback recoverable by re-uploading'
 
   assert.equal(status.status, 'failed')
   assert.equal(state.workbenchStatus, 'failed')
-  assert.equal(state.primaryActionType, 'upload')
-  assert.equal(state.primaryActionText, '重新上传作答')
-  assert.match(state.primaryActionUrl, /upload/)
+  assert.equal(state.primaryActionType, 'download')
+  assert.equal(state.primaryActionText, '下载验证卷')
+  assert.equal(state.secondaryActionType, 'upload')
+  assert.equal(state.secondaryActionText, '重新上传作答')
+  assert.match(state.secondaryActionUrl, /upload/)
   assert.deepEqual(state.lifecycleSteps.map(step => step.status), ['completed', 'failed', 'failed'])
 })
 
@@ -117,9 +125,11 @@ test('paper preview lifecycle sends completed feedback to the report', () => {
   })
 
   assert.equal(state.workbenchStatus, 'completed')
-  assert.equal(state.primaryActionType, 'report')
-  assert.equal(state.primaryActionText, '查看验证反馈')
-  assert.match(state.primaryActionUrl, /report-completed/)
+  assert.equal(state.primaryActionType, 'download')
+  assert.equal(state.primaryActionText, '下载验证卷')
+  assert.equal(state.secondaryActionType, 'report')
+  assert.equal(state.secondaryActionText, '查看验证反馈')
+  assert.match(state.secondaryActionUrl, /report-completed/)
   assert.deepEqual(state.lifecycleSteps.map(step => step.status), ['completed', 'completed', 'completed'])
 })
 

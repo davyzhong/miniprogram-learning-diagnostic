@@ -1,4 +1,6 @@
 <view class="page">
+  <image class="join-illustration" src="/assets/images/math-diagnostic-guide.jpg" mode="aspectFill"></image>
+
   <view class="card code-card" wx:if="{{status === 'code'}}">
     <view class="state-icon">码</view>
     <view class="title">输入家庭邀请码</view>

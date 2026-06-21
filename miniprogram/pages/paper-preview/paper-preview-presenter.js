@@ -127,38 +127,46 @@ function buildLifecycleSteps(status) {
 }
 
 function buildPrimaryAction(status, { uploadUrl = '', reportUrl = '' } = {}) {
+  return {
+    primaryActionType: 'download',
+    primaryActionText: '下载验证卷',
+    primaryActionUrl: ''
+  }
+}
+
+function buildSecondaryAction(status, { uploadUrl = '', reportUrl = '' } = {}) {
   if (status === 'completed') {
     return {
-      primaryActionType: 'report',
-      primaryActionText: '查看验证反馈',
-      primaryActionUrl: reportUrl
+      secondaryActionType: 'report',
+      secondaryActionText: '查看验证反馈',
+      secondaryActionUrl: reportUrl
     }
   }
   if (status === 'analyzing') {
     return {
-      primaryActionType: 'report',
-      primaryActionText: '查看分析进度',
-      primaryActionUrl: reportUrl
+      secondaryActionType: 'report',
+      secondaryActionText: '查看分析进度',
+      secondaryActionUrl: reportUrl
     }
   }
   if (status === 'failed') {
     return {
-      primaryActionType: 'upload',
-      primaryActionText: '重新上传作答',
-      primaryActionUrl: uploadUrl
+      secondaryActionType: 'upload',
+      secondaryActionText: '重新上传作答',
+      secondaryActionUrl: uploadUrl
     }
   }
-  if (status === 'downloaded') {
+  if (uploadUrl) {
     return {
-      primaryActionType: 'upload',
-      primaryActionText: '作答完成，上传验证',
-      primaryActionUrl: uploadUrl
+      secondaryActionType: 'upload',
+      secondaryActionText: '上传作答照片',
+      secondaryActionUrl: uploadUrl
     }
   }
   return {
-    primaryActionType: 'download',
-    primaryActionText: '下载 PDF 并打印',
-    primaryActionUrl: ''
+    secondaryActionType: '',
+    secondaryActionText: '',
+    secondaryActionUrl: ''
   }
 }
 
@@ -304,6 +312,7 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
     : ''
   const workbenchStatus = buildWorkbenchStatus(latestReport, { pdfDownloaded })
   const primaryAction = buildPrimaryAction(workbenchStatus.status, { uploadUrl, reportUrl })
+  const secondaryAction = buildSecondaryAction(workbenchStatus.status, { uploadUrl, reportUrl })
 
   return {
     paperId: p._id,
@@ -344,11 +353,12 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
     workbenchStatusDesc: workbenchStatus.desc,
     lifecycleSteps: buildLifecycleSteps(workbenchStatus.status),
     ...primaryAction,
+    ...secondaryAction,
     feedback,
     ...taskPackView,
     pdfReady: !!p.pdfFileId,
     pdfDownloaded,
-    uploadBtnText: primaryAction.primaryActionText || `作答完成，${isVerification ? '上传验证' : '上传答题'}`
+    uploadBtnText: secondaryAction.secondaryActionText || `作答完成，${isVerification ? '上传验证' : '上传答题'}`
   }
 }
 
@@ -362,6 +372,7 @@ module.exports = {
   buildWorkbenchStatus,
   buildLifecycleSteps,
   buildPrimaryAction,
+  buildSecondaryAction,
   buildFeedback,
   buildTaskPackView,
   buildPaperPreviewState
