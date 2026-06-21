@@ -238,7 +238,7 @@ test('family workbench hero turns the household overview into a real action entr
 
   const hero = buildFamilyWorkbenchHero(cards)
 
-  assert.equal(hero.imageSrc, '/assets/images/math-diagnostic-guide.jpg')
+  assert.equal(hero.imageSrc, undefined)
   assert.match(hero.title, /钟青羽/)
   assert.match(hero.summary, /2 个学习卡点/)
   assert.equal(hero.actionText, '处理今日优先行动')
@@ -419,7 +419,7 @@ test('learning profile home exposes an actionable personal workbench contract', 
     papers: []
   }, relative)
 
-  assert.equal(view.personalHero.imageSrc, '/assets/images/student-profile-hero.png')
+  assert.equal(view.personalHero.imageSrc, undefined)
   assert.equal(view.personalHero.actionText, '下载验证卷')
   assert.match(view.personalHero.url, /pages\/subject-home\/subject-home/)
 

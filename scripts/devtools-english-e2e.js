@@ -342,7 +342,7 @@ async function runCase(miniProgram, caseDef, outputDir) {
     await page.callMethod('onRecognitionResult', { recognizedText: 'siense', audioFileID: 'cloud://audio-1' })
     await page.waitFor(800)
     text = await pageText(page)
-    assert(text.includes('这个词还需要再见几次'), 'familiarity page should render the friendly judgment')
+    assert(text.includes('稍后再见一次'), 'familiarity page should render the friendly judgment')
     assert(text.includes('目标单词：science'), 'familiarity page should show the target word after judgment')
     const data = await page.data()
     assert.equal(data.queue.length, 21, 'wrong familiarity answers should be requeued once')

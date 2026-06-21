@@ -1,5 +1,5 @@
-// 每页放 5 个 target（= 10 道题），和标准验证卷格式一致（双栏高密度排版）
-const DEFAULT_MATH_TARGETS_PER_PAGE = 5
+// 数学验证卷双栏排版带演算区，4 个 target（通常 8 道题）可稳定落在一张 A4 学生页内。
+const DEFAULT_MATH_TARGETS_PER_PAGE = 4
 const DEFAULT_CHINESE_REVIEW_TARGETS_PER_PAGE = 8
 
 const SUBJECT_CODES = {

@@ -23,7 +23,7 @@
     "test:real-data-smoke": "npm run test:e2e:real-data",
     "test:e2e:data-driven": "node scripts/devtools-e2e-data-driven.js",
     "test:e2e:knowledge-map": "node scripts/devtools-knowledge-map-e2e.js",
-    "test:e2e:all": "npm run test:e2e:core && npm run test:e2e:math && npm run test:e2e:english && node scripts/e2e-report-aggregator.js",
+    "test:e2e:all": "npm run test:e2e:core && npm run test:e2e:math && npm run test:e2e:chinese && npm run test:e2e:english && node scripts/e2e-report-aggregator.js",
     "test:real-cloud": "npm run test:e2e:real-cloud",
     "vocab:english:build": "node scripts/build-english-vocabulary-seed.js",
     "metrics:student": "node scripts/learning-metrics.js",

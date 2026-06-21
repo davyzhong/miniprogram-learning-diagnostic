@@ -186,7 +186,7 @@ const pages = [
     name: 'verification-paper-download 验证卷下载入口',
     route: `/pages/generate-verification/generate-verification?${studentQ}&subject=math&subjectName=%E6%95%B0%E5%AD%A6`,
     expect: {
-      text: ['出卷配置', '生成 A4 试卷'],
+      text: ['验证卷状态', '纸面验证卷', '查看/下载验证卷'],
       notText: ['LP-001'], // 卡点应以文字摘要展示
     },
   },

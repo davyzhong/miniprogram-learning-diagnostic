@@ -43,6 +43,12 @@ const SOURCES = [
     type: 'english',
   },
   {
+    name: '语文 E2E',
+    script: 'devtools-e2e-chinese',
+    output: 'tmp/e2e/chinese',
+    type: 'chinese',
+  },
+  {
     name: '真实数据冒烟',
     script: 'devtools-real-data-smoke',
     output: 'tmp/e2e/real-data',
@@ -76,10 +82,11 @@ function summarizeResult(data) {
   //   1. {passed, failed, total}（数据驱动 E2E 的格式）
   //   2. {summary: {total, passed, failed}}（fullpage 等的格式）
   const s = data.summary || data
-  const passed = s.passed || s.pass || 0
-  const failed = s.failed || s.fail || 0
-  const total = s.total || s.totalTests || (passed + failed)
   const failedItems = (data.results || []).filter(r => r.status === 'FAIL' || r.status === 'FAIL*')
+  const passedItems = (data.results || []).filter(r => r.status === 'PASS')
+  const passed = s.passed ?? s.pass ?? passedItems.length
+  const failed = s.failed ?? s.fail ?? failedItems.length
+  const total = s.total ?? s.totalTests ?? ((data.results || []).length || (passed + failed))
   return {
     status: failed === 0 ? 'PASS' : 'FAIL',
     detail: `${passed}/${total} 通过`,

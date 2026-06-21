@@ -697,8 +697,8 @@ test('generatePaper stores verificationPack for many fine bottlenecks', async ()
     'MATH-V-20260616-01-P01',
     'MATH-V-20260616-01-P02'
   ])
-  // verificationPack 按 target 分页（每页 5 个 target），8 个 target 分 2 页：5+3
-  assert.deepEqual(paper.verificationPack.pages.map(page => page.questionIds.length), [10, 6])
+  // verificationPack 按 target 分页（每页 4 个 target），8 个 target 分 2 页：4+4
+  assert.deepEqual(paper.verificationPack.pages.map(page => page.questionIds.length), [8, 8])
   assert.equal(paper.questions[0].pageCode, 'MATH-V-20260616-01-P01')
   assert.equal(paper.questions[0].targetId, 'BN-FINE-1')
   assert.equal(paper.questions[0].targetType, 'fine_bottleneck')

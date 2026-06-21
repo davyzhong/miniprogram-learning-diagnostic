@@ -3,8 +3,8 @@
  * 知识地图外显化 E2E 验收脚本
  *
  * 专门验收近一轮改动的设计目标：
- *   1. student-profile 页能看到 🗺️ 学习地图卡片（入口外显）
- *   2. 点击卡片能进入 knowledge-map 页（页面可达）
+ *   1. student-profile 页能看到个人工作台与切换孩子入口
+ *   2. subject-home 页点击知识地图入口能进入 knowledge-map 页（页面可达）
  *   3. knowledge-map 默认平铺卡点（不再折叠），看到"最该先处理"
  *   4. 点击卡点能直跳 learning-resource（跳过 bottleneck-detail 中间页）
  *   5. 空数据状态显示"去上传试卷"CTA
@@ -82,10 +82,10 @@ const studentQ = 'studentId=student-km&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD'
 
 const checks = [
   {
-    name: 'A1: student-profile 页能看到学习地图紧凑条 + 切换孩子入口',
+    name: 'A1: student-profile 页能看到个人工作台 + 切换孩子入口',
     route: `/pages/student-profile/student-profile?${studentQ}`,
     wait: 2000,
-    expect: { text: ['学习地图', '查看', '切换孩子'] }
+    expect: { text: ['个人学习工作台', '今日行动', '切换孩子'] }
   },
   {
     name: 'A2: knowledge-map 页可达且默认平铺卡点',
@@ -132,7 +132,7 @@ const checks = [
     route: `/pages/paper-preview/paper-preview?paperId=5caf1a7c6a350738025b1db174d6eb9f&studentId=${student._id}&subject=math&studentName=${encodeURIComponent(student.name)}`,
     wait: 2500,
     expect: {
-      text: ['下载 PDF 并打印'],
+      text: ['下载验证卷'],
       notText: ['分享打印'],
     }
   },
@@ -152,10 +152,10 @@ const checks = [
 // === 跨页交互场景 ===
 const scenarios = [
   {
-    name: 'B1: student-profile → 点学习地图紧凑条 → knowledge-map',
+    name: 'B1: subject-home → 点知识地图入口 → knowledge-map',
     steps: [
-      { route: `/pages/student-profile/student-profile?${studentQ}`, wait: 2000, expect: { text: ['学习地图'] } },
-      { action: 'tapByText', selector: '.map-compact-bar', text: '学习地图', wait: 3000, expect: { path: 'pages/knowledge-map/knowledge-map' } },
+      { route: `/pages/subject-home/subject-home?${studentQ}&subject=math&subjectName=%E6%95%B0%E5%AD%A6&grade=6`, wait: 2000, expect: { text: ['知识地图'] } },
+      { action: 'tapByText', selector: '.map-entry', text: '知识地图', wait: 3000, expect: { path: 'pages/knowledge-map/knowledge-map' } },
       // 进入后应直接看到卡点（不需要再点展开）；多等一会儿让 onLoad + setData 完成
       { action: 'waitFor', wait: 2000 },
       { action: 'assertText', text: ['最该先处理', '积的小数位数判断错误'] }

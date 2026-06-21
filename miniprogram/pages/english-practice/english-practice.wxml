@@ -1,15 +1,6 @@
 <view class="page">
-  <view class="hero">
-    <view class="hero-copy">
-      <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
-      <text class="title">认词练习</text>
-      <text class="subtitle">看中文或英文提示，录音说出对应内容。</text>
-    </view>
-    <image class="hero-illustration" src="/assets/images/english-practice-hero.jpg" mode="aspectFill"></image>
-  </view>
-
   <view class="state-card" wx:if="{{loading}}">
-      <text class="state-title">正在准备认词练习</text>
+    <text class="state-title">正在准备认词练习</text>
     <text class="state-desc">优先抽取薄弱词、待复测词和未测词。</text>
   </view>
 
@@ -20,41 +11,53 @@
   </view>
 
   <view wx:elif="{{finished}}" class="finish-card">
-    <text class="finish-mark">✓</text>
-      <text class="finish-title">本轮认词练习完成</text>
+    <text class="finish-mark">OK</text>
+    <text class="finish-title">本轮认词练习完成</text>
     <text class="finish-desc">不熟悉和听不清的单词已经记录，后续会提高出现频率。</text>
     <button class="primary-btn" bindtap="onFinishTap">完成并返回</button>
   </view>
 
-  <view wx:else class="dictation-wrap">
-    <view class="progress-card">
-      <text class="progress-label">当前进度</text>
-      <text class="progress-value">{{currentIndex + 1}} / {{queue.length}}</text>
+  <view wx:else class="practice-shell">
+    <view class="practice-topbar">
+      <view class="practice-title-wrap">
+        <text class="practice-kicker">{{studentName || '钟青羽'}} · 英语</text>
+        <text class="practice-title">认词练习</text>
+      </view>
+      <view class="progress-pill">
+        <text class="progress-now">{{currentIndex + 1}}</text>
+        <text class="progress-total">/ {{queue.length}}</text>
+      </view>
     </view>
 
-    <view class="prompt-card">
-      <view class="prompt-top">
-      <text class="prompt-pill">{{currentItem.promptTypeText}}</text>
-      <text class="retry-pill" wx:if="{{currentItem.retryCount > 0}}">第 {{currentItem.retryCount + 1}} 次出现</text>
-    </view>
-    <text class="prompt-title">{{currentItem.promptText}}</text>
-      <text class="prompt-desc">看清提示后，点击录音按钮说出对应的英文单词或中文意思。系统会把不熟的词安排稍后再出现。</text>
-      <button class="play-btn" wx:if="{{currentItem.canPlayPrompt}}" bindtap="onPlayPromptTap">辅助播放提示</button>
+    <view class="progress-track">
+      <view class="progress-fill" style="width: {{progressPercent}}%;"></view>
     </view>
 
-    <view class="voice-card">
-      <button class="record-btn {{recording ? 'recording' : ''}}" loading="{{submitting}}" disabled="{{submitting || recognizing}}" bindtap="onRecordTap">
-        {{recordButtonText}}
+    <view class="word-stage-card">
+      <view class="prompt-tag-row">
+        <text class="prompt-tag">{{currentItem.promptModeText}}</text>
+        <text class="retry-tag" wx:if="{{currentItem.retryCount > 0}}">再次出现</text>
+      </view>
+      <text class="primary-prompt">{{currentItem.promptMainText}}</text>
+      <text class="answer-instruction">{{currentItem.answerInstruction}}</text>
+      <text class="answer-hint">{{currentItem.answerHintText}}</text>
+      <button class="play-chip" wx:if="{{currentItem.canPlayPrompt}}" bindtap="onPlayPromptTap">播放发音</button>
+    </view>
+
+    <view class="voice-dock">
+      <button class="mic-orb {{recording ? 'recording' : ''}} {{recognizing || submitting ? 'busy' : ''}}" loading="{{submitting}}" disabled="{{submitting || recognizing}}" bindtap="onRecordTap">
+        <text class="mic-dot"></text>
+        <text class="mic-label">{{recordButtonText}}</text>
       </button>
       <text class="voice-hint" wx:if="{{voiceUnavailableText}}">{{voiceUnavailableText}}</text>
-      <text class="voice-hint" wx:else>{{recording ? '正在录音，回答完后再次点击识别。' : (recognizing ? '正在识别刚才的回答，请稍等。' : '准备好后点击按钮开始录音。')}}</text>
+      <text class="voice-hint" wx:else>{{recording ? '回答完后再点一次，系统会开始识别。' : (recognizing ? '正在识别刚才的回答，请稍等。' : (submitting ? '正在判断回答是否正确。' : '准备好后点击按钮回答。'))}}</text>
     </view>
 
-    <view class="result-card result-{{lastResult.status}}" wx:if="{{lastResult}}">
+    <view class="result-sheet result-{{lastResult.status}}" wx:if="{{lastResult}}">
       <text class="result-title">
-        <block wx:if="{{lastResult.status === 'correct'}}">这个词已经比较熟了</block>
-        <block wx:elif="{{lastResult.status === 'incorrect'}}">这个词还需要再见几次</block>
-        <block wx:else>刚才没听清，再试一次</block>
+        <block wx:if="{{lastResult.status === 'correct'}}">已经熟悉</block>
+        <block wx:elif="{{lastResult.status === 'incorrect'}}">稍后再见一次</block>
+        <block wx:else>刚才没听清</block>
       </text>
       <text class="result-desc">{{lastResult.reason}}</text>
       <text class="answer-line">目标单词：{{lastAnsweredItem ? lastAnsweredItem.word : ''}}</text>

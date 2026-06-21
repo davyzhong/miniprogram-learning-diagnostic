@@ -170,11 +170,11 @@ test('empty profile exposes a first-use workbench action', () => {
   assert.equal(view.primaryTask.actionText, '拍照诊断')
   assert.equal(view.taskQueue.length, 0)
   assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history'])
-  assert.equal(view.subjectIllustration.imageSrc, '/assets/images/subject-math-hero.jpg')
+  assert.equal(view.subjectIllustration.imageSrc, undefined)
   assert.match(view.subjectIllustration.alt, /数学/)
 })
 
-test('subject workbench chooses subject-specific hero illustrations', () => {
+test('subject workbench keeps subject labels without static hero images', () => {
   const math = buildSubjectHomeView({}, [], relative, { subject: 'math', subjectName: '数学' })
   const chinese = buildSubjectHomeView({}, [], relative, { subject: 'chinese', subjectName: '语文' })
   const english = buildSubjectHomeView({}, [], relative, {
@@ -183,11 +183,12 @@ test('subject workbench chooses subject-specific hero illustrations', () => {
     englishVocabulary: { summary: { totalWords: 20 } }
   })
 
-  assert.equal(math.subjectIllustration.imageSrc, '/assets/images/subject-math-hero.jpg')
-  assert.equal(chinese.subjectIllustration.imageSrc, '/assets/images/subject-chinese-hero.jpg')
-  assert.equal(english.subjectIllustration.imageSrc, '/assets/images/subject-english-hero.jpg')
-  assert.notEqual(math.subjectIllustration.imageSrc, chinese.subjectIllustration.imageSrc)
-  assert.notEqual(chinese.subjectIllustration.imageSrc, english.subjectIllustration.imageSrc)
+  assert.equal(math.subjectIllustration.imageSrc, undefined)
+  assert.equal(chinese.subjectIllustration.imageSrc, undefined)
+  assert.equal(english.subjectIllustration.imageSrc, undefined)
+  assert.match(math.subjectIllustration.alt, /数学/)
+  assert.match(chinese.subjectIllustration.alt, /语文/)
+  assert.match(english.subjectIllustration.alt, /英语/)
 })
 
 test('English workbench uses vocabulary summary as the primary learning asset', () => {

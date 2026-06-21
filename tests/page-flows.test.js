@@ -114,7 +114,7 @@ test('index family workbench renders actionable card sections instead of old lat
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
 
   assert.match(wxml, /family-workbench-hero/)
-  assert.match(wxml, /math-diagnostic-guide\.jpg/)
+  assert.doesNotMatch(wxml, /\/assets\/images\//)
   assert.match(wxml, /child-priority-action/)
   assert.match(wxml, /secondary-action-grid/)
   assert.match(wxml, /child-quick-grid/)
@@ -138,7 +138,7 @@ test('index and student profile render the redesigned personal action workbench'
     assert.match(wxml, /personal-report-card/)
     assert.match(wxml, /personal-action-queue/)
     assert.match(wxml, /personal-subject-list/)
-    assert.match(wxml, /student-profile-hero\.png/)
+    assert.doesNotMatch(wxml, /\/assets\/images\//)
   }
 
   assert.doesNotMatch(profileWxml, /coverage-card/)
@@ -153,15 +153,15 @@ test('index and student profile render the redesigned personal action workbench'
   assert.match(wxss, /\.personal-report-card/)
   assert.match(wxss, /\.personal-action-card/)
   assert.match(wxss, /\.personal-subject-row/)
-  assert.match(indexWxml, /class="family-hero-image"[^>]*mode="aspectFill"/)
-  assert.match(indexWxml, /class="personal-hero-image"[^>]*mode="aspectFill"/)
-  assert.match(profileWxml, /class="personal-hero-image"[^>]*mode="aspectFill"/)
+  assert.doesNotMatch(indexWxml, /class="family-hero-image"/)
+  assert.doesNotMatch(indexWxml, /class="personal-hero-image"/)
+  assert.doesNotMatch(profileWxml, /class="personal-hero-image"/)
   assert.doesNotMatch(profileWxml, /back-arrow/)
   assert.doesNotMatch(profileWxml, /class="top-left" bindtap="onBackHome"/)
   assert.doesNotMatch(profileWxml, /返回首页/)
 })
 
-test('theme illustrations are wired into downstream learning pages', () => {
+test('static illustration images are not wired into app pages', () => {
   const subjectHomeWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/subject-home/subject-home.wxml'), 'utf8')
   const reportWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxml'), 'utf8')
   const verificationWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/generate-verification/generate-verification.wxml'), 'utf8')
@@ -179,24 +179,6 @@ test('theme illustrations are wired into downstream learning pages', () => {
   const addStudentWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/add-student/add-student.wxml'), 'utf8')
   const joinStudentWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/join-student/join-student.wxml'), 'utf8')
   const parentManagementWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/parent-management/parent-management.wxml'), 'utf8')
-
-  assert.match(subjectHomeWxml, /subjectIllustration\.imageSrc/)
-  assert.match(reportWxml, /heroIllustration\.imageSrc/)
-  assert.match(verificationWxml, /verification-paper-hero\.jpg/)
-  assert.match(knowledgeMapWxml, /knowledge-map-hero\.jpg/)
-  assert.match(resourceWxml, /learning-resource-hero\.jpg/)
-  assert.match(uploadWxml, /upload-photo-hero\.jpg/)
-  assert.match(historyWxml, /learning-history-hero\.jpg/)
-  assert.match(englishPracticeWxml, /english-practice-hero\.jpg/)
-  assert.match(englishDictationWxml, /english-dictation-hero\.jpg/)
-  assert.match(englishWrongWordsWxml, /english-wrong-words-hero\.jpg/)
-  assert.match(defaultPaperWxml, /verification-paper-hero\.jpg/)
-  assert.match(paperPreviewWxml, /verification-paper-hero\.jpg/)
-  assert.match(bottleneckCenterWxml, /knowledge-map-hero\.jpg/)
-  assert.match(bottleneckDetailWxml, /learning-resource-hero\.jpg/)
-  assert.match(addStudentWxml, /student-profile-hero\.png/)
-  assert.match(joinStudentWxml, /math-diagnostic-guide\.jpg/)
-  assert.match(parentManagementWxml, /math-diagnostic-guide\.jpg/)
 
   for (const source of [
     subjectHomeWxml,
@@ -217,8 +199,12 @@ test('theme illustrations are wired into downstream learning pages', () => {
     joinStudentWxml,
     parentManagementWxml
   ]) {
-    assert.match(source, /mode="aspectFill"/)
+    assert.doesNotMatch(source, /\/assets\/images\//)
+    assert.doesNotMatch(source, /imageSrc/)
+    assert.doesNotMatch(source, /class="[^"]*(illustration|hero-image|empty-logo|loading-logo)[^"]*"/)
   }
+
+  assert.match(uploadWxml, /class="preview-img" src="\{\{item\.tempPath\}\}"/)
 })
 
 test('learning profile home loads the active student summary', async () => {
@@ -1150,13 +1136,29 @@ test('English practice page generates a 20 word familiarity session without patt
   assert.equal(page.data.functionType, 'familiarity')
   assert.equal(page.data.queue.length, 20)
   assert.equal(page.data.currentItem.word, 'word1')
-  assert.match(page.data.currentItem.promptText, /看中文意思/)
+  assert.equal(page.data.currentItem.promptMainText, '词义1')
+  assert.equal(page.data.currentItem.answerInstruction, '请说出英文')
   assert.doesNotMatch(page.data.currentItem.promptText, /听中文/)
-  assert.equal(page.data.recordButtonText, '开始录音回答')
+  assert.equal(page.data.recordButtonText, '开始回答')
   assert.equal(page.data.queue[1].promptTypeText, '英文提示')
-  assert.match(page.data.queue[1].promptText, /看英文单词/)
+  assert.equal(page.data.queue[1].promptMainText, 'word2')
+  assert.equal(page.data.queue[1].answerInstruction, '请说出中文意思')
   assert.doesNotMatch(page.data.queue[1].promptText, /听英文/)
+  assert.equal(page.data.progressPercent, 5)
   assert.equal(page.data.patternItems.length, 0)
+})
+
+test('English practice page uses a minimal word-card interaction instead of lecture copy', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-practice/english-practice.wxml'), 'utf8')
+
+  assert.match(source, /class="practice-shell"/)
+  assert.match(source, /class="word-stage-card"/)
+  assert.match(source, /class="primary-prompt"/)
+  assert.match(source, /class="mic-orb/)
+  assert.match(source, /\{\{currentItem\.answerInstruction\}\}/)
+  assert.doesNotMatch(source, /class="hero"/)
+  assert.doesNotMatch(source, /看清提示后，点击录音按钮说出对应的英文单词或中文意思/)
+  assert.doesNotMatch(source, /辅助播放提示/)
 })
 
 test('English practice pages avoid duplicate custom back controls', () => {
@@ -1336,6 +1338,7 @@ test('English practice page cleans voice and prompt audio resources', async () =
 
 test('English practice page gives immediate feedback when stopping recording', async () => {
   let stopCount = 0
+  const timers = []
   const manager = {
     onStop: handler => { manager.stopHandler = handler },
     onError: () => {},
@@ -1362,22 +1365,116 @@ test('English practice page gives immediate feedback when stopping recording', a
   }
   const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
     requirePlugin: () => ({ getRecordRecognitionManager: () => manager }),
-    modules: { '../../utils/cloud': cloud }
+    modules: { '../../utils/cloud': cloud },
+    setTimeout: (handler, delay) => {
+      timers.push({ handler, delay })
+      return { id: timers.length }
+    }
   })
 
   await page.onLoad({ studentId: 'student-1' })
   page.onRecordTap()
   assert.equal(page.data.recording, true)
+  assert.equal(page.data.recordButtonText, '正在听你说...')
 
   page.onRecordTap()
   assert.equal(stopCount, 1)
   assert.equal(page.data.recording, false)
   assert.equal(page.data.recognizing, true)
   assert.equal(page.data.recordButtonText, '正在识别...')
+  assert.equal(timers.length, 1)
 
   await manager.stopHandler({ result: 'science', tempFilePath: '/tmp/audio.mp3' })
   assert.equal(page.data.recognizing, false)
-  assert.equal(page.data.recordButtonText, '开始录音回答')
+  assert.equal(page.data.recordButtonText, '开始回答')
+})
+
+test('English practice page recovers when voice recognition stop callback never returns', async () => {
+  const timers = []
+  const manager = {
+    onStop: handler => { manager.stopHandler = handler },
+    onError: () => {},
+    start: () => {},
+    stop: () => {}
+  }
+  const cloud = {
+    generateEnglishRecognitionSession: async () => ({
+      sessionId: 'session-1',
+      functionType: 'familiarity',
+      wordItems: [{
+        queueKey: 'word-1:0',
+        wordId: 'word-1',
+        word: 'science',
+        meanings: ['科学'],
+        promptType: 'chinese'
+      }],
+      patternItems: []
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    requirePlugin: () => ({ getRecordRecognitionManager: () => manager }),
+    modules: { '../../utils/cloud': cloud },
+    setTimeout: (handler, delay) => {
+      timers.push({ handler, delay })
+      return { id: timers.length }
+    }
+  })
+
+  await page.onLoad({ studentId: 'student-1' })
+  page.onRecordTap()
+  page.onRecordTap()
+
+  assert.equal(page.data.recognizing, true)
+  assert.equal(timers.length, 1)
+  timers[0].handler()
+
+  assert.equal(page.data.recognizing, false)
+  assert.equal(page.data.recordButtonText, '开始回答')
+  assert.equal(page.data.lastResult.status, 'unclear')
+  assert.match(page.data.lastResult.reason, /没有收到语音识别结果/)
+})
+
+test('English practice page switches to judgment state after speech text is returned', async () => {
+  const timers = []
+  const manager = {
+    onStop: handler => { manager.stopHandler = handler },
+    onError: () => {},
+    start: () => {},
+    stop: () => {}
+  }
+  const cloud = {
+    generateEnglishRecognitionSession: async () => ({
+      sessionId: 'session-1',
+      functionType: 'familiarity',
+      wordItems: [{
+        queueKey: 'word-1:0',
+        wordId: 'word-1',
+        word: 'science',
+        meanings: ['科学'],
+        promptType: 'chinese'
+      }],
+      patternItems: []
+    }),
+    submitEnglishRecognitionAttempt: async () => new Promise(() => {})
+  }
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    requirePlugin: () => ({ getRecordRecognitionManager: () => manager }),
+    modules: { '../../utils/cloud': cloud },
+    setTimeout: (handler, delay) => {
+      timers.push({ handler, delay })
+      return { id: timers.length }
+    }
+  })
+
+  await page.onLoad({ studentId: 'student-1' })
+  page.onRecordTap()
+  page.onRecordTap()
+  manager.stopHandler({ result: 'science', tempFilePath: '/tmp/audio.mp3' })
+  await Promise.resolve()
+
+  assert.equal(page.data.recognizing, false)
+  assert.equal(page.data.submitting, true)
+  assert.equal(page.data.recordButtonText, '正在判断...')
 })
 
 test('English dictation page creates a paper session and uploads answer photos', async () => {
@@ -1945,11 +2042,11 @@ test('verification page plans all report-selected fine math targets and sends fi
     JSON.parse(JSON.stringify(page.data.bottlenecks.filter(item => item.selected).map(item => item.bottleneckId))),
     ['BN-FINE-1', 'BN-FINE-2', 'BN-FINE-3', 'BN-FINE-4', 'BN-FINE-5', 'BN-FINE-6', 'BN-FINE-7']
   )
-  // 每页 5 个 BN：7 个 = 2 页（5 + 2）
+  // 每页 4 个 BN：7 个 = 2 页（4 + 3）
   assert.equal(page.data.paperConfig.taskPageCount, 2)
   assert.deepEqual(
     JSON.parse(JSON.stringify(page.data.paperConfig.taskPages.map(item => item.targetCount))),
-    [5, 2]
+    [4, 3]
   )
 
   await page.onGenerate()

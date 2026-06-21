@@ -267,6 +267,7 @@ test('E2E test framework V2 package scripts expose unit and subject CLI suites',
   assert.equal(scripts['test:e2e:english'], 'node scripts/devtools-english-e2e.js')
   assert.match(scripts['test:e2e:all'], /test:e2e:core/)
   assert.match(scripts['test:e2e:all'], /test:e2e:math/)
+  assert.match(scripts['test:e2e:all'], /test:e2e:chinese/)
   assert.match(scripts['test:e2e:all'], /test:e2e:english/)
   assert.match(scripts['test:e2e:all'], /e2e-report-aggregator/)
 
@@ -288,6 +289,7 @@ test('E2E test framework V2 aggregator reads standardized tmp/e2e suite reports'
     'tmp/e2e/core',
     'tmp/e2e/math-data',
     'tmp/e2e/math-knowledge-map',
+    'tmp/e2e/chinese',
     'tmp/e2e/english',
     'tmp/e2e/real-data'
   ]) {

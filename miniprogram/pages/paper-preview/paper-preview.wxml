@@ -18,7 +18,6 @@
         </view>
         <text class="status-desc">{{workbenchStatusDesc}}</text>
       </view>
-      <image class="workbench-illustration" src="/assets/images/verification-paper-hero.jpg" mode="aspectFill"></image>
     </view>
     <view class="lifecycle-row" wx:if="{{lifecycleSteps.length > 0}}">
       <view class="lifecycle-step lifecycle-{{item.status}}" wx:for="{{lifecycleSteps}}" wx:key="key">

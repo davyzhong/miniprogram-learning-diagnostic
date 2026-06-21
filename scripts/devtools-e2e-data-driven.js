@@ -166,6 +166,16 @@ async function pageText(page) {
   return (await root.text()).replace(/\s+/g, ' ')
 }
 
+async function activePage(miniProgram, fallbackPage) {
+  let page = null
+  if (typeof miniProgram.currentPage === 'function') {
+    page = await miniProgram.currentPage()
+  } else {
+    page = miniProgram.currentPage
+  }
+  return page && typeof page.$ === 'function' ? page : fallbackPage
+}
+
 async function installCloudMocks(miniProgram) {
   await miniProgram.evaluate((cfg) => {
     const { student, subjectProfile, diagnosisReport, verificationReport } = cfg
@@ -186,6 +196,10 @@ async function installCloudMocks(miniProgram) {
           if (data.action === 'getAccessibleStudents') return { result: { success: true, students: [{ ...student, role: 'owner', permissions: { canView: true, canManageParents: true, canUpload: true, canGeneratePaper: true, canRetryAnalysis: true } }] } }
         }
         if (name === 'studentData') {
+          if (data.action === 'getReportDetail') {
+            const report = data.reportId === 'report-dd-verify' ? verificationReport : diagnosisReport
+            return { result: { success: true, report } }
+          }
           if (data.action === 'getReport') {
             if (data.reportId === 'report-dd-diag') return { result: { success: true, report: diagnosisReport } }
             if (data.reportId === 'report-dd-verify') return { result: { success: true, report: verificationReport } }
@@ -219,7 +233,7 @@ async function installCloudMocks(miniProgram) {
   }, { student, subjectProfile, diagnosisReport, verificationReport })
 }
 
-async function assertPage(page, scenario) {
+async function assertPage(miniProgram, page, scenario) {
   const text = await pageText(page)
   const fail = []
 
@@ -281,7 +295,8 @@ async function main() {
       }
       await new Promise(r => setTimeout(r, scenario.wait || 2000))
 
-      const check = await assertPage(miniProgram.currentPage || page, scenario)
+      const currentPage = await activePage(miniProgram, page)
+      const check = await assertPage(miniProgram, currentPage, scenario)
       const passed = check.fail.length === 0 && check.errors.pageErrors.length === 0
 
       results.push({
@@ -300,7 +315,7 @@ async function main() {
         // 截图
         try {
           const screenshotPath = path.join(outputDir, `${results.length}-fail.png`)
-          await (miniProgram.currentPage || page).screenshot({ path: screenshotPath })
+          await currentPage.screenshot({ path: screenshotPath })
           console.log(`    截图: ${screenshotPath}`)
         } catch {}
       }

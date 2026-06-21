@@ -13,7 +13,6 @@
 
   <view wx:else>
     <view class="hero">
-      <image class="hero-illustration" src="/assets/images/knowledge-map-hero.jpg" mode="aspectFill"></image>
       <view class="hero-copy">
         <text class="hero-title">🗺️ {{view.title}}</text>
         <text class="hero-summary">{{view.summary}}</text>

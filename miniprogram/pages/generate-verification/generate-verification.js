@@ -21,7 +21,7 @@ function questionsForWeight(weight) {
   return QUESTIONS_FOR_LOW
 }
 
-const MATH_TARGETS_PER_TASK_PAGE = 5
+const MATH_TARGETS_PER_TASK_PAGE = 4
 const CHINESE_TARGETS_PER_TASK_PAGE = 8
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
 const CHINESE_REVIEW_TYPE_LABELS = {

@@ -38,7 +38,7 @@
       "feature": "familiarity",
       "name": "认词练习生成 20 词并提交一次 AI 判定",
       "route": "/pages/english-practice/english-practice?studentId=student-english-e2e&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6",
-      "expectedTexts": ["认词练习", "当前进度", "1 / 20", "看中文意思", "开始录音回答"],
+      "expectedTexts": ["认词练习", "1/ 20", "看中文", "请说出英文", "开始回答"],
       "forbiddenTexts": ["听中文", "辅助播放提示", "句型", "时态"],
       "steps": [
         { "action": "callMethod", "target": "onRecognitionResult", "args": [{ "recognizedText": "siense", "audioFileID": "cloud://audio-1" }] }
@@ -95,7 +95,7 @@
       "feature": "empty-state",
       "name": "无词库时单词熟悉度页面给出可恢复空态",
       "route": "/pages/english-practice/english-practice?studentId=student-english-e2e-no-words&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6",
-      "expectedTexts": ["认词练习", "暂无可练习单词", "请先导入钟青羽的个人英语词库", "重新生成"],
+      "expectedTexts": ["暂无可练习单词", "请先导入钟青羽的个人英语词库", "重新生成"],
       "forbiddenTexts": ["1 / 20", "时态"],
       "steps": [
         { "action": "assertVisible", "target": "暂无可练习单词" }

@@ -8,7 +8,7 @@ const {
   pageCodeOf
 } = require('../cloudfunctions/generatePaper/verification-pack')
 
-test('buildVerificationPack paginates many fine bottlenecks instead of capping the whole paper at five', () => {
+test('buildVerificationPack paginates many fine bottlenecks by printable page capacity', () => {
   const targets = Array.from({ length: 12 }, (_, index) => ({
     targetId: `BN-FINE-${index + 1}`,
     targetType: 'fine_bottleneck',
@@ -27,9 +27,9 @@ test('buildVerificationPack paginates many fine bottlenecks instead of capping t
   assert.equal(pack.packId, 'VPK-MATH-20260616-01')
   assert.equal(pack.totalTargets, 12)
   assert.ok(pack.pages.length > 1)
-  assert.ok(pack.pages.every(page => page.targetIds.length <= 5))
+  assert.ok(pack.pages.every(page => page.targetIds.length <= 4))
   assert.equal(pack.pages[0].pageCode, 'MATH-V-20260616-01-P01')
-  assert.deepEqual(pack.pages[0].targetIds, ['BN-FINE-1', 'BN-FINE-2', 'BN-FINE-3', 'BN-FINE-4', 'BN-FINE-5'])
+  assert.deepEqual(pack.pages[0].targetIds, ['BN-FINE-1', 'BN-FINE-2', 'BN-FINE-3', 'BN-FINE-4'])
 })
 
 test('buildVerificationPack uses larger concrete-review pages for chinese item targets', () => {
@@ -114,7 +114,7 @@ test('decorateQuestionsWithPack adds stable page and target metadata to generate
     { targetId: 'BN-FINE-4', stem: '题 2', questionRole: 'transfer' }
   ], pack)
 
-  // 4 个 target，每页 5 个 → 全在第 1 页
+  // 4 个 target，每页 4 个 → 全在第 1 页
   assert.deepEqual(questions.map(question => question.pageCode), [
     'MATH-V-20260616-01-P01',
     'MATH-V-20260616-01-P01'

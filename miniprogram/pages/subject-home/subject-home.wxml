@@ -16,7 +16,6 @@
           <text class="primary-arrow">›</text>
         </view>
       </view>
-      <image class="workbench-illustration" src="{{subjectIllustration.imageSrc}}" mode="aspectFill"></image>
     </view>
   </view>
 

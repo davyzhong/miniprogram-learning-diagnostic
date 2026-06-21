@@ -1,6 +1,17 @@
 const cloud = require('../../utils/cloud')
 const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
 
+const RECOGNITION_WAIT_TIMEOUT_MS = 12000
+const RECORD_BUTTON_READY = '开始回答'
+const RECORD_BUTTON_LISTENING = '正在听你说...'
+const RECORD_BUTTON_RECOGNIZING = '正在识别...'
+const RECORD_BUTTON_JUDGING = '正在判断...'
+
+function calculateProgressPercent(currentIndex, queueLength) {
+  if (!queueLength) return 0
+  return Math.min(100, Math.round(((currentIndex + 1) / queueLength) * 100))
+}
+
 function withDisplayFields(item) {
   const view = _withDisplayFields(item, {
     englishLabel: '英文提示',
@@ -8,9 +19,16 @@ function withDisplayFields(item) {
     englishPrompt: '看英文单词，然后说出中文意思',
     chinesePrefix: '看中文意思，然后说出英文单词：'
   })
+  const meaningText = buildMeaningText(view)
+  const isEnglishPrompt = view.promptType === 'english'
   return {
     ...view,
-    canPlayPrompt: view.promptType === 'english'
+    meaningText,
+    promptModeText: isEnglishPrompt ? '看英文' : '看中文',
+    promptMainText: isEnglishPrompt ? view.word : (meaningText || '这个单词'),
+    answerInstruction: isEnglishPrompt ? '请说出中文意思' : '请说出英文',
+    answerHintText: isEnglishPrompt ? '看到单词后，直接说出它的中文意思。' : '看到中文意思后，直接说出对应的英文单词。',
+    canPlayPrompt: isEnglishPrompt
   }
 }
 
@@ -33,10 +51,11 @@ Page({
     finished: false,
     recording: false,
     recognizing: false,
-    recordButtonText: '开始录音回答',
+    recordButtonText: RECORD_BUTTON_READY,
     voiceReady: false,
     voiceUnavailableText: '',
-    patternItems: []
+    patternItems: [],
+    progressPercent: 0
   },
 
   async onLoad(options = {}) {
@@ -59,6 +78,7 @@ Page({
       const manager = plugin && plugin.getRecordRecognitionManager ? plugin.getRecordRecognitionManager() : null
       if (!manager) throw new Error('WechatSI unavailable')
       manager.onStop(async res => {
+        this.clearRecognitionTimeout()
         this.setData({ recording: false })
         await this.onRecognitionResult({
           recognizedText: res && (res.result || res.text || ''),
@@ -66,10 +86,11 @@ Page({
         })
       })
       manager.onError(() => {
+        this.clearRecognitionTimeout()
         this.setData({
           recording: false,
           recognizing: false,
-          recordButtonText: '开始录音回答',
+          recordButtonText: RECORD_BUTTON_READY,
           lastResult: { status: 'unclear', reason: '语音识别失败，请再读一次。' }
         })
       })
@@ -100,6 +121,7 @@ Page({
           queue: [],
           currentIndex: 0,
           currentItem: null,
+          progressPercent: 0,
           lastAnsweredItem: null,
           patternItems: [],
           finished: false,
@@ -115,6 +137,7 @@ Page({
         queue,
         currentIndex: 0,
         currentItem: queue[0] || null,
+        progressPercent: calculateProgressPercent(0, queue.length),
         lastAnsweredItem: null,
         patternItems: [],
         finished: queue.length === 0
@@ -156,7 +179,7 @@ Page({
       return
     }
     this._answerStartedAt = Date.now()
-    this.setData({ recording: true, recognizing: false, recordButtonText: '停止录音并识别', lastResult: null })
+    this.setData({ recording: true, recognizing: false, recordButtonText: RECORD_BUTTON_LISTENING, lastResult: null })
     this._voiceManager.start({ lang: this.getRecognitionLang(this.data.currentItem) })
   },
 
@@ -179,26 +202,29 @@ Page({
       this.setData({
         recording: false,
         recognizing: true,
-        recordButtonText: '正在识别...'
+        recordButtonText: RECORD_BUTTON_RECOGNIZING
       })
+      this.startRecognitionTimeout()
     } catch (error) {
+      this.clearRecognitionTimeout()
       this.setData({
         recording: false,
         recognizing: false,
-        recordButtonText: '开始录音回答',
+        recordButtonText: RECORD_BUTTON_READY,
         lastResult: { status: 'unclear', reason: '停止录音失败，请再试一次。' }
       })
     }
   },
 
   async onRecognitionResult(result = {}) {
+    this.clearRecognitionTimeout()
     const current = this.data.currentItem
     if (!current || this.data.submitting) {
-      this.setData({ recognizing: false, recordButtonText: '开始录音回答' })
+      this.setData({ recognizing: false, recordButtonText: RECORD_BUTTON_READY })
       return
     }
     const durationMs = Math.max(1, Date.now() - (this._answerStartedAt || this._sessionStartedAt || Date.now()))
-    this.setData({ submitting: true, recognizing: false })
+    this.setData({ submitting: true, recognizing: false, recordButtonText: RECORD_BUTTON_JUDGING })
     try {
       const response = await cloud.submitEnglishRecognitionAttempt({
         studentId: this.data.studentId,
@@ -232,16 +258,17 @@ Page({
         lastAnsweredItem: current,
         currentIndex: nextIndex,
         currentItem: queue[nextIndex] || null,
+        progressPercent: calculateProgressPercent(nextIndex, queue.length),
         finished: nextIndex >= queue.length,
         recognizing: false,
-        recordButtonText: '开始录音回答'
+        recordButtonText: RECORD_BUTTON_READY
       })
       this._answerStartedAt = Date.now()
     } catch (error) {
       this.setData({
         submitting: false,
         recognizing: false,
-        recordButtonText: '开始录音回答',
+        recordButtonText: RECORD_BUTTON_READY,
         lastResult: {
           status: 'unclear',
           reason: error && error.message ? error.message : 'AI 判定失败，请稍后重试。'
@@ -272,13 +299,43 @@ Page({
 
   stopPromptAudio,
 
+  startRecognitionTimeout() {
+    this.clearRecognitionTimeout()
+    const token = `${Date.now()}-${Math.random()}`
+    this._recognitionTimeoutToken = token
+    this._recognitionTimer = setTimeout(() => {
+      if (this._recognitionTimeoutToken !== token) return
+      this._recognitionTimeoutToken = ''
+      this._recognitionTimer = null
+      if (!this.data.recognizing) return
+      this.setData({
+        recording: false,
+        recognizing: false,
+        recordButtonText: RECORD_BUTTON_READY,
+        lastResult: {
+          status: 'unclear',
+          reason: '没有收到语音识别结果，请重新录一次。'
+        }
+      })
+    }, RECOGNITION_WAIT_TIMEOUT_MS)
+  },
+
+  clearRecognitionTimeout() {
+    this._recognitionTimeoutToken = ''
+    if (this._recognitionTimer) {
+      clearTimeout(this._recognitionTimer)
+      this._recognitionTimer = null
+    }
+  },
+
   cleanupVoice() {
+    this.clearRecognitionTimeout()
     if (this.data.recording && this._voiceManager && typeof this._voiceManager.stop === 'function') {
       this._voiceManager.stop()
     }
     this.stopPromptAudio()
     if (this.data.recording || this.data.recognizing) {
-      this.setData({ recording: false, recognizing: false, recordButtonText: '开始录音回答' })
+      this.setData({ recording: false, recognizing: false, recordButtonText: RECORD_BUTTON_READY })
     }
   },
 

@@ -81,8 +81,8 @@ allQuestions.sort((a, b) => {
   return 0
 })
 
-// 按题数分页（每页 10 题）— 与 _regeneratePdf 逻辑一致
-const QUESTIONS_PER_PAGE = 10
+// 按题数分页（每页 8 题）— 与 _regeneratePdf 逻辑一致
+const QUESTIONS_PER_PAGE = 8
 const totalPages = Math.max(1, Math.ceil(allQuestions.length / QUESTIONS_PER_PAGE))
 const dateCode = formatDateCode(paperDate)
 const sequence = (paperCodes.paperCode.match(/-(\d+)$/)||[])[1] || '01'
