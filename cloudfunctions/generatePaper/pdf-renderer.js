@@ -382,13 +382,14 @@ async function generatePDF(questionsData, subject, type, options = {}) {
     return drawStudentHeader(doc, subject, type, true, paperDate, paperDisplayCode, pageNumber, currentStudentPageCode);
   }
 
-  // 按 pageCode 分组渲染：每个 pageCode 一页学生页，页内题目双栏排列。
-  // 不再逐 lpCode 画 group bar（28 个 lpCode 会浪费大量空间），
-  // 改为每个 pageCode 页头画一个汇总 bar（列出该页覆盖的卡点）。
+  // 学生页流式渲染：题目按 pageCode 分组（让同卡点题目相邻，减少标签重复），
+  // 但物理分页只看实际高度——铺满一页才换页，不再以 pageCode 作为硬分页边界。
+  // 这样可避免"高权重卡点挤爆前几页、低权重卡点饿死后几页"导致的大段空白。
+  // pageCode 仍随题目记录到 studentPageMetadata，用于学生完成进度追踪。
   const studentQuestions = questionsData.questions || [];
   const groups = groupQuestions(studentQuestions);
 
-  // 按 pageCode 把题目分成页
+  // 按 pageCode 把题目分组，保持每组内题目相邻（便于双栏配对与卡点标签去重）。
   const pagesByCode = new Map();  // pageCode → [{ group, question }]
   groups.forEach(group => {
     group.questions.forEach(question => {
@@ -399,111 +400,108 @@ async function generatePDF(questionsData, subject, type, options = {}) {
   });
 
   const pageCodes = Array.from(pagesByCode.keys()).sort();
-  let pageNumber = 1;
-  let y = drawStudentHeader(doc, subject, type, false, paperDate, paperDisplayCode, 1, pageCodes[0] || '');
-
-  pageCodes.forEach((pageCode, pageIdx) => {
+  // 把所有题目按 pageCode 顺序展平成一条连续流（不再逐 pageCode 强制换页）。
+  const flowQuestions = [];
+  pageCodes.forEach(pageCode => {
     const pageItems = pagesByCode.get(pageCode) || [];
-    const pageQuestions = pageItems.map(item => item.question);
+    pageItems.forEach(item => flowQuestions.push(item.question));
+  });
 
-    if (pageIdx > 0) {
+  // 统计每个 lpCode 的题目数（用于标签显示）——基于全量题目，不受分页影响。
+  const lpCounts = new Map();
+  const lpConfidence = new Map();
+  flowQuestions.forEach(q => {
+    const lp = q.lpCode || q.targetId || '';
+    lpCounts.set(lp, (lpCounts.get(lp) || 0) + 1);
+  });
+  groups.forEach(g => {
+    if (g.lpCode) lpConfidence.set(g.lpCode, g.confidenceLabel || '');
+  });
+
+  let pageNumber = 1;
+  const firstPageCode = flowQuestions.length
+    ? questionPageCode(flowQuestions[0], verificationPack, 1)
+    : pageCodes[0] || '';
+  let y = drawStudentHeader(doc, subject, type, false, paperDate, paperDisplayCode, 1, firstPageCode);
+
+  // 左右栏各自独立跟踪 lpCode，各自画栏内卡点标签。
+  let lastLeftLp = '';
+  let lastRightLp = '';
+
+  for (let qi = 0; qi < flowQuestions.length; qi += 2) {
+    const leftQ = flowQuestions[qi];
+    const rightQ = flowQuestions[qi + 1];
+    const leftLp = leftQ.lpCode || leftQ.targetId || '';
+    const rightLp = rightQ ? (rightQ.lpCode || rightQ.targetId || '') : '';
+
+    // 1. 各栏独立判断是否需要画卡点标签
+    const leftNeedsLabel = leftLp !== lastLeftLp;
+    const rightNeedsLabel = rightQ && rightLp !== lastRightLp;
+
+    // 2. 计算标签高度（各栏独立，取最大值保证对齐）
+    let leftLabelH = 0, rightLabelH = 0;
+    if (leftNeedsLabel) {
+      doc.fontSize(9);
+      leftLabelH = doc.heightOfString(leftQ.lpName || leftLp, { width: COLUMN_WIDTH * 0.65, lineGap: 1 }) + 5;
+    }
+    if (rightNeedsLabel) {
+      doc.fontSize(9);
+      rightLabelH = doc.heightOfString(rightQ.lpName || rightLp, { width: COLUMN_WIDTH * 0.65, lineGap: 1 }) + 5;
+    }
+    const labelHeight = Math.max(leftLabelH, rightLabelH);
+
+    // 3. 计算题目行高
+    const leftContentH = questionContentHeight(doc, leftQ);
+    const rightContentH = rightQ ? questionContentHeight(doc, rightQ) : 0;
+    const alignContentHeight = Math.max(leftContentH, rightContentH);
+    const questionRowHeight = alignContentHeight + 52 + 4 + 10;
+
+    // 4. 总高度 = 标签高度 + 题目高度
+    const totalHeight = labelHeight + questionRowHeight;
+
+    // 5. 高度分页检查：铺满一页才换页（不再以 pageCode 作为分页边界）
+    if (y + totalHeight > PAGE.contentBottom) {
       finishStudentPage();
       doc.addPage();
       pageNumber += 1;
-      y = startStudentPage(pageQuestions[0] || null);
+      y = startStudentPage(leftQ);
+      // 换页后重置（跨页同卡点也重画标签，因为到了新页）
+      lastLeftLp = '';
+      lastRightLp = '';
+      qi -= 2;
+      continue;
     }
 
-    // 渲染策略：左右栏各自独立跟踪 lpCode，各自画栏内卡点标签。
-    // 卡点标签只占栏宽（不占整行），跟随题目。左右栏题目严格对齐。
-    let lastLeftLp = '';
-    let lastRightLp = '';
-    // 统计每个 lpCode 的题目数（用于标签显示）
-    const lpCounts = new Map();
-    const lpConfidence = new Map();
-    pageQuestions.forEach(q => {
-      const lp = q.lpCode || q.targetId || '';
-      lpCounts.set(lp, (lpCounts.get(lp) || 0) + 1);
-    });
-    groups.forEach(g => {
-      if (g.lpCode) lpConfidence.set(g.lpCode, g.confidenceLabel || '');
-    });
-
-    for (let qi = 0; qi < pageQuestions.length; qi += 2) {
-      const leftQ = pageQuestions[qi];
-      const rightQ = pageQuestions[qi + 1];
-      const leftLp = leftQ.lpCode || leftQ.targetId || '';
-      const rightLp = rightQ ? (rightQ.lpCode || rightQ.targetId || '') : '';
-
-      // 1. 各栏独立判断是否需要画卡点标签
-      const leftNeedsLabel = leftLp !== lastLeftLp;
-      const rightNeedsLabel = rightQ && rightLp !== lastRightLp;
-
-      // 2. 计算标签高度（各栏独立，取最大值保证对齐）
-      let leftLabelH = 0, rightLabelH = 0;
-      if (leftNeedsLabel) {
-        doc.fontSize(9);
-        leftLabelH = doc.heightOfString(leftQ.lpName || leftLp, { width: COLUMN_WIDTH * 0.65, lineGap: 1 }) + 5;
-      }
-      if (rightNeedsLabel) {
-        doc.fontSize(9);
-        rightLabelH = doc.heightOfString(rightQ.lpName || rightLp, { width: COLUMN_WIDTH * 0.65, lineGap: 1 }) + 5;
-      }
-      const labelHeight = Math.max(leftLabelH, rightLabelH);
-
-      // 3. 计算题目行高
-      const leftContentH = questionContentHeight(doc, leftQ);
-      const rightContentH = rightQ ? questionContentHeight(doc, rightQ) : 0;
-      const alignContentHeight = Math.max(leftContentH, rightContentH);
-      const questionRowHeight = alignContentHeight + 52 + 4 + 10;
-
-      // 4. 总高度 = 标签高度 + 题目高度
-      const totalHeight = labelHeight + questionRowHeight;
-
-      // 5. 分页检查
-      if (y + totalHeight > PAGE.contentBottom) {
-        finishStudentPage();
-        doc.addPage();
-        pageNumber += 1;
-        y = startStudentPage(leftQ);
-        // 换页后重置（跨页同卡点也重画标签，因为到了新页）
-        lastLeftLp = '';
-        lastRightLp = '';
-        qi -= 2;
-        continue;
-      }
-
-      // 6. 画左栏卡点标签（如果需要）
-      if (leftNeedsLabel) {
-        const conf = lpConfidence.get(leftLp) || '';
-        const actualLabelH = drawColumnGroupLabel(doc,
-          leftQ.lpName || leftLp, lpCounts.get(leftLp) || 1, conf,
-          y, PAGE.left, COLUMN_WIDTH, type);
-        lastLeftLp = leftLp;
-        // 如果左右标签高度不等，左栏标签后补空白对齐到 labelHeight
-      }
-
-      // 7. 画右栏卡点标签（如果需要）
-      if (rightNeedsLabel) {
-        const conf = lpConfidence.get(rightLp) || '';
-        drawColumnGroupLabel(doc,
-          rightQ.lpName || rightLp, lpCounts.get(rightLp) || 1, conf,
-          y, PAGE.left + COLUMN_WIDTH + COLUMN_GAP, COLUMN_WIDTH, type);
-        lastRightLp = rightLp;
-      }
-
-      // 8. 题目起始 Y = 当前 Y + 标签高度
-      const questionY = y + labelHeight;
-
-      // 9. 画双栏题目
-      rememberQuestionOnStudentPage(leftQ);
-      drawQuestion(doc, leftQ, questionY, PAGE.left, COLUMN_WIDTH, alignContentHeight);
-      if (rightQ) {
-        rememberQuestionOnStudentPage(rightQ);
-        drawQuestion(doc, rightQ, questionY, PAGE.left + COLUMN_WIDTH + COLUMN_GAP, COLUMN_WIDTH, alignContentHeight);
-      }
-      y += totalHeight;
+    // 6. 画左栏卡点标签（如果需要）
+    if (leftNeedsLabel) {
+      const conf = lpConfidence.get(leftLp) || '';
+      drawColumnGroupLabel(doc,
+        leftQ.lpName || leftLp, lpCounts.get(leftLp) || 1, conf,
+        y, PAGE.left, COLUMN_WIDTH, type);
+      lastLeftLp = leftLp;
     }
-  });
+
+    // 7. 画右栏卡点标签（如果需要）
+    if (rightNeedsLabel) {
+      const conf = lpConfidence.get(rightLp) || '';
+      drawColumnGroupLabel(doc,
+        rightQ.lpName || rightLp, lpCounts.get(rightLp) || 1, conf,
+        y, PAGE.left + COLUMN_WIDTH + COLUMN_GAP, COLUMN_WIDTH, type);
+      lastRightLp = rightLp;
+    }
+
+    // 8. 题目起始 Y = 当前 Y + 标签高度
+    const questionY = y + labelHeight;
+
+    // 9. 画双栏题目
+    rememberQuestionOnStudentPage(leftQ);
+    drawQuestion(doc, leftQ, questionY, PAGE.left, COLUMN_WIDTH, alignContentHeight);
+    if (rightQ) {
+      rememberQuestionOnStudentPage(rightQ);
+      drawQuestion(doc, rightQ, questionY, PAGE.left + COLUMN_WIDTH + COLUMN_GAP, COLUMN_WIDTH, alignContentHeight);
+    }
+    y += totalHeight;
+  }
   finishStudentPage();
 
   doc.addPage();
