@@ -8,6 +8,7 @@ const {
 const { buildLearningMapReportItems } = require('../../utils/math-learning-map')
 const { paperCodeOf } = require('../../utils/paper-display')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
+const { reportIllustrationOf } = require('../../utils/page-illustrations')
 
 const DEFAULT_SOURCE_EVIDENCE_LIMIT = 3
 const DEFAULT_ERROR_DETAIL_LIMIT = 20
@@ -471,6 +472,7 @@ function buildReportView(report, options = {}) {
 
   return {
     headline,
+    heroIllustration: reportIllustrationOf(isVerification),
     reportSummaryText,
     ...explanation,
     paperCodeText,

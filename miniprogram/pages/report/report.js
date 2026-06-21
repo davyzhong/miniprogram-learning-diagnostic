@@ -66,6 +66,7 @@ Page({
   data: {
     reportId: '',
     report: {},
+    heroIllustration: { imageSrc: '/assets/images/diagnostic-report-hero.jpg', alt: '诊断报告插图' },
     isVerification: false,
     dateText: '',
     // 预计算字段（WXML 不支持复杂表达式）

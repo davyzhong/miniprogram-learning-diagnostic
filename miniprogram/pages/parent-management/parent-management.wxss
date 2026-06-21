@@ -6,7 +6,26 @@
 }
 
 .header {
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
   padding: 28rpx 0 24rpx;
+}
+
+.header-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.header-illustration {
+  border-radius: 18rpx;
+  box-shadow: 0 8rpx 20rpx rgba(26, 54, 93, .08);
+  flex-shrink: 0;
+  height: 390rpx;
+  width: 100%;
+  background: #eef7ff;
+  order: -1;
 }
 
 .eyebrow {

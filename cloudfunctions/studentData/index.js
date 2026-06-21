@@ -674,7 +674,7 @@ async function getActiveVerificationPaper(openId, studentId, subject, reportId) 
   const ready = papers.find(p => p.generationStatus === 'ready' || (!p.generationStatus && p.pdfFileId));
   if (ready) return withAccess(access, { paper: ready, status: 'ready' });
 
-  const generating = papers.find(p => p.generationStatus === 'generating');
+  const generating = papers.find(p => p.generationStatus === 'generating' || p.generationStatus === 'appending');
   if (generating) return withAccess(access, { paper: generating, status: 'generating' });
 
   const failed = papers.find(p => p.generationStatus === 'failed');

@@ -284,12 +284,7 @@ function knowledgeMapUrl(student) {
 }
 
 function generateVerificationUrl(student, subjectKey) {
-  return buildTraceableUrl({
-    type: 'generate-verification',
-    ...studentContext(student),
-    subject: subjectKey,
-    subjectName: SUBJECT_NAMES[subjectKey] || subjectKey
-  })
+  return subjectHomeUrl(student, subjectKey)
 }
 
 function buildPrimaryActionCard(nextAction, student, canWriteActions) {
@@ -297,7 +292,7 @@ function buildPrimaryActionCard(nextAction, student, canWriteActions) {
   const primaryText = (nextAction && nextAction.primaryText) || '查看学习记录'
   let url = learningRecordsUrl(student)
 
-  if (primaryText === '生成纸面验证卷') {
+  if (primaryText === '下载验证卷' || primaryText === '查看/下载验证卷' || primaryText === '查看验证卷') {
     url = generateVerificationUrl(student, subject)
   } else if (primaryText === '上传新试卷' || primaryText === '上传第一份试卷') {
     url = uploadUrl(student, subject)
@@ -540,14 +535,14 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
   const nextAction = canWriteActions
     ? {
         title: hasPending
-          ? `优先完成${primarySubject ? primarySubject.name : '数学'}验证试卷`
+          ? `下载${primarySubject ? primarySubject.name : '数学'}验证试卷`
           : hasImprovedOnly
             ? '继续上传新试卷观察巩固情况'
             : '上传第一份试卷，建立学习档案',
         summary: hasPending
-          ? `用于确认${pendingNames}是否稳定出现。`
+          ? `系统会根据诊断报告自动准备纸面验证卷，用于确认${pendingNames}是否稳定出现。`
           : '上传试卷后，系统会整理学习观察和诊断报告。',
-        primaryText: hasPending ? '生成纸面验证卷' : (hasImprovedOnly ? '上传新试卷' : '上传第一份试卷'),
+        primaryText: hasPending ? '下载验证卷' : (hasImprovedOnly ? '上传新试卷' : '上传第一份试卷'),
         secondaryText: hasPending ? '上传新试卷' : '查看学习记录',
         subject: nextSubject
       }

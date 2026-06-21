@@ -7,14 +7,19 @@
   </view>
 
   <view class="workbench-card">
-    <view class="workbench-top">
-      <view class="code-block traceable-block" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
-        <text class="code-label">验证试卷编号</text>
-        <text class="paper-code">{{paperCodeText || '待生成编号'}}</text>
+    <view class="workbench-hero">
+      <view class="workbench-main">
+        <view class="workbench-top">
+          <view class="code-block traceable-block" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
+            <text class="code-label">验证试卷编号</text>
+            <text class="paper-code">{{paperCodeText || '待生成编号'}}</text>
+          </view>
+          <view class="status-pill status-{{workbenchStatus}}" bindtap="onTraceableUrlTap" data-url="{{statusUrl}}">{{workbenchStatusText}}</view>
+        </view>
+        <text class="status-desc">{{workbenchStatusDesc}}</text>
       </view>
-      <view class="status-pill status-{{workbenchStatus}}" bindtap="onTraceableUrlTap" data-url="{{statusUrl}}">{{workbenchStatusText}}</view>
+      <image class="workbench-illustration" src="/assets/images/verification-paper-hero.jpg" mode="aspectFill"></image>
     </view>
-    <text class="status-desc">{{workbenchStatusDesc}}</text>
     <view class="lifecycle-row" wx:if="{{lifecycleSteps.length > 0}}">
       <view class="lifecycle-step lifecycle-{{item.status}}" wx:for="{{lifecycleSteps}}" wx:key="key">
         <text class="step-dot"></text>
@@ -100,6 +105,9 @@
   <view class="bottom-bar">
     <button class="btn-primary btn-main" bindtap="onPrimaryAction" disabled="{{downloading}}">
       {{downloading ? '下载中...' : (primaryActionText || uploadBtnText)}}
+    </button>
+    <button class="btn-secondary btn-main" wx:if="{{secondaryActionText}}" bindtap="onSecondaryAction">
+      {{secondaryActionText}}
     </button>
   </view>
 </view>

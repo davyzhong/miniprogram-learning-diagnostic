@@ -1,10 +1,11 @@
 // pages/generate-verification/generate-verification.js
-// 兜底页：仅在验证卷 none/failed 状态下进入，正常流程由统一入口 navigateToVerificationPaper 处理。
-// 卡点默认全选，题量按置信度分层（高3/中2/低1），不再有硬上限。
+// 历史兼容页：主流程中验证卷由诊断报告完成后自动准备。
+// 用户进入这里时，只查看自动验证卷状态并跳转到下载页。
 const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
 const { buildBottleneckViews, profileBottlenecks, buildConfidence } = require('../../utils/bottleneck-view')
 const { groupBottlenecksByHierarchy } = require('../../utils/math-bottleneck-hierarchy')
+const { navigateToVerificationPaper } = require('../../utils/shared-navigation')
 
 // 置信度分层出题数（与云函数 generatePaper 保持一致）
 const CONFIDENCE_HIGH_THRESHOLD = 75
@@ -157,7 +158,6 @@ Page({
     bottlenecks: [],   // pendingBottlenecks 列表
     selectedCount: 0,
     generating: false,
-    previewing: false,
     loading: true,
     selectedSummary: '',
     paperConfig: {
@@ -184,6 +184,11 @@ Page({
 
   onShow() {
     this.loadPendingBottlenecks()
+  },
+
+  async onViewAutoPaper() {
+    const { studentId, subject } = this.data
+    await navigateToVerificationPaper(cloud, { studentId, subject, reportId: '' })
   },
 
   async loadPendingBottlenecks() {
@@ -237,51 +242,7 @@ Page({
     this.setSelectionState(this.data.bottlenecks)
   },
 
-  // 预览 PDF（调用云函数生成临时 PDF）
-  async onPreview() {
-    const { studentId, subject, bottlenecks } = this.data
-    const selected = bottlenecks.filter(b => b.selected)
-    if (selected.length === 0 || this.data.previewing) return
-    const questionCount = this.questionCountForSelection(selected)
-    const targets = targetCodesForPaper(selected)
-    const targetPlan = this.targetPlanForSelection(selected)
-    if (targets.length === 0) {
-      wx.showToast({ title: '学习卡点参数无效', icon: 'none' })
-      return
-    }
-
-    this.setData({ previewing: true })
-    wx.showLoading({ title: '生成预览...' })
-
-    try {
-      const result = await cloud.callGeneratePaper({
-        studentId,
-        subject,
-        type: 'verification',
-        targets,
-        targetPlan,
-        questionCount,
-        preview: true
-      })
-
-      wx.hideLoading()
-
-      if (result.pdfFileId) {
-        // 跳转到试卷预览页
-        wx.navigateTo({
-          url: `/pages/paper-preview/paper-preview?fileId=${encodeURIComponent(result.pdfFileId)}&type=verification`
-        })
-      }
-    } catch (err) {
-      console.error('预览失败', err)
-      wx.hideLoading()
-      wx.showToast({ title: err.message || '预览失败', icon: 'none' })
-    } finally {
-      this.setData({ previewing: false })
-    }
-  },
-
-  // 生成试卷（正式生成并保存）
+  // 历史兼容：旧测试/旧路由仍可能调用，正式主流程不从这里手动出卷。
   async onGenerate() {
     const { studentId, subject, subjectName, bottlenecks } = this.data
     const selected = bottlenecks.filter(b => b.selected)
@@ -295,7 +256,7 @@ Page({
     }
 
     this.setData({ generating: true })
-    wx.showLoading({ title: '生成试卷...' })
+    wx.showLoading({ title: '准备验证卷...' })
 
     try {
       const result = await cloud.callGeneratePaper({
@@ -311,7 +272,7 @@ Page({
       wx.hideLoading()
 
       if (result.paperId) {
-        wx.showToast({ title: '生成成功', icon: 'success' })
+        wx.showToast({ title: '验证卷已准备', icon: 'success' })
         // 跳转到试卷预览/打印页
         setTimeout(() => {
           wx.navigateTo({
@@ -320,9 +281,9 @@ Page({
         }, 1000)
       }
     } catch (err) {
-      console.error('生成试卷失败', err)
+      console.error('验证卷准备失败', err)
       wx.hideLoading()
-      wx.showToast({ title: err.message || '生成失败', icon: 'none' })
+      wx.showToast({ title: err.message || '准备失败', icon: 'none' })
     } finally {
       this.setData({ generating: false })
     }

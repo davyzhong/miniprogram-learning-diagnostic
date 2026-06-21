@@ -116,12 +116,7 @@ const sharedNavigation = {
       try { cloudModule = require('./cloud') } catch (e) { cloudModule = null }
     }
     if (!cloudModule || typeof cloudModule.getActiveVerificationPaper !== 'function') {
-      // 旧环境兜底：直接跳生成页
-      const subjectNameEncoded = encodeURIComponent(subjectName || getSubjectName(subject, '数学'))
-      const studentNameEncoded = encodeURIComponent(studentName || '')
-      wx.navigateTo({
-        url: `/pages/generate-verification/generate-verification?studentId=${studentId}&subject=${subject}&subjectName=${subjectNameEncoded}&studentName=${studentNameEncoded}`
-      })
+      wx.showToast({ title: '验证卷状态暂不可用', icon: 'none' })
       return
     }
     await navigateToVerificationPaper(cloudModule, { studentId, subject, reportId })
@@ -181,9 +176,8 @@ const sharedNavigation = {
       this.onViewAllRecords()
       return
     }
-    if (home.nextAction && home.nextAction.primaryText === '生成纸面验证卷') {
-      this.navigateToVerificationByStatus(student._id || studentId, subject, subjectName, student.name || '')
-      return
+    if (home.nextAction && ['下载验证卷', '查看/下载验证卷', '查看验证卷'].includes(home.nextAction.primaryText)) {
+      return this.navigateToVerificationByStatus(student._id || studentId, subject, subjectName, student.name || '')
     }
     wx.navigateTo({
       url: `/pages/upload/upload?mode=diagnosis&studentId=${student._id || studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}&grade=${student.grade || ''}`
@@ -214,11 +208,11 @@ const sharedNavigation = {
 /**
  * 验证卷统一入口（纯函数，不依赖 this，任何页面可直接调用）
  *
- * 验证卷在诊断报告完成后已异步自动生成，此函数负责：
+ * 验证卷在诊断报告完成后已自动生成/后台生成，此函数只负责：
  *   ready     → 直接跳预览页
  *   generating→ 提示并轮询，ready 后自动跳预览
- *   failed    → 调 regenerateVerificationPaper 重新生成 + 轮询
- *   none      → 调 regenerateVerificationPaper 首次触发 + 轮询
+ *   failed    → 提示后台生成失败
+ *   none      → 提示尚无验证卷
  *
  * @param {object} cloudModule - cloud 模块（可注入 mock）
  * @param {object} params - { studentId, subject, reportId, onPollStart, onPage }
@@ -251,112 +245,19 @@ async function navigateToVerificationPaper(cloudModule, { studentId, subject, re
     return { status, paperId }
   }
 
-  // generating 且已有批次完成（completedBatches > 0）：说明别的入口正在驱动，只轮询
-  const paper = result && result.paper ? result.paper : null
-  const progress = paper && paper.generationProgress ? paper.generationProgress : null
-  const completedBatches = progress ? (progress.completedBatches || 0) : 0
-  const questionCount = paper && Array.isArray(paper.questions) ? paper.questions.length : 0
-
-  if (status === 'generating' && completedBatches > 0) {
-    wx.showToast({ title: '验证卷生成中，完成后自动跳转', icon: 'none', duration: 2500 })
+  if (status === 'generating' || status === 'appending') {
+    wx.showToast({ title: '验证卷正在后台生成，完成后自动跳转', icon: 'none', duration: 2500 })
     startVerificationPoller(cloudModule, studentId, subject, reportId)
     return { status, paperId }
   }
 
-  // 其余情况（failed / none / generating 但 0 批完成）：
-  // 云函数 fire-and-forget 会被进程销毁，所以由前端循环调 generatePaper 分批驱动
-  // 如果已有 generating 记录（analyzePhotos 创建），复用它；否则创建新的
-  let drivePaperId = paperId
-  let batches = []
-  let totalBatches = 0
-
-  if (status === 'generating' && drivePaperId && paper && Array.isArray(paper.bottleneckTargets)) {
-    // 复用 analyzePhotos 创建的记录，从 bottleneckTargets 重新分批
-    batches = chunkTargetsFrontend(paper.bottleneckTargets)
-    totalBatches = batches.length
-  } else {
-    // 创建新记录
-    const actionLabel = status === 'failed' ? '重新生成验证卷' : '生成验证卷'
-    wx.showLoading({ title: actionLabel + '…' })
-    const startResult = await cloudModule.regenerateVerificationPaper({
-      studentId, subject, reportId, action: 'start'
-    })
-    wx.hideLoading()
-    if (!startResult || !startResult.success) {
-      wx.showToast({ title: (startResult && startResult.error) || '生成失败，请稍后重试', icon: 'none' })
-      return { status: 'failed', paperId: '' }
-    }
-    drivePaperId = startResult.paperId
-    batches = startResult.batches || []
-    totalBatches = batches.length
+  if (status === 'failed') {
+    wx.showToast({ title: '验证卷后台生成失败，请稍后重新诊断或查看报告', icon: 'none', duration: 3000 })
+    return { status, paperId }
   }
 
-  if (totalBatches === 0) {
-    wx.showToast({ title: '暂无待验证卡点', icon: 'none' })
-    return { status: 'failed', paperId: '' }
-  }
-
-  const markFailed = async (message) => {
-    const error = message || '验证卷生成失败'
-    await cloudModule.regenerateVerificationPaper({
-      studentId, subject, reportId, paperId: drivePaperId, action: 'fail', error
-    }).catch(() => {})
-    wx.hideLoading()
-    wx.showToast({ title: '验证卷生成失败，请稍后重试', icon: 'none' })
-    return { status: 'failed', paperId: drivePaperId }
-  }
-
-  // 前端驱动逐批生成
-  for (let i = 0; i < batches.length; i++) {
-    wx.showLoading({ title: `生成中 ${i + 1}/${totalBatches} 批…` })
-    try {
-      const batchResult = await cloudModule.callGeneratePaper({
-        studentId, subject, type: 'verification',
-        targets: batches[i],
-        _appendToPaperId: drivePaperId,
-      })
-      if (!batchResult || batchResult.success === false) {
-        throw new Error((batchResult && batchResult.error) || `第 ${i + 1} 批生成失败`)
-      }
-    } catch (batchErr) {
-      console.warn(`批次 ${i + 1}/${totalBatches} 失败:`, batchErr && batchErr.message)
-      return markFailed((batchErr && batchErr.message) || `第 ${i + 1} 批生成失败`)
-    }
-  }
-
-  // 重新生成 PDF
-  wx.showLoading({ title: '生成 PDF…' })
-  try {
-    const pdfResult = await cloudModule.callGeneratePaper({ _regeneratePdf: true, paperId: drivePaperId })
-    if (!pdfResult || pdfResult.success === false) {
-      throw new Error((pdfResult && pdfResult.error) || 'PDF 生成失败')
-    }
-  } catch (pdfErr) {
-    console.warn('PDF 重新生成失败:', pdfErr && pdfErr.message)
-    return markFailed((pdfErr && pdfErr.message) || 'PDF 生成失败')
-  }
-
-  // 标记完成
-  const finalizeResult = await cloudModule.regenerateVerificationPaper({
-    studentId, subject, reportId, paperId: drivePaperId, action: 'finalize'
-  }).catch(err => ({ success: false, error: err && err.message }))
-  if (!finalizeResult || finalizeResult.success === false) {
-    return markFailed((finalizeResult && finalizeResult.error) || '验证卷生成完成状态写入失败')
-  }
-
-  wx.hideLoading()
-  wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${drivePaperId}` })
-  return { status: 'ready', paperId: drivePaperId }
-}
-
-// 前端分批（与云函数 BATCH_SIZE 一致）
-function chunkTargetsFrontend(targets, size = 8) {
-  const chunks = []
-  const arr = Array.isArray(targets) ? targets : []
-  for (let i = 0; i < arr.length; i += size) {
-    chunks.push(arr.slice(i, i + size))
-  }
-  return chunks
+  wx.showToast({ title: '暂无验证卷，请先完成一次诊断', icon: 'none', duration: 2500 })
+  return { status: 'none', paperId: '' }
 }
 
 /**
@@ -372,6 +273,8 @@ function startVerificationPoller(cloudModule, studentId, subject, reportId) {
   _activePoller = createPoller({
     intervalMs: VERIFICATION_POLL_INTERVAL,
     maxAttempts: VERIFICATION_POLL_MAX_ATTEMPTS,
+    schedule: setTimeout,
+    cancel: clearTimeout,
     request: async () => cloudModule.getActiveVerificationPaper(studentId, subject, reportId),
     onValue: (result) => {
       const st = result.status || 'none'

@@ -5,6 +5,16 @@
   color: #1a202c;
 }
 
+.join-illustration {
+  background: linear-gradient(135deg, #e8f1ff 0%, #fff7ed 100%);
+  border-radius: 22rpx;
+  box-shadow: 0 10rpx 30rpx rgba(26, 54, 93, 0.08);
+  display: block;
+  height: 390rpx;
+  margin-bottom: 24rpx;
+  width: 100%;
+}
+
 .card {
   padding: 52rpx 32rpx;
   border-radius: 18rpx;

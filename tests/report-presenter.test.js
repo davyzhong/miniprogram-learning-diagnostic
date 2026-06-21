@@ -14,6 +14,7 @@ test('builds verification report counters and chart widths', () => {
   })
 
   assert.equal(view.isVerification, true)
+  assert.equal(view.heroIllustration.imageSrc, '/assets/images/verification-report-hero.jpg')
   assert.equal(view.improvedCount, 1)
   assert.equal(view.worsenedCount, 1)
   assert.deepEqual(view.bottleneckList.map(item => item.barWidth), [100, 50])
@@ -30,6 +31,7 @@ test('diagnosis report zeroes improvement counters and shows next step when bott
   })
 
   assert.equal(view.isVerification, false)
+  assert.equal(view.heroIllustration.imageSrc, '/assets/images/diagnostic-report-hero.jpg')
   assert.equal(view.improvedCount, 0)
   assert.equal(view.worsenedCount, 0)
   assert.equal(view.showNextStep, true)

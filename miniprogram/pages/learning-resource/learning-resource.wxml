@@ -7,9 +7,12 @@
 
   <view wx:else>
     <view class="hero">
-      <text class="kicker">学习任务包</text>
-      <text class="title">{{view.title}}</text>
-      <text class="meta">{{view.timeText}} · {{view.practiceCount}} 道练习</text>
+      <view class="hero-copy">
+        <text class="kicker">学习任务包</text>
+        <text class="title">{{view.title}}</text>
+        <text class="meta">{{view.timeText}} · {{view.practiceCount}} 道练习</text>
+      </view>
+      <image class="hero-illustration" src="/assets/images/learning-resource-hero.jpg" mode="aspectFill"></image>
     </view>
 
     <!-- 概述板块 -->

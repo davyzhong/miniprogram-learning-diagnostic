@@ -53,6 +53,28 @@
   padding: 28rpx;
 }
 
+.workbench-hero {
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.workbench-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.workbench-illustration {
+  border-radius: 18rpx;
+  box-shadow: 0 8rpx 20rpx rgba(19, 43, 72, 0.08);
+  flex-shrink: 0;
+  height: 390rpx;
+  width: 100%;
+  background: #eef7ff;
+  order: -1;
+}
+
 .workbench-top {
   align-items: flex-start;
   display: flex;
@@ -453,6 +475,8 @@
   background: #fff;
   bottom: 0;
   box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
+  display: flex;
+  gap: 16rpx;
   left: 0;
   padding: 20rpx 28rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
@@ -462,15 +486,23 @@
 }
 
 .bottom-bar .btn-main {
-  background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%);
   border: none;
   border-radius: 16rpx;
-  color: #fff;
+  flex: 1;
   font-size: 32rpx;
   font-weight: 650;
   line-height: 1.4;
   padding: 24rpx 0;
-  width: 100%;
+}
+
+.bottom-bar .btn-primary {
+  background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%);
+  color: #fff;
+}
+
+.bottom-bar .btn-secondary {
+  background: #eef6ff;
+  color: #245b93;
 }
 
 .btn-main::after {

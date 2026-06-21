@@ -31,7 +31,7 @@ const ROUTE_DEFINITIONS = {
   },
   verification: {
     key: 'verification',
-    name: '生成纸面验证卷',
+    name: '验证卷下载入口',
     path: ({ studentId, studentName }) => `/pages/generate-verification/generate-verification?studentId=${encodeURIComponent(studentId)}&subject=math&subjectName=${encodeURIComponent('数学')}&studentName=${encodeURIComponent(studentName || '')}`
   }
 }

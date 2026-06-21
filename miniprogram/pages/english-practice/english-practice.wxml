@@ -5,6 +5,7 @@
       <text class="title">认词练习</text>
       <text class="subtitle">看中文或英文提示，录音说出对应内容。</text>
     </view>
+    <image class="hero-illustration" src="/assets/images/english-practice-hero.jpg" mode="aspectFill"></image>
   </view>
 
   <view class="state-card" wx:if="{{loading}}">

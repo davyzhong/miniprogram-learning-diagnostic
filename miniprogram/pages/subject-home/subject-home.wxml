@@ -1,17 +1,22 @@
 <!--pages/subject-home/subject-home.wxml-->
 <view class="page page-{{subject}}">
   <view class="workbench-card {{subject === 'english' ? 'english-hero-card' : ''}}">
-    <view class="workbench-header">
-      <view class="subject-mark">{{subjectInitial}}</view>
-      <view class="workbench-copy">
-        <text class="workbench-eyebrow">{{primaryTask.title}}</text>
-        <text class="workbench-title">{{subject === 'english' ? '英语词汇掌握' : primaryTask.actionText}}</text>
+    <view class="workbench-hero-layout">
+      <view class="workbench-main">
+        <view class="workbench-header">
+          <view class="subject-mark">{{subjectInitial}}</view>
+          <view class="workbench-copy">
+            <text class="workbench-eyebrow">{{primaryTask.title}}</text>
+            <text class="workbench-title">{{subject === 'english' ? '英语词汇掌握' : primaryTask.actionText}}</text>
+          </view>
+        </view>
+        <text class="workbench-summary">{{primaryTask.summary}}</text>
+        <view class="primary-action" wx:if="{{subject !== 'english'}}" bindtap="onPrimaryAction">
+          <text>{{primaryTask.actionText}}</text>
+          <text class="primary-arrow">›</text>
+        </view>
       </view>
-    </view>
-    <text class="workbench-summary">{{primaryTask.summary}}</text>
-    <view class="primary-action" wx:if="{{subject !== 'english'}}" bindtap="onPrimaryAction">
-      <text>{{primaryTask.actionText}}</text>
-      <text class="primary-arrow">›</text>
+      <image class="workbench-illustration" src="{{subjectIllustration.imageSrc}}" mode="aspectFill"></image>
     </view>
   </view>
 

@@ -92,7 +92,7 @@ const pages = [
   { name: 'learning-resource 学习资源', route: '/pages/learning-resource/learning-resource?packId=pack-smoke' },
   { name: 'english-practice 英语练习', route: `/pages/english-practice/english-practice?${studentQ}&grade=6` },
   { name: 'english-dictation 英语听写', route: `/pages/english-dictation/english-dictation?${studentQ}&grade=6` },
-  { name: 'generate-verification 生成验证卷', route: `/pages/generate-verification/generate-verification?${studentQ}&subject=math&subjectName=%E6%95%B0%E5%AD%A6` },
+  { name: 'verification-paper-download 验证卷下载入口', route: `/pages/generate-verification/generate-verification?${studentQ}&subject=math&subjectName=%E6%95%B0%E5%AD%A6` },
   { name: 'default-paper 默认试卷', route: `/pages/default-paper/default-paper?${studentQ}&subject=math&subjectName=%E6%95%B0%E5%AD%A6&grade=6` },
   { name: 'paper-preview 试卷预览', route: `/pages/paper-preview/paper-preview?paperId=paper-smoke` },
 ]

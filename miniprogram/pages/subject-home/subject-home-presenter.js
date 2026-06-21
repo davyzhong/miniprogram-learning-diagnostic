@@ -3,6 +3,7 @@ const {
   buildBottleneckStats,
   profileBottlenecks
 } = require('../../utils/bottleneck-view')
+const { subjectIllustrationOf } = require('../../utils/page-illustrations')
 
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
 const CHINESE_REVIEW_TYPE_LABELS = {
@@ -131,7 +132,7 @@ function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions = {}
   if (!canWrite) {
     return {
       title: '当前可查看',
-      summary: `${subjectName}学习资料已开放给你查看，上传和生成试卷由档案创建者操作。`,
+      summary: `${subjectName}学习资料已开放给你查看，上传和下载验证卷由档案创建者操作。`,
       actionText: '查看学习记录',
       actionType: 'history'
     }
@@ -140,8 +141,8 @@ function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions = {}
   if (options.subject === 'chinese' && chineseReviewQueue.length > 0) {
     return {
       title: '下一步建议',
-      summary: `${chineseReviewQueue.length} 个具体错项等待复测，建议先生成语文错项复测卷。`,
-      actionText: '生成纸面验证卷',
+      summary: `${chineseReviewQueue.length} 个具体错项等待复测，系统会根据诊断报告自动准备语文错项复测卷。`,
+      actionText: '查看/下载验证卷',
       actionType: 'verification'
     }
   }
@@ -149,8 +150,8 @@ function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions = {}
   if (taskQueue.length > 0) {
     return {
       title: '下一步建议',
-      summary: `${taskQueue.length} 个学习卡点等待验证，建议先做一张纸面验证卷。`,
-      actionText: '生成纸面验证卷',
+      summary: `${taskQueue.length} 个学习卡点等待验证，验证卷准备好后可下载打印。`,
+      actionText: '查看/下载验证卷',
       actionType: 'verification'
     }
   }
@@ -413,6 +414,7 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
 
   return {
     subjectTitle: options.subject === 'english' ? '英语词汇掌握' : `${subjectName}工作台`,
+    subjectIllustration: subjectIllustrationOf(subject, subjectName),
     totalReports: profile.totalReports || reports.filter(item => item.status === 'completed').length,
     currentSummary: primaryTask.summary,
     nextAction: primaryTask.actionText,
