@@ -1,7 +1,6 @@
 <!--pages/index/index.wxml-->
 <view class="page">
   <view class="loading-state" wx:if="{{loading}}">
-    <image class="loading-logo" src="/assets/images/app-logo-share.jpg" mode="aspectFit" />
     <text>正在整理学习档案...</text>
   </view>
 
@@ -23,7 +22,6 @@
       catchtap="onTraceableUrlTap"
       data-url="{{familyHero.url}}"
     >
-      <image class="family-hero-image" src="/assets/images/math-diagnostic-guide.jpg" mode="aspectFill" />
       <view class="family-hero-copy">
         <text class="family-hero-kicker">家庭今日总览</text>
         <text class="family-hero-title">{{familyHero.title}}</text>
@@ -142,7 +140,6 @@
 
     <block wx:if="{{homeMode === 'single-profile'}}">
       <view class="personal-hero-card" catchtap="onPrimaryAction">
-        <image class="personal-hero-image" src="/assets/images/student-profile-hero.png" mode="aspectFill"></image>
         <view class="personal-hero-copy">
           <view class="student-line">
             <view class="mini-avatar">{{home.avatarText}}</view>
@@ -241,7 +238,6 @@
   </view>
 
   <view class="empty-state" wx:else>
-    <image class="empty-logo" src="/assets/images/app-logo-share.jpg" mode="aspectFit" />
     <text class="text">还没有学习档案</text>
     <text class="sub-text">添加第一个孩子后，上传试卷建立学习记录。</text>
     <view class="empty-action" bindtap="onAddStudent">添加第一个孩子</view>

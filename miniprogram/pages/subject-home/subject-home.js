@@ -19,7 +19,7 @@ Page({
     grade: '',
 
     subjectTitle: '数学工作台',
-    subjectIllustration: { imageSrc: '/assets/images/subject-math-hero.jpg', alt: '数学学科插图' },
+    subjectIllustration: { alt: '数学学科' },
     primaryTask: null,
     taskQueue: [],
     pendingTaskCount: 0,

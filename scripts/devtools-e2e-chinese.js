@@ -73,7 +73,7 @@ const pages = [
   {
     name: '语文工作台',
     route: `/pages/subject-home/subject-home?${studentQ}&subject=chinese&subjectName=${encodeURIComponent('语文')}&grade=6`,
-    text: ['语文工作台', '拍照诊断', '生成验证试卷'],
+    text: ['下一步建议', '拍照诊断', '下载验证卷', '知识地图'],
   },
   {
     name: '语文诊断报告',
@@ -83,7 +83,7 @@ const pages = [
   {
     name: '语文错项复测出卷页',
     route: `/pages/generate-verification/generate-verification?${studentQ}&subject=chinese&subjectName=${encodeURIComponent('语文')}`,
-    text: ['出卷配置', '生成 A4 试卷'],
+    text: ['验证卷状态', '纸面验证卷', '查看/下载验证卷'],
   },
 ]
 
@@ -94,8 +94,11 @@ async function pageText(page) {
 }
 
 async function installMocks(miniProgram) {
-  await miniProgram.evaluate(({ student, permissions, profile, report }) => {
-    wx.cloud.callFunction = async ({ name, data = {} }) => {
+  await miniProgram.evaluate((cfg) => {
+    const { student, permissions, profile, report } = cfg
+    wx.cloud.callFunction = async (payload) => {
+      const name = payload && payload.name
+      const data = (payload && payload.data) || {}
       if (name === 'studentData') {
         if (data.action === 'getSubjectDashboard') {
           return { result: { success: true, student, permissions, profile, reports: [report], papers: [] } }

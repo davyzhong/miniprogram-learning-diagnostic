@@ -66,7 +66,7 @@ Page({
   data: {
     reportId: '',
     report: {},
-    heroIllustration: { imageSrc: '/assets/images/diagnostic-report-hero.jpg', alt: '诊断报告插图' },
+    heroIllustration: { alt: '诊断报告' },
     isVerification: false,
     dateText: '',
     // 预计算字段（WXML 不支持复杂表达式）
@@ -284,8 +284,7 @@ Page({
     var report = this.data.report
     return {
       title: (report.studentName || '孩子') + '的学习诊断报告',
-      path: '/pages/report/report?id=' + this.data.reportId,
-      imageUrl: '/assets/images/app-logo-share.jpg'
+      path: '/pages/report/report?id=' + this.data.reportId
     }
   },
 

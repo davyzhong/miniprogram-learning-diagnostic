@@ -517,7 +517,7 @@ exports.main = async (event) => {
         : await createPaperCodes(paper.studentId, subject, paperDate);
 
       // 重建 verificationPack（追加模式后题目数变了，旧的分页信息已失效）
-      // 关键修复：按实际题目数量均匀分页（每页 ~10 题），而不是按原始 targets 分页。
+      // 关键修复：按实际题目数量均匀分页，和 A4 双栏学生页容量保持一致。
       let verificationPack = paper.verificationPack || null;
       if (type === 'verification') {
         // 1. 清除题目里残留的旧 pageCode/questionId
@@ -535,8 +535,8 @@ exports.main = async (event) => {
           return 0;  // 同 lpCode 保持原序（core 在前 transfer 在后）
         });
 
-        // 2. 按实际题数分页（每页最多 10 题，双栏 5 行）
-        const QUESTIONS_PER_PAGE = 10;
+        // 2. 按实际题数分页（每页最多 8 题，双栏 4 行）
+        const QUESTIONS_PER_PAGE = 8;
         const totalPages = Math.max(1, Math.ceil(cleanQuestions.length / QUESTIONS_PER_PAGE));
         const dateCode = formatDateCode(paperDate);
         const sequence = (paperCodes.paperCode.match(/-(\d+)$/)||[])[1] || '01';

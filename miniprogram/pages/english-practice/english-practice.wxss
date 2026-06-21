@@ -1,67 +1,101 @@
 .page {
   min-height: 100vh;
-  background: #f7fafc;
-  padding-bottom: 48rpx;
+  background: linear-gradient(180deg, #fff7ed 0%, #f5f8fc 34%, #eef4f8 100%);
+  padding: 28rpx 28rpx 56rpx;
+  box-sizing: border-box;
 }
 
-.hero {
-  background: #9c4f24;
-  color: #fff;
-  padding: 42rpx 28rpx 34rpx;
+.practice-shell {
   display: flex;
   flex-direction: column;
-  gap: 22rpx;
-  align-items: stretch;
+  gap: 24rpx;
 }
 
-.hero-copy { flex: 1; min-width: 0; }
-
-.hero-illustration {
-  width: 100%;
-  height: 390rpx;
-  border-radius: 18rpx;
-  flex-shrink: 0;
-  background: rgba(255, 255, 255, .15);
-  box-shadow: 0 8rpx 20rpx rgba(0, 0, 0, .14);
-  order: -1;
+.practice-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24rpx;
+  padding: 8rpx 2rpx 0;
 }
 
-.eyebrow,
-.subtitle {
-  display: block;
-  opacity: .86;
-  font-size: 23rpx;
-  line-height: 1.45;
+.practice-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  min-width: 0;
 }
 
-.title {
-  display: block;
-  font-size: 42rpx;
-  font-weight: 800;
-  margin: 8rpx 0;
+.practice-kicker {
+  color: #8a4b22;
+  font-size: 24rpx;
+  font-weight: 700;
 }
 
-.state-card,
-.dictation-wrap,
-.finish-card {
-  margin: 24rpx 28rpx 0;
+.practice-title {
+  color: #162033;
+  font-size: 46rpx;
+  font-weight: 850;
+  line-height: 1.14;
+}
+
+.progress-pill {
+  min-width: 112rpx;
+  padding: 14rpx 18rpx;
+  border-radius: 999rpx;
+  background: #fff;
+  border: 1rpx solid #f1d4bd;
+  box-shadow: 0 8rpx 24rpx rgba(130, 75, 33, .08);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.progress-now {
+  color: #9c4f24;
+  font-size: 34rpx;
+  font-weight: 850;
+}
+
+.progress-total {
+  color: #8aa0b8;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.progress-track {
+  height: 12rpx;
+  border-radius: 999rpx;
+  background: rgba(156, 79, 36, .13);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #d97706, #2f8f83);
+  transition: width .22s ease;
 }
 
 .state-card,
 .finish-card,
-.progress-card,
-.prompt-card,
-.voice-card,
-.result-card {
+.word-stage-card,
+.voice-dock,
+.result-sheet {
+  background: rgba(255, 255, 255, .96);
+  border: 1rpx solid rgba(203, 213, 225, .82);
   border-radius: 18rpx;
-  background: #fff;
-  box-shadow: 0 4rpx 18rpx rgba(15, 23, 42, .06);
+  box-shadow: 0 10rpx 28rpx rgba(15, 23, 42, .07);
+}
+
+.state-card,
+.finish-card {
+  margin-top: 24rpx;
+  padding: 32rpx;
 }
 
 .state-card {
-  padding: 28rpx;
   background: #fff7ed;
-  border: 1rpx solid #fed7aa;
+  border-color: #fed7aa;
 }
 
 .state-card.error {
@@ -73,126 +107,175 @@
 .finish-title,
 .result-title {
   display: block;
-  color: #25364a;
-  font-size: 30rpx;
-  font-weight: 750;
+  color: #1f2937;
+  font-size: 31rpx;
+  font-weight: 800;
 }
 
 .state-desc,
 .finish-desc,
 .result-desc,
 .voice-hint,
-.prompt-desc {
+.answer-hint {
   display: block;
   color: #64748b;
   font-size: 24rpx;
   line-height: 1.5;
-  margin-top: 8rpx;
+}
+
+.state-desc,
+.finish-desc,
+.result-desc,
+.voice-hint {
+  margin-top: 10rpx;
 }
 
 .retry-btn,
 .primary-btn {
-  margin-top: 20rpx;
+  margin-top: 22rpx;
   background: #9c4f24;
   color: #fff;
   border-radius: 14rpx;
 }
 
-.dictation-wrap {
+.word-stage-card {
+  min-height: 480rpx;
+  padding: 36rpx 34rpx;
   display: flex;
   flex-direction: column;
-  gap: 22rpx;
+  justify-content: center;
 }
 
-.progress-card {
-  padding: 22rpx 26rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.progress-label {
-  color: #64748b;
-  font-size: 24rpx;
-}
-
-.progress-value {
-  color: #9c4f24;
-  font-size: 30rpx;
-  font-weight: 800;
-}
-
-.prompt-card,
-.voice-card,
-.result-card,
-.finish-card {
-  padding: 30rpx;
-}
-
-.prompt-top {
+.prompt-tag-row {
   display: flex;
   align-items: center;
   gap: 12rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: 28rpx;
 }
 
-.prompt-pill,
-.retry-pill {
+.prompt-tag,
+.retry-tag {
   padding: 8rpx 16rpx;
   border-radius: 999rpx;
   font-size: 22rpx;
-  font-weight: 700;
+  font-weight: 800;
 }
 
-.prompt-pill {
+.prompt-tag {
   background: #fff7ed;
   color: #9c4f24;
 }
 
-.retry-pill {
+.retry-tag {
   background: #e0f2fe;
   color: #0369a1;
 }
 
-.prompt-title {
+.primary-prompt {
   display: block;
-  color: #1f2937;
+  color: #111827;
+  font-size: 58rpx;
+  font-weight: 850;
+  line-height: 1.22;
+  word-break: break-word;
+}
+
+.answer-instruction {
+  display: block;
+  margin-top: 28rpx;
+  color: #2f8f83;
   font-size: 34rpx;
-  font-weight: 800;
-  line-height: 1.35;
+  font-weight: 850;
 }
 
-.play-btn {
-  margin-top: 24rpx;
-  border: 2rpx solid #9c4f24;
-  background: #fff;
-  color: #9c4f24;
-  border-radius: 14rpx;
+.answer-hint {
+  margin-top: 12rpx;
 }
 
-.record-btn {
-  background: #c05621;
-  color: #fff;
-  border-radius: 18rpx;
-  font-size: 30rpx;
+.play-chip {
+  align-self: flex-start;
+  margin: 26rpx 0 0;
+  padding: 0 24rpx;
+  min-width: 0;
+  height: 62rpx;
+  line-height: 62rpx;
+  border-radius: 999rpx;
+  border: 1rpx solid #bfdbfe;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 24rpx;
   font-weight: 750;
 }
 
-.record-btn.recording {
-  background: #c2410c;
+.voice-dock {
+  padding: 30rpx 28rpx;
+  text-align: center;
 }
 
-.result-card {
+.mic-orb {
+  width: 260rpx;
+  min-width: 260rpx;
+  max-width: 260rpx;
+  height: 260rpx;
+  margin: 0 auto;
+  padding: 0;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 130rpx;
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 20rpx 36rpx rgba(37, 99, 235, .24);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14rpx;
+  font-size: 28rpx;
+  font-weight: 850;
+  line-height: 1.2;
+}
+
+.mic-orb.recording {
+  background: #c2410c;
+  box-shadow: 0 20rpx 36rpx rgba(194, 65, 12, .24);
+}
+
+.mic-orb.busy {
+  background: #64748b;
+  box-shadow: none;
+}
+
+.mic-dot {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 50%;
+  background: #fff;
+  opacity: .95;
+}
+
+.mic-orb.recording .mic-dot {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 12rpx;
+}
+
+.mic-label {
+  max-width: 184rpx;
+  text-align: center;
+}
+
+.result-sheet {
+  padding: 28rpx 30rpx;
   border-left: 8rpx solid #94a3b8;
 }
 
 .result-correct {
-  border-left-color: #2f855a;
-  background: #f0fff4;
+  border-left-color: #2f8f83;
+  background: #f0fdf4;
 }
 
 .result-incorrect {
-  border-left-color: #c05621;
+  border-left-color: #d97706;
   background: #fff7ed;
 }
 
@@ -201,12 +284,17 @@
   background: #f8fafc;
 }
 
-.answer-line {
+.answer-line,
+.result-hint {
   display: block;
-  color: #1f2937;
-  font-size: 26rpx;
-  font-weight: 700;
   margin-top: 14rpx;
+  color: #334155;
+  font-size: 24rpx;
+  font-weight: 750;
+}
+
+.result-hint {
+  color: #9c4f24;
 }
 
 .finish-card {
@@ -215,13 +303,13 @@
 
 .finish-mark {
   display: block;
-  width: 72rpx;
-  height: 72rpx;
-  line-height: 72rpx;
+  width: 78rpx;
+  height: 78rpx;
+  line-height: 78rpx;
   margin: 0 auto 18rpx;
-  border-radius: 22rpx;
+  border-radius: 24rpx;
   background: #dcfce7;
   color: #15803d;
-  font-size: 42rpx;
-  font-weight: 800;
+  font-size: 30rpx;
+  font-weight: 850;
 }

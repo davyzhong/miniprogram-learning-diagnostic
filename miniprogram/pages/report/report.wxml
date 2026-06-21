@@ -12,7 +12,6 @@
         <text class="report-summary" wx:if="{{reportSummaryText}}">{{reportSummaryText}}</text>
         <view class="quality-chip quality-chip-{{qualityClass}}" wx:if="{{hasQuality}}">{{qualityLabel}}</view>
       </view>
-      <image class="report-hero-illustration" src="{{heroIllustration.imageSrc}}" mode="aspectFill"></image>
     </view>
   </view>
 

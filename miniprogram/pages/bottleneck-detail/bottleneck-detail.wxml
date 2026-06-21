@@ -13,7 +13,6 @@
           <text class="summary" wx:if="{{bottleneck.parentDescription}}">{{bottleneck.parentDescription}}</text>
           <text class="summary">{{bottleneck.evidenceText}}</text>
         </view>
-        <image class="hero-illustration" src="/assets/images/learning-resource-hero.jpg" mode="aspectFill"></image>
       </view>
       <view class="chip-row">
         <text class="chip priority-{{bottleneck.priorityClass}}">{{bottleneck.priorityText}}</text>

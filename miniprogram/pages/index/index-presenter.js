@@ -561,7 +561,6 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
   const reportPanel = buildReportPanel(primaryReport, student)
   const personalActionQueue = buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowledgeMapCard, recentRecords)
   const personalHero = {
-    imageSrc: '/assets/images/student-profile-hero.png',
     title: headline,
     summary: compactSummary(summary, 88),
     actionText: primaryActionCard.actionText,

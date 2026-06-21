@@ -6,7 +6,6 @@
       <text class="tip-title">{{pageTitle}}</text>
       <text class="tip-desc">{{pageDesc}}</text>
     </view>
-    <image class="tip-illustration" src="/assets/images/upload-photo-hero.jpg" mode="aspectFill"></image>
   </view>
 
   <view class="paper-context" wx:if="{{paperId}}">

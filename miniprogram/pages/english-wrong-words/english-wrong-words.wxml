@@ -5,7 +5,6 @@
       <text class="title">错词本</text>
       <text class="subtitle">把不熟、写错和到期复测的单词集中处理。</text>
     </view>
-    <image class="hero-illustration" src="/assets/images/english-wrong-words-hero.jpg" mode="aspectFill"></image>
   </view>
 
   <view class="state-card" wx:if="{{loading}}">

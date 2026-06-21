@@ -197,32 +197,17 @@ test('every WXML event handler exists on its page controller', () => {
   }
 })
 
-test('brand illustration and logo assets exist', () => {
-  const assets = [
-    'miniprogram/assets/images/math-diagnostic-guide.jpg',
-    'miniprogram/assets/images/student-profile-hero.png',
-    'miniprogram/assets/images/subject-math-hero.jpg',
-    'miniprogram/assets/images/subject-chinese-hero.jpg',
-    'miniprogram/assets/images/subject-english-hero.jpg',
-    'miniprogram/assets/images/diagnostic-report-hero.jpg',
-    'miniprogram/assets/images/verification-report-hero.jpg',
-    'miniprogram/assets/images/verification-paper-hero.jpg',
-    'miniprogram/assets/images/knowledge-map-hero.jpg',
-    'miniprogram/assets/images/learning-resource-hero.jpg',
-    'miniprogram/assets/images/upload-photo-hero.jpg',
-    'miniprogram/assets/images/learning-history-hero.jpg',
-    'miniprogram/assets/images/english-practice-hero.jpg',
-    'miniprogram/assets/images/english-dictation-hero.jpg',
-    'miniprogram/assets/images/english-wrong-words-hero.jpg',
-    'miniprogram/assets/images/app-logo-share.jpg',
-    'brand-assets/app-logo.png'
-  ]
+test('decorative illustration assets stay out of the miniprogram package', () => {
+  const packagedAssetDir = path.join(root, 'miniprogram/assets/images')
+  const packagedImageFiles = fs.existsSync(packagedAssetDir)
+    ? fs.readdirSync(packagedAssetDir).filter(file => /\.(?:png|jpe?g|webp|gif|svg)$/i.test(file))
+    : []
 
-  for (const asset of assets) {
-    const absolutePath = path.join(root, asset)
-    assert.equal(fs.existsSync(absolutePath), true, `${asset} is missing`)
-    assert.ok(fs.statSync(absolutePath).size > 0, `${asset} is empty`)
-  }
+  assert.deepEqual(packagedImageFiles, [], 'miniprogram/assets/images should not contain packaged illustrations')
+
+  const brandLogo = path.join(root, 'brand-assets/app-logo.png')
+  assert.equal(fs.existsSync(brandLogo), true, 'brand-assets/app-logo.png is missing')
+  assert.ok(fs.statSync(brandLogo).size > 0, 'brand-assets/app-logo.png is empty')
 })
 
 test('cloud functions do not reference ../_shared (CloudBase only packages per-function)', () => {

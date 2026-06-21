@@ -503,7 +503,6 @@ function buildFamilyWorkbenchHero(cards = []) {
     : '当前没有待验证卡点'
 
   return {
-    imageSrc: '/assets/images/math-diagnostic-guide.jpg',
     title: totalTodos > 0
       ? `今天先看${focusName}的学习行动`
       : '今天的家庭学习状态很清爽',
