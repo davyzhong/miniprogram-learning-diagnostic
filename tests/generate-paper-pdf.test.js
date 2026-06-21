@@ -152,6 +152,8 @@ test('verification PDF returns student and answer page metadata with the buffer'
 test('verification PDF prints traceable page codes on student pages', async () => {
   const { PdfMock, operations } = createRecordingPdfKit()
   const { generatePDF } = require('../cloudfunctions/generatePaper/pdf-renderer')
+  // 两道短题放在同一物理页（流式排版后，pageCode 不再强制换页）。
+  // pageCode 仍作为语义标识记录到 metadata，供学生完成进度追踪使用。
   const result = await generatePDF({
     questions: [
       {
@@ -185,23 +187,68 @@ test('verification PDF prints traceable page codes on student pages', async () =
   })
 
   const texts = operations.filter(item => item[0] === 'text').map(item => item[1])
-  // pageCode 已移到标题栏（不再在页尾显示"页面编号：xxx"）
+  // 首页标题栏应含第一题所在 pageCode
   assert.ok(texts.some(t => t.includes('MATH-V-20260616-01-P01')), '标题栏应含 pageCode P01')
-  assert.ok(texts.some(t => t.includes('MATH-V-20260616-01-P02')), '标题栏应含 pageCode P02')
-  assert.deepEqual(result.studentPageCodes, [
-    'MATH-V-20260616-01-P01',
-    'MATH-V-20260616-01-P02'
-  ])
-  assert.deepEqual(result.studentPageMetadata, [
-    {
-      pageNumber: 1,
-      pageCode: 'MATH-V-20260616-01-P01',
-      questionIds: ['MATH-V-20260616-01-P01-Q01']
-    },
-    {
-      pageNumber: 2,
-      pageCode: 'MATH-V-20260616-01-P02',
-      questionIds: ['MATH-V-20260616-01-P02-Q01']
+  // 流式排版：两道短题共占一张物理页，pageCode P02 的题目也落在同一页上（不再强制换页）。
+  // 两道题的 questionId 都应被记录到学生页 metadata，保证进度追踪不丢题。
+  const allQuestionIds = result.studentPageMetadata.flatMap(page => page.questionIds)
+  assert.ok(allQuestionIds.includes('MATH-V-20260616-01-P01-Q01'), 'metadata 应记录 P01 的题目')
+  assert.ok(allQuestionIds.includes('MATH-V-20260616-01-P02-Q01'), 'metadata 应记录 P02 的题目')
+  // 首页 pageCode 应为 P01
+  assert.equal(result.studentPageCodes[0], 'MATH-V-20260616-01-P01')
+})
+
+test('verification PDF fills each page to capacity instead of breaking per pageCode (regression for blank pages)', async () => {
+  const { PdfMock } = createRecordingPdfKit()
+  const { generatePDF } = require('../cloudfunctions/generatePaper/pdf-renderer')
+  // 复现 weight 降序分页 bug：高权重卡点挤爆前几页、低权重卡点饿死后几页。
+  // 这里构造 40 个卡点 × 置信度分层题量（高 3 / 中 2 / 低 1）= 75 题，
+  // 每 4 个卡点分配一个 pageCode（共 10 个 pageCode）。
+  // 旧行为：前几页 12 题溢出、后几页仅 4 题（大段空白）。
+  // 新行为：流式排版，每页填满到容量上限（约 8-14 题），无稀疏空白页。
+  const questions = []
+  let qIdx = 0
+  for (let t = 1; t <= 40; t++) {
+    const weight = t <= 10 ? 85 : t <= 25 ? 60 : 30
+    const count = weight >= 75 ? 3 : weight >= 45 ? 2 : 1
+    const pageCode = `MATH-V-20260621-01-P${String(Math.ceil(t / 4)).padStart(2, '0')}`
+    for (let k = 0; k < count; k++) {
+      qIdx++
+      questions.push({
+        index: qIdx,
+        // questionId 用全局 qIdx 保证唯一（同 pageCode 下多个卡点各自出题，避免 Q01 撞车）
+        questionId: `${pageCode}-Q${String(qIdx).padStart(3, '0')}`,
+        pageCode,
+        content: `第${qIdx}题：计算并写出过程。`,
+        answer: `答案${qIdx}`,
+        lpCode: `BN-DEMO-${t}`,
+        lpName: `演示卡点${t}`
+      })
     }
-  ])
+  }
+  const pageCodes = Array.from(new Set(questions.map(q => q.pageCode))).sort()
+
+  const result = await generatePDF({ questions }, 'math', 'verification', {
+    pdfkit: PdfMock,
+    fontPath: path.resolve(__dirname, '../cloudfunctions/generatePaper/NotoSansCJKsc-Regular.otf'),
+    verificationPack: { pages: pageCodes.map((pageCode, i) => ({ pageCode, pageIndex: i + 1 })) }
+  })
+
+  // 所有题目 questionId 都应被记录（无丢失）
+  const allQuestionIds = result.studentPageMetadata.flatMap(page => page.questionIds)
+  assert.equal(allQuestionIds.length, questions.length, '所有题目都应被记录到 metadata')
+  assert.equal(new Set(allQuestionIds).size, questions.length, 'questionId 不应重复')
+
+  // 核心回归断言：每页都应填满到合理容量，不应出现"仅 4-5 题"的稀疏空白页。
+  // 容量下限设为 6（A4 双栏 4 行演算区至少容 8 题，留余量给标签）。
+  const perPageCounts = result.studentPageMetadata.map(page => page.questionIds.length)
+  const minPerPage = Math.min(...perPageCounts)
+  // 最后一页可能是余数页（题少），单独豁免；其余页都应 ≥ 6。
+  const nonLastPages = perPageCounts.slice(0, -1)
+  const minNonLast = nonLastPages.length ? Math.min(...nonLastPages) : minPerPage
+  assert.ok(minNonLast >= 6,
+    `非末页每页至少 6 题（实际最小 ${minNonLast}），不应出现稀疏空白页。分布：${perPageCounts.join(', ')}`)
+  // 物理页数应明显少于 pageCode 数（10 个 pageCode → 6-7 页，而非 10 页）
+  assert.ok(result.studentPages < pageCodes.length,
+    `流式排版后页数（${result.studentPages}）应少于 pageCode 数（${pageCodes.length}）`)
 })
