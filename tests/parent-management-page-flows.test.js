@@ -2,6 +2,20 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 
+async function flushAsync(turns = 4) {
+  for (let i = 0; i < turns; i += 1) {
+    await Promise.resolve()
+  }
+}
+
+async function waitForPageLoad(page) {
+  if (page._loadPromise) {
+    await page._loadPromise
+    return
+  }
+  await flushAsync()
+}
+
 test('owner sees invite button and can create an invite', async () => {
   let createdFor = ''
   let createdRelation = ''
@@ -22,7 +36,8 @@ test('owner sees invite button and can create an invite', async () => {
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({ studentId: 'student-1' })
+  page.onLoad({ studentId: 'student-1' })
+  await waitForPageLoad(page)
   assert.equal(page.data.canInvite, true)
   assert.equal(page.data.members.length, 1)
 
@@ -84,7 +99,8 @@ test('viewer can see members but does not see invite action', async () => {
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({ studentId: 'student-1' })
+  page.onLoad({ studentId: 'student-1' })
+  await waitForPageLoad(page)
   assert.equal(page.data.role, 'viewer')
   assert.equal(page.data.canInvite, false)
   assert.equal(page.data.members.length, 2)
@@ -109,7 +125,8 @@ test('valid invite renders child summary and accepted invite navigates home', as
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({ inviteId: 'invite-1', token: 'abc' })
+  page.onLoad({ inviteId: 'invite-1', token: 'abc' })
+  await waitForPageLoad(page)
   assert.equal(page.data.status, 'ready')
   assert.equal(page.data.student.name, '钟青羽')
   assert.equal(page.data.displayName, '钟青羽妈妈')
@@ -138,7 +155,8 @@ test('invite code lookup renders child summary and joins by code', async () => {
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({})
+  page.onLoad({})
+  await flushAsync()
   assert.equal(page.data.status, 'code')
   page.onInviteCodeInput({ detail: { value: 'qy8392' } })
   await page.onLookupCode()
@@ -159,7 +177,8 @@ test('invalid invite shows error state', async () => {
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({ inviteId: 'bad', token: 'bad' })
+  page.onLoad({ inviteId: 'bad', token: 'bad' })
+  await waitForPageLoad(page)
   assert.equal(page.data.status, 'error')
   assert.equal(page.data.error, '邀请不存在或已失效')
 })

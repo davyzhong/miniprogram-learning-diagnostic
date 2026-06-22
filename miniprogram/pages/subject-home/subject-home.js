@@ -296,11 +296,14 @@ Page({
     })
   },
 
-  async navigateToVerification(targetCode = '') {
+  navigateToVerification(targetCode = '') {
     if (!this.data.canWriteActions) return
     const { studentId, subject } = this.data
-    // 统一入口：状态分流 + 自动轮询 + 兜底重新生成
-    await navigateToVerificationPaper(cloud, { studentId, subject, reportId: '' })
+    // 统一入口：状态分流 + 自动轮询。不要把 Promise 返回给小程序事件系统。
+    navigateToVerificationPaper(cloud, { studentId, subject, reportId: '' })
+      .catch(error => {
+        console.error('打开验证卷失败', error)
+      })
   },
 
   navigateToBottleneckDetail(lpCode = '', bottleneckId = '', viewId = '') {
@@ -337,7 +340,7 @@ Page({
 
   onPrimaryAction() {
     const actionType = this.data.primaryTask && this.data.primaryTask.actionType
-    return this.navigateByAction(actionType || (this.data.isFirstUse ? 'diagnosis' : 'verification'))
+    this.navigateByAction(actionType || (this.data.isFirstUse ? 'diagnosis' : 'verification'))
   },
 
   onTaskTap(e) {
@@ -382,7 +385,8 @@ Page({
       return
     }
     if (actionType === 'verification') {
-      return this.navigateToVerification(payload.targetCode || '')
+      this.navigateToVerification(payload.targetCode || '')
+      return
     }
     if (actionType === 'defaultPaper') {
       this.onDefaultPaperTap()

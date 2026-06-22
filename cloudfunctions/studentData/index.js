@@ -671,7 +671,8 @@ async function getActiveVerificationPaper(openId, studentId, subject, reportId) 
     papers.push(...(fallbackRes.data || []));
   }
 
-  const ready = papers.find(p => p.generationStatus === 'ready' || (!p.generationStatus && p.pdfFileId));
+  const hasPdfFile = paper => !!(paper && String(paper.pdfFileId || '').trim());
+  const ready = papers.find(p => (p.generationStatus === 'ready' || !p.generationStatus) && hasPdfFile(p));
   if (ready) return withAccess(access, { paper: ready, status: 'ready' });
 
   const generating = papers.find(p => p.generationStatus === 'generating' || p.generationStatus === 'appending');
@@ -679,6 +680,17 @@ async function getActiveVerificationPaper(openId, studentId, subject, reportId) 
 
   const failed = papers.find(p => p.generationStatus === 'failed');
   if (failed) return withAccess(access, { paper: failed, status: 'failed' });
+
+  const readyWithoutPdf = papers.find(p => p.generationStatus === 'ready' && !hasPdfFile(p));
+  if (readyWithoutPdf) {
+    return withAccess(access, {
+      paper: {
+        ...readyWithoutPdf,
+        generationError: readyWithoutPdf.generationError || 'PDF 文件未生成',
+      },
+      status: 'failed',
+    });
+  }
 
   return withAccess(access, { paper: null, status: 'none' });
 }

@@ -35,9 +35,11 @@ Page({
     editingRelationIndex: RELATION_OPTIONS.length - 1,
   },
 
-  async onLoad(options = {}) {
+  onLoad(options = {}) {
     this.setData({ studentId: options.studentId || '' })
-    await this.loadMembers()
+    this._loadPromise = this.loadMembers().catch(error => {
+      console.error('加载家长管理失败', error)
+    })
   },
 
   async loadMembers() {

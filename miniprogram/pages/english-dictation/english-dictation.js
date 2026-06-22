@@ -51,14 +51,16 @@ Page({
     uploadProgress: ''
   },
 
-  async onLoad(options = {}) {
+  onLoad(options = {}) {
     this.setData({
       studentId: options.studentId || '',
       studentName: decodeURIComponent(options.studentName || ''),
       grade: options.grade || ''
     })
     this.initVoice()
-    await this.generateSession()
+    this._loadPromise = this.generateSession().catch(error => {
+      console.error('加载英语听写失败', error)
+    })
   },
 
   initVoice() {

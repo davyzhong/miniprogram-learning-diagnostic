@@ -7,6 +7,34 @@ const util = require('../miniprogram/utils/util')
 
 const ROOT = path.resolve(__dirname, '..')
 
+function isThenable(value) {
+  return Boolean(value && typeof value.then === 'function')
+}
+
+async function loadPageAndWait(page, options = {}) {
+  const result = page.onLoad(options)
+  if (isThenable(result)) {
+    await result
+  }
+  if (page._loadPromise) {
+    await page._loadPromise
+  }
+}
+
+async function flushAsync(turns = 4) {
+  for (let i = 0; i < turns; i += 1) {
+    await Promise.resolve()
+  }
+}
+
+async function waitForPageLoad(page) {
+  if (page && page._loadPromise) {
+    await page._loadPromise
+    return
+  }
+  await flushAsync()
+}
+
 
 
 
@@ -76,6 +104,53 @@ test('empty index stays in add-first-child mode', async () => {
   assert.equal(page.data.hasStudents, false)
   assert.equal(page.data.home, null)
   assert.equal(page.data.childCards.length, 0)
+})
+
+test('page lifecycle handlers do not return promises to the mini program runtime', () => {
+  const cloud = {
+    getAccessibleStudents: async () => [],
+    getStudents: async () => [],
+    getStudentDashboard: async () => ({
+      student: { _id: 'student-1', name: '钟青羽' },
+      subjectProfiles: [],
+      recentReports: [],
+      recentPapers: []
+    })
+  }
+  const wx = createWxMock()
+  const { page: indexPage } = loadPage('miniprogram/pages/index/index.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+  const { page: profilePage } = loadPage('miniprogram/pages/student-profile/student-profile.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  assert.equal(isThenable(indexPage.onShow()), false)
+  assert.equal(isThenable(profilePage.onLoad({ studentId: 'student-1' })), false)
+})
+
+test('page onLoad handlers stay synchronous and start async work internally', () => {
+  const pageFiles = fs.readdirSync(path.join(ROOT, 'miniprogram/pages'), { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => path.join(ROOT, 'miniprogram/pages', entry.name, `${entry.name}.js`))
+    .filter(file => fs.existsSync(file))
+
+  for (const file of pageFiles) {
+    const source = fs.readFileSync(file, 'utf8')
+    assert.doesNotMatch(
+      source,
+      /async\s+onLoad\s*\(/,
+      `${path.relative(ROOT, file)} should not expose an async onLoad lifecycle`
+    )
+  }
 })
 
 test('multi-child index shows only the family workbench and routes child cards to profile pages', async () => {
@@ -260,7 +335,8 @@ test('learning profile home loads the active student summary', async () => {
 
   page.onViewAllBottlenecks()
   page.onBottleneckTap({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
-  await page.onBottleneckAction({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
+  page.onBottleneckAction({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
+  await waitForPageLoad(page)
   const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
   assert.match(urls[0], /pages\/bottleneck-center\/bottleneck-center/)
   assert.match(urls[1], /pages\/bottleneck-detail\/bottleneck-detail/)
@@ -402,7 +478,8 @@ test('learning profile home uses shared access and lets co-parents operate learn
   assert.equal(page.data.permissions.canManageParents, false)
   assert.equal(page.data.home.nextAction.primaryText, '下载验证卷')
 
-  await page.onPrimaryAction()
+  page.onPrimaryAction()
+  await waitForPageLoad(page)
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paper-preview\/paper-preview\?paperId=paper-1/)
 })
 
@@ -478,8 +555,8 @@ test('index onShow reuses a fresh dashboard snapshot instead of refetching immed
     }
   })
 
-  await page.onShow()
-  await page.onShow()
+  await page.loadStudents()
+  await page.loadStudents()
 
   assert.equal(accessibleCalls, 1)
   assert.equal(dashboardCalls, 1)
@@ -519,7 +596,8 @@ test('student profile page loads one child and keeps profile actions clickable',
     }
   })
 
-  await page.onLoad({ studentId: 'student-1' })
+  page.setData({ studentId: 'student-1' })
+  await page.loadProfile()
 
   assert.equal(page.data.home.studentName, '钟青羽')
   assert.equal(page.data.home.nextAction.primaryText, '下载验证卷')
@@ -588,7 +666,7 @@ test('bottleneck center loads dashboard bottlenecks and filters by status', asyn
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({ studentId: 'student-1', studentName: encodeURIComponent('钟青羽') })
+  await loadPageAndWait(page, { studentId: 'student-1', studentName: encodeURIComponent('钟青羽') })
 
   assert.deepEqual(JSON.parse(JSON.stringify(dashboardArgs)), ['student-1', { includeRecent: false }])
   assert.equal(page.data.stats.totalCount, 2)
@@ -701,7 +779,7 @@ test('bottleneck detail builds a focused evidence workbench without repetitive r
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({
+  await loadPageAndWait(page, {
     studentId: 'student-1',
     subject: 'math',
     lpCode: 'LP-001',
@@ -777,7 +855,7 @@ test('bottleneck detail opens math fine-grained candidate by bottleneck id', asy
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({
+  await loadPageAndWait(page, {
     studentId: 'student-1',
     subject: 'math',
     lpCode: 'LP-001',
@@ -1091,7 +1169,8 @@ test('subject home task and primary actions open the focused workflow', async ()
   })
 
   page.onTaskTap({ currentTarget: { dataset: { code: 'LP-001' } } })
-  await page.onPrimaryAction()
+  page.onPrimaryAction()
+  await waitForPageLoad(page)
 
   const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
   assert.match(urls[0], /pages\/bottleneck-detail\/bottleneck-detail/)
@@ -1123,11 +1202,12 @@ test('English practice page generates a 20 word familiarity session without patt
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({
+  page.onLoad({
     studentId: 'student-1',
     studentName: encodeURIComponent('钟青羽'),
     grade: '6'
   })
+  await waitForPageLoad(page)
 
   assert.equal(generated[0].studentId, 'student-1')
   assert.equal(generated[0].wordLimit, 20)
@@ -1230,11 +1310,12 @@ test('English practice page explains when no vocabulary words are available', as
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({
+  page.onLoad({
     studentId: 'student-1',
     studentName: encodeURIComponent('钟青羽'),
     grade: '6'
   })
+  await waitForPageLoad(page)
 
   assert.equal(page.data.finished, false)
   assert.match(page.data.error, /还没有可练习单词/)
@@ -1268,11 +1349,12 @@ test('English practice page submits AI recognition attempts and requeues wrong w
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({
+  page.onLoad({
     studentId: 'student-1',
     studentName: encodeURIComponent('钟青羽'),
     grade: '6'
   })
+  await waitForPageLoad(page)
   await page.onRecognitionResult({ recognizedText: 'siense', audioFileID: 'cloud://audio-1' })
 
   assert.equal(submitted[0].targetWord, 'science')
@@ -1326,7 +1408,8 @@ test('English practice page cleans voice and prompt audio resources', async () =
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({ studentId: 'student-1' })
+  page.onLoad({ studentId: 'student-1' })
+  await waitForPageLoad(page)
   page.startRecord()
   page.onPlayPromptTap()
   page.onUnload()
@@ -1372,7 +1455,8 @@ test('English practice page gives immediate feedback when stopping recording', a
     }
   })
 
-  await page.onLoad({ studentId: 'student-1' })
+  page.onLoad({ studentId: 'student-1' })
+  await waitForPageLoad(page)
   page.onRecordTap()
   assert.equal(page.data.recording, true)
   assert.equal(page.data.recordButtonText, '正在听你说...')
@@ -1420,7 +1504,8 @@ test('English practice page recovers when voice recognition stop callback never 
     }
   })
 
-  await page.onLoad({ studentId: 'student-1' })
+  page.onLoad({ studentId: 'student-1' })
+  await waitForPageLoad(page)
   page.onRecordTap()
   page.onRecordTap()
 
@@ -1466,7 +1551,8 @@ test('English practice page switches to judgment state after speech text is retu
     }
   })
 
-  await page.onLoad({ studentId: 'student-1' })
+  page.onLoad({ studentId: 'student-1' })
+  await waitForPageLoad(page)
   page.onRecordTap()
   page.onRecordTap()
   manager.stopHandler({ result: 'science', tempFilePath: '/tmp/audio.mp3' })
@@ -1527,11 +1613,12 @@ test('English dictation page creates a paper session and uploads answer photos',
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({
+  page.onLoad({
     studentId: 'student-1',
     studentName: encodeURIComponent('钟青羽'),
     grade: '6'
   })
+  await waitForPageLoad(page)
   page.onNextTap()
   await page.onChoosePhotoTap()
 
@@ -1576,7 +1663,8 @@ test('English dictation page starts in ready phase with a 20-word preview list',
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({ studentId: 'student-1', studentName: encodeURIComponent('钟青羽'), grade: '6' })
+  page.onLoad({ studentId: 'student-1', studentName: encodeURIComponent('钟青羽'), grade: '6' })
+  await waitForPageLoad(page)
 
   assert.equal(page.data.dictationPhase, 'ready')
   assert.equal(page.data.playbackState, 'idle')
@@ -1623,7 +1711,8 @@ test('English dictation page auto-plays after start and advances on OK style com
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({ studentId: 'student-1' })
+  page.onLoad({ studentId: 'student-1' })
+  await waitForPageLoad(page)
   page.onStartTap()
 
   assert.equal(page.data.dictationPhase, 'running')
@@ -1679,7 +1768,8 @@ test('English dictation page supports optional voice next command and cleans res
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({ studentId: 'student-1' })
+  page.onLoad({ studentId: 'student-1' })
+  await waitForPageLoad(page)
   page.onPlayPromptTap()
   page.onStartTap()
   page.onVoiceNextTap()
@@ -1716,11 +1806,12 @@ test('English wrong words page summarizes weak vocabulary and opens practice flo
     modules: { '../../utils/cloud': cloud }
   })
 
-  await page.onLoad({
+  page.onLoad({
     studentId: 'student-1',
     studentName: encodeURIComponent('钟青羽'),
     grade: '6'
   })
+  await waitForPageLoad(page)
 
   assert.equal(page.data.studentName, '钟青羽')
   assert.equal(page.data.summaryCards.find(item => item.key === 'weak').value, 8)
@@ -2355,6 +2446,40 @@ test('paper preview allows multiple downloads (user may lose the file)', async (
   await page.onDownload()
   assert.equal(downloadCount, 2, '第二次下载应成功，不再被阻止')
   assert.equal(page.data.downloading, false)
+})
+
+test('paper preview regenerates a missing PDF before downloading a saved paper', async () => {
+  let regeneratePayload = null
+  let downloadedFileId = ''
+  const wx = createWxMock({
+    cloud: {
+      downloadFile: async payload => {
+        downloadedFileId = payload.fileID
+        return { tempFilePath: '/tmp/regenerated-paper.pdf' }
+      }
+    }
+  })
+  const cloud = {
+    callGeneratePaper: async payload => {
+      regeneratePayload = payload
+      return { success: true, pdfFileId: 'cloud://regenerated-paper.pdf' }
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/paper-preview/paper-preview.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+  page.setData({ mode: 'paper', paperId: 'paper-1', pdfFileId: '' })
+
+  await page.onDownload()
+
+  assert.equal(regeneratePayload._regeneratePdf, true)
+  assert.equal(regeneratePayload.paperId, 'paper-1')
+  assert.equal(page.data.pdfFileId, 'cloud://regenerated-paper.pdf')
+  assert.equal(page.data.pdfReady, true)
+  assert.equal(page.data.pdfDownloaded, true)
+  assert.equal(downloadedFileId, 'cloud://regenerated-paper.pdf')
+  assert.equal(wx.calls.find(call => call.name === 'openDocument').payload.filePath, '/tmp/regenerated-paper.pdf')
 })
 
 test('report passes its subject name into verification paper generation', async () => {

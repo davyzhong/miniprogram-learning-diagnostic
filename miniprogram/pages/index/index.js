@@ -46,7 +46,9 @@ Page({
 
   onShow() {
     this._cloud = cloud
-    return this.loadStudents()
+    this.loadStudents().catch(error => {
+      console.error('首页加载失败', error)
+    })
   },
 
   onKnowledgeMapTap() {

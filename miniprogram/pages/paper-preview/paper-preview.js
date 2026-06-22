@@ -142,14 +142,37 @@ Page({
 
   // 下载 PDF
   async onDownload() {
-    const { mode, pdfFileId, fileId } = this.data
-    const cloudFileId = mode === 'paper' ? pdfFileId : fileId
+    const { mode, pdfFileId, fileId, paperId } = this.data
+    let cloudFileId = mode === 'paper' ? pdfFileId : fileId
+
+    if (this.data.downloading) return
+
+    if (!cloudFileId && mode === 'paper' && paperId && typeof cloud.callGeneratePaper === 'function') {
+      this.setData({ downloading: true })
+      wx.showLoading({ title: '生成 PDF...' })
+      try {
+        const result = await cloud.callGeneratePaper({ _regeneratePdf: true, paperId })
+        if (!result || !result.pdfFileId) {
+          throw new Error((result && result.error) || 'PDF 未生成')
+        }
+        cloudFileId = result.pdfFileId
+        this.setData({
+          pdfFileId: cloudFileId,
+          pdfReady: true
+        })
+      } catch (err) {
+        console.error('重新生成 PDF 失败', err)
+        wx.hideLoading()
+        wx.showToast({ title: 'PDF 生成失败', icon: 'none' })
+        this.setData({ downloading: false })
+        return
+      }
+    }
 
     if (!cloudFileId) {
       wx.showToast({ title: 'PDF 未生成', icon: 'none' })
       return
     }
-    if (this.data.downloading) return
 
     // 不再阻止重复下载：用户可能找不到文件需要重新下载
 

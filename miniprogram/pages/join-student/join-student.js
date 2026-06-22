@@ -19,7 +19,7 @@ Page({
     lookingUp: false,
   },
 
-  async onLoad(options = {}) {
+  onLoad(options = {}) {
     const inviteId = options.inviteId || ''
     const token = options.token || ''
     if (!inviteId || !token) {
@@ -27,7 +27,9 @@ Page({
       return
     }
     this.setData({ mode: 'link', inviteId, token })
-    await this.loadInvite()
+    this._loadPromise = this.loadInvite().catch(error => {
+      console.error('加载邀请信息失败', error)
+    })
   },
 
   async loadInvite() {

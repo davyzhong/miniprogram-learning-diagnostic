@@ -15,6 +15,30 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const { loadPage } = require('./helpers/page-harness')
 
+async function flushAsync(turns = 4) {
+  for (let i = 0; i < turns; i += 1) {
+    await Promise.resolve()
+  }
+}
+
+async function loadPageAndWait(page, options = {}) {
+  const result = page.onLoad(options)
+  if (result && typeof result.then === 'function') {
+    await result
+  }
+  if (page._loadPromise) {
+    await page._loadPromise
+  }
+}
+
+async function waitForPageLoad(page) {
+  if (page._loadPromise) {
+    await page._loadPromise
+    return
+  }
+  await flushAsync()
+}
+
 function buildCloudMock(generatePackResult) {
   return {
     getSubjectProfile: async () => ({
@@ -65,7 +89,8 @@ test('knowledge-map 点击卡点直跳 learning-resource（不经过 bottleneck-
   const { page, wx } = loadKnowledgeMapPage(cloudMock)
 
   // 模拟 onLoad 设置 studentId
-  await page.onLoad({ studentId: 'student-1', studentName: '钟青羽', subject: 'math' })
+  page.onLoad({ studentId: 'student-1', studentName: '钟青羽', subject: 'math' })
+  await waitForPageLoad(page)
 
   // 构造 dataset 模拟 wxml 传过来的数据
   const fakeEvent = {
@@ -100,7 +125,8 @@ test('knowledge-map.onBottleneckTap 把 bottleneckId 和 nodeId 透传给云函�
     }
   }
   const { page, wx } = loadKnowledgeMapPage(cloudMock)
-  await page.onLoad({ studentId: 's1', subject: 'math' })
+  page.onLoad({ studentId: 's1', subject: 'math' })
+  await waitForPageLoad(page)
 
   await page.onBottleneckTap({
     currentTarget: {
@@ -124,7 +150,8 @@ test('knowledge-map.onBottleneckTap 失败时显示 toast 而不崩溃', async (
     generateLearningResourcePack: async () => { throw new Error('云函数挂了') }
   }
   const { page, wx } = loadKnowledgeMapPage(cloudMock)
-  await page.onLoad({ studentId: 's1', subject: 'math' })
+  page.onLoad({ studentId: 's1', subject: 'math' })
+  await waitForPageLoad(page)
 
   // 不应抛错
   await page.onBottleneckTap({
@@ -146,7 +173,8 @@ test('knowledge-map.onBottleneckTap 失败时显示 toast 而不崩溃', async (
 test('knowledge-map.onUploadTap 跳 upload 页（带 studentId 和 subject）', async () => {
   const cloudMock = { getSubjectProfile: async () => ({}), generateLearningResourcePack: async () => ({ success: false }) }
   const { page, wx } = loadKnowledgeMapPage(cloudMock)
-  await page.onLoad({ studentId: 's1', studentName: '钟青羽', subject: 'math' })
+  page.onLoad({ studentId: 's1', studentName: '钟青羽', subject: 'math' })
+  await waitForPageLoad(page)
 
   await page.onUploadTap()
 
@@ -204,7 +232,8 @@ test('knowledge-map.onBottleneckTap 防重复点击（第二次点击直接 retu
     }
   }
   const { page } = loadKnowledgeMapPage(cloudMock)
-  await page.onLoad({ studentId: 's1', subject: 'math' })
+  page.onLoad({ studentId: 's1', subject: 'math' })
+  await waitForPageLoad(page)
 
   const fakeEvent = {
     currentTarget: { dataset: { lpCode: 'LP-X', lpName: 'X', bottleneckId: 'BN-X', nodeId: 'N-X' } }
@@ -244,7 +273,7 @@ test('learning-resource 练习题答案默认折叠（revealed=false）', async 
       questions: [{ questionId: 'P01', question: '2.4×1.5=', answer: '3.6', explanation: '关键' }]
     }]
   })
-  await page.onLoad({ packId: 'pack-1' })
+  await loadPageAndWait(page, { packId: 'pack-1' })
   // onLoad 不 await loadPack，需要等一个微任务让 async loadPack 完成
   await new Promise(r => setTimeout(r, 10))
   assert.ok(page.data.view, 'view 必须加载完成')
@@ -260,7 +289,7 @@ test('learning-resource onPracticeToggle 点击后展开答案（revealed=true�
       questions: [{ questionId: 'P01', question: '2.4×1.5=', answer: '3.6', explanation: '关键' }]
     }]
   })
-  await page.onLoad({ packId: 'pack-1' })
+  await loadPageAndWait(page, { packId: 'pack-1' })
   await new Promise(r => setTimeout(r, 10))
 
   // 点击展开
@@ -284,7 +313,7 @@ test('learning-resource onPracticeToggle 只切换目标题目，不影响其他
       ]
     }]
   })
-  await page.onLoad({ packId: 'pack-1' })
+  await loadPageAndWait(page, { packId: 'pack-1' })
   await new Promise(r => setTimeout(r, 10))
 
   // 只展开 P02
