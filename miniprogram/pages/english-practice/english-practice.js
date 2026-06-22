@@ -7,6 +7,23 @@ const RECORD_BUTTON_LISTENING = '正在听你说...'
 const RECORD_BUTTON_RECOGNIZING = '正在识别...'
 const RECORD_BUTTON_JUDGING = '正在判断...'
 
+function extractSpeechText(res = {}) {
+  return (res.result || res.text || res.content || '').trim()
+}
+
+function extractAudioFile(res = {}) {
+  return res.tempFilePath || res.fileID || res.fileId || ''
+}
+
+function bindVoiceEvent(manager, eventName, handler) {
+  if (!manager) return
+  if (typeof manager[eventName] === 'function') {
+    manager[eventName](handler)
+    return
+  }
+  manager[eventName] = handler
+}
+
 function calculateProgressPercent(currentIndex, queueLength) {
   if (!queueLength) return 0
   return Math.min(100, Math.round(((currentIndex + 1) / queueLength) * 100))
@@ -79,16 +96,21 @@ Page({
       const plugin = requirePlugin('WechatSI')
       const manager = plugin && plugin.getRecordRecognitionManager ? plugin.getRecordRecognitionManager() : null
       if (!manager) throw new Error('WechatSI unavailable')
-      manager.onStop(async res => {
-        this.clearRecognitionTimeout()
-        this.setData({ recording: false })
-        await this.onRecognitionResult({
-          recognizedText: res && (res.result || res.text || ''),
-          audioFileID: res && (res.tempFilePath || res.fileID || '')
-        })
+      bindVoiceEvent(manager, 'onRecognize', res => {
+        const recognizedText = extractSpeechText(res)
+        if (!recognizedText) return
+        this._pendingRecognitionText = recognizedText
+        this._pendingAudioFileID = extractAudioFile(res) || this._pendingAudioFileID || ''
       })
-      manager.onError(() => {
+      bindVoiceEvent(manager, 'onStop', async res => {
+        const recognizedText = extractSpeechText(res) || this._pendingRecognitionText || ''
+        const audioFileID = extractAudioFile(res) || this._pendingAudioFileID || ''
+        await this.finishRecognition({ recognizedText, audioFileID })
+      })
+      bindVoiceEvent(manager, 'onError', () => {
         this.clearRecognitionTimeout()
+        this._pendingRecognitionText = ''
+        this._pendingAudioFileID = ''
         this.setData({
           recording: false,
           recognizing: false,
@@ -181,8 +203,37 @@ Page({
       return
     }
     this._answerStartedAt = Date.now()
+    this._pendingRecognitionText = ''
+    this._pendingAudioFileID = ''
+    this._recognitionSettled = false
     this.setData({ recording: true, recognizing: false, recordButtonText: RECORD_BUTTON_LISTENING, lastResult: null })
-    this._voiceManager.start({ lang: this.getRecognitionLang(this.data.currentItem) })
+    try {
+      const startResult = this._voiceManager.start({
+        lang: this.getRecognitionLang(this.data.currentItem),
+        duration: 30000,
+        detectInterrupt: true
+      })
+      if (startResult && typeof startResult.catch === 'function') {
+        startResult.catch(error => {
+          console.error('启动语音识别失败', error)
+          this.clearRecognitionTimeout()
+          this.setData({
+            recording: false,
+            recognizing: false,
+            recordButtonText: RECORD_BUTTON_READY,
+            lastResult: { status: 'unclear', reason: '录音启动失败，请检查麦克风权限后重试。' }
+          })
+        })
+      }
+    } catch (error) {
+      this.clearRecognitionTimeout()
+      this.setData({
+        recording: false,
+        recognizing: false,
+        recordButtonText: RECORD_BUTTON_READY,
+        lastResult: { status: 'unclear', reason: '录音启动失败，请检查麦克风权限后重试。' }
+      })
+    }
   },
 
   getRecognitionLang(item = {}) {
@@ -218,8 +269,31 @@ Page({
     }
   },
 
+  async finishRecognition(result = {}) {
+    if (this._recognitionSettled) return
+    this._recognitionSettled = true
+    this.clearRecognitionTimeout()
+    this.setData({ recording: false })
+    if (!result.recognizedText) {
+      this._pendingRecognitionText = ''
+      this._pendingAudioFileID = ''
+      this.setData({
+        recognizing: false,
+        recordButtonText: RECORD_BUTTON_READY,
+        lastResult: {
+          status: 'unclear',
+          reason: '没有收到语音识别结果，请重新录一次。'
+        }
+      })
+      return
+    }
+    await this.onRecognitionResult(result)
+  },
+
   async onRecognitionResult(result = {}) {
     this.clearRecognitionTimeout()
+    this._pendingRecognitionText = ''
+    this._pendingAudioFileID = ''
     const current = this.data.currentItem
     if (!current || this.data.submitting) {
       this.setData({ recognizing: false, recordButtonText: RECORD_BUTTON_READY })
@@ -310,6 +384,15 @@ Page({
       this._recognitionTimeoutToken = ''
       this._recognitionTimer = null
       if (!this.data.recognizing) return
+      const recognizedText = this._pendingRecognitionText || ''
+      if (recognizedText) {
+        this.finishRecognition({
+          recognizedText,
+          audioFileID: this._pendingAudioFileID || ''
+        })
+        return
+      }
+      this._recognitionSettled = true
       this.setData({
         recording: false,
         recognizing: false,
