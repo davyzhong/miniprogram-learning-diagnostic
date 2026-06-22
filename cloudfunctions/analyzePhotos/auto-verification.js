@@ -10,8 +10,9 @@
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 10000; // 10秒后重试
 
-// 分批生成：每批最多 8 个细 BN（对应约 16-24 题，单次 generatePaper 在 60s 超时内可完成）
-const BATCH_SIZE = 8;
+// 分批生成：真实数据下 2-8 个卡点一批仍可能触发 60s 调用超时。
+// 默认每批只推进 1 个细 BN，靠续跑机制完成整份卷子。
+const BATCH_SIZE = 1;
 
 const SEVERITY_RANK = { high: 3, medium: 2, low: 1 };
 // 不再限制细卡点数量：验证卷应该覆盖全量细分卡点（BN），
@@ -207,6 +208,9 @@ async function regenerateFinalPdf({ cloud, paperId }) {
   if (!result.success) {
     throw new Error(result.error || 'PDF 重新生成失败');
   }
+  if (!result.pdfFileId) {
+    throw new Error('PDF 文件未生成');
+  }
   return result;
 }
 
@@ -234,6 +238,21 @@ function chunkTargets(targets, size = BATCH_SIZE) {
     chunks.push(targets.slice(i, i + size));
   }
   return chunks;
+}
+
+function scheduleVerificationContinuation(cloud, { paperId, studentId, subject, reportId = '' }) {
+  cloud.callFunction({
+    name: 'regenerateVerificationPaper',
+    data: {
+      action: 'continue',
+      paperId,
+      studentId,
+      subject,
+      reportId,
+    },
+  }).catch(err => {
+    console.error('续跑验证卷生成失败：', err);
+  });
 }
 
 /**
@@ -320,7 +339,25 @@ async function generateInBatches(db, cloud, { paperId, studentId, subject, targe
 
   // 全部批次成功后，重新生成最终 PDF
   console.log(`[auto-verification] 批次完成 ${succeededBatches}/${totalBatches}，开始生成最终 PDF`);
-  const pdfResult = await callWithRetry(regenerateFinalPdf, { cloud, paperId });
+  let pdfResult;
+  try {
+    pdfResult = await callWithRetry(regenerateFinalPdf, { cloud, paperId });
+  } catch (err) {
+    const message = err.message || String(err);
+    await db.collection('papers').doc(paperId).update({
+      data: {
+        generationStatus: 'failed',
+        generationError: message,
+        generationProgress: { completedBatches: totalBatches, totalBatches, succeededBatches },
+      },
+    }).catch(() => {});
+    if (reportId) {
+      await db.collection('reports').doc(reportId).update({
+        data: { verificationPaperStatus: 'failed' },
+      }).catch(() => {});
+    }
+    throw err;
+  }
 
   await db.collection('papers').doc(paperId).update({
     data: {
@@ -387,32 +424,14 @@ async function triggerAutoVerificationPaper(cloud, db, { reportId, studentId, su
     }
   }
 
-  // 3. 后台推进生成：前端只负责查看状态和下载，不参与出题/PDF 生成。
-  try {
-    const result = await generateInBatches(db, cloud, {
-      paperId,
-      studentId,
-      subject,
-      targets: fineBottlenecks,
-      reportId,
-    });
-    return {
-      triggered: true,
-      paperId,
-      totalBatches: batches.length,
-      status: 'ready',
-      questionCount: result.questionCount,
-    };
-  } catch (err) {
-    console.warn('[auto-verification] 后台生成失败:', err.message);
-    return {
-      triggered: true,
-      paperId,
-      totalBatches: batches.length,
-      status: 'failed',
-      error: err.message || String(err),
-    };
-  }
+  // 3. 安排短任务续跑。每次只推进一个卡点，避免 analyzePhotos 被验证卷生成拖到超时。
+  scheduleVerificationContinuation(cloud, { paperId, studentId, subject, reportId });
+  return {
+    triggered: true,
+    paperId,
+    totalBatches: batches.length,
+    status: 'generating',
+  };
 }
 
 module.exports = {
@@ -422,4 +441,5 @@ module.exports = {
   supersedeOldPapers,
   generateInBatches,
   chunkTargets,
+  scheduleVerificationContinuation,
 };

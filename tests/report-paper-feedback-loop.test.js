@@ -26,9 +26,9 @@ test('断裂A修复：triggerAutoVerificationPaper 成功后回写 report.verifi
   // 必须在创建 paper 后回写 report
   assert.match(body, /verificationPaperId/, '必须回写 report.verificationPaperId')
   assert.match(body, /verificationPaperStatus.*generating/, '初始状态应为 generating')
-  // v3 架构：云函数创建 generating 记录后在后端推进分批生成。
+  // v4 架构：云函数创建 generating 记录后安排短任务续跑。
   assert.match(body, /generationProgress/, '必须写入 generationProgress 供前端展示后台进度')
-  assert.match(body, /generateInBatches/, '必须由后端推进分批生成')
+  assert.match(body, /scheduleVerificationContinuation/, '必须调度后端短任务续跑')
 })
 
 test('断裂A修复：createGeneratingPaper 写入 verificationStatus: pending', () => {

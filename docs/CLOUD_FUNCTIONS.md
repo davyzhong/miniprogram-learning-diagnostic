@@ -17,6 +17,7 @@
 - [analyzePhotos](#analyzephotos)
 - [analyzeBatch](#analyzebatch)
 - [generatePaper](#generatepaper)
+- [regenerateVerificationPaper](#regenerateverificationpaper)
 - [reanalyzeMathHistory](#reanalyzemathhistory)
 - [generateReportPDF](#generatereportpdf)
 - [getAnalysisProgress](#getanalysisprogress)
@@ -690,13 +691,14 @@ wx.cloud.callFunction({
 
 - 微信云数据库（reports、analysisTasks、subjectProfiles、papers 集合）
 - 微信云存储（通过 analyzeBatch 间接访问）
-- 内部云函数：`analyzeBatch`
+- 内部云函数：`analyzeBatch`、`regenerateVerificationPaper`
 - 预留：`sendSubscribeMessage`（尚未实现，当前仅打日志）
 
 ### 内部调用关系
 
 - ➡️ `cloud.callFunction({ name: 'analyzeBatch', ... })`（串行，每批 1 张）
 - ➡️ `cloud.callFunction({ name: 'analyzePhotos', data: { reportId, taskId, continuation: true } })`（未完成时 fire-and-forget 续跑下一张）
+- ➡️ 诊断报告有效且存在待验证数学卡点时，创建 `papers.generationStatus='generating'` 并调度 `regenerateVerificationPaper?action=continue` 续跑验证卷生成
 - ⬅️ 被 `uploadAndAnalyze` 调用
 - 📦 使用本地模块：`./comparison.js`、`./photo-dedup.js`
 
@@ -706,8 +708,9 @@ wx.cloud.callFunction({
 2. **僵尸任务保护**：若存在 `status === 'processing'` 且创建时间超过 10 分钟的任务，会自动标记为 failed 并允许重新启动。
 3. **去重逻辑**：基于 OCR 摘要指纹识别重复页面，重复页不参与卡点合并，但仍保留在 `imageFiles` 中（带 `isDuplicate: true`）。
 4. **验证模式对比**：会从 papers 集合读取 `bottleneckTargets`，仅对目标卡点做 improved/persisting/worsened/new 分类。
-5. **失败回滚**：异常时会将 `reports.status` 和 `analysisTasks.status` 都置为 `failed`，并清空 `subjectProfiles.analysisStatus`。
-6. `sendNotification` 目前是预留钩子；后续接入 `sendSubscribeMessage` 云函数、模板 ID 和前端订阅授权后，再恢复“完成后推送通知”的产品文案。
+5. **自动验证卷**：诊断链路只负责创建验证卷记录和启动短任务续跑，前端只轮询状态，不直接调用出题或拼批次。
+6. **失败回滚**：异常时会将 `reports.status` 和 `analysisTasks.status` 都置为 `failed`，并清空 `subjectProfiles.analysisStatus`。
+7. `sendNotification` 目前是预留钩子；后续接入 `sendSubscribeMessage` 云函数、模板 ID 和前端订阅授权后，再恢复“完成后推送通知”的产品文案。
 
 ---
 
@@ -971,6 +974,103 @@ wx.cloud.callFunction({
 6. 数学细卡点较多时，前端可传入 `targetPlan.pages`；后端会把同一家族/同一粗类的细卡点安排到同一任务页，并在 `verificationPack.pages` 中保存 `pageType/categoryTitle/familyTitle/targetIds/questionIds`。
 7. PDF 学生页会打印唯一 `pageCode`，孩子可以批量打印、分批作答；上传照片后可按页追踪验证效果。
 8. PDF 分页阈值 y > 700，每题预留答题空白区。
+
+### 内部维护模式
+
+`generatePaper` 还支持自动验证卷内部调用使用的维护参数：
+
+| 参数 | 调用方 | 行为 |
+| --- | --- | --- |
+| `_appendToPaperId` | `regenerateVerificationPaper?action=continue` | 只把本次 `targets` 对应题目追加到已有 paper，不生成 PDF |
+| `_regeneratePdf` + `paperId` | `regenerateVerificationPaper?action=continue` | 读取已有 paper.questions，重新分页、渲染 PDF、回写 `pdfFileId/studentPages/answerPages/totalPages` |
+
+这些参数不作为前端页面入口使用。
+
+---
+
+## regenerateVerificationPaper
+
+### 功能描述
+
+数学验证卷后台续跑云函数。诊断报告完成后，`analyzePhotos` 会先创建一条 `papers.generationStatus='generating'` 的验证卷记录；本函数通过 `action='continue'` 每次只生成 1 个尚未覆盖的 BN 目标，成功后自动调度下一次 `continue`。最后一个目标完成后，本函数调用 `generatePaper(_regeneratePdf)` 生成最终 PDF，并把 paper/report 标记为 `ready`。
+
+### 调用方式
+
+```javascript
+wx.cloud.callFunction({
+  name: 'regenerateVerificationPaper',
+  data: {
+    action: 'continue',
+    studentId: 'stu_xxx',
+    subject: 'math',
+    reportId: 'report_xxx',
+    paperId: 'paper_xxx'
+  }
+})
+```
+
+### action 列表
+
+| action | 必填参数 | 描述 |
+| --- | --- | --- |
+| `start` | `studentId`, `subject`, `reportId` | 兼容维护入口：基于 profile 创建 generating 验证卷 |
+| `continue` | `studentId`, `subject`, `paperId`; `reportId` 建议传入 | 读取 paper 当前题目，跳过已生成目标，只推进下一个未生成 BN |
+| `finalize` | `studentId`, `subject`, `paperId`; `reportId` 可选 | 兼容维护入口：校验已有题目完整后标记 ready |
+| `fail` | `studentId`, `subject`, `paperId`; `reportId` 可选 | 兼容维护入口：标记 failed |
+
+### 输出格式
+
+**续跑中**
+
+```json
+{
+  "success": true,
+  "status": "appending",
+  "paperId": "paper_xxx",
+  "advancedTarget": "BN-DEC-MUL-POINT-COUNT",
+  "completedBatches": 18,
+  "totalBatches": 38
+}
+```
+
+**完成**
+
+```json
+{
+  "success": true,
+  "status": "ready",
+  "paperId": "paper_xxx",
+  "pdfFileId": "cloud://env.xxx/papers/paper_xxx.pdf",
+  "questionCount": 59
+}
+```
+
+**失败**
+
+```json
+{
+  "success": false,
+  "status": "failed",
+  "error": "PDF 文件未生成"
+}
+```
+
+### 权限与状态规则
+
+1. 普通入口要求当前 OPENID 对 `studentId` 有学习操作权限。
+2. 后端自调度 `continue` 若没有 OPENID，必须满足 `paper.triggeredByReport === reportId`，并继续通过 report/paper 的 studentId、subject 归属校验。
+3. `paper.studentId`、`paper.subject` 必须与入参一致。
+4. 如传入 `reportId`，`report.studentId`、`report.subject` 也必须一致。
+5. `continue` 只处理 `paper.bottleneckTargets` 中未出现在 `paper.questions[].lpCode/targetCode/bottleneckId/targetId` 的目标。
+6. `generationProgress.totalBatches` 等于目标总数，`completedBatches/succeededBatches` 等于已生成目标数。
+7. 任一目标或最终 PDF 连续失败后，paper 标记 `failed`，report 同步 `verificationPaperStatus='failed'`。
+
+### 内部调用关系
+
+- ➡️ `generatePaper(_appendToPaperId)`：每次追加 1 个 BN 目标的题目。
+- ➡️ `regenerateVerificationPaper(action='continue')`：还有未生成目标时自调度下一次短任务。
+- ➡️ `generatePaper(_regeneratePdf)`：全部目标完成后重排并生成最终 PDF。
+- ⬅️ 被 `analyzePhotos/auto-verification.js` 调度。
 
 ---
 
