@@ -28,7 +28,7 @@ npm run test:e2e:english    # 英语页面 E2E
 | 诊断报告展示和报告质量 | `report-presenter.test.js`、`report-quality.test.js`、`page-flows.test.js` | `test:e2e:core`、`test:e2e:math` | 已覆盖 |
 | 数学细颗粒度学习卡点 | `bottleneck-view.test.js`、`bottleneck-hierarchy-regression.test.js`、`math-bottleneck-hierarchy.test.js` | `test:e2e:math` | 已覆盖 |
 | 数学知识地图和学习资源 | `knowledge-map-*.test.js`、`learning-resource-*.test.js`、`math-learning-map-*.test.js` | `test:e2e:math` | 已覆盖 |
-| 验证卷生成、分页、PDF、失败状态 | `verification-pack.test.js`、`generate-paper-pdf.test.js`、`auto-verification.test.js`、`cloud-functions.test.js` | `test:e2e:math` 覆盖页面入口 | 已覆盖；真实打印需人工验收 |
+| 验证卷自动触发、短任务续跑、分页、PDF、失败状态 | `verification-pack.test.js`、`generate-paper-pdf.test.js`、`auto-verification.test.js`、`report-paper-feedback-loop.test.js`、`cloud-functions.test.js` | `test:e2e:math` 覆盖页面入口 | 已覆盖；真实打印需人工验收 |
 | 验证反馈、页面编号、证据回传 | `verification-evidence.test.js`、`report-paper-feedback-loop.test.js`、`analyze-batch-result.test.js` | 后续补数学作答页完整 E2E | 单元层已覆盖 |
 | 语文具体错项复习 | `chinese-review-targets.test.js`、`profile-summary.test.js`、`subject-home-presenter.test.js` | `test:e2e:chinese` | 轻量页面链路已建，完整作答回传待扩展 |
 | 英语个人词库、认词练习、纸面听写、错词本 | `english-vocabulary.test.js`、`english-vocabulary-cloud.test.js`、`english-devtools-cases.test.js` | `test:e2e:english` 覆盖工作台、自动导入、认词、听写、学习记录、错词本、空态 | 已覆盖 |

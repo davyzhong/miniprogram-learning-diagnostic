@@ -86,6 +86,13 @@ test('extractPendingTargets 返回 bottleneckId 数组', () => {
   assert.deepEqual(targets, ['BN-1'])
 })
 
+test('chunkTargets defaults to one bottleneck per batch to avoid cloud function timeouts', () => {
+  const autoVerification = loadModule('cloudfunctions/analyzePhotos/auto-verification.js')
+  const chunks = autoVerification.chunkTargets(['BN-001', 'BN-002', 'BN-003'])
+
+  assert.equal(JSON.stringify(chunks), JSON.stringify([['BN-001'], ['BN-002'], ['BN-003']]))
+})
+
 test('generateInBatches marks paper failed when any batch cannot be generated', async () => {
   const autoVerification = loadModule('cloudfunctions/analyzePhotos/auto-verification.js', {}, {
     setTimeout: callback => {
@@ -126,9 +133,54 @@ test('generateInBatches marks paper failed when any batch cannot be generated', 
   const paper = db.dump('papers')[0]
   assert.equal(pdfCalls, 0)
   assert.equal(paper.generationStatus, 'failed')
-  assert.equal(paper.generationProgress.succeededBatches, 1)
+  assert.equal(paper.generationProgress.succeededBatches, 8)
   assert.equal(paper.generationProgress.failedBatches, 1)
-  assert.deepEqual(paper.generationProgress.failedBatchIndexes, [2])
+  assert.deepEqual(paper.generationProgress.failedBatchIndexes, [9])
+})
+
+test('generateInBatches requires the final regenerated PDF file id before marking ready', async () => {
+  const autoVerification = loadModule('cloudfunctions/analyzePhotos/auto-verification.js', {}, {
+    setTimeout: callback => {
+      callback()
+      return 0
+    }
+  })
+  const db = createDatabase({
+    papers: [{
+      _id: 'paper-1',
+      studentId: 's1',
+      subject: 'math',
+      type: 'verification',
+      questions: [],
+      generationStatus: 'generating',
+    }],
+    reports: [{ _id: 'report-1', studentId: 's1', subject: 'math', type: 'diagnosis' }]
+  })
+  const cloud = {
+    callFunction: async ({ data }) => {
+      if (data._regeneratePdf) {
+        return { result: { success: true, questionCount: 8 } }
+      }
+      return { result: { success: true, appendedQuestionCount: (data.targets || []).length } }
+    }
+  }
+
+  await assert.rejects(
+    () => autoVerification.generateInBatches(db, cloud, {
+      paperId: 'paper-1',
+      studentId: 's1',
+      subject: 'math',
+      targets: ['BN-001'],
+      reportId: 'report-1'
+    }),
+    /PDF 文件未生成/
+  )
+
+  const paper = db.dump('papers')[0]
+  const report = db.dump('reports')[0]
+  assert.equal(paper.generationStatus, 'failed')
+  assert.match(paper.generationError, /PDF 文件未生成/)
+  assert.equal(report.verificationPaperStatus, 'failed')
 })
 
 // ========== supersedeOldPapers 单元测试 ==========
@@ -210,6 +262,23 @@ test('getActiveVerificationPaper 返回 ready 状态', async () => {
   assert.equal(result.status, 'ready')
   assert.ok(result.paper)
   assert.equal(result.paper._id, 'p1')
+})
+
+test('getActiveVerificationPaper does not return ready when the PDF file is missing', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '钟青羽' }],
+    papers: [
+      { _id: 'p1', studentId: 's1', subject: 'math', type: 'verification', generationStatus: 'ready', createdAt: new Date() },
+    ],
+    reports: [],
+  })
+  const handler = loadStudentData(db)
+  const result = await handler.main({ action: 'getActiveVerificationPaper', studentId: 's1', subject: 'math' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.status, 'failed')
+  assert.equal(result.paper._id, 'p1')
+  assert.match(result.paper.generationError, /PDF/)
 })
 
 test('getActiveVerificationPaper 返回 generating 状态', async () => {
@@ -308,6 +377,169 @@ test('regenerateVerificationPaper finalize rejects incomplete generated papers',
   assert.equal(result.success, false)
   assert.equal(result.error, '验证卷尚未生成完整题目或 PDF')
   assert.equal(db.dump('papers')[0].generationStatus, 'generating')
+})
+
+test('regenerateVerificationPaper continue advances only the next missing target and schedules another run', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '钟青羽' }],
+    papers: [{
+      _id: 'paper-1',
+      studentId: 's1',
+      subject: 'math',
+      type: 'verification',
+      bottleneckTargets: ['BN-001', 'BN-002', 'BN-003'],
+      questions: [{ questionId: 'q1', lpCode: 'BN-001', content: '已生成题' }],
+      generationStatus: 'appending',
+    }],
+    reports: [{ _id: 'report-1', studentId: 's1', subject: 'math', type: 'diagnosis' }],
+  })
+  const cloudCalls = []
+  const cloud = createCloudMock({
+    db,
+    openId: 'owner-1',
+    callFunction: async payload => {
+      cloudCalls.push(payload)
+      if (payload.name === 'generatePaper') {
+        return { result: { success: true, appendedQuestionCount: 1, questionCount: 2 } }
+      }
+      if (payload.name === 'regenerateVerificationPaper') {
+        return { result: { success: true, scheduled: true } }
+      }
+      return { result: { success: true } }
+    }
+  })
+  const handler = loadModule('cloudfunctions/regenerateVerificationPaper/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({
+    action: 'continue',
+    studentId: 's1',
+    subject: 'math',
+    paperId: 'paper-1',
+    reportId: 'report-1',
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.status, 'appending')
+  assert.equal(result.advancedTarget, 'BN-002')
+
+  const generateCall = cloudCalls.find(call => call.name === 'generatePaper')
+  assert.equal(JSON.stringify(generateCall.data.targets), JSON.stringify(['BN-002']))
+  assert.equal(generateCall.data._appendToPaperId, 'paper-1')
+
+  const continueCall = cloudCalls.find(call =>
+    call.name === 'regenerateVerificationPaper' && call.data.action === 'continue'
+  )
+  assert.ok(continueCall, '应安排下一次续跑')
+  assert.equal(continueCall.data.paperId, 'paper-1')
+
+  const paper = db.dump('papers')[0]
+  assert.equal(paper.generationStatus, 'appending')
+  assert.equal(paper.generationProgress.completedBatches, 2)
+  assert.equal(paper.generationProgress.totalBatches, 3)
+})
+
+test('regenerateVerificationPaper continue allows trusted backend continuation without openid', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '钟青羽' }],
+    papers: [{
+      _id: 'paper-1',
+      _openid: 'owner-1',
+      studentId: 's1',
+      subject: 'math',
+      type: 'verification',
+      triggeredByReport: 'report-1',
+      bottleneckTargets: ['BN-001', 'BN-002'],
+      questions: [{ questionId: 'q1', lpCode: 'BN-001', content: '已生成题' }],
+      generationStatus: 'appending',
+    }],
+    reports: [{ _id: 'report-1', _openid: 'owner-1', studentId: 's1', subject: 'math', type: 'diagnosis' }],
+  })
+  const cloudCalls = []
+  const cloud = createCloudMock({
+    db,
+    callFunction: async payload => {
+      cloudCalls.push(payload)
+      if (payload.name === 'generatePaper' && payload.data._regeneratePdf) {
+        return { result: { success: true, pdfFileId: 'cloud://paper.pdf', questionCount: 2 } }
+      }
+      if (payload.name === 'generatePaper') {
+        return { result: { success: true, appendedQuestionCount: 1, questionCount: 2 } }
+      }
+      return { result: { success: true } }
+    }
+  })
+  cloud.getWXContext = () => ({ OPENID: '' })
+  const handler = loadModule('cloudfunctions/regenerateVerificationPaper/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({
+    action: 'continue',
+    studentId: 's1',
+    subject: 'math',
+    paperId: 'paper-1',
+    reportId: 'report-1',
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.status, 'ready')
+  assert.equal(result.advancedTarget, 'BN-002')
+  assert.ok(cloudCalls.some(call => call.name === 'generatePaper'))
+})
+
+test('regenerateVerificationPaper continue finalizes the PDF after the last missing target', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '钟青羽' }],
+    papers: [{
+      _id: 'paper-1',
+      studentId: 's1',
+      subject: 'math',
+      type: 'verification',
+      bottleneckTargets: ['BN-001'],
+      questions: [],
+      generationStatus: 'generating',
+    }],
+    reports: [{ _id: 'report-1', studentId: 's1', subject: 'math', type: 'diagnosis' }],
+  })
+  const cloudCalls = []
+  const cloud = createCloudMock({
+    db,
+    openId: 'owner-1',
+    callFunction: async payload => {
+      cloudCalls.push(payload)
+      if (payload.name === 'generatePaper' && payload.data._regeneratePdf) {
+        return { result: { success: true, pdfFileId: 'cloud://paper.pdf', questionCount: 1 } }
+      }
+      if (payload.name === 'generatePaper') {
+        return { result: { success: true, appendedQuestionCount: 1, questionCount: 1 } }
+      }
+      throw new Error('不应继续调度')
+    }
+  })
+  const handler = loadModule('cloudfunctions/regenerateVerificationPaper/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({
+    action: 'continue',
+    studentId: 's1',
+    subject: 'math',
+    paperId: 'paper-1',
+    reportId: 'report-1',
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.status, 'ready')
+  assert.equal(result.pdfFileId, 'cloud://paper.pdf')
+  assert.ok(cloudCalls.some(call => call.name === 'generatePaper' && call.data._regeneratePdf))
+  assert.equal(cloudCalls.some(call => call.name === 'regenerateVerificationPaper'), false)
+
+  const paper = db.dump('papers')[0]
+  const report = db.dump('reports')[0]
+  assert.equal(paper.generationStatus, 'ready')
+  assert.equal(report.verificationPaperStatus, 'ready')
 })
 
 // ========== generatePaper _autoPaperId 模式测试 ==========
