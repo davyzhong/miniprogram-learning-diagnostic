@@ -29,11 +29,13 @@ Page({
     })
   },
 
-  async onLoad(options = {}) {
+  onLoad(options = {}) {
     const studentId = options.studentId || ''
     this.setData({ studentId })
     this._cloud = cloud
-    await this.loadProfile()
+    this.loadProfile().catch(error => {
+      console.error('加载孩子档案失败', error)
+    })
   },
 
   hasFreshProfileSnapshot() {

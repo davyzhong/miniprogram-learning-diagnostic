@@ -13,12 +13,14 @@ Page({
     generatingLpCode: '',
   },
 
-  async onLoad(options = {}) {
+  onLoad(options = {}) {
     const studentId = options.studentId || ''
     const studentName = decodeURIComponent(options.studentName || '')
     const subject = options.subject || 'math'
     this.setData({ studentId, studentName, subject })
-    await this.loadData()
+    this._loadPromise = this.loadData().catch(error => {
+      console.error('加载知识地图失败', error)
+    })
   },
 
   async loadData() {

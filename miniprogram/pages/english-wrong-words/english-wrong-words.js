@@ -94,13 +94,15 @@ Page({
     weakWords: []
   },
 
-  async onLoad(options = {}) {
+  onLoad(options = {}) {
     this.setData({
       studentId: options.studentId || '',
       studentName: decodeURIComponent(options.studentName || ''),
       grade: options.grade || ''
     })
-    await this.loadWrongWords()
+    this._loadPromise = this.loadWrongWords().catch(error => {
+      console.error('加载英语错词失败', error)
+    })
   },
 
   async loadWrongWords() {

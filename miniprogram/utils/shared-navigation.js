@@ -132,7 +132,7 @@ const sharedNavigation = {
     })
   },
 
-  async onBottleneckAction(e) {
+  onBottleneckAction(e) {
     const { subject = 'math', lpCode = '' } = e.currentTarget.dataset
     if (!lpCode) return
     const bottleneck = this.findHomeBottleneck(subject, lpCode)
@@ -143,7 +143,10 @@ const sharedNavigation = {
     const student = getStudent(this)
     const studentId = getStudentId(this)
     const subjectName = getSubjectName(subject, '数学')
-    await this.navigateToVerificationByStatus(student._id || studentId, subject, subjectName, student.name || '')
+    return this.navigateToVerificationByStatus(student._id || studentId, subject, subjectName, student.name || '')
+      .catch(error => {
+        console.error('打开验证卷失败', error)
+      })
   },
 
   onRecordTap(e) {
@@ -178,6 +181,9 @@ const sharedNavigation = {
     }
     if (home.nextAction && ['下载验证卷', '查看/下载验证卷', '查看验证卷'].includes(home.nextAction.primaryText)) {
       return this.navigateToVerificationByStatus(student._id || studentId, subject, subjectName, student.name || '')
+        .catch(error => {
+          console.error('打开验证卷失败', error)
+        })
     }
     wx.navigateTo({
       url: `/pages/upload/upload?mode=diagnosis&studentId=${student._id || studentId}&subject=${subject}&subjectName=${encodeURIComponent(subjectName)}&studentName=${encodeURIComponent(student.name || '')}&grade=${student.grade || ''}`
