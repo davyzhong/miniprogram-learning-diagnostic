@@ -113,6 +113,25 @@ test('generatePaper PDF display helpers are self-contained for single-function d
   assert.match(sources, /require\(['"]\.\/access['"]\)/)
 })
 
+test('analyzeBatch taxonomy-bn-list is self-contained for single-function deployment', () => {
+  const sources = [
+    read('cloudfunctions/analyzeBatch/index.js'),
+    read('cloudfunctions/analyzeBatch/result-normalizer.js'),
+  ].join('\n')
+
+  // taxonomy-bn-list.js 必须打包在 analyzeBatch 目录内（data/ 目录不会随云函数上传）
+  assert.ok(exists('cloudfunctions/analyzeBatch/taxonomy-bn-list.js'),
+    'taxonomy-bn-list.js should be packaged inside analyzeBatch for CloudBase deployment')
+  // 不应引用 ../../data/ 路径（部署后会断）
+  assert.doesNotMatch(sources, /require\(['"]\.\.\/\.\.\/data\//)
+  // 应引用本地 taxonomy-bn-list
+  assert.match(sources, /require\(['"]\.\/taxonomy-bn-list['"]\)/)
+  // taxonomy-bn-list 应包含标准 BN ID
+  const bnList = require(path.join(root, 'cloudfunctions/analyzeBatch/taxonomy-bn-list.js'))
+  assert.ok(bnList.TAXONOMY_BN_LIST.length >= 28, 'taxonomy-bn-list should contain at least 28 standard BNs')
+  assert.ok(bnList.BN_VARIANT_ALIASES, 'taxonomy-bn-list should export BN_VARIANT_ALIASES')
+})
+
 test('math learning map seed data is packaged with the miniprogram runtime', () => {
   const runtimeSeeds = [
     'knowledge-nodes.seed',

@@ -132,7 +132,8 @@ test('preserves math learning map v2 fields from AI bottleneck output', () => {
     evidenceStrength: 'high',
     microValidationRequired: true,
     suggestedMicroValidation: ['6÷7/8', '3÷2/5'],
-    recommendedResourceIds: ['RES-YT-FRACTION-DIV-001', 'RES-BILI-FRACTION-DIV-001']
+    recommendedResourceIds: ['RES-YT-FRACTION-DIV-001', 'RES-BILI-FRACTION-DIV-001'],
+    isNew: false
   })
   assert.equal(result.pageResults[0].bottlenecks[0].nextActionType, 'resourceReview')
 })

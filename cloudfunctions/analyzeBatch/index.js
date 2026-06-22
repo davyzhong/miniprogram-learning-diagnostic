@@ -5,6 +5,7 @@ const cloud = require('wx-server-sdk');
 const { normalizePageResults } = require('./result-normalizer');
 const { getSubjectName } = require('./constants');
 const { BOTTLENECK_CODE_NAMES } = require('./bottleneck-name');
+const { TAXONOMY_BN_LIST } = require('./taxonomy-bn-list');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -62,8 +63,12 @@ function buildPrompt(subject, verificationPlan = []) {
   const verificationInstruction = verificationPlan.length > 0
     ? `\n## 验证试卷判定\n这是验证试卷。请先识别纸面印出的“页面编号”，并在 pageResults.pageCode 中返回；如果本页没有清楚看到页面编号，pageCode 返回空字符串。请按 pageCode + targetId/lpCode 统计证据质量，不要把不确定情况当成已改善：\n${verificationPlanLines.join('\n')}${chineseReviewPlanItems.length > 0 ? `\n\n语文错项还需要按 reviewItemId 单独统计 chineseReviewEvidence：\n${chineseReviewPlanItems.map(item => `- ${item.itemId}：targetText=${item.targetText}，预期 ${item.expectedQuestionCount} 道`).join('\n')}` : ''}\n- attemptedQuestionCount：清晰可见、已经作答、能够判断对错的题目数量\n- incorrectQuestionCount：attemptedQuestionCount 中明确答错的题目数量\n- blankQuestionCount：清晰可见但没有作答或明显空白的题目数量\n- unclearQuestionCount：被遮挡、模糊、拍摄不完整、无法判断答案是否正确的题目数量\n- missingQuestionCount：预期题目中未在图片中找到或无法归入以上类别的数量\n未作答、被遮挡、模糊或无法确认的题目不得计入 attemptedQuestionCount。`
     : '';
+  const mathBnCatalogLines = TAXONOMY_BN_LIST.map(bn => `- ${bn.id}：${bn.title}（症状：${bn.symptom}）`).join('\n');
+  const mathBnCatalog = subject === 'math'
+    ? `\n## 标准细卡点库（candidateBottlenecks 的 bottleneckId 必须优先从这里选取）\n以下是已建立的标准细卡点。语义相同的错题必须归入同一个 bottleneckId，禁止为同一知识点创建多个 ID。\n只有以下清单确实没有覆盖的全新知识点，才允许新建 bottleneckId（命名用 BN- 前缀）。\n${mathBnCatalogLines}`
+    : '';
   const mathLearningMapInstruction = subject === 'math'
-    ? `\n## 数学诊断升级字段\n数学卡点除了旧的 lpCode/lpName 外，还要尽量补充知识地图字段，无法判断时用空数组或空字符串，不要编造：\n- nodeIds：对应知识节点 ID，例如 MATH-NUM-DEC-MUL-POINT、MATH-NUM-FRACTION-DIV-RECIPROCAL、MATH-MOD-PERCENT-BASE、MATH-GEO-CYLINDER-VOLUME\n- candidateBottlenecks：细颗粒度候选卡点数组，每项包含 bottleneckId、title、evidenceStrength，可选 microValidationRequired、suggestedMicroValidation、recommendedResourceIds\n- recommendedResourceIds：推荐资源 ID。优先给“高质量锚点 + 国内补充”的组合，例如 RES-YT-FRACTION-DIV-001 + RES-BILI-FRACTION-DIV-001\n- nextActionType：resourceReview / microValidation / verificationPaper 三选一。发现漏洞时优先 resourceReview 或 microValidation，不要一上来就 verificationPaper\n- nextActionText：一句给家长看的下一步建议`
+    ? `\n## 数学诊断升级字段\n数学卡点除了旧的 lpCode/lpName 外，还要尽量补充知识地图字段，无法判断时用空数组或空字符串，不要编造：\n- nodeIds：对应知识节点 ID，例如 MATH-NUM-DEC-MUL-POINT、MATH-NUM-FRACTION-DIV-RECIPROCAL、MATH-MOD-PERCENT-BASE、MATH-GEO-CYLINDER-VOLUME\n- candidateBottlenecks：细颗粒度候选卡点数组，每项包含 bottleneckId、title、evidenceStrength，可选 microValidationRequired、suggestedMicroValidation、recommendedResourceIds。bottleneckId 必须优先从”标准细卡点库”中选取，不要自创新 ID\n- recommendedResourceIds：推荐资源 ID。优先给”高质量锚点 + 国内补充”的组合，例如 RES-YT-FRACTION-DIV-001 + RES-BILI-FRACTION-DIV-001\n- nextActionType：resourceReview / microValidation / verificationPaper 三选一。发现漏洞时优先 resourceReview 或 microValidation，不要一上来就 verificationPaper\n- nextActionText：一句给家长看的下一步建议`
     : '';
   const mathBottleneckJsonFields = subject === 'math'
     ? `,
@@ -167,11 +172,12 @@ ${chineseErrorInstruction}
 
 ## 卡点分类体系（${subjectName}）
 ${taxonomy.map(t => `- ${t.code}：${t.name}——${t.desc}`).join('\n')}
+${mathBnCatalog}
 ${mathLearningMapInstruction}
 
 ## 注意
 1. severity 只能是 "high" / "medium" / "low"
-2. 如果错题无法归类到现有体系，使用 "LP-XXX" 作为新卡点代码，并在 lpName 中描述
+2. 如果错题无法归类到现有体系，使用 "LP-XXX" 作为新粗卡点代码，并在 lpName 中描述。candidateBottlenecks 的细卡点 bottleneckId 必须优先从"标准细卡点库"选取，不要自创同义变体 ID；确实没有的全新知识点才新建（用 BN- 前缀）
 3. 只分析清晰可见的错题，模糊不清的题目跳过
 4. 每一张图片都必须返回一个 pageResults 项，即使本页没有错题
 5. ocrSummary 应包含足够区分本页内容的信息，但不要逐字抄录整页
