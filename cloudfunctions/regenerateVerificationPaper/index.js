@@ -82,7 +82,8 @@ function extractFineBottlenecks(profile) {
   }
 
   fineList.sort((a, b) => (Number(b.weight) || 0) - (Number(a.weight) || 0)
-    || (SEVERITY_RANK[b.severity] || 2) - (SEVERITY_RANK[a.severity] || 2));
+    || (SEVERITY_RANK[b.severity] || 2) - (SEVERITY_RANK[a.severity] || 2)
+    || fineList.indexOf(a) - fineList.indexOf(b));
   return fineList;
 }
 

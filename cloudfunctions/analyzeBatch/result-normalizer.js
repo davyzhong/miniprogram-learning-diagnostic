@@ -1,3 +1,5 @@
+const { TAXONOMY_BN_LIST, BN_VARIANT_ALIASES } = require('./taxonomy-bn-list');
+
 function cleanText(value, maxLength) {
   return String(value || '').slice(0, maxLength);
 }
@@ -12,6 +14,56 @@ function cleanStringArray(values, maxItems = 8, maxLength = 100) {
 
 function normalizeEvidenceStrength(value) {
   return ['high', 'medium', 'low'].includes(value) ? value : '';
+}
+
+// evidenceStrength 强弱排序（high > medium > low > 空），归并时取更强值
+const EVIDENCE_RANK = { high: 3, medium: 2, low: 1, '': 0 };
+function strongerEvidence(a, b) {
+  return (EVIDENCE_RANK[a] || 0) >= (EVIDENCE_RANK[b] || 0) ? a : b;
+}
+
+// title 标准化关键词：去掉 AI 常加的后缀变体，用于 title 匹配
+const TITLE_SUFFIX_NOISE = /规则不熟练$|不熟练$|错误$|不稳$|不稳定$|失败$|混淆$|不足$|偏差$|错误。*$|不稳。*$/g;
+function normalizeBnTitle(title) {
+  return String(title || '')
+    .replace(/（.*?）/g, '')      // 去括号注释
+    .replace(TITLE_SUFFIX_NOISE, '')
+    .trim();
+}
+
+/**
+ * 将 AI 返回的 bottleneckId 归并到标准 taxonomy ID。
+ * 三层匹配：
+ *   1. 已在 taxonomy 28 个标准 ID 中 → 直接返回（含 isNew:false）
+ *   2. 在 BN_VARIANT_ALIASES 变体映射表中 → 映射到标准 ID（含 isNew:false）
+ *   3. 以上都不命中 → 保留原 ID，标记 isNew:true（宽松策略：保留新卡点）
+ */
+function canonicalizeBottleneckId(rawId, title) {
+  const id = String(rawId || '').trim();
+  if (!id) return { canonicalId: '', isNew: false };
+
+  // 1. 已是标准 ID
+  const isStandard = TAXONOMY_BN_LIST.some(bn => bn.id === id);
+  if (isStandard) return { canonicalId: id, isNew: false };
+
+  // 2. 在变体映射表中
+  if (BN_VARIANT_ALIASES[id]) {
+    return { canonicalId: BN_VARIANT_ALIASES[id], isNew: false };
+  }
+
+  // 3. title 关键词匹配：用归一化后的 title 与 taxonomy 做 substring 匹配
+  const normTitle = normalizeBnTitle(title);
+  if (normTitle.length >= 4) {
+    for (const bn of TAXONOMY_BN_LIST) {
+      const bnNormTitle = normalizeBnTitle(bn.title);
+      if (bnNormTitle.length >= 4 && (normTitle.includes(bnNormTitle) || bnNormTitle.includes(normTitle))) {
+        return { canonicalId: bn.id, isNew: false };
+      }
+    }
+  }
+
+  // 4. 都不命中：保留原 ID，标记为新卡点
+  return { canonicalId: id, isNew: true };
 }
 
 function normalizeNextActionType(value) {
@@ -33,14 +85,16 @@ function normalizeChineseItemType(value) {
 
 function normalizeCandidateBottlenecks(items) {
   if (!Array.isArray(items)) return [];
-  return items
+
+  // 1. 结构化清洗 + canonicalize bottleneckId
+  const cleaned = items
     .map(item => {
       if (typeof item === 'string') {
-        return { bottleneckId: cleanText(item, 80) };
+        return { rawId: item, title: '' };
       }
       if (!item || typeof item !== 'object') return null;
       return {
-        bottleneckId: cleanText(item.bottleneckId || item.id, 80),
+        rawId: cleanText(item.bottleneckId || item.id, 80),
         title: cleanText(item.title, 120),
         evidenceStrength: normalizeEvidenceStrength(item.evidenceStrength),
         microValidationRequired: Boolean(item.microValidationRequired),
@@ -48,8 +102,38 @@ function normalizeCandidateBottlenecks(items) {
         recommendedResourceIds: cleanStringArray(item.recommendedResourceIds, 6, 80),
       };
     })
-    .filter(item => item && item.bottleneckId)
-    .slice(0, 5);
+    .filter(item => item && item.rawId);
+
+  // 2. canonicalize + 按 canonical ID 归并去重（同义变体合并为一个标准 BN）
+  const byCanonical = new Map();
+  for (const item of cleaned) {
+    const { canonicalId, isNew } = canonicalizeBottleneckId(item.rawId, item.title);
+    if (!canonicalId) continue;
+
+    if (!byCanonical.has(canonicalId)) {
+      // 首次出现：用 canonicalId 作为 bottleneckId，保留 title（优先用 taxonomy 标准标题）
+      const stdBn = TAXONOMY_BN_LIST.find(bn => bn.id === canonicalId);
+      byCanonical.set(canonicalId, {
+        bottleneckId: canonicalId,
+        title: (stdBn && stdBn.title) || item.title,
+        evidenceStrength: item.evidenceStrength || '',
+        microValidationRequired: item.microValidationRequired || false,
+        suggestedMicroValidation: item.suggestedMicroValidation || [],
+        recommendedResourceIds: item.recommendedResourceIds || [],
+        isNew,
+      });
+    } else {
+      // 重复出现：归并（取更强 evidence、OR microValidation、并集 arrays）
+      const existing = byCanonical.get(canonicalId);
+      existing.evidenceStrength = strongerEvidence(existing.evidenceStrength, item.evidenceStrength);
+      existing.microValidationRequired = existing.microValidationRequired || item.microValidationRequired;
+      existing.suggestedMicroValidation = [...new Set([...(existing.suggestedMicroValidation||[]), ...(item.suggestedMicroValidation||[])])].slice(0, 6);
+      existing.recommendedResourceIds = [...new Set([...(existing.recommendedResourceIds||[]), ...(item.recommendedResourceIds||[])])].slice(0, 6);
+      existing.isNew = existing.isNew && isNew; // 只要任一来源是标准 ID，就不是新卡点
+    }
+  }
+
+  return Array.from(byCanonical.values()).slice(0, 5);
 }
 
 function normalizeChineseErrorItems(items) {
@@ -182,4 +266,10 @@ function normalizePageResults(result, expectedPageCount) {
   return { pageResults };
 }
 
-module.exports = { normalizePageResults };
+module.exports = {
+  normalizePageResults,
+  // 导出以下函数供测试
+  normalizeCandidateBottlenecks,
+  canonicalizeBottleneckId,
+  normalizeBnTitle,
+};
