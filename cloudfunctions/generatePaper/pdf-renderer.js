@@ -293,19 +293,37 @@ function drawAnswerHeader(doc, subject, type, paperDate = '', paperDisplayCode =
   return metaY + 47;
 }
 
-function drawAnswer(doc, question, y, x, colWidth) {
-  const w = colWidth || COLUMN_WIDTH;
-  const left = x || PAGE.left;
+function answerParts(question) {
   const num = question.index || '';
   const lpName = summarizeBottleneckName(question.lpName);
   const answer = question.answer || '';
   const explanation = question.explanation || question.reasoning || '';
+  return {
+    line1: `${num}. [${lpName}]`,
+    line2: `答案：${answer}`,
+    line3: explanation ? `思路：${explanation}` : '',
+  };
+}
 
-  // 把所有文本合并成一个字符串，一次性渲染，避免 PDFKit 游标覆盖
-  // 格式：1. [卡点名] 答案：xxx \n 思路：xxx
-  let line1 = `${num}. [${lpName}]`;
-  let line2 = `答案：${answer}`;
-  let line3 = explanation ? `思路：${explanation}` : '';
+function answerHeight(doc, question, colWidth) {
+  const w = colWidth || COLUMN_WIDTH;
+  const { line1, line2, line3 } = answerParts(question);
+  doc.fontSize(9);
+  const h1 = doc.heightOfString(line1, { width: w - 4, lineGap: 0 });
+  doc.fontSize(10);
+  const h2 = doc.heightOfString(line2, { width: w - 4, lineGap: 1 });
+  let h3 = 0;
+  if (line3) {
+    doc.fontSize(8.5);
+    h3 = doc.heightOfString(line3, { width: w - 4, lineGap: 1 });
+  }
+  return h1 + 2 + h2 + (line3 ? 3 + h3 : 0) + 8;
+}
+
+function drawAnswer(doc, question, y, x, colWidth) {
+  const w = colWidth || COLUMN_WIDTH;
+  const left = x || PAGE.left;
+  const { line1, line2, line3 } = answerParts(question);
 
   // 渲染第一行（题号 + 卡点名）
   doc.fillColor(COLORS.blue).fontSize(9)
@@ -512,13 +530,22 @@ async function generatePDF(questionsData, subject, type, options = {}) {
   for (let qi = 0; qi < allQuestions.length; qi += 2) {
     const leftAns = allQuestions[qi];
     const rightAns = allQuestions[qi + 1];
+    const leftHeight = answerHeight(doc, leftAns, COLUMN_WIDTH);
+    const rightHeight = rightAns ? answerHeight(doc, rightAns, COLUMN_WIDTH) : 0;
+    const rowHeight = Math.max(leftHeight, rightHeight);
+    if (y + rowHeight > PAGE.contentBottom && qi > 0) {
+      drawPageNumber(doc, answerPageNumber, true);
+      doc.addPage();
+      answerPageNumber += 1;
+      y = drawAnswerHeader(doc, subject, type, paperDate, paperDisplayCode);
+    }
     const leftResult = drawAnswer(doc, leftAns, y, PAGE.left, COLUMN_WIDTH);
-    let rightHeight = 0;
+    let drawnRightHeight = 0;
     if (rightAns) {
       const rightResult = drawAnswer(doc, rightAns, y, PAGE.left + COLUMN_WIDTH + COLUMN_GAP, COLUMN_WIDTH);
-      rightHeight = rightResult.height;
+      drawnRightHeight = rightResult.height;
     }
-    y += Math.max(leftResult.height, rightHeight);
+    y += Math.max(leftResult.height, drawnRightHeight);
     // 分页检查
     if (y + 50 > PAGE.contentBottom && qi + 2 < allQuestions.length) {
       drawPageNumber(doc, answerPageNumber, true);
