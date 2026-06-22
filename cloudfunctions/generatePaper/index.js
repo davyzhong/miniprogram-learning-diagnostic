@@ -632,6 +632,14 @@ exports.main = async (event) => {
       };
       if (!pageInfo.totalPages) pageInfo.totalPages = pageInfo.studentPages + pageInfo.answerPages;
 
+      // 补全状态回写：_regeneratePdf 是用户手动重生成 PDF 的路径（前端 paper-preview 调用），
+      // 之前只写了 generationStatus: 'ready'，漏了 generationProgress 和 report 同步，
+      // 导致报告页 verificationPaperStatus 一直停在 'generating'、进度显示 0 批完成。
+      const totalBatches = (paper.generationProgress && paper.generationProgress.totalBatches) || 1;
+      const completedBatches = (paper.generationProgress && paper.generationProgress.completedBatches) || totalBatches;
+      const succeededBatches = (paper.generationProgress && paper.generationProgress.succeededBatches) || completedBatches;
+      const now = new Date();
+
       await db.collection('papers').doc(event.paperId).update({
         data: {
           pdfFileId: upload.fileID,
@@ -640,10 +648,24 @@ exports.main = async (event) => {
           verificationPack,
           questions: allQuestions,
           generationStatus: 'ready',
-          updatedAt: new Date(),
+          generationError: '',
+          generationProgress: { completedBatches, totalBatches, succeededBatches },
+          generatedAt: now,
+          updatedAt: now,
           ...pageInfo,
         },
       });
+
+      // 同步回写报告状态（report.verificationPaperStatus）
+      // 修复：之前 _regeneratePdf 路径没有回写 report，导致报告页状态停在 'generating'
+      if (paper.triggeredByReport) {
+        await db.collection('reports').doc(paper.triggeredByReport).update({
+          data: { verificationPaperStatus: 'ready', verificationPaperId: event.paperId },
+        }).catch(err => {
+          console.warn('[generatePaper] 回写 report.verificationPaperStatus 失败:', err.message);
+        });
+      }
+
       return { success: true, paperId: event.paperId, pdfFileId: upload.fileID, questionCount: allQuestions.length, ...pageInfo };
     } catch (err) {
       console.error('重新生成 PDF 失败：', err);
