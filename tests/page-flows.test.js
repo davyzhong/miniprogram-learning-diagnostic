@@ -1477,6 +1477,7 @@ test('English practice page recovers when voice recognition stop callback never 
   const timers = []
   const manager = {
     onStop: handler => { manager.stopHandler = handler },
+    onRecognize: handler => { manager.recognizeHandler = handler },
     onError: () => {},
     start: () => {},
     stop: () => {}
@@ -1517,6 +1518,64 @@ test('English practice page recovers when voice recognition stop callback never 
   assert.equal(page.data.recordButtonText, '开始回答')
   assert.equal(page.data.lastResult.status, 'unclear')
   assert.match(page.data.lastResult.reason, /没有收到语音识别结果/)
+})
+
+test('English practice page uses interim speech text when final stop callback is delayed', async () => {
+  const timers = []
+  const submitted = []
+  const manager = {
+    onStop: handler => { manager.stopHandler = handler },
+    onRecognize: handler => { manager.recognizeHandler = handler },
+    onError: () => {},
+    start: () => {},
+    stop: () => {}
+  }
+  const cloud = {
+    generateEnglishRecognitionSession: async () => ({
+      sessionId: 'session-1',
+      functionType: 'familiarity',
+      wordItems: [{
+        queueKey: 'word-1:0',
+        wordId: 'word-1',
+        word: 'science',
+        meanings: ['科学'],
+        promptType: 'chinese'
+      }],
+      patternItems: []
+    }),
+    submitEnglishRecognitionAttempt: async payload => {
+      submitted.push(payload)
+      return {
+        judgment: { status: 'correct', reason: '正确' },
+        shouldRepeat: false
+      }
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    requirePlugin: () => ({ getRecordRecognitionManager: () => manager }),
+    modules: { '../../utils/cloud': cloud },
+    setTimeout: (handler, delay) => {
+      timers.push({ handler, delay })
+      return { id: timers.length }
+    }
+  })
+
+  page.onLoad({ studentId: 'student-1' })
+  await waitForPageLoad(page)
+  page.onRecordTap()
+  manager.recognizeHandler({ result: 'science' })
+  page.onRecordTap()
+
+  assert.equal(page.data.recognizing, true)
+  timers[0].handler()
+  await Promise.resolve()
+  await Promise.resolve()
+  await Promise.resolve()
+  await Promise.resolve()
+
+  assert.equal(submitted[0].recognizedText, 'science')
+  assert.equal(page.data.lastResult.status, 'correct')
+  assert.equal(page.data.recordButtonText, '开始回答')
 })
 
 test('English practice page switches to judgment state after speech text is returned', async () => {
