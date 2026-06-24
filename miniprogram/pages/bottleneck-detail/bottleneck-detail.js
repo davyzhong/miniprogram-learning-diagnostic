@@ -9,7 +9,7 @@ const { bottleneckListText } = require('../../utils/learning-records')
 const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-display')
 const { SUBJECT_NAMES } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
-const { navigateToVerificationPaper } = require('../../utils/shared-navigation')
+const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
 
 // 知识节点 seed（查前序依赖）
 const knowledgeSeed = require('../../data/math/knowledge-nodes.seed')
@@ -450,5 +450,9 @@ Page({
     wx.redirectTo({
       url: `/pages/bottleneck-center/bottleneck-center?studentId=${this.data.studentId}&studentName=${encodeURIComponent(this.data.studentName || '')}`
     })
+  },
+
+  onUnload() {
+    stopVerificationPoller()
   }
 })

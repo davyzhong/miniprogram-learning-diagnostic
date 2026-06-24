@@ -4,7 +4,7 @@ const { formatRelativeTime } = require('../../utils/util')
 const { buildStatusText } = require('../../utils/learning-records')
 const { createAnalysisPoller } = require('../../utils/analysis-poller')
 const { buildSubjectHomeView } = require('./subject-home-presenter')
-const { navigateToVerificationPaper } = require('../../utils/shared-navigation')
+const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
 const { getSubjectColor } = require('../../utils/constants')
 
 const SUBJECT_HOME_CACHE_TTL_MS = 30 * 1000
@@ -483,9 +483,11 @@ Page({
 
   onHide() {
     if (this._poller) this._poller.stop()
+    stopVerificationPoller()
   },
 
   onUnload() {
     if (this._poller) this._poller.stop()
+    stopVerificationPoller()
   }
 })

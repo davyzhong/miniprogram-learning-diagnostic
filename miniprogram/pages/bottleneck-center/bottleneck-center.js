@@ -8,7 +8,7 @@ const {
   SUBJECTS,
   SUBJECT_NAMES
 } = require('../../utils/constants')
-const { navigateToVerificationPaper } = require('../../utils/shared-navigation')
+const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
 
 const SUBJECT_FILTERS = [
   { key: 'all', name: '全部' },
@@ -226,5 +226,9 @@ Page({
 
   onRefresh() {
     return this.loadBottlenecks()
+  },
+
+  onUnload() {
+    stopVerificationPoller()
   }
 })

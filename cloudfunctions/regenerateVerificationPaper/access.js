@@ -19,7 +19,7 @@ async function getActiveMember(db, studentId, openId) {
       studentId,
       memberOpenId: openId,
       status: 'active',
-    }).get();
+    }).limit(1).get();
     return (res.data || [])[0] || null;
   } catch (error) {
     if (isMissingCollectionError(error)) return null;
