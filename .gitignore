@@ -16,6 +16,9 @@ npm-debug.log*
 .superpowers/
 tmp/
 
+# Codemap tool transient outputs (the .md artifacts in docs/CODEMAPS/ are kept)
+.reports/
+
 # Environment / secrets
 .env
 .env.local
