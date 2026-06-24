@@ -10,9 +10,10 @@
 const MAX_RETRY_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 10000; // 10秒后重试
 
-// 分批生成：真实数据下 2-8 个卡点一批仍可能触发 60s 调用超时。
-// 默认每批只推进 1 个细 BN，靠续跑机制完成整份卷子。
-const BATCH_SIZE = 1;
+// 分批生成：每批 5 个细 BN。_appendToPaperId 路径只调 AI 出题（不生成 PDF），
+// deepseek-v4-flash 为 5 个 BN 出 ~10 题约 5-15s，远在 60s 超时内。
+// 这样 38 个卡点只需 8 批（原来逐个串行需 38 批）。
+const BATCH_SIZE = 5;
 
 const SEVERITY_RANK = { high: 3, medium: 2, low: 1 };
 // 不再限制细卡点数量：验证卷应该覆盖全量细分卡点（BN），
@@ -110,6 +111,9 @@ function extractPendingTargets(profile) {
 
 /**
  * 覆盖旧卷：标记同学科未验证的旧验证卷为 superseded
+ *
+ * 性能优化：原来逐份旧卷查询是否有验证报告（N+1 查询），
+ * 现在一次查全量验证报告，构建已有 paperId 集合，再批量 supersede。
  */
 async function supersedeOldPapers(db, studentId, subject, newReportId) {
   const oldPapers = await db.collection('papers')
@@ -121,27 +125,33 @@ async function supersedeOldPapers(db, studentId, subject, newReportId) {
     .limit(20)
     .get();
 
-  let superseded = 0;
-  for (const old of oldPapers.data || []) {
-    // 跳过已 superseded 的
-    if (old.generationStatus === 'superseded') continue;
-    // 只覆盖没有验证报告的旧卷（即用户还没上传作答的）
-    const verifReports = await db.collection('reports')
-      .where({ studentId, subject, type: 'verification', paperId: old._id })
-      .limit(1)
-      .get();
-    if ((verifReports.data || []).length === 0) {
-      await db.collection('papers').doc(old._id).update({
-        data: {
-          generationStatus: 'superseded',
-          supersededAt: new Date(),
-          supersededBy: newReportId,
-        },
-      });
-      superseded += 1;
-    }
-  }
-  return superseded;
+  // 过滤出需要检查的旧卷（跳过已 superseded）
+  const candidates = (oldPapers.data || []).filter(p => p.generationStatus !== 'superseded');
+  if (candidates.length === 0) return 0;
+
+  // 单次查询所有相关验证报告，构建"已有验证报告的 paperId"集合
+  const verifReportsRes = await db.collection('reports')
+    .where({ studentId, subject, type: 'verification' })
+    .limit(50)
+    .get();
+  const papersWithVerifReport = new Set(
+    (verifReportsRes.data || []).map(r => r.paperId).filter(Boolean)
+  );
+
+  // 批量标记未验证的旧卷为 superseded（并行 update）
+  const toSupersede = candidates.filter(p => !papersWithVerifReport.has(p._id));
+  const now = new Date();
+  await Promise.all(toSupersede.map(p =>
+    db.collection('papers').doc(p._id).update({
+      data: {
+        generationStatus: 'superseded',
+        supersededAt: now,
+        supersededBy: newReportId,
+      },
+    }).catch(() => {})  // 单条失败不影响其他
+  ));
+
+  return toSupersede.length;
 }
 
 /**

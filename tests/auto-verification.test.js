@@ -86,11 +86,12 @@ test('extractPendingTargets 返回 bottleneckId 数组', () => {
   assert.deepEqual(targets, ['BN-1'])
 })
 
-test('chunkTargets defaults to one bottleneck per batch to avoid cloud function timeouts', () => {
+test('chunkTargets batches bottlenecks at BATCH_SIZE=5 to balance latency and timeout safety', () => {
   const autoVerification = loadModule('cloudfunctions/analyzePhotos/auto-verification.js')
-  const chunks = autoVerification.chunkTargets(['BN-001', 'BN-002', 'BN-003'])
+  const chunks = autoVerification.chunkTargets(['BN-001', 'BN-002', 'BN-003', 'BN-004', 'BN-005', 'BN-006'])
 
-  assert.equal(JSON.stringify(chunks), JSON.stringify([['BN-001'], ['BN-002'], ['BN-003']]))
+  // BATCH_SIZE=5: 前5个一批，第6个单独一批
+  assert.equal(JSON.stringify(chunks), JSON.stringify([['BN-001','BN-002','BN-003','BN-004','BN-005'], ['BN-006']]))
 })
 
 test('generateInBatches marks paper failed when any batch cannot be generated', async () => {
@@ -133,9 +134,10 @@ test('generateInBatches marks paper failed when any batch cannot be generated', 
   const paper = db.dump('papers')[0]
   assert.equal(pdfCalls, 0)
   assert.equal(paper.generationStatus, 'failed')
-  assert.equal(paper.generationProgress.succeededBatches, 8)
+  // BATCH_SIZE=5: 9 个 target 分 2 批。BN-009 在第 2 批，第 2 批失败。
+  assert.equal(paper.generationProgress.succeededBatches, 1)
   assert.equal(paper.generationProgress.failedBatches, 1)
-  assert.deepEqual(paper.generationProgress.failedBatchIndexes, [9])
+  assert.deepEqual(paper.generationProgress.failedBatchIndexes, [2])
 })
 
 test('generateInBatches requires the final regenerated PDF file id before marking ready', async () => {

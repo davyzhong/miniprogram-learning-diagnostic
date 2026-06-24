@@ -1,0 +1,34 @@
+Codemap Diff Report
+====================
+Generated: 2026-06-25
+
+Status: FIRST GENERATION (no previous codemaps found)
+
+Previous codemaps: NONE
+This is the initial codemap generation for the project.
+
+Files scanned: 254
+Codemaps generated: 5
+  - docs/CODEMAPS/architecture.md
+  - docs/CODEMAPS/backend.md
+  - docs/CODEMAPS/frontend.md
+  - docs/CODEMAPS/data.md
+  - docs/CODEMAPS/dependencies.md
+
+Codebase metrics:
+  - Cloud functions: 13 (12,645 lines JS)
+  - Mini program pages: 19 (17,471 lines JS)
+  - Tests: 611 tests (18,567 lines)
+  - Database collections: 10
+  - Seed data: 4 math taxonomy files
+
+New architecture detected (recent changes in this session):
+  - BN canonicalize/dedup in analyzeBatch/result-normalizer.js (NEW)
+  - taxonomy-bn-list.js packaging-safe BN catalog (NEW)
+  - _regeneratePdf status writeback fix in generatePaper/index.js
+  - PDF flow-pagination fix in generatePaper/pdf-renderer.js
+
+Staleness warnings:
+  - docs/ARCHITECTURE.md (pre-existing, not updated — codemaps/ supersedes)
+  - docs/CLOUD_FUNCTIONS.md (pre-existing, not updated — codemaps/ supersedes)
+  - docs/DATA_DICTIONARY.md (pre-existing, not updated — codemaps/ supersedes)

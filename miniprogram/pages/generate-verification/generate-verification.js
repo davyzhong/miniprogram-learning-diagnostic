@@ -5,7 +5,7 @@ const cloud = require('../../utils/cloud')
 const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
 const { buildBottleneckViews, profileBottlenecks, buildConfidence } = require('../../utils/bottleneck-view')
 const { groupBottlenecksByHierarchy } = require('../../utils/math-bottleneck-hierarchy')
-const { navigateToVerificationPaper } = require('../../utils/shared-navigation')
+const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
 
 // 置信度分层出题数（与云函数 generatePaper 保持一致）
 const CONFIDENCE_HIGH_THRESHOLD = 75
@@ -421,5 +421,9 @@ Page({
   questionCountForSelection(selectedItemsOrCount) {
     const selectedItems = Array.isArray(selectedItemsOrCount) ? selectedItemsOrCount : []
     return selectedItems.reduce((sum, item) => sum + questionsForWeight(item.weight), 0)
+  },
+
+  onUnload() {
+    stopVerificationPoller()
   }
 })

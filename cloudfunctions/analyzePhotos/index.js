@@ -21,9 +21,11 @@ const db = cloud.database();
 const _ = db.command;
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const STALE_TASK_MS = 10 * 60 * 1000;
-const ANALYSIS_BATCH_SIZE = 1;
+// 批量大小：analyzeBatch 支持单批最多 5 张图片（多模态 AI），每批 5 张可将
+// 串行调用次数从 N 降到 N/5。3 批/调用让续跑机制每轮做更多有效工作。
+const ANALYSIS_BATCH_SIZE = 5;
 const MAX_CONCURRENT_BATCHES = 1;
-const MAX_BATCHES_PER_INVOCATION = 1;
+const MAX_BATCHES_PER_INVOCATION = 3;
 const MAX_BATCH_ATTEMPTS = 2;
 const BATCH_RETRY_DELAY_MS = (process.env.BATCH_RETRY_DELAY_MS != null && process.env.BATCH_RETRY_DELAY_MS !== '')
   ? Number(process.env.BATCH_RETRY_DELAY_MS)
@@ -179,6 +181,32 @@ async function getHistoricalPhotos(studentId, subject, options = {}) {
     .filter(item => !excludeReportIds.has(item._id))
     .filter(item => !item.isArchived && !item.archivedAt)
     .flatMap(item => Array.isArray(item.imageFiles) ? item.imageFiles : []);
+}
+
+/**
+ * 一次性查询历史报告，同时派生 previousReport 和 historicalPhotos。
+ * 替代分别调用 getHistoricalPhotos + getPreviousReport 的重复查询（P1-9）。
+ */
+async function getHistoricalContext(studentId, subject, options = {}) {
+  const excludeReportIds = new Set((options.excludeReportIds || []).filter(Boolean));
+  const res = await db.collection('reports')
+    .where({
+      studentId,
+      subject,
+      status: 'completed',
+    })
+    .orderBy('createdAt', 'desc')
+    .limit(20)
+    .get();
+
+  const validReports = res.data
+    .filter(item => !excludeReportIds.has(item._id))
+    .filter(item => !item.isArchived && !item.archivedAt);
+
+  return {
+    historicalPhotos: validReports.flatMap(item => Array.isArray(item.imageFiles) ? item.imageFiles : []),
+    previousReport: validReports.find(item => Array.isArray(item.bottlenecks) && item.bottlenecks.length > 0) || null,
+  };
 }
 
 async function getVerificationPaper(report) {
@@ -446,9 +474,10 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     batchIndex: item.batchIndex,
     error: item.error,
   })));
-  const historicalPhotos = await getHistoricalPhotos(studentId, subject, {
+  const historicalContext = await getHistoricalContext(studentId, subject, {
     excludeReportIds: [reportId, ...reanalysisSourceReportIds(report)],
   });
+  const historicalPhotos = historicalContext.historicalPhotos;
   const markedPages = markDuplicatePages(pageResults, historicalPhotos);
   const uniquePages = markedPages.filter(page => !page.isDuplicate);
   const merged = mergeBatchResults(
@@ -473,9 +502,7 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     merged.summary = '本次照片均疑似重复，未更新学习卡点';
     comparisonSummary = '本次照片均疑似重复，未更新学习卡点。';
   } else if (mode === 'verification') {
-    previousReport = await getPreviousReport(studentId, subject, {
-      excludeReportIds: [reportId, ...reanalysisSourceReportIds(report)],
-    });
+    previousReport = historicalContext.previousReport;
     verificationTargets = verificationPaper.targets;
     const verificationEvidence = aggregateVerificationEvidence(verificationPaper.plan, uniquePages);
     const passedCodes = verificationEvidence.filter(item => item.evidenceStatus === 'passed').map(item => item.lpCode);

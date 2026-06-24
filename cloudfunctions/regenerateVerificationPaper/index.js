@@ -10,7 +10,8 @@ const { getStudentAccess, canOperateLearning } = require('./access');
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 
-const BATCH_SIZE = 1;
+// start 路径分批大小：每批 5 个细 BN（与 auto-verification.js 一致）。
+const BATCH_SIZE = 5;
 const CONTINUE_BATCH_SIZE = 1;
 const MAX_CONTINUE_ATTEMPTS = 3;
 
