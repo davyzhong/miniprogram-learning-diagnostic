@@ -1,0 +1,251 @@
+.page {
+  padding: 0 0 120rpx;
+  min-height: 100vh;
+  background: #f7f7f9;
+  box-sizing: border-box;
+}
+
+/* 月份切换 */
+.month-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24rpx 0 8rpx;
+  background: #fff;
+}
+.month-btn {
+  width: 64rpx;
+  height: 64rpx;
+  line-height: 60rpx;
+  text-align: center;
+  font-size: 40rpx;
+  color: #4a6cf7;
+}
+.month-label {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #222;
+  margin: 0 48rpx;
+}
+
+/* 内测估算提示 */
+.notice-bar {
+  margin: 16rpx 24rpx 0;
+  padding: 16rpx 24rpx;
+  background: #fff8e6;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  color: #9a7400;
+  line-height: 1.5;
+}
+
+/* 汇总卡片 */
+.summary-grid {
+  display: flex;
+  flex-wrap: wrap;
+  padding: 24rpx 16rpx 0;
+}
+.summary-card {
+  width: 50%;
+  box-sizing: border-box;
+  padding: 8rpx;
+}
+.summary-card .summary-value {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 28rpx 24rpx;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #222;
+}
+.summary-card .summary-label {
+  padding: 8rpx 24rpx 0;
+  font-size: 24rpx;
+  color: #888;
+}
+.summary-hint {
+  margin-left: 8rpx;
+  font-size: 20rpx;
+  color: #b08a2a;
+}
+
+/* 功能拆分 */
+.section {
+  margin: 32rpx 24rpx 0;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+.section-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f0f0f0;
+}
+.breakdown-row:last-child {
+  border-bottom: none;
+}
+.breakdown-name {
+  flex: 0 0 180rpx;
+  font-size: 26rpx;
+  color: #333;
+}
+.breakdown-meta {
+  flex: 1;
+  font-size: 22rpx;
+  color: #999;
+}
+.breakdown-cost {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #4a6cf7;
+}
+
+/* 筛选 */
+.filter-bar {
+  white-space: nowrap;
+  padding: 24rpx 16rpx 8rpx;
+}
+.filter-chip {
+  display: inline-block;
+  padding: 10rpx 28rpx;
+  margin: 0 8rpx;
+  border-radius: 32rpx;
+  background: #fff;
+  font-size: 24rpx;
+  color: #666;
+}
+.filter-chip.active {
+  background: #4a6cf7;
+  color: #fff;
+}
+
+/* 明细按天 */
+.day-group {
+  margin: 16rpx 24rpx 0;
+}
+.day-label {
+  font-size: 24rpx;
+  color: #999;
+  padding: 16rpx 8rpx 8rpx;
+}
+.event-row {
+  display: flex;
+  align-items: flex-start;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 12rpx;
+}
+.event-main {
+  flex: 1;
+  min-width: 0;
+}
+.event-name {
+  font-size: 28rpx;
+  color: #222;
+  font-weight: 500;
+}
+.event-status {
+  margin-left: 12rpx;
+  font-size: 20rpx;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+.event-status.failed {
+  background: #fdecea;
+  color: #c62828;
+}
+.event-status.pending {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+.event-sub {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #999;
+}
+.event-sub text {
+  margin-right: 16rpx;
+}
+.event-model {
+  font-family: monospace;
+}
+.event-error {
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: #c62828;
+}
+.event-cost {
+  text-align: right;
+  flex: 0 0 140rpx;
+}
+.cost-value {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #4a6cf7;
+}
+.cost-tokens {
+  font-size: 20rpx;
+  color: #aaa;
+  margin-top: 4rpx;
+}
+.cost-estimate {
+  display: inline-block;
+  margin-top: 4rpx;
+  font-size: 18rpx;
+  color: #b08a2a;
+  background: #fff8e6;
+  padding: 2rpx 10rpx;
+  border-radius: 6rpx;
+}
+
+/* 空态 */
+.empty {
+  padding: 120rpx 48rpx;
+  text-align: center;
+}
+.empty-title {
+  font-size: 30rpx;
+  color: #666;
+  margin-bottom: 12rpx;
+}
+.empty-desc {
+  font-size: 24rpx;
+  color: #aaa;
+  line-height: 1.6;
+}
+
+/* 删除入口 */
+.footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: #fff;
+  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+.deletion-btn {
+  text-align: center;
+  padding: 24rpx;
+  border-radius: 16rpx;
+  background: #f5f5f5;
+  color: #888;
+  font-size: 26rpx;
+}
+.deletion-btn.submitting {
+  opacity: 0.6;
+}
+.deletion-btn.submitted {
+  background: #e8f5e9;
+  color: #2e7d32;
+}

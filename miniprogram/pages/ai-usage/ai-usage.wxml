@@ -1,0 +1,81 @@
+<view class="page">
+  <!-- 月份切换 -->
+  <view class="month-bar">
+    <view class="month-btn" catchtap="onPrevMonth">‹</view>
+    <view class="month-label">{{monthLabel}}</view>
+    <view class="month-btn" catchtap="onNextMonth">›</view>
+  </view>
+
+  <!-- 内测估算提示（设计文档强制） -->
+  <view class="notice-bar">{{estimateNotice}}</view>
+
+  <!-- 汇总卡片 -->
+  <view class="summary-grid">
+    <view class="summary-card" wx:for="{{summaryCards}}" wx:key="label">
+      <view class="summary-value">{{item.value}}</view>
+      <view class="summary-label">
+        {{item.label}}<text wx:if="{{item.hint}}" class="summary-hint">{{item.hint}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 功能拆分 -->
+  <view class="section" wx:if="{{breakdownVisible}}">
+    <view class="section-title">按功能拆分</view>
+    <view class="breakdown-row" wx:for="{{breakdown}}" wx:key="key">
+      <view class="breakdown-name">{{item.name}}</view>
+      <view class="breakdown-meta">{{item.callCount}} 次 · {{item.tokens}} token</view>
+      <view class="breakdown-cost">{{item.costText}}</view>
+    </view>
+  </view>
+
+  <!-- 筛选 -->
+  <scroll-view class="filter-bar" scroll-x wx:if="{{filters.length}}">
+    <view
+      wx:for="{{filters}}"
+      wx:key="key"
+      class="filter-chip {{activeFilter === item.key ? 'active' : ''}}"
+      data-key="{{item.key}}"
+      catchtap="onFilterTap"
+    >{{item.name}}</view>
+  </scroll-view>
+
+  <!-- 明细按天 -->
+  <block wx:if="{{hasEvents}}">
+    <view class="day-group" wx:for="{{days}}" wx:for-item="day" wx:key="dayKey">
+      <view class="day-label">{{day.dayLabel}}</view>
+      <view class="event-row" wx:for="{{day.items}}" wx:for-item="ev" wx:key="_id">
+        <view class="event-main">
+          <view class="event-name">{{ev.name}}<text class="event-status {{ev.status}}">{{ev.statusText}}</text></view>
+          <view class="event-sub">
+            <text>{{ev.time}}</text>
+            <text wx:if="{{ev.model}}" class="event-model">{{ev.model}}</text>
+            <text wx:if="{{ev.imageCount}}" class="event-img">{{ev.imageCount}}图</text>
+          </view>
+          <view class="event-error" wx:if="{{ev.errorMessage}}">{{ev.errorMessage}}</view>
+        </view>
+        <view class="event-cost">
+          <view class="cost-value">{{ev.costText}}</view>
+          <view class="cost-tokens">{{ev.tokens}} token</view>
+          <view class="cost-estimate" wx:if="{{ev.isEstimate}}">估算</view>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 空态 -->
+  <view class="empty" wx:if="{{!loading && !hasEvents}}">
+    <view class="empty-title">{{emptyTitle}}</view>
+    <view class="empty-desc">{{emptyDesc}}</view>
+  </view>
+
+  <!-- 删除数据入口 -->
+  <view class="footer">
+    <view
+      class="deletion-btn {{deletionSubmitting ? 'submitting' : ''}} {{deletionSubmitted ? 'submitted' : ''}}"
+      catchtap="onDeletionRequest"
+    >
+      {{deletionSubmitted ? '已提交删除申请' : (deletionSubmitting ? '提交中…' : '申请删除我的数据')}}
+    </view>
+  </view>
+</view>

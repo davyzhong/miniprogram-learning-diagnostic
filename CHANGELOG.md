@@ -8,6 +8,8 @@
 
 ### Added
 
+- **AI 用量与成本估算账本**（体验版内测）：`aiUsage` 云函数 + `aiUsageEvents` 追加式事件账本。各 AI 云函数（analyzeBatch/generatePaper/learningResource/englishVocabulary）在真实调用边界写入 pending→succeeded/failed 事件，成本优先用真实 token usage，无 usage 时按字符/图片数估算并标记。账单页（`pages/ai-usage`）展示月度汇总、按功能拆分和按天明细，强制标注"内测成本估算，不代表应付款项"。
+- **内测授权与数据删除**：首次上传前展示内测说明弹层（收集内容/用途/风险/删除方式），用户同意后才能继续；`userConsents` 集合记录授权；AI 用量页可发起 `dataDeletionRequests`。设计文档见 `docs/superpowers/specs/2026-06-27-private-beta-ai-usage-design.md`。
 - 验证卷预览页“覆盖卡点”层级展示：新增 `paperDisplay.bottleneckHierarchy`，按粗类、卡点家族、细卡点展示覆盖范围，并兼容旧 LP/摘要数据。
 - 验证卷范围页卡点层级提示：数学目标显示“粗类 / 卡点组”，语文具体错项继续显示错项说明。
 - **本地 PDF 预览工具** `scripts/preview-pdf.js`：改完 PDF 渲染代码直接跑，不用上传云函数即可看效果。输出到 `tmp/preview-verification.pdf`

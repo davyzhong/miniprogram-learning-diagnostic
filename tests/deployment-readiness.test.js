@@ -32,7 +32,8 @@ const REQUIRED_CLOUD_FUNCTIONS = [
   'studentAccess',
   'reportFeedback',
   'englishVocabulary',
-  'learningResource'
+  'learningResource',
+  'aiUsage'
 ]
 
 test('deployable cloud functions have required manifests and timeout configs', () => {
@@ -78,7 +79,13 @@ test('frontend cloud data layer exposes wrappers for deployable learning functio
     'generateEnglishRecognitionSession',
     'submitEnglishRecognitionAttempt',
     'generateEnglishPracticeSession',
-    'submitEnglishPracticeResult'
+    'submitEnglishPracticeResult',
+    'getAiUsageEvents',
+    'getAiUsageSummary',
+    'createDeletionRequest',
+    'getDeletionRequests',
+    'getBetaAuth',
+    'setBetaAuth'
   ]
 
   for (const wrapper of expectedWrappers) {
@@ -254,7 +261,9 @@ test('各云函数的共享文件副本互相保持一致', () => {
   // 共享文件直接复制成各云函数的根级文件（不再用 _shared 子目录或顶层源目录）。
   // 这里检查同一文件名的所有副本内容一致——改了其中一个就要同步全部。
   const sharedFiles = {
-    'access.js': ['generateReportPDF', 'getAnalysisProgress', 'learningResource', 'reportFeedback', 'studentAccess', 'studentData', 'uploadAndAnalyze', 'englishVocabulary', 'generatePaper'],
+    'access.js': ['generateReportPDF', 'getAnalysisProgress', 'learningResource', 'reportFeedback', 'studentAccess', 'studentData', 'uploadAndAnalyze', 'englishVocabulary', 'generatePaper', 'aiUsage'],
+    'pricing.js': ['aiUsage', 'analyzeBatch', 'generatePaper', 'learningResource', 'englishVocabulary'],
+    'usage-ledger.js': ['aiUsage', 'analyzeBatch', 'generatePaper', 'learningResource', 'englishVocabulary'],
     'constants.js': ['generateReportPDF', 'generatePaper'],
     'bottleneck-name.js': ['analyzeBatch', 'generatePaper'],
   }

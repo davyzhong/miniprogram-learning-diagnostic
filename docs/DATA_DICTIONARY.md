@@ -18,6 +18,9 @@
 | `learningResourcePacks` | 数学学习卡点任务包 | 点击“学一下”生成或读取时 | learningResource 云函数 |
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
 | `analysisTasks` | 异步分析任务进度追踪 | analyzePhotos 启动时 | analyzePhotos 云函数 |
+| `aiUsageEvents` | AI 用量追加事件账本（token、估算成本、状态） | AI 云函数发起调用时 | analyzeBatch / generatePaper / learningResource / englishVocabulary（通过 usage-ledger） |
+| `dataDeletionRequests` | 用户发起的数据删除请求 | 用户在 AI 用量页申请时 | aiUsage 云函数 |
+| `userConsents` | 内测授权同意记录 | 用户首次同意内测说明时 | aiUsage 云函数 |
 
 > 学习记录页面不是独立集合，而是前端按天聚合 `reports`、`papers`、`reports.imageFiles`、`englishPracticeSessions` 和 `learningResourcePacks` 后得到的时间线视图。页面会派生学习天数、主记录数、验证试卷数、验证反馈数、学习任务包数等摘要；长时间中断的分析记录通过 `studentData.cleanupStaleLearningRecords` 预检和 owner 确认后归档，不新增事件集合。
 
@@ -620,6 +623,8 @@ MVP 数学卡点当前包含：
 | `studentEnglishWords` | `studentId`, `masteryStatus`, `nextReviewAt` | 升序, 升序, 升序 | 英语听写抽取待练、错词和待复测词 |
 | `englishPracticeSessions` | `studentId`, `createdAt` | 升序, 降序 | 英语听写历史记录 |
 | `learningResourcePacks` | `studentId`, `subject`, `updatedAt` | 升序, 升序, 降序 | 学习卡点任务包列表和学习记录时间线 |
+| `aiUsageEvents` | `_openid`, `createdAt` | 升序, 降序 | AI 用量账单页按用户读取本月事件 |
+| `aiUsageEvents` | `studentId`, `createdAt` | 升序, 降序 | 维护者按孩子统计用量（预留） |
 
 ### 索引设计要点
 

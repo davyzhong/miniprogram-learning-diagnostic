@@ -435,7 +435,8 @@ test('learning profile home exposes an actionable personal workbench contract', 
     'bottleneckCenter',
     'uploadEvidence',
     'knowledgeMap',
-    'learningRecords'
+    'learningRecords',
+    'aiUsage'
   ])
   assert.ok(view.personalActionQueue.every(item => item.url))
 

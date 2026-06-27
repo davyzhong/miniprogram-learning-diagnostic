@@ -11,7 +11,8 @@ const TRACEABLE_TYPES = new Set([
   'upload-history',
   'parent-management',
   'permission-info',
-  'empty-state-info'
+  'empty-state-info',
+  'ai-usage'
 ])
 
 function clean(value) {
@@ -44,6 +45,7 @@ function normalizeTraceableAction(action) {
     bottleneckId: clean(action.bottleneckId),
     viewId: clean(action.viewId),
     filter: clean(action.filter),
+    month: clean(action.month),
     title: clean(action.title)
   }
 }
@@ -65,6 +67,7 @@ function buildTraceableUrl(action) {
     grade,
     id,
     filter,
+    month,
     title
   } = normalized
 
@@ -165,6 +168,11 @@ function buildTraceableUrl(action) {
       empty: 1,
       title
     })
+  }
+
+  if (type === 'ai-usage') {
+    // AI 用量账单页：全局（按用户），可带 month 参数
+    return withQuery('/pages/ai-usage/ai-usage', { month: normalized.month || '' })
   }
 
   return null

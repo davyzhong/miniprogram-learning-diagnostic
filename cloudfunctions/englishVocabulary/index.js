@@ -18,6 +18,7 @@ const {
   judgeRecognitionAnswer,
   dateOnly
 } = require('./english-vocabulary')
+const { recordUsageStart, recordUsageSuccess, recordUsageFailure } = require('./usage-ledger')
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
@@ -203,7 +204,9 @@ async function createImportBatch(event, openId) {
     const extracted = await extractCandidatesFromImages(event.pageFileIDs, {
       sourceFile: event.sourceFile,
       defaultGrade: event.defaultGrade,
-      defaultVolume: event.defaultVolume
+      defaultVolume: event.defaultVolume,
+      ledgerOpenId: openId,
+      ledgerStudentId: event.studentId
     })
     words = extracted.words
     patterns = extracted.patterns
@@ -280,17 +283,50 @@ async function extractCandidatesFromImages(pageFileIDs = [], context = {}) {
 
   const ai = app.ai()
   const model = ai.createModel('cloudbase')
-  const result = await model.generateText({
-    model: 'hy3-preview',
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'text', text: prompt },
-        ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } }))
-      ]
-    }],
-    temperature: 0.1
-  })
+
+  // AI 用量记账（pending）——写入失败不阻断业务
+  let eventId = null
+  if (context.ledgerOpenId) {
+    try {
+      eventId = await recordUsageStart({
+        db, openId: context.ledgerOpenId,
+        eventType: 'photo_analysis',
+        studentId: context.ledgerStudentId || '',
+        subject: 'english',
+        sourceType: 'english_session',
+        cloudFunction: 'englishVocabulary',
+        model: 'hy3-preview',
+        imageCount: imageUrls.length
+      })
+    } catch (e) { console.error('[usage] recordUsageStart failed', e && e.message) }
+  }
+
+  let result
+  try {
+    result = await model.generateText({
+      model: 'hy3-preview',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } }))
+        ]
+      }],
+      temperature: 0.1
+    })
+    if (eventId) {
+      recordUsageSuccess({
+        db, eventId, usage: result && result.usage, outputText: result && result.text,
+        model: 'hy3-preview', imageCount: imageUrls.length
+      }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
+    }
+  } catch (err) {
+    if (eventId) {
+      recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length })
+        .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
+    }
+    throw err
+  }
   const parsed = parseJsonText(result.text)
   return {
     words: Array.isArray(parsed.words) ? parsed.words : [],
@@ -664,17 +700,52 @@ ${JSON.stringify(candidates)}
 }`
   const ai = app.ai()
   const model = ai.createModel('cloudbase')
-  const result = await model.generateText({
-    model: 'hy3-preview',
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'text', text: prompt },
-        ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } }))
-      ]
-    }],
-    temperature: 0.1
-  })
+
+  // AI 用量记账（pending）——写入失败不阻断业务
+  let eventId = null
+  try {
+    const ledgerOpenId = cloud.getWXContext().OPENID
+    if (ledgerOpenId) {
+      eventId = await recordUsageStart({
+        db, openId: ledgerOpenId,
+        eventType: 'dictation_grading',
+        studentId: event.studentId || '',
+        subject: 'english',
+        sourceId: event.sessionId || '',
+        sourceType: 'english_session',
+        cloudFunction: 'englishVocabulary',
+        model: 'hy3-preview',
+        imageCount: imageUrls.length
+      })
+    }
+  } catch (e) { console.error('[usage] recordUsageStart failed', e && e.message) }
+
+  let result
+  try {
+    result = await model.generateText({
+      model: 'hy3-preview',
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'text', text: prompt },
+          ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } }))
+        ]
+      }],
+      temperature: 0.1
+    })
+    if (eventId) {
+      recordUsageSuccess({
+        db, eventId, usage: result && result.usage, outputText: result && result.text,
+        model: 'hy3-preview', imageCount: imageUrls.length
+      }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
+    }
+  } catch (err) {
+    if (eventId) {
+      recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length })
+        .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
+    }
+    throw err
+  }
   const parsed = parseJsonText(result.text)
   const results = normalizeDictationOcrResults(parsed.results || [], wordItems)
   const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
