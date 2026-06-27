@@ -7,6 +7,7 @@ const {
   canOperateLearning,
   isMissingCollectionError
 } = require('./access')
+const { recordUsageStart, recordUsageSuccess, recordUsageFailure } = require('./usage-ledger')
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
@@ -154,7 +155,7 @@ async function generatePack(event, openId) {
   // LLM 增强：用 taxonomy 数据 + LLM 生成更深入的讲解内容
   let enhancedDraft = draft
   try {
-    enhancedDraft = await enhancePackWithLLM(draft, subject)
+    enhancedDraft = await enhancePackWithLLM(draft, subject, { openId, studentId })
   } catch (err) {
     console.warn('LLM 增强失败，使用 taxonomy 数据版本:', err.message)
   }
@@ -175,7 +176,7 @@ async function generatePack(event, openId) {
 }
 
 // LLM 增强函数
-async function enhancePackWithLLM(draft, subject) {
+async function enhancePackWithLLM(draft, subject, ledgerContext = {}) {
   if (subject !== 'math') return draft
 
   const target = {
@@ -232,11 +233,43 @@ ${taxonomyContext}
 
   const app = cloud.init()
   const model = app.ai.createModel('cloudbase')
-  const result = await model.generateText({
-    model: 'deepseek-v4-flash',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.4,
-  })
+
+  // AI 用量记账（pending）——写入失败不阻断业务
+  let eventId = null
+  if (ledgerContext.openId) {
+    try {
+      eventId = await recordUsageStart({
+        db, openId: ledgerContext.openId,
+        eventType: 'learning_resource_pack',
+        studentId: ledgerContext.studentId || '',
+        subject,
+        sourceType: 'resource_pack',
+        cloudFunction: 'learningResource',
+        model: 'deepseek-v4-flash'
+      })
+    } catch (e) { console.error('[usage] recordUsageStart failed', e && e.message) }
+  }
+
+  let result
+  try {
+    result = await model.generateText({
+      model: 'deepseek-v4-flash',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.4,
+    })
+    if (eventId) {
+      recordUsageSuccess({
+        db, eventId, usage: result && result.usage, outputText: result && result.text,
+        model: 'deepseek-v4-flash'
+      }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
+    }
+  } catch (err) {
+    if (eventId) {
+      recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'deepseek-v4-flash' })
+        .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
+    }
+    throw err
+  }
 
   const text = result.text || ''
   const cleanText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()

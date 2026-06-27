@@ -6,6 +6,7 @@ const { normalizePageResults } = require('./result-normalizer');
 const { getSubjectName } = require('./constants');
 const { BOTTLENECK_CODE_NAMES } = require('./bottleneck-name');
 const { TAXONOMY_BN_LIST } = require('./taxonomy-bn-list');
+const { recordUsageStart, recordUsageSuccess, recordUsageFailure } = require('./usage-ledger');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -211,11 +212,11 @@ async function authorizeBatch({ reportId, taskId, fileIDs }) {
   if (fileIDs.some(fileID => !allowedFiles.has(fileID))) {
     return { allowed: false, error: '图片不属于当前分析任务' };
   }
-  return { allowed: true };
+  return { allowed: true, report };
 }
 
 // ========== 调用 CloudBase AI（多模态） ==========
-async function callAI(imageUrls, subject, verificationPlan) {
+async function callAI(imageUrls, subject, verificationPlan, ledgerContext = {}) {
   const prompt = buildPrompt(subject, verificationPlan);
 
   // 构造 messages（CloudBase AI 多模态格式）
@@ -230,13 +231,48 @@ async function callAI(imageUrls, subject, verificationPlan) {
   const ai = app.ai();
   const model = ai.createModel('cloudbase');
 
-  const result = await model.generateText({
-    model: 'hy3-preview',
-    messages: [{ role: 'user', content }],
-    temperature: 0.3,
-  });
+  // AI 用量记账（pending）——写入失败不阻断业务
+  let eventId = null
+  if (ledgerContext.openId) {
+    try {
+      eventId = await recordUsageStart({
+        db, openId: ledgerContext.openId,
+        eventType: 'photo_analysis',
+        studentId: ledgerContext.studentId || '',
+        subject,
+        sourceId: ledgerContext.reportId || '',
+        sourceType: 'report',
+        cloudFunction: 'analyzeBatch',
+        model: 'hy3-preview',
+        imageCount: imageUrls.length
+      })
+    } catch (e) { console.error('[usage] recordUsageStart failed', e && e.message) }
+  }
 
-  return result.text;
+  try {
+    const result = await model.generateText({
+      model: 'hy3-preview',
+      messages: [{ role: 'user', content }],
+      temperature: 0.3,
+    });
+
+    // 记账成功（优先真实 usage，无则估算）
+    if (eventId) {
+      recordUsageSuccess({
+        db, eventId, usage: result && result.usage, outputText: result && result.text,
+        model: 'hy3-preview', imageCount: imageUrls.length
+      }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
+    }
+
+    return result.text;
+  } catch (err) {
+    if (eventId) {
+      recordUsageFailure({
+        db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length
+      }).catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
+    }
+    throw err;
+  }
 }
 
 // ========== 解析 AI 返回 ==========
@@ -322,7 +358,10 @@ exports.main = async (event) => {
 
     // 2. 调用 CloudBase AI
     console.log('调用 CloudBase AI 分析...');
-    const aiText = await callAI(imageUrls, subject, verificationPlan);
+    const ledgerContext = access.report
+      ? { openId: access.report._openid, studentId: access.report.studentId || '', reportId }
+      : {};
+    const aiText = await callAI(imageUrls, subject, verificationPlan, ledgerContext);
 
     // 3. 解析结果
     const result = parseResult(aiText, availableFileIDs.length);

@@ -21,6 +21,8 @@
 - [reanalyzeMathHistory](#reanalyzemathhistory)
 - [generateReportPDF](#generatereportpdf)
 - [getAnalysisProgress](#getanalysisprogress)
+- [learningResource](#learningresource)
+- [aiUsage](#aiusage)
 - [辅助模块](#辅助模块)
   - [result-normalizer.js](#result-normalizerjs)
   - [photo-dedup.js](#photo-dedupjs)
@@ -1307,6 +1309,45 @@ wx.cloud.callFunction({
 - `target.lpCode`：仅作为粗卡点兼容兜底。
 
 云函数查找或复用 `learningResourcePacks` 时按 `bottleneckId || targetId || lpCode || id` 生成目标键。不能只用 `lpCode` 区分任务包，因为同一个粗卡点下面可能有多个细卡点；否则学习卡点中心不同卡片的“学一下”会打开同一份内容。
+
+---
+
+## aiUsage
+
+**位置**：`cloudfunctions/aiUsage/index.js`
+
+### 功能描述
+
+AI 用量与成本估算账本、数据删除请求和内测授权。读操作按 `_openid` 隔离（用户只能读自己的用量事件）。AI 调用的实际事件写入由各 AI 云函数通过本地 `usage-ledger.js` 副本完成（紧贴真实请求边界，避免重试漏记/重记）；本函数只负责读取、聚合和管理。
+
+设计文档：`docs/superpowers/specs/2026-06-27-private-beta-ai-usage-design.md`
+
+### Actions
+
+| action | 输入 | 输出 | 说明 |
+| --- | --- | --- | --- |
+| `listEvents` | `month?` (YYYY-MM) | `{ success, items, hasMore }` | 列出当前用户本月用量事件（最多 50 条，按 createdAt 倒序） |
+| `getSummary` | `month?` | `{ success, month, totalTokens, totalCostCny, callCount, studentCount, byEventType[], byModel[] }` | 聚合本月用量 |
+| `createDeletionRequest` | `studentId?, scope, reason?` | `{ success, requestId }` | 发起数据删除请求（scope ∈ student_all/photos_only/usage_only） |
+| `getDeletionRequests` | — | `{ success, items[] }` | 查看自己的删除请求 |
+| `getBetaAuth` | — | `{ success, consented, consentedAt }` | 读取内测授权状态 |
+| `setBetaAuth` | `consented` | `{ success, consented, consentedAt }` | 记录内测授权同意 |
+
+### 集合
+
+- `aiUsageEvents`（追加式事件账本）：`_openid, studentId, subject, eventType, model, inputTokens, outputTokens, totalTokens, imageCount, estimatedCostCny, costSource(provider_usage|estimated_by_chars|estimated_by_image_count), isEstimate, status(pending|succeeded|failed), createdAt, completedAt`
+- `dataDeletionRequests`：`_openid, studentId, scope, reason, status, createdAt, processedAt`
+- `userConsents`：`_openid, betaConsented, consentedAt`
+
+### 成本估算策略
+
+优先使用 AI 返回的真实 `result.usage`（`costSource: provider_usage`）；无 usage 时按输出字符数估算 token、按图片数附加成本（`costSource: estimated_by_chars|estimated_by_image_count`，`isEstimate: true`）。价格表常量维护在 `pricing.js`（5 个 AI 云函数 + aiUsage 各一份副本，由 deployment-readiness 测试守护一致性）。
+
+### 注意事项
+
+- 事件写入失败绝不阻断业务流程（观测层）。
+- 账单页强制显示"当前为内测成本估算，不代表应付款项"。
+- 详见设计文档 §5（账本）、§6（账单页）、§9（合规）。
 
 ---
 

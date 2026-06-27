@@ -367,6 +367,12 @@ function buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowled
     summary: latestRecord ? compactSummary(latestRecord.summary || latestRecord.title, 34) : '查看历史报告、试卷和上传记录。',
     actionText: '看记录',
     url: learningRecordsUrl(student)
+  }, {
+    key: 'aiUsage',
+    title: 'AI 用量与成本估算',
+    summary: '查看本月 AI 调用次数、token 消耗和平台估算成本。',
+    actionText: '看账本',
+    url: buildTraceableUrl({ type: 'ai-usage' })
   }]
 }
 

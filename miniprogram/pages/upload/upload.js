@@ -78,6 +78,9 @@ Page({
     uploadProgress: 0,
     submitBtnText: '上传并开始分析',
     existingFileNames: [],
+    // 内测授权：首次上传前必须同意内测说明（设计文档 §4.1）
+    betaConsented: false,
+    betaChecking: true
   },
 
   onLoad(options) {
@@ -101,6 +104,40 @@ Page({
     wx.setNavigationBarTitle({ title: cfg.title })
     this.loadExistingFileNames()
     if (paperId) this.loadPaperContext(paperId)
+    this.checkBetaAuth()
+  },
+
+  // 内测授权：首次上传前展示内测说明，用户必须同意才能继续（设计文档 §4.1）
+  async checkBetaAuth() {
+    try {
+      const res = await cloud.getBetaAuth()
+      if (res && res.success && res.consented) {
+        this.setData({ betaConsented: true, betaChecking: false })
+        return
+      }
+    } catch (err) {
+      console.warn('读取内测授权状态失败', err)
+    }
+    this.setData({ betaChecking: false })
+    this.showBetaConsent()
+  },
+
+  showBetaConsent() {
+    wx.showModal({
+      title: '内测说明与授权',
+      content: '本小程序为内测版本，会收集孩子姓名、年级、试卷照片和 AI 识别结果，用于生成学习诊断、验证卷和卡点追踪。AI 诊断可能出错，仅供家庭学习参考，不替代老师或专业评估。内测期间数据保留用于连续学习记录和问题排查。家长可在「AI 用量」页申请删除。请尽量只上传试卷内容，避免含身份证号、住址等敏感信息。',
+      confirmText: '同意并继续',
+      cancelText: '暂不同意',
+      success: res => {
+        if (res.confirm) {
+          cloud.setBetaAuth(true).catch(err => console.warn('记录授权失败', err))
+          this.setData({ betaConsented: true })
+        } else {
+          this.setData({ betaConsented: false })
+          wx.showToast({ title: '未同意内测说明，暂无法上传', icon: 'none' })
+        }
+      }
+    })
   },
 
   async loadPaperContext(paperId) {
@@ -274,6 +311,11 @@ Page({
   // ========== 提交上传 ==========
   async onSubmit() {
     if (this.data.uploading) return
+    // 内测授权守卫：未同意内测说明则阻断上传并重新提示
+    if (!this.data.betaConsented) {
+      this.showBetaConsent()
+      return
+    }
     const { images, mode, studentId, subject, paperId } = this.data
     if (images.length === 0) return
 

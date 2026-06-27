@@ -2,7 +2,7 @@
 
 > 更新日期：2026-06-27
 > 范围：当前小程序 MVP + 数学学习地图升级 + 语文具体错项复习 + 英语词库闭环
-> 当前单元自动化基线：`npm test` / `npm run test:unit` 共 599 个用例通过
+> 当前单元自动化基线：`npm test` / `npm run test:unit` 共 628 个用例通过
 
 ## 1. 验证命令
 
@@ -35,6 +35,7 @@ npm run test:e2e:english    # 英语页面 E2E
 | 学习记录和证据时间线 | `learning-records.test.js`、`student-data-access.test.js`、`upload-history-page-flows.test.js` | `test:e2e:core`、`test:e2e:english` | 已覆盖 |
 | 数据归属、参数白名单、无堆栈返回 | `contracts.test.js`、`student-access.test.js`、`student-data-access.test.js` | 第二微信账号需人工验收 | 已覆盖主要入口 |
 | E2E 命令和输出目录契约 | `contracts.test.js` | `scripts/e2e-report-aggregator.js` 聚合 | 已覆盖 |
+| AI 用量账本、成本估算、内测授权、删除请求 | `ai-usage-ledger.test.js`、`ai-usage-presenter.test.js` | 真实 AI usage 字段需真机验证 | 已覆盖；含三态记账、真实/估算优先级、月份聚合、账单视图模型 |
 
 ## 3. 人工验收清单
 

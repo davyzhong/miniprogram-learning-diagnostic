@@ -18,7 +18,8 @@
     "pages/english-wrong-words/english-wrong-words",
     "pages/generate-verification/generate-verification",
     "pages/default-paper/default-paper",
-    "pages/paper-preview/paper-preview"
+    "pages/paper-preview/paper-preview",
+    "pages/ai-usage/ai-usage"
   ],
   "window": {
     "backgroundTextStyle": "dark",

@@ -378,6 +378,30 @@ async function scheduleResourcePackVerification(packId) {
   return callFunction('learningResource', { action: 'scheduleVerification', packId })
 }
 
+async function getAiUsageEvents(payload = {}) {
+  return callFunction('aiUsage', { action: 'listEvents', ...payload })
+}
+
+async function getAiUsageSummary(payload = {}) {
+  return callFunction('aiUsage', { action: 'getSummary', ...payload })
+}
+
+async function createDeletionRequest(payload = {}) {
+  return callFunction('aiUsage', { action: 'createDeletionRequest', ...payload })
+}
+
+async function getDeletionRequests() {
+  return callFunction('aiUsage', { action: 'getDeletionRequests' })
+}
+
+async function getBetaAuth() {
+  return callFunction('aiUsage', { action: 'getBetaAuth' })
+}
+
+async function setBetaAuth(consented) {
+  return callFunction('aiUsage', { action: 'setBetaAuth', consented })
+}
+
 async function getEnglishVocabularySummary(studentId, today = '') {
   return callFunction('englishVocabulary', { action: 'getVocabularySummary', studentId, today })
 }
@@ -474,6 +498,12 @@ module.exports = {
   getLearningResourcePack,
   completeLearningResourcePack,
   scheduleResourcePackVerification,
+  getAiUsageEvents,
+  getAiUsageSummary,
+  createDeletionRequest,
+  getDeletionRequests,
+  getBetaAuth,
+  setBetaAuth,
   getEnglishVocabularySummary,
   createEnglishImportBatch,
   confirmEnglishImportBatch,

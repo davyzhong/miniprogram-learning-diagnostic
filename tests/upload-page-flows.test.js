@@ -75,7 +75,8 @@ test('upload submits file metadata and navigates back on success', async () => {
     callUploadAndAnalyze: async payload => {
       submitted = payload
       return { success: true, reportId: 'report-1' }
-    }
+    },
+    getBetaAuth: async () => ({ success: true, consented: true })
   }
   const wx = createWxMock()
   const { page } = loadPage('miniprogram/pages/upload/upload.js', {
@@ -87,7 +88,8 @@ test('upload submits file metadata and navigates back on success', async () => {
     studentId: 'student-1',
     subject: 'math',
     mode: 'diagnosis',
-    images: [{ tempPath: '/tmp/paper.jpg', fileName: 'paper.jpg', fileSize: 100 }]
+    images: [{ tempPath: '/tmp/paper.jpg', fileName: 'paper.jpg', fileSize: 100 }],
+    betaConsented: true
   })
 
   await page.onSubmit()

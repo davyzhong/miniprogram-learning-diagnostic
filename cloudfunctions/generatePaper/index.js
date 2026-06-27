@@ -11,6 +11,7 @@ const {
   inferTargetType,
 } = require('./verification-pack');
 const { getStudentAccess, canOperateLearning } = require('./access');
+const { recordUsageStart, recordUsageSuccess, recordUsageFailure } = require('./usage-ledger');
 const { getSubjectName, getSubjectCode } = require('./constants');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
@@ -480,18 +481,50 @@ ${chineseReviewPromptBlock}
   const ai = app.ai();
   const model = ai.createModel('cloudbase');
 
-  const result = await model.generateText({
-    model: 'deepseek-v4-flash',
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.3,
-  });
+  // AI 用量记账（pending）——写入失败不阻断业务
+  let eventId = null
+  try {
+    const openId = cloud.getWXContext().OPENID
+    if (openId) {
+      eventId = await recordUsageStart({
+        db, openId,
+        eventType: 'paper_generation',
+        studentId: student._id || '',
+        subject,
+        sourceType: 'paper',
+        cloudFunction: 'generatePaper',
+        model: 'deepseek-v4-flash'
+      })
+    }
+  } catch (e) { console.error('[usage] recordUsageStart failed', e && e.message) }
 
-  const content = result.text || '';
-  const cleaned = content.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
-  return {
-    ...normalizeQuestionsData(JSON.parse(cleaned), expectedCount),
-    chineseReviewTargets,
-  };
+  try {
+    const result = await model.generateText({
+      model: 'deepseek-v4-flash',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+    });
+
+    if (eventId) {
+      recordUsageSuccess({
+        db, eventId, usage: result && result.usage, outputText: result && result.text,
+        model: 'deepseek-v4-flash'
+      }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
+    }
+
+    const content = result.text || '';
+    const cleaned = content.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
+    return {
+      ...normalizeQuestionsData(JSON.parse(cleaned), expectedCount),
+      chineseReviewTargets,
+    };
+  } catch (err) {
+    if (eventId) {
+      recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'deepseek-v4-flash' })
+        .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
+    }
+    throw err;
+  }
 }
 
 // ========== 主函数 ==========
