@@ -6,6 +6,9 @@ const {
   formatChineseDateTime,
   formatDate,
   formatDateTime,
+  formatClock,
+  formatMonthDay,
+  beijingParts,
   severityBadgeClass,
   formatBottleneckDisplayName,
   formatBottleneckDisplayList,
@@ -33,6 +36,29 @@ test('formatDate pads month and day for both Date objects and ISO strings', () =
 test('formatDateTime appends zero-padded hours and minutes', () => {
   assert.equal(formatDateTime(new Date('2026-06-11T09:05:00+08:00')), '2026-06-11 09:05')
   assert.equal(formatDateTime('2026-06-11T18:30:00+08:00'), '2026-06-11 18:30')
+})
+
+test('formatClock and formatMonthDay are Beijing-timezone and handle edges', () => {
+  // 2026-01-07 00:30 UTC = 08:30 北京时间
+  assert.equal(formatClock('2026-01-07T00:30:00Z'), '08:30')
+  // 午夜边界：2026-03-05 16:00 UTC = 00:00 次日北京时间
+  assert.equal(formatClock('2026-03-05T16:00:00Z'), '00:00')
+  assert.equal(formatMonthDay('2026-03-05T16:00:00Z'), '3月6日')
+  // 无效/空输入返回空串
+  assert.equal(formatClock(''), '')
+  assert.equal(formatClock('not-a-date'), '')
+  assert.equal(formatMonthDay(null), '')
+})
+
+test('beijingParts extracts UTC+8 components for a UTC timestamp', () => {
+  // 2026-06-15 10:00 UTC = 18:00 北京时间，同一天
+  const p = beijingParts('2026-06-15T10:00:00Z')
+  assert.deepEqual(p, { year: 2026, month: 6, day: 15, hour: 18, minute: 0 })
+  // 跨天：2026-06-15 17:30 UTC = 01:30 次日（6/16）北京时间
+  const next = beijingParts('2026-06-15T17:30:00Z')
+  assert.equal(next.day, 16)
+  assert.equal(next.hour, 1)
+  assert.equal(beijingParts('bad'), null)
 })
 
 test('severityBadgeClass maps known severities and falls back to badge-mid', () => {

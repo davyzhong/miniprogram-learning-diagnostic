@@ -2,6 +2,7 @@ const { uniqueBottleneckSummaries } = require('./bottlenecks')
 const { formatBottleneckDisplayName } = require('./bottleneck-name')
 const { getSubjectName } = require('./constants')
 const { groupBottlenecksByHierarchy } = require('./math-bottleneck-hierarchy')
+const { beijingParts } = require('./util')
 
 function pad2(value) {
   return String(value).padStart(2, '0')
@@ -20,16 +21,16 @@ function paperDateCode(value) {
   const text = String(value)
   const matched = text.match(/^(\d{4})-(\d{2})-(\d{2})/)
   if (matched) return `${matched[1]}${matched[2]}${matched[3]}`
-  const date = toDate(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return `${date.getFullYear()}${pad2(date.getMonth() + 1)}${pad2(date.getDate())}`
+  const p = beijingParts(value)
+  if (!p) return ''
+  return `${p.year}${pad2(p.month)}${pad2(p.day)}`
 }
 
 function dateChip(label, value) {
   if (!value) return ''
-  const date = toDate(`${String(value).slice(0, 10)}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return ''
-  return `${label} ${date.getMonth() + 1}月${date.getDate()}日`
+  const p = beijingParts(`${String(value).slice(0, 10)}T00:00:00`)
+  if (!p) return ''
+  return `${label} ${p.month}月${p.day}日`
 }
 
 function paperCodeOf(paper, fallbackSubjectName = '') {

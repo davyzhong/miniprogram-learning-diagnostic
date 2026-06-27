@@ -2,6 +2,7 @@ const { bottleneckLabelOf } = require('./learning-records')
 const { SUBJECT_NAMES } = require('./constants')
 const { getBottleneckMeta } = require('./bottleneck-taxonomy')
 const { groupBottlenecksByHierarchy } = require('./math-bottleneck-hierarchy')
+const { formatMonthDay } = require('./util')
 
 const STATUS_META = {
   needs_verification: { text: '待验证', className: 'pending', icon: '?', badgeText: '待验证', actionText: '查看/下载验证卷' },
@@ -39,9 +40,8 @@ function toTime(value) {
 function formatDate(value) {
   const date = toDate(value)
   if (!date) return ''
-  // 固定北京时间（UTC+8），纯数学偏移，不依赖 Intl
-  const shifted = new Date(date.getTime() + 8 * 60 * 60 * 1000)
-  return `${shifted.getUTCMonth() + 1}月${shifted.getUTCDate()}日`
+  // M月D日，复用 util 的北京时区实现
+  return formatMonthDay(date)
 }
 
 function normalizeStatus(item = {}) {

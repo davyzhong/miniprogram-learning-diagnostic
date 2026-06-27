@@ -68,6 +68,22 @@ function formatChineseDateTime(date) {
   return `${p.year}年${p.month}月${p.day}日 ${p.hour}:${minutes}`
 }
 
+// 时分（HH:MM，时补零），用于时间行。统一基于 beijingParts，避免 local 时区。
+function formatClock(date) {
+  const p = beijingParts(date)
+  if (!p) return ''
+  const h = String(p.hour).padStart(2, '0')
+  const min = String(p.minute).padStart(2, '0')
+  return `${h}:${min}`
+}
+
+// 月日（M月D日，不补零），用于天分组标签、日期 chip。
+function formatMonthDay(date) {
+  const p = beijingParts(date)
+  if (!p) return ''
+  return `${p.month}月${p.day}日`
+}
+
 /**
  * 严重程度对应的样式类
  */
@@ -113,8 +129,11 @@ function showError(title = '操作失败') {
 }
 
 module.exports = {
+  beijingParts,
   formatDate,
   formatDateTime,
+  formatClock,
+  formatMonthDay,
   formatRelativeTime,
   formatChineseDateTime,
   severityBadgeClass,

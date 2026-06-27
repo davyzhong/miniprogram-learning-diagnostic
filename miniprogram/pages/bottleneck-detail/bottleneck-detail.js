@@ -10,6 +10,7 @@ const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-disp
 const { SUBJECT_NAMES } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
+const { formatMonthDay, formatClock } = require('../../utils/util')
 
 // 知识节点 seed（查前序依赖）
 const knowledgeSeed = require('../../data/math/knowledge-nodes.seed')
@@ -67,9 +68,8 @@ function timeOf(value) {
 function formatDateTime(value) {
   const date = toDate(value)
   if (!date) return ''
-  const hour = String(date.getHours()).padStart(2, '0')
-  const minute = String(date.getMinutes()).padStart(2, '0')
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${hour}:${minute}`
+  // M月D日 HH:MM，基于北京时区
+  return `${formatMonthDay(date)} ${formatClock(date)}`
 }
 
 function compactText(text = '', maxLength = 34) {

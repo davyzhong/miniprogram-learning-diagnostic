@@ -13,7 +13,7 @@
 | P1 数学（#15-17） | ✅ 全部修复 | 407/407 |
 | P1 性能（#18-19） | ✅ 全部修复 | 407/407 |
 | P2 第一批（#20-24,26,28,29,32） | ✅ 已修复 | 407/407 |
-| P2 剩余（#25,27,30,31,33,34） | 待处理（大改动/需讨论） | — |
+| P2 剩余（#25,27,30,31,33,34） | ✅ 已处理（见下方说明） | 599/599 |
 
 **本轮共修复 28 项（全部 P0 + 全部 P1 + 大部分 P2），407 个测试全绿，无回归。**
 
@@ -97,6 +97,18 @@ P0-5 原计划删除 englishVocabulary/access.js 副本改用 `_shared/access`�
 | 32 | subject-home.js:88 读 this.data.loading 但该字段从未 setData（死代码） | 死代码 | 0.1d |
 | 33 | learningResource 3 个 action（getPack/completePack/scheduleVerification）零行为测试 | 测试覆盖 | 1d |
 | 34 | page-flows.test.js 应按页面拆分为 6-7 个文件 | 测试维护 | 1d |
+
+### P2 剩余项处理结果（2026-06-27 核实）
+
+| # | 结论 |
+|---|------|
+| 25 同一 BN 跨 LP 重复展开 | ✅ **已修复**（之前迭代）：`bottleneck-view.js` `expandFineBottleneckItems` 用 `Set<dedupeKey>` 按 `lpCode:title` 去重 |
+| 26 legacyLpCode 多码 | ✅ **已修复**（之前迭代）：taxonomy 已无 `LP-AXIS/LP-LANG` 多码，全部单码 |
+| 27 副本同步测试 | ✅ **已修复**（之前迭代）：`deployment-readiness.test.js` 「各云函数的共享文件副本互相保持一致」断言 access.js/constants.js/bottleneck-name.js 全部副本一致 |
+| 30 大文件拆分 | ⏸️ **跳过**：reanalyzeMathHistory(990)/analyzePhotos(845) 源码拆分是高风险纯重构、零功能收益；page-flows.test.js 部分见 #34 |
+| 31 日期时区不一致 | ✅ **本轮修复**：`util.js` 导出 `beijingParts` 并新增 `formatClock`/`formatMonthDay`；report-presenter、upload-history-presenter、paper-display、bottleneck-detail、bottleneck-view 5 处统一到 UTC+8；新增 `paper-display-date.test.js` + util 测试守护 |
+| 33 learningResource 测试 | ✅ **本轮修复**：`learning-resource-cloud.test.js` 新增 8 个行为测试覆盖 getPack/completePack/scheduleVerification 的正常、拒绝、缺省路径 |
+| 34 page-flows 拆分 | ✅ **本轮修复**：拆成 11 个按页面文件（index/student-profile/bottleneck/subject-home/english-practice/english-dictation/upload/generate-verification/paper/report/upload-history）+ 提取 `tests/helpers/page-flow-utils.js`；99 个测试全部保留，0 回归 |
 
 ---
 

@@ -9,19 +9,17 @@ const { buildLearningMapReportItems } = require('../../utils/math-learning-map')
 const { paperCodeOf } = require('../../utils/paper-display')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { reportIllustrationOf } = require('../../utils/page-illustrations')
+const { beijingParts } = require('../../utils/util')
 
 const DEFAULT_SOURCE_EVIDENCE_LIMIT = 3
 const DEFAULT_ERROR_DETAIL_LIMIT = 20
 
-function pad2(value) {
-  return String(value).padStart(2, '0')
-}
-
 function formatDateTime(value) {
-  if (!value) return ''
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return ''
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${pad2(date.getHours())}:${pad2(date.getMinutes())}`
+  const p = beijingParts(value)
+  if (!p) return ''
+  const h = String(p.hour).padStart(2, '0')
+  const min = String(p.minute).padStart(2, '0')
+  return `${p.year}年${p.month}月${p.day}日 ${h}:${min}`
 }
 
 function buildTrendSummary(bottlenecks = []) {

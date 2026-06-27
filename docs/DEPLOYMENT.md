@@ -62,7 +62,24 @@ git diff --check
 
 如果只改了单个云函数，可以只部署该函数；但涉及报告结构、卡点更新、反馈或访问权限时，优先部署相关函数组合，避免前后端结构不一致。
 
-## 4. 预览构建
+## 4. 数据库索引
+
+首次部署或新增集合后，需要在云开发控制台为热查询创建复合索引。完整索引清单见 [SETUP.md 第五章「数据库索引」](../SETUP.md#数据库索引)，设计说明见 [DATA_DICTIONARY.md §4](./DATA_DICTIONARY.md#4-索引设计说明)。
+
+最关键的几个索引（缺了会全表扫描，列表页变慢）：
+
+| 集合 | 索引字段 | 排序 |
+| --- | --- | --- |
+| `reports` | `studentId`, `subject`, `createdAt`, `_openid` | 升序、升序、降序、升序 |
+| `papers` | `studentId`, `subject`, `type`, `grade`, `paperKey`, `_openid` | 全部升序 |
+| `learningResourcePacks` | `studentId`, `subject`, `updatedAt`, `_openid` | 升序、升序、降序、升序 |
+| `studentEnglishWords` | `studentId`, `masteryStatus`, `nextReviewAt` | 升序、升序、升序 |
+
+操作路径：`云开发控制台 → 数据库 → 对应集合 → 索引管理 → 新建索引`。开发者工具中 `cloud://createindex` 链接经常超时，直接到控制台手动建更可靠。创建后通常需等待几十秒到数分钟生效。
+
+> 注：`subjectProfiles` 仅按 `studentId` 查询后内存筛选 `subject`（每个学生最多 3 条），用 `studentId + _openid` 索引即可，不需要三字段复合索引。`analysisTasks` 数据量小（每份报告 1-2 条），靠默认 `_id` 索引即可，无需额外建索引。
+
+## 5. 预览构建
 
 部署后使用微信开发者工具 CLI 做一次预览构建：
 
@@ -75,7 +92,7 @@ git diff --check
 
 预览成功只说明客户端可构建，不代表云函数逻辑已经完成真实数据验收。
 
-## 5. 最小烟测路径
+## 6. 最小烟测路径
 
 跳过真实设备时，至少在微信开发者工具中用已有真实数据检查：
 
@@ -96,7 +113,7 @@ studentData:getStudentDashboard 请求超时，请稍后重试
 
 这表示需要优先检查对应云函数、数据量或索引，而不是只看微信运行时的通用 `WAServiceMainContext timeout`。
 
-## 6. 常见问题
+## 7. 常见问题
 
 ### 页面显示空白或“页面不存在”
 

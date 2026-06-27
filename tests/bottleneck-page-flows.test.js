@@ -1,0 +1,299 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const ROOT = path.resolve(__dirname, '..')
+const { loadPageAndWait, flushAsync, waitForPageLoad, isThenable } = require('./helpers/page-flow-utils')
+const { createWxMock, loadPage } = require('./helpers/page-harness')
+const util = require('../miniprogram/utils/util')
+
+test('bottleneck center loads dashboard bottlenecks and filters by status', async () => {
+  let dashboardArgs = null
+  const cloud = {
+    getStudentDashboard: async (...args) => {
+      const [studentId] = args
+      dashboardArgs = args
+      assert.equal(studentId, 'student-1')
+      return {
+        student: { _id: 'student-1', name: '钟青羽' },
+        subjectProfiles: [{
+          subject: 'math',
+          currentBottlenecks: [
+            { lpCode: 'LP-001', status: 'persisting', trend: 'persisting', weight: 80, evidenceCount: 3 },
+            { lpCode: 'LP-008', status: 'improved', trend: 'declining', weight: 30, verificationPassCount: 1 }
+          ]
+        }]
+      }
+    },
+    getActiveVerificationPaper: async () => ({ status: 'ready', paper: { _id: 'paper-1' } })
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/bottleneck-center/bottleneck-center.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await loadPageAndWait(page, { studentId: 'student-1', studentName: encodeURIComponent('钟青羽') })
+
+  assert.deepEqual(JSON.parse(JSON.stringify(dashboardArgs)), ['student-1', { includeRecent: false }])
+  assert.equal(page.data.stats.totalCount, 2)
+  assert.equal(page.data.stats.activeCount, 1)
+  assert.equal(page.data.filteredBottlenecks[0].displayName, '计算基础')
+
+  page.onStatusFilterTap({ currentTarget: { dataset: { status: 'improved' } } })
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.filteredBottlenecks.map(item => item.displayName))), ['审题理解'])
+
+  page.onBottleneckTap({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
+  await page.onGenerateForBottleneck({ currentTarget: { dataset: { subject: 'math', lpCode: 'LP-001' } } })
+  const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
+  assert.match(urls[0], /pages\/bottleneck-detail\/bottleneck-detail/)
+  // 统一入口：ready 时跳预览页
+  assert.match(urls[1], /pages\/paper-preview\/paper-preview\?paperId=paper-1/)
+})
+
+test('bottleneck pages expose learning task pack actions before verification', () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const detailWxml = fs.readFileSync(path.resolve(__dirname, '../miniprogram/pages/bottleneck-detail/bottleneck-detail.wxml'), 'utf8')
+  const centerWxml = fs.readFileSync(path.resolve(__dirname, '../miniprogram/pages/bottleneck-center/bottleneck-center.wxml'), 'utf8')
+
+  assert.match(detailWxml, /学一下/)
+  assert.match(detailWxml, /onOpenLearningResource/)
+  assert.match(centerWxml, /学一下/)
+  assert.match(centerWxml, /onOpenLearningResource/)
+})
+
+
+test('bottleneck center opens learning resources for the tapped fine bottleneck', async () => {
+  let requestedTarget = null
+  const cloud = {
+    getStudentDashboard: async () => ({
+      student: { _id: 'student-1', name: '钟青羽' },
+      subjectProfiles: [{
+        subject: 'math',
+        currentBottlenecks: [{
+          lpCode: 'LP-001',
+          lpName: '计算基础',
+          status: 'persisting',
+          candidateBottlenecks: [
+            { title: '小数乘法拆分后加法求和错误', evidenceStrength: 'medium' },
+            { title: '异分母分数加减法通分方法不熟练', evidenceStrength: 'medium' }
+          ]
+        }]
+      }]
+    }),
+    generateLearningResourcePack: async payload => {
+      requestedTarget = payload.target
+      return { success: true, packId: 'pack-2' }
+    }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/bottleneck-center/bottleneck-center.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await loadPageAndWait(page, { studentId: 'student-1', studentName: encodeURIComponent('钟青羽') })
+
+  const second = page.data.filteredBottlenecks.find(item => item.displayName === '异分母分数加减法通分方法不熟练')
+  assert.ok(second)
+  await page.onOpenLearningResource({
+    currentTarget: {
+      dataset: {
+        subject: second.subject,
+        lpCode: second.lpCode,
+        bottleneckId: second.bottleneckId,
+        viewId: second.viewId
+      }
+    }
+  })
+
+  assert.equal(requestedTarget.title, '异分母分数加减法通分方法不熟练')
+  assert.equal(requestedTarget.lpCode, 'LP-001')
+  assert.equal(requestedTarget.targetId, second.viewId)
+  assert.match(wx.calls.filter(call => call.name === 'navigateTo').pop().payload.url, /packId=pack-2/)
+})
+
+
+
+test('bottleneck detail builds a focused evidence workbench without repetitive report and paper lists', async () => {
+  let dashboardArgs = null
+  const cloud = {
+    getSubjectDashboard: async (...args) => {
+      const [studentId, subject] = args
+      dashboardArgs = args
+      assert.equal(studentId, 'student-1')
+      assert.equal(subject, 'math')
+      return {
+        profile: {
+          subject: 'math',
+          currentBottlenecks: [{
+            lpCode: 'LP-001',
+            status: 'persisting',
+            trend: 'persisting',
+            weight: 82,
+            evidenceCount: 3,
+            recentErrorCount: 5,
+            firstSeenAt: '2026-06-08T09:00:00+08:00',
+            lastSeenAt: '2026-06-12T09:00:00+08:00'
+          }]
+        },
+        reports: [
+          {
+            _id: 'report-2',
+            subject: 'math',
+            type: 'verification',
+            status: 'completed',
+            paperId: 'paper-1',
+            createdAt: '2026-06-12T11:30:00+08:00',
+            comparisonSummary: '计算基础已改善，仍需观察口算稳定性',
+            verificationTargets: ['LP-001'],
+            verificationEvidence: [{ lpCode: 'LP-001', complete: true, allCorrect: true }]
+          },
+          {
+            _id: 'report-1',
+            subject: 'math',
+            type: 'diagnosis',
+            status: 'completed',
+            createdAt: '2026-06-12T09:30:00+08:00',
+            summary: '计算基础需要继续验证',
+            totalErrors: 5,
+            imageFiles: [{}, {}],
+            bottlenecks: [{ lpCode: 'LP-001' }]
+          }
+        ],
+        papers: [
+          {
+            _id: 'paper-2',
+            subject: 'math',
+            type: 'verification',
+            createdAt: '2026-06-13T10:30:00+08:00',
+            paperDisplayCode: '数学-20260613-01',
+            questionCount: 8,
+            studentPages: 2,
+            answerPages: 1,
+            bottleneckTargets: ['LP-001'],
+            bottleneckSummaries: ['计算基础']
+          },
+          {
+            _id: 'paper-1',
+            subject: 'math',
+            type: 'verification',
+            createdAt: '2026-06-12T10:30:00+08:00',
+            paperDisplayCode: '数学-20260612-01',
+            questions: [{}, {}, {}, {}, {}, {}],
+            studentPages: 1,
+            answerPages: 1,
+            bottleneckTargets: ['LP-001'],
+            bottleneckSummaries: ['计算基础']
+          }
+        ]
+      }
+    },
+    getActiveVerificationPaper: async () => ({ status: 'ready', paper: { _id: 'paper-2' } })
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await loadPageAndWait(page, {
+    studentId: 'student-1',
+    subject: 'math',
+    lpCode: 'LP-001',
+    studentName: encodeURIComponent('钟青羽')
+  })
+
+  assert.deepEqual(JSON.parse(JSON.stringify(dashboardArgs)), [
+    'student-1',
+    'math',
+    { reportLimit: 10, paperLimit: 10 }
+  ])
+  assert.equal(page.data.bottleneck.displayName, '计算基础')
+  assert.equal(page.data.relatedReports.length, 2)
+  assert.equal(page.data.relatedPapers.length, 2)
+  assert.equal(page.data.evidenceChain.length, 4)
+  assert.equal(page.data.visibleEvidenceChain.length, 3)
+  assert.equal(page.data.hiddenEvidenceCount, 1)
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.visibleEvidenceChain.map(item => item.category))), ['验证试卷', '验证反馈', '验证试卷'])
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.visibleEvidenceChain.map(item => item.title))), ['数学-20260613-01', '验证反馈', '数学-20260612-01'])
+  assert.match(page.data.visibleEvidenceChain[0].url, /pages\/paper-preview\/paper-preview\?paperId=paper-2/)
+  assert.match(page.data.visibleEvidenceChain[1].url, /pages\/report\/report\?id=report-2/)
+  assert.ok(page.data.visibleEvidenceChain[0].metaChips.includes('待上传'))
+  assert.ok(page.data.visibleEvidenceChain[1].metaChips.includes('关联 数学-20260612-01'))
+  assert.ok(page.data.visibleEvidenceChain[2].metaChips.includes('已反馈'))
+
+  page.onToggleEvidence()
+  assert.equal(page.data.visibleEvidenceChain.length, 4)
+  assert.equal(page.data.showAllEvidence, true)
+
+  await page.onGenerateVerification()
+  page.onViewReport({ currentTarget: { dataset: { id: 'report-1' } } })
+  page.onViewPaper({ currentTarget: { dataset: { id: 'paper-1' } } })
+  const urls = wx.calls.filter(call => call.name === 'navigateTo').map(call => call.payload.url)
+  // 统一入口：ready 时跳预览页
+  assert.match(urls[0], /pages\/paper-preview\/paper-preview\?paperId=paper-2/)
+  assert.match(urls[1], /pages\/report\/report\?id=report-1/)
+  assert.match(urls[2], /pages\/paper-preview\/paper-preview\?paperId=paper-1/)
+})
+
+
+test('bottleneck detail opens math fine-grained candidate by bottleneck id', async () => {
+  const cloud = {
+    getSubjectDashboard: async () => ({
+      profile: {
+        subject: 'math',
+        currentBottlenecks: [{
+          lpCode: 'LP-001',
+          lpName: '计算错误（加减乘除）',
+          status: 'needs_verification',
+          errorCount: 8,
+          candidateBottlenecks: [{
+            bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+            title: '小数乘法中小数位数累计规则不稳',
+            evidenceStrength: 'high',
+            microValidationRequired: true,
+            recommendedResourceIds: ['RES-BILI-DEC-MUL-001']
+          }]
+        }]
+      },
+      reports: [{
+        _id: 'report-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        createdAt: '2026-06-12T09:30:00+08:00',
+        summary: '计算基础需要继续验证',
+        totalErrors: 8,
+        bottlenecks: [{ lpCode: 'LP-001' }]
+      }],
+      papers: []
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await loadPageAndWait(page, {
+    studentId: 'student-1',
+    subject: 'math',
+    lpCode: 'LP-001',
+    bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+    studentName: encodeURIComponent('钟青羽')
+  })
+
+  assert.equal(page.data.bottleneck.displayName, '小数乘法中小数位数累计规则不稳')
+  assert.equal(page.data.bottleneck.bottleneckId, 'BN-DEC-MUL-POINT-COUNT')
+  assert.match(page.data.bottleneck.evidenceText, /归属计算基础/)
+  assert.equal(page.data.relatedReports.length, 1)
+})
+
+
+
+test('bottleneck detail uses forward action wording instead of duplicate return wording', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/bottleneck-detail/bottleneck-detail.wxml'), 'utf8')
+
+  assert.doesNotMatch(source, /返回卡点中心/)
+  assert.match(source, /查看全部卡点/)
+})

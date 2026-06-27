@@ -67,7 +67,7 @@ npm run verify
 | 范围 | 代表文件 |
 |---|---|
 | 云函数主流程和权限 | `tests/cloud-functions.test.js`、`tests/student-access.test.js`、`tests/student-data-access.test.js` |
-| 页面 controller 和视图模型 | `tests/page-flows.test.js`、`tests/report-presenter.test.js`、`tests/subject-home-presenter.test.js` |
+| 页面 controller 和视图模型 | `tests/*-page-flows.test.js`（按页面拆分，共 12 个文件）、`tests/report-presenter.test.js`、`tests/subject-home-presenter.test.js` |
 | 验证卷和反馈闭环 | `tests/verification-pack.test.js`、`tests/verification-evidence.test.js`、`tests/report-paper-feedback-loop.test.js` |
 | 数学学习地图 | `tests/math-learning-map-*.test.js`、`tests/bottleneck-hierarchy-regression.test.js` |
 | 语文具体错项 | `tests/chinese-review-targets.test.js` |

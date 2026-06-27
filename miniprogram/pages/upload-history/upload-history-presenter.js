@@ -18,6 +18,7 @@ const {
   normalizeSubject: normalizeKnownSubject
 } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
+const { formatDate, formatClock, formatMonthDay } = require('../../utils/util')
 
 const SUBJECT_FILTERS = [
   { key: '', name: '全部' },
@@ -62,29 +63,23 @@ function toDate(value) {
   return value ? new Date(value) : new Date(0)
 }
 
-function pad2(value) {
-  return String(value).padStart(2, '0')
-}
-
 function dateKey(value) {
-  const date = toDate(value)
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+  // 日期分组键 YYYY-MM-DD，基于北京时区
+  return formatDate(toDate(value))
 }
 
 function timeText(value) {
-  const date = toDate(value)
-  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`
+  // 时分 HH:MM，基于北京时区
+  return formatClock(toDate(value))
 }
 
 function dateTimeChip(label, value) {
   if (!value) return ''
-  const date = toDate(value)
-  return `${label} ${date.getMonth() + 1}月${date.getDate()}日 ${timeText(value)}`
+  return `${label} ${formatMonthDay(toDate(value))} ${timeText(value)}`
 }
 
 function dayLabel(value) {
-  const date = toDate(value)
-  return `${date.getMonth() + 1}月${date.getDate()}日`
+  return formatMonthDay(toDate(value))
 }
 
 function recordSubjectName(item = {}, fallback = '') {

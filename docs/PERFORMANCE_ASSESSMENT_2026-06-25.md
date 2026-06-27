@@ -85,8 +85,8 @@ BATCH_SIZE = 1  （两个文件都是）
 
 | # | 位置 | 问题 |
 |---|------|------|
-| P2-1 | 多处 | **缺复合索引**：reports 需 `(studentId, subject, createdAt)`、papers 需 `(studentId, subject, type)`。当前可能全表扫描 |
-| P2-2 | 7 处 | `subjectProfiles.where({studentId}).get()` 拉全量再 `.find(subject)`。每次 3× 过量传输 |
+| P2-1 | 多处 | ~~**缺复合索引**：reports 需 `(studentId, subject, createdAt)`、papers 需 `(studentId, subject, type)`。当前可能全表扫描~~ ✅ 已处理：SETUP.md 第五章 + DATA_DICTIONARY.md §4 已有完整索引清单，2026-06-27 补全 `learningResourcePacks(studentId, subject, updatedAt)` 和英语集合索引，并在 DEPLOYMENT.md 新增索引章节。**索引本身需在云开发控制台手动创建（见部署阶段）。** |
+| P2-2 | 7 处 | ~~`subjectProfiles.where({studentId}).get()` 拉全量再 `.find(subject)`。每次 3× 过量传输~~ ⚠️ **有意保留**：每个学生只有 3 条学科档案，内存筛选 3 条比维护 `studentId+subject` 复合索引更经济；且首页/卡点中心/档案页需要全部 3 条。`contracts.test.js:123` 用契约测试锁定此决策，禁止改为精确 `where({studentId, subject})`。 |
 | P2-3 | 6 处 | 无 `.limit()` 的 `.where().get()`，潜在无界读取 |
 | P2-4 | `subject-home.js:72-79` | `onShow` 每次返回页面都跑 `loadProfile` + `checkAnalysisStatus` |
 | P2-5 | `bottleneck-center.js:135-163` | 筛选点击双 setData（状态 + 过滤结果） |
