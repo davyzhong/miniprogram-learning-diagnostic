@@ -1298,6 +1298,16 @@ wx.cloud.callFunction({
 - `getPack / completePack / scheduleVerification` 使用 `getLearningResourceAccess` 校验当前用户是否可读或可操作该任务包。
 - 非成员不能生成、读取或更新学习任务包。
 
+### 目标与缓存契约
+
+`generatePack` 的 `target` 必须能唯一指向一个学习目标。前端应传入：
+
+- `target.bottleneckId`：有 BN 级细卡点 ID 时优先使用。
+- `target.targetId`：没有 BN 但有前端细卡点 `viewId` 时使用。
+- `target.lpCode`：仅作为粗卡点兼容兜底。
+
+云函数查找或复用 `learningResourcePacks` 时按 `bottleneckId || targetId || lpCode || id` 生成目标键。不能只用 `lpCode` 区分任务包，因为同一个粗卡点下面可能有多个细卡点；否则学习卡点中心不同卡片的“学一下”会打开同一份内容。
+
 ---
 
 ## 辅助模块

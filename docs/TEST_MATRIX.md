@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序测试矩阵
 
-> 更新日期：2026-06-20
+> 更新日期：2026-06-27
 > 范围：当前小程序 MVP + 数学学习地图升级 + 语文具体错项复习 + 英语词库闭环
-> 当前单元自动化基线：`npm test` / `npm run test:unit` 共 545 个用例通过
+> 当前单元自动化基线：`npm test` / `npm run test:unit` 共 583 个用例通过
 
 ## 1. 验证命令
 
@@ -27,8 +27,8 @@ npm run test:e2e:english    # 英语页面 E2E
 | 分批 AI 分析、OCR 摘要、重复照片 | `analyze-batch-result.test.js`、`analyze-photos-pipeline.test.js`、`cloud-functions.test.js` | 真实图片需 `test:e2e:real-image` | 已覆盖 |
 | 诊断报告展示和报告质量 | `report-presenter.test.js`、`report-quality.test.js`、`page-flows.test.js` | `test:e2e:core`、`test:e2e:math` | 已覆盖 |
 | 数学细颗粒度学习卡点 | `bottleneck-view.test.js`、`bottleneck-hierarchy-regression.test.js`、`math-bottleneck-hierarchy.test.js` | `test:e2e:math` | 已覆盖 |
-| 数学知识地图和学习资源 | `knowledge-map-*.test.js`、`learning-resource-*.test.js`、`math-learning-map-*.test.js` | `test:e2e:math` | 已覆盖 |
-| 验证卷自动触发、短任务续跑、分页、PDF、失败状态 | `verification-pack.test.js`、`generate-paper-pdf.test.js`、`auto-verification.test.js`、`report-paper-feedback-loop.test.js`、`cloud-functions.test.js` | `test:e2e:math` 覆盖页面入口 | 已覆盖；真实打印需人工验收 |
+| 数学知识地图和学习资源 | `knowledge-map-*.test.js`、`learning-resource-*.test.js`、`learning-resource-cloud.test.js`、`math-learning-map-*.test.js`、`page-flows.test.js` | `test:e2e:math` | 已覆盖；含细 `targetId` 缓存回归 |
+| 验证卷自动触发、短任务续跑、分页、PDF、失败状态 | `verification-pack.test.js`、`generate-paper-pdf.test.js`、`auto-verification.test.js`、`report-paper-feedback-loop.test.js`、`cloud-functions.test.js`、`learning-records.test.js`、`page-flows.test.js` | `test:e2e:math` 覆盖页面入口 | 已覆盖；含覆盖卡点层级展示回归，真实打印需人工验收 |
 | 验证反馈、页面编号、证据回传 | `verification-evidence.test.js`、`report-paper-feedback-loop.test.js`、`analyze-batch-result.test.js` | 后续补数学作答页完整 E2E | 单元层已覆盖 |
 | 语文具体错项复习 | `chinese-review-targets.test.js`、`profile-summary.test.js`、`subject-home-presenter.test.js` | `test:e2e:chinese` | 轻量页面链路已建，完整作答回传待扩展 |
 | 英语个人词库、认词练习、纸面听写、错词本 | `english-vocabulary.test.js`、`english-vocabulary-cloud.test.js`、`english-devtools-cases.test.js` | `test:e2e:english` 覆盖工作台、自动导入、认词、听写、学习记录、错词本、空态 | 已覆盖 |
@@ -44,7 +44,7 @@ npm run test:e2e:english    # 英语页面 E2E
 2. 使用真实手写、黑/蓝/红笔迹试卷，核对 OCR、错题、卡点和逐页摘要。
 3. 分析中主动关闭小程序，再次进入后确认当前报告和进度可恢复。
 4. 上传同名不同内容、不同名相同内容、全部重复内容三组照片。
-5. 生成学习任务包，检查“学一下”入口、任务包内容、完成学习和学习记录回写。
+5. 生成学习任务包，检查“学一下”入口、任务包内容、完成学习和学习记录回写；同一粗卡点下不同细卡点分别点击“学一下”时，任务包标题和内容必须对应各自细卡点。
 6. 生成验证任务包和默认诊断卷，检查中文字体、A4 分页、页面编号、答题空间及打印效果。
 7. 分页上传验证卷答案，核对只有已上传页面中的目标卡点会更新证据，未上传页面仍显示待回传。
 8. 用第二个微信账号验证数据库安全规则和云函数归属校验。

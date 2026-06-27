@@ -16,7 +16,7 @@
 | 后端服务 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI 模型（图像分析） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI 模型（题目生成） | CloudBase AI `deepseek-v4-flash` | 用于 generatePaper 生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 11 个核心集合：students / studentMembers / studentInvites / subjectProfiles / reports / papers / analysisTasks / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 12 个核心集合：students / studentMembers / studentInvites / subjectProfiles / reports / papers / analysisTasks / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / learningResourcePacks |
 | 文件存储 | 云开发云存储 | 试卷照片、生成的 PDF 文件 |
 | PDF 生成 | pdfkit（Node.js） | 云函数内生成 A4 试卷/报告 PDF |
 | 中文字体 | 内置 Noto CJK 字体 | `generatePaper` / `generateReportPDF` 随函数部署字体文件，不依赖环境变量 |
@@ -63,7 +63,7 @@
 │  ┌──────────────────┐                                               │
 │  │generateReportPDF │    ┌──────────────┐  ┌────────────────────┐   │
 │  │报告PDF生成        │    │ 云数据库      │  │ 云存储              │   │
-│  └──────────────────┘    │ 11 个核心集合  │  │ photos/ papers/    │   │
+│  └──────────────────┘    │ 12 个核心集合  │  │ photos/ papers/    │   │
 │                           │              │  │ reports/           │   │
 │                           └──────────────┘  └────────────────────┘   │
 │  ┌──────────────────┐    ┌──────────────────┐                       │
@@ -153,21 +153,21 @@ report 页面：createPoller 每 10s 轮询 getAnalysisProgress
 subject-home 学科工作台 → 点击主任务或待处理队列
     │
     ▼
-generate-verification 页面
+generate-verification 页面（历史兼容页；主流程优先走自动验证卷）
     ├── getSubjectProfile() → 获取 pendingBottlenecks
     ├── targetCode 存在时预选单个学习卡点，否则按严重度默认选择
-    ├── 展示出卷配置（卡点数、题量、预计用时、A4 页数）
+    ├── 展示出卷配置（卡点数、题量、预计用时、A4 页数、粗/细卡点层级摘要）
     └── callGeneratePaper({ type:'verification', targets:[...] })
               │
               ▼
          [generatePaper 云函数]
-              ├── generateQuestionsWithAI(deepseek-v4-flash) → 每个卡点 5 道题（3 核心验证 + 2 迁移延展）
+             ├── generateQuestionsWithAI(deepseek-v4-flash) → 按置信度每个目标 1-3 道题
               ├── generatePDF(pdfkit) → Buffer
               ├── uploadFile() → 云存储
               └── 写入 papers 集合
     │
     ▼
-paper-preview 页面 → 预览/下载 PDF（已下载后显示“已下载”）→ 线下答题
+paper-preview 页面 → 展示 bottleneckHierarchy 覆盖层级 → 预览/下载 PDF（已下载后显示“已下载”）→ 线下答题
     │
     ▼
 答题完成后 → upload 页面（mode='verification', paperId=xxx）
@@ -371,9 +371,9 @@ bottleneck-detail（学习卡点详情）
 | `pages/upload/upload` | 拍照/选图 + 上传 + 触发分析 | cloud.uploadPhoto, callUploadAndAnalyze, getReports |
 | `pages/upload-history/upload-history` | 学习记录时间线 | cloud.getLearningTimeline, getReports, getPapers, getTempFileURLs |
 | `pages/report/report` | 报告详情 + 分析进度轮询 + PDF 生成 | cloud.getReport, getSubjectProfile, getAnalysisProgress, callAnalyzePhotos, callGenerateReportPDF; poller |
-| `pages/generate-verification/generate-verification` | 出卷配置器：选择范围 → 生成验证试卷 | cloud.getSubjectProfile, callGeneratePaper |
+| `pages/generate-verification/generate-verification` | 出卷配置器：选择范围 → 分层展示覆盖卡点 → 生成验证试卷 | cloud.getSubjectProfile, callGeneratePaper |
 | `pages/default-paper/default-paper` | 选年级 → 生成/选择默认诊断试卷 | cloud.getPapers, callGeneratePaper |
-| `pages/paper-preview/paper-preview` | 预览/下载试卷 PDF，记录已下载状态 | cloud.getPaper, getStudent |
+| `pages/paper-preview/paper-preview` | 预览/下载试卷 PDF，展示覆盖卡点层级，记录已下载状态 | cloud.getPaper, getStudent |
 
 ### 聚合读取与降级原则
 

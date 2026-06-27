@@ -15,10 +15,11 @@
 | `englishImportBatches` | 英语词库候选导入批次 | 导入 PEP 单词表图片或结构化候选时 | englishVocabulary 云函数 |
 | `studentEnglishWords` | 单个孩子的个人英语单词库 | 家长确认英语导入批次后 | englishVocabulary 云函数 |
 | `englishPracticeSessions` | 英语单词熟悉度、纸面听写会话和逐题/照片证据记录 | 开始英语练习时 | englishVocabulary 云函数 |
+| `learningResourcePacks` | 数学学习卡点任务包 | 点击“学一下”生成或读取时 | learningResource 云函数 |
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
 | `analysisTasks` | 异步分析任务进度追踪 | analyzePhotos 启动时 | analyzePhotos 云函数 |
 
-> 学习记录页面不是独立集合，而是前端按天聚合 `reports`、`papers`、`reports.imageFiles` 和 `englishPracticeSessions` 后得到的时间线视图。页面会派生学习天数、主记录数、验证试卷数、验证反馈数等摘要；长时间中断的分析记录通过 `studentData.cleanupStaleLearningRecords` 预检和 owner 确认后归档，不新增事件集合。
+> 学习记录页面不是独立集合，而是前端按天聚合 `reports`、`papers`、`reports.imageFiles`、`englishPracticeSessions` 和 `learningResourcePacks` 后得到的时间线视图。页面会派生学习天数、主记录数、验证试卷数、验证反馈数、学习任务包数等摘要；长时间中断的分析记录通过 `studentData.cleanupStaleLearningRecords` 预检和 owner 确认后归档，不新增事件集合。
 
 ---
 
@@ -461,6 +462,8 @@ MVP 数学卡点当前包含：
 
 > 验证卷的题量规则（置信度分层）：每个 BN 按 weight 分层出题——高置信（≥75）出 3 题，中置信（45-74）出 2 题，低置信（<45）出 1 题。详见 `docs/subject-design/置信度驱动分层验证模型设计文档.md`。
 
+> 前端展示用的 `bottleneckHierarchy` 不落库，由 `miniprogram/utils/paper-display.js` 基于 `verificationPack.targets/pages`、`questions[].targetId/lpCode`、`bottleneckTargets` 和 `bottleneckSummaries` 派生。试卷预览和验证卷列表必须优先使用该层级结构展示“覆盖卡点”，不要退回到长文本拼接。
+
 #### verificationPack 子结构
 
 | 字段名 | 类型 | 描述 | 示例值 |
@@ -698,7 +701,7 @@ MVP 数学卡点当前包含：
 | `sourceReportId` | String | 来源报告 ID，可为空 |
 | `lpCode` | String | 兼容旧粗卡点代码 |
 | `bottleneckId` | String | 细颗粒度卡点 ID |
-| `targetId` | String | 当前任务包绑定的目标 ID |
+| `targetId` | String | 当前任务包绑定的目标 ID；缓存和任务包唯一目标优先键，优先 BN id，其次细卡点 viewId，最后才回退 LP |
 | `title` | String | 家长和孩子可读的任务包标题 |
 | `status` | String | `ready / completed / archived` |
 | `estimatedMinutes` | Number | 建议学习时长，第一版通常为 8 |

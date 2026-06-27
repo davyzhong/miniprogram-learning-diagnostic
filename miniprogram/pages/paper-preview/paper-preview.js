@@ -43,6 +43,13 @@ Page({
     pageSummary: '共 1 页 · A4 纸张',
     bottleneckTargets: [],
     bottleneckText: '',  // 预拼接的卡点文本
+    bottleneckHierarchy: {
+      hasHierarchy: false,
+      totalCount: 0,
+      groupCount: 0,
+      summaryText: '',
+      groups: []
+    },
     questionPreview: [],
     hasMoreQuestions: false,
     allQuestionsExpanded: false,

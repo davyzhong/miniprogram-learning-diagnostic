@@ -2,7 +2,7 @@
 
 <!-- Generated: 2026-06-25 | Files scanned: 254 | Token estimate: ~800 -->
 
-## 数据库集合（10 collections）
+## 数据库集合（12 collections）
 
 | 集合 | 作用 | 关键字段 |
 |------|------|----------|
@@ -14,6 +14,8 @@
 | `papers` | 验证卷/诊断卷 | type, generationStatus, questions[], pdfFileId, verificationPack |
 | `analysisTasks` | 分析任务 | reportId, fileIDs[], status, batchResults[] |
 | `learningResourcePacks` | 资源包 | studentId, targetId, status, sections[] |
+| `englishImportBatches` | 英语导入批次 | studentId, status, candidates[] |
+| `studentEnglishWords` | 学生英语词库 | studentId, word, familiarity |
 | `englishPracticeSessions` | 英语练习 | studentId, sessionType, words[] |
 | `reportFeedback` | 反馈 | reportId, feedbackType, content |
 
@@ -24,6 +26,7 @@ students 1──N studentMembers      (家长成员)
 students 1──N subjectProfiles     (每学科一个 profile)
 students 1──N reports             (诊断+验证报告)
 students 1──N papers              (验证卷)
+students 1──N learningResourcePacks
 students 1──N englishPracticeSessions
 
 reports N──1 papers               (report.verificationPaperId ↔ paper.triggeredByReport)
@@ -39,6 +42,7 @@ paper.verificationStatus: pending → completed
 report.verificationPaperStatus: generating → ready | failed
 report.verificationPaperId → papers._id
 paper.triggeredByReport → reports._id
+paper-display.bottleneckHierarchy 由 verificationPack/questions/bottleneckTargets 派生，不落库
 ```
 
 ## 种子数据（data/math/）
@@ -79,4 +83,16 @@ subjectProfiles.currentBottlenecks[]:
 weight ≥ 75  → 高置信 → 验证卷出 3 题（2核心+1迁移）
 weight ≥ 45  → 中置信 → 出 2 题（1核心+1迁移）
 weight < 45  → 低置信 → 出 1 题（1核心）
+```
+
+## 学习任务包目标键
+
+```
+learningResourcePacks.targetId:
+  bottleneckId || viewId || lpCode
+
+云函数复用缓存时使用:
+  target.bottleneckId || target.targetId || target.lpCode || target.id
+
+同一个 LP 粗卡点下可能有多个细卡点，因此“学一下”不能只依赖 lpCode。
 ```

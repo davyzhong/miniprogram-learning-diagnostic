@@ -345,6 +345,53 @@ iPhone 相册选择的照片预览失败、上传后无法被 OCR/AI 正常分�
 
 ---
 
+## 15. 学习卡点中心“学一下”打开的内容都一样
+
+**症状**
+学习卡点中心里多个不同细卡点右侧都有“学一下”，但点击后进入的学习任务包标题、讲解和练习内容相同，尤其常见于同一个粗卡点下面的多个细卡点。
+
+**可能原因**
+- 前端跳转时只传了粗卡点 `lpCode`，没有传细卡点 `viewId` 或 BN 级 `bottleneckId`
+- `learningResource.generatePack` 复用缓存时只按 `lpCode` 查找，导致同粗卡点下的不同细卡点命中同一份 `learningResourcePacks`
+- 云端仍保留旧版本粗 `lpCode` 缓存，前端或云函数没有更新到细 `targetId` 契约
+
+**排查步骤**
+1. 在开发者工具 Network 或云函数日志中检查 `generateLearningResourcePack` 入参，确认 `target.targetId` 是否存在
+2. 到数据库查看 `learningResourcePacks.targetId`，同一粗卡点下不同细卡点应该对应不同值
+3. 运行回归测试：`node --test tests/learning-resource-cloud.test.js tests/page-flows.test.js`
+4. 若只在真机云端复现，优先确认 `learningResource` 云函数是否已重新部署
+
+**解决方案**
+- 前端传参优先级保持为 `bottleneckId || viewId || lpCode`
+- 云函数缓存键优先级保持为 `bottleneckId || targetId || lpCode || id`
+- 重新部署 `learningResource` 云函数
+- 旧的粗 `lpCode` 任务包可以保留；细 `targetId` 生效后，新点击会生成或读取对应细卡点任务包
+
+---
+
+## 16. 验证卷“覆盖卡点”显示成一整段长文本或层级为空
+
+**症状**
+验证卷详情页的“覆盖卡点”区域变成很长一段逗号分隔文字，或粗类、卡点组、细卡点没有层级关系；验证卷列表中的覆盖范围也难以阅读。
+
+**可能原因**
+- 前端没有使用 `paperDisplay.bottleneckHierarchy`
+- `verificationPack.targets/pages`、`questions[].targetId/lpCode`、`bottleneckTargets` 或 `bottleneckSummaries` 缺失，导致层级派生信息不足
+- 使用了旧版本小程序包或旧页面缓存
+
+**排查步骤**
+1. 在 `paper-preview` 页面调试 `this.data.paper.bottleneckHierarchy.groups`
+2. 检查目标 paper 文档是否有 `verificationPack.targets` 或至少有 `bottleneckTargets`
+3. 运行回归测试：`node --test tests/learning-records.test.js tests/page-flows.test.js`
+4. 若老试卷缺少 `verificationPack`，确认 `paper-display.js` 是否能从 `questions` 和 `bottleneckTargets` 兜底生成层级
+
+**解决方案**
+- 试卷预览页和验证卷列表优先渲染 `bottleneckHierarchy.groups`
+- 仅在层级完全不可用时才回退到 `bottleneckText`
+- 新生成验证卷应保证 `verificationPack.targets/pages` 和 `questions[].targetId/lpCode` 尽量完整
+
+---
+
 ## 通用排查技巧
 
 1. **先看自动化测试**：多数已知回归都有对应用例，先跑 `npm test` 确认是否绿

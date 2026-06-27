@@ -1,6 +1,7 @@
 const { uniqueBottleneckSummaries } = require('./bottlenecks')
 const { formatBottleneckDisplayName } = require('./bottleneck-name')
 const { getSubjectName } = require('./constants')
+const { groupBottlenecksByHierarchy } = require('./math-bottleneck-hierarchy')
 
 function pad2(value) {
   return String(value).padStart(2, '0')
@@ -107,6 +108,164 @@ function paperBottleneckText(paper = {}) {
   return paperBottleneckSummaries(paper).join('、')
 }
 
+function firstNonEmpty(...values) {
+  for (const value of values) {
+    const text = String(value || '').trim()
+    if (text) return text
+  }
+  return ''
+}
+
+function targetIdOf(target = {}) {
+  if (typeof target === 'string') return target
+  return firstNonEmpty(
+    target.targetId,
+    target.bottleneckId,
+    target.reviewItemId,
+    target.itemId,
+    target.lpCode,
+    target.id
+  )
+}
+
+function fallbackTargetNameOf(targetId = '') {
+  const text = String(targetId || '').trim()
+  if (/^(BN|CHI)-/.test(text)) return ''
+  return formatBottleneckDisplayName(text)
+}
+
+function targetNameOf(target = {}) {
+  if (typeof target === 'string') return fallbackTargetNameOf(target)
+  return firstNonEmpty(
+    target.displayName,
+    target.title,
+    target.targetText,
+    target.lpName,
+    target.name,
+    fallbackTargetNameOf(targetIdOf(target))
+  )
+}
+
+function collectPaperTargets(paper = {}) {
+  const byId = new Map()
+
+  function addTarget(raw = {}) {
+    const targetId = targetIdOf(raw)
+    const displayName = targetNameOf(raw)
+    if (!targetId && !displayName) return
+    const key = targetId || displayName
+    if (byId.has(key)) return
+    const normalized = typeof raw === 'string'
+      ? { targetId, displayName }
+      : { ...raw, targetId, displayName }
+    if (targetId && targetId.startsWith('BN-') && !normalized.bottleneckId) normalized.bottleneckId = targetId
+    if (targetId && targetId.startsWith('LP-') && !normalized.lpCode) normalized.lpCode = targetId
+    byId.set(key, normalized)
+  }
+
+  const pack = paper.verificationPack || {}
+  ;(Array.isArray(pack.targets) ? pack.targets : []).forEach(addTarget)
+  ;(Array.isArray(pack.pages) ? pack.pages : []).forEach(page => {
+    ;(Array.isArray(page.targets) ? page.targets : []).forEach(addTarget)
+    ;(Array.isArray(page.targetIds) ? page.targetIds : []).forEach(addTarget)
+  })
+
+  const questions = Array.isArray(paper.questions) ? paper.questions : []
+  questions.forEach(question => addTarget(question))
+  ;(Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : []).forEach(addTarget)
+
+  if (byId.size === 0) {
+    paperBottleneckSummaries(paper).forEach(summary => addTarget({ displayName: summary, title: summary }))
+  }
+
+  return Array.from(byId.values())
+}
+
+function compactGroupItems(items = []) {
+  return items.map(item => {
+    const displayName = item.displayName || item.displayTitle || item.title || item.lpName || item.targetId || item.bottleneckId || ''
+    return {
+      ...item,
+      viewId: item.viewId || item.targetId || item.bottleneckId || item.lpCode || displayName,
+      displayName,
+      detailText: [
+        item.familyTitle && item.familyTitle !== '待归类卡点组' ? item.familyTitle : '',
+        item.categoryTitle && item.categoryTitle !== '待归类' ? item.categoryTitle : ''
+      ].filter(Boolean).join(' · ')
+    }
+  })
+}
+
+function paperBottleneckHierarchy(paper = {}) {
+  const targets = collectPaperTargets(paper)
+  const summaries = paperBottleneckSummaries(paper)
+  if (targets.length === 0 && summaries.length === 0) {
+    return {
+      hasHierarchy: false,
+      totalCount: 0,
+      groupCount: 0,
+      summaryText: '',
+      groups: []
+    }
+  }
+
+  const subject = paper.subject || ''
+  if (subject === 'math') {
+    const groups = groupBottlenecksByHierarchy(targets).map(group => ({
+      ...group,
+      categoryTitle: group.categoryTitle === '待归类' ? '粗颗粒卡点' : group.categoryTitle,
+      title: group.categoryTitle === '待归类' ? '粗颗粒卡点' : group.categoryTitle,
+      summaryText: `${group.itemCount} 个细分卡点`,
+      families: (group.families || []).map(family => ({
+        ...family,
+        familyTitle: family.familyTitle === '待归类卡点组' ? '学习卡点' : family.familyTitle,
+        title: family.familyTitle === '待归类卡点组' ? '学习卡点' : family.familyTitle,
+        summaryText: `${family.itemCount} 个卡点`,
+        items: compactGroupItems(family.items)
+      }))
+    }))
+    const totalCount = groups.reduce((sum, group) => sum + (Number(group.itemCount) || 0), 0)
+    return {
+      hasHierarchy: groups.length > 0,
+      totalCount,
+      groupCount: groups.length,
+      summaryText: groups.length > 0 ? `${groups.length} 类 · ${totalCount} 个细分卡点` : '',
+      groups
+    }
+  }
+
+  const items = uniqueBottleneckSummaries(summaries.length > 0 ? summaries : targets.map(targetNameOf))
+    .map(name => ({
+      viewId: name,
+      displayName: name,
+      detailText: ''
+    }))
+
+  return {
+    hasHierarchy: items.length > 0,
+    totalCount: items.length,
+    groupCount: items.length > 0 ? 1 : 0,
+    summaryText: items.length > 0 ? `${items.length} 个卡点` : '',
+    groups: items.length > 0
+      ? [{
+        categoryId: 'GENERAL',
+        categoryTitle: '覆盖卡点',
+        title: '覆盖卡点',
+        itemCount: items.length,
+        summaryText: `${items.length} 个卡点`,
+        families: [{
+          familyId: 'GENERAL',
+          familyTitle: '学习卡点',
+          title: '学习卡点',
+          itemCount: items.length,
+          summaryText: `${items.length} 个卡点`,
+          items
+        }]
+      }]
+      : []
+  }
+}
+
 function buildPaperCodeMap(papers = [], fallbackSubjectName = '') {
   const byId = new Map()
   const groups = new Map()
@@ -148,6 +307,7 @@ function buildPaperDisplay(paper = {}, subjectName = '', options = {}) {
     || paperCodeOf(paper, subjectName)
   const bottleneckSummaries = paperBottleneckSummaries(paper)
   const bottleneckText = bottleneckSummaries.join('、')
+  const bottleneckHierarchy = paperBottleneckHierarchy(paper)
 
   return {
     paperTitle: paperTitleOf(paper),
@@ -155,6 +315,7 @@ function buildPaperDisplay(paper = {}, subjectName = '', options = {}) {
     questionCount,
     bottleneckSummaries,
     bottleneckText,
+    bottleneckHierarchy,
     studentPages: pageInfo.studentPages,
     answerPages: pageInfo.answerPages,
     totalPages: pageInfo.totalPages,
@@ -175,6 +336,7 @@ module.exports = {
   buildPaperCodeMap,
   buildPaperDisplay,
   paperBottleneckSummaries,
+  paperBottleneckHierarchy,
   paperBottleneckText,
   paperCodeOf,
   paperDateCode,

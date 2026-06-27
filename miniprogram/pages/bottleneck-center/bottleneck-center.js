@@ -180,11 +180,11 @@ Page({
 
   async onOpenLearningResource(e) {
     const { viewId = '', lpCode = '', bottleneckId = '', subject = 'math' } = e.currentTarget.dataset
-    const bottleneck = this.data.allBottlenecks.find(item => (
-      (viewId && item.viewId === viewId)
-      || (bottleneckId && item.bottleneckId === bottleneckId)
-      || (lpCode && item.lpCode === lpCode && item.subject === subject)
-    ))
+    const bottleneck = viewId
+      ? this.data.allBottlenecks.find(item => item.viewId === viewId)
+      : bottleneckId
+        ? this.data.allBottlenecks.find(item => item.bottleneckId === bottleneckId)
+        : this.data.allBottlenecks.find(item => lpCode && item.lpCode === lpCode && item.subject === subject)
     if (!bottleneck) return
 
     wx.showLoading({ title: '正在生成任务' })
@@ -193,6 +193,7 @@ Page({
         studentId: this.data.studentId,
         subject: bottleneck.subject || subject,
         target: {
+          targetId: bottleneck.bottleneckId || bottleneck.viewId || bottleneckId || viewId || bottleneck.lpCode || lpCode || '',
           bottleneckId: bottleneck.bottleneckId || bottleneckId || '',
           lpCode: bottleneck.lpCode || lpCode || '',
           title: bottleneck.displayName || bottleneck.shortName || '学习卡点',

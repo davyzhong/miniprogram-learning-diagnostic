@@ -64,6 +64,7 @@
           </view>
         </view>
         <text class="bottleneck-date">{{item.rangeText}}</text>
+        <text class="bottleneck-hierarchy" wx:if="{{item.hierarchyText}}">{{item.hierarchyText}}</text>
       </view>
     </view>
 

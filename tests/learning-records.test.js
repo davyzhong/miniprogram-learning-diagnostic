@@ -112,6 +112,9 @@ test('paper display helper builds stable codes, page text and bottleneck summari
   assert.equal(display.bottleneckText, '计算错误')
   assert.equal(display.pageSummary, '学生卷 1 页 · 答案 1 页 · 共 2 页')
   assert.deepEqual(display.chips, ['试卷日期 6月13日', '6题', '学生卷1页', '答案1页'])
+  assert.equal(display.bottleneckHierarchy.hasHierarchy, true)
+  assert.equal(display.bottleneckHierarchy.summaryText, '1 类 · 1 个细分卡点')
+  assert.equal(display.bottleneckHierarchy.groups[0].title, '粗颗粒卡点')
 
   assert.deepEqual(paperPageInfo({ totalPages: 1 }), {
     totalPages: 1,
@@ -122,6 +125,47 @@ test('paper display helper builds stable codes, page text and bottleneck summari
     answerPagesText: '',
     totalPagesText: '共1页'
   })
+})
+
+test('paper display helper groups math fine bottlenecks by category and family', () => {
+  const display = buildPaperDisplay({
+    _id: 'paper-fine',
+    subject: 'math',
+    type: 'verification',
+    verificationPack: {
+      targets: [
+        { targetId: 'BN-DEC-MUL-POINT-COUNT', displayName: '小数乘法中积的小数位数判断错误' },
+        { targetId: 'BN-DEC-MUL-POINT-ESTIMATE', displayName: '小数乘法中未用估算校验小数点' }
+      ]
+    },
+    bottleneckSummaries: ['小数乘法中积的小数位数判断错误', '小数乘法中未用估算校验小数点']
+  }, '数学')
+
+  assert.equal(display.bottleneckHierarchy.hasHierarchy, true)
+  assert.equal(display.bottleneckHierarchy.summaryText, '1 类 · 2 个细分卡点')
+  assert.equal(display.bottleneckHierarchy.groups[0].title, '计算规则')
+  assert.equal(display.bottleneckHierarchy.groups[0].families[0].title, '小数点定位与移动')
+  assert.deepEqual(
+    display.bottleneckHierarchy.groups[0].families[0].items.map(item => item.displayName),
+    ['小数乘法中积的小数位数判断错误', '小数乘法中未用估算校验小数点']
+  )
+})
+
+test('paper display helper resolves raw fine target ids to taxonomy titles', () => {
+  const display = buildPaperDisplay({
+    _id: 'paper-raw-targets',
+    subject: 'math',
+    type: 'verification',
+    verificationPack: {
+      pages: [{
+        targetIds: ['BN-DEC-MUL-POINT-COUNT']
+      }]
+    }
+  }, '数学')
+
+  const item = display.bottleneckHierarchy.groups[0].families[0].items[0]
+  assert.equal(item.displayName, '小数乘法中积的小数位数判断错误')
+  assert.doesNotMatch(item.displayName, /^BN-/)
 })
 
 test('paper display helper assigns readable legacy codes by subject and paper date', () => {

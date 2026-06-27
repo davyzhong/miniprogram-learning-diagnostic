@@ -45,10 +45,27 @@
     </view>
   </view>
 
-  <view class="paper-info card traceable-block" wx:if="{{bottleneckText}}" bindtap="onTraceableUrlTap" data-url="{{bottleneckCenterUrl}}">
-    <view class="info-row">
-      <text class="info-label">覆盖卡点</text>
-      <text class="info-value">{{bottleneckText}}</text>
+  <view class="coverage-card card traceable-block" wx:if="{{bottleneckHierarchy.hasHierarchy}}" bindtap="onTraceableUrlTap" data-url="{{bottleneckCenterUrl}}">
+    <view class="section-title-row">
+      <text class="section-title">覆盖卡点</text>
+      <text class="section-action">{{bottleneckHierarchy.summaryText}}</text>
+    </view>
+    <view class="coverage-group" wx:for="{{bottleneckHierarchy.groups}}" wx:for-item="group" wx:key="categoryId">
+      <view class="coverage-group-head">
+        <text class="coverage-group-title">{{group.title}}</text>
+        <text class="coverage-group-count">{{group.summaryText}}</text>
+      </view>
+      <view class="coverage-family" wx:for="{{group.families}}" wx:for-item="family" wx:key="familyId">
+        <view class="coverage-family-head">
+          <text class="coverage-family-title">{{family.title}}</text>
+          <text class="coverage-family-count">{{family.summaryText}}</text>
+        </view>
+        <view class="coverage-chip-list">
+          <view class="coverage-chip" wx:for="{{family.items}}" wx:for-item="item" wx:key="viewId">
+            <text class="coverage-chip-title">{{item.displayName}}</text>
+          </view>
+        </view>
+      </view>
     </view>
   </view>
 

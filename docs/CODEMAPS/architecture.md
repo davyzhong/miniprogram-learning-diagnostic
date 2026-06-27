@@ -14,8 +14,8 @@
 │  miniprogram/ (19 pages, 20 utils, 17471 lines JS)       │
 │  ├── 首页/学生档案/学科首页                                │
 │  ├── 拍照诊断 → 诊断报告                                  │
-│  ├── 验证卷生成/预览/下载                                  │
-│  ├── 知识地图/卡点中心/学习资源                             │
+│  ├── 验证卷生成/预览/下载（覆盖卡点层级展示）                 │
+│  ├── 知识地图/卡点中心/学习资源（细 targetId 任务包）          │
 │  └── 英语双功能（口语+听写）                               │
 └──────────────────────────┬──────────────────────────────┘
                            │ wx.cloud.callFunction
@@ -36,7 +36,7 @@
                            │ CloudBase DB + Storage + AI
 ┌──────────────────────────▼──────────────────────────────┐
 │                    CloudBase 基础设施                     │
-│  数据库(10 collections) | 云存储(PDF/图片) | AI(混元/deepseek)│
+│  数据库(12 collections) | 云存储(PDF/图片) | AI(混元/deepseek)│
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -48,6 +48,7 @@
 3. 自动生成验证卷      auto-verification → generatePaper(AI 出题) → PDF
 4. 用户打印/作答/拍照   upload → analyzePhotos(mode=verification)
 5. 反馈学习闭环        reportFeedback → reports.verification → profile 更新
+6. 针对卡点学习        learningResource(targetId) → learningResourcePacks
 ```
 
 ## 服务边界
