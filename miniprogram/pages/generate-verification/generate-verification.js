@@ -44,6 +44,16 @@ function cleanText(value) {
   return String(value || '').trim()
 }
 
+function bottleneckHierarchyLine(item = {}, subject = '') {
+  if (subject !== 'math') return item.detailText || ''
+  const group = groupBottlenecksByHierarchy([item])[0] || {}
+  const family = (group.families || [])[0] || {}
+  return [
+    group.categoryTitle && group.categoryTitle !== '待归类' ? group.categoryTitle : '',
+    family.familyTitle && family.familyTitle !== '待归类卡点组' ? family.familyTitle : ''
+  ].filter(Boolean).join(' / ')
+}
+
 function isActiveChineseReviewItem(item = {}) {
   return !['mastered', 'archived', 'ignored'].includes(item.status)
 }
@@ -79,6 +89,7 @@ function chineseReviewTargets(profile = {}, targetCodes = []) {
         displayName: chineseReviewTitleOf(item),
         lpName: chineseReviewTitleOf(item),
         detailText: chineseReviewDetailOf(item),
+        hierarchyText: chineseReviewDetailOf(item),
         severity: item.status === 'recurring' ? 'high' : 'medium',
         status: item.status || 'needs_verification',
         weight: item.status === 'recurring' ? 100 : 80,
@@ -110,7 +121,10 @@ function verificationBottlenecks(profile = {}, targetCodes = []) {
     subject: profile.subject,
     subjectName: profile.subjectName,
     expandCandidates: profile.subject === 'math'
-  })
+  }).map(item => ({
+    ...item,
+    hierarchyText: bottleneckHierarchyLine(item, profile.subject) || item.detailText || item.evidenceText
+  }))
   return chineseTargets.length > 0 ? chineseTargets.concat(bottleneckTargets) : bottleneckTargets
 }
 

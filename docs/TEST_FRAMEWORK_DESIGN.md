@@ -1,7 +1,7 @@
 # 学习诊断小程序测试框架设计 V2
 
-> 更新日期：2026-06-20
-> 基线：`npm test` / `npm run test:unit` 当前 545 个离线用例通过
+> 更新日期：2026-06-27
+> 基线：`npm test` / `npm run test:unit` 当前 583 个离线用例通过
 > 配套执行计划：`docs/TEST_STRATEGY_V2.md`
 
 ## 一、设计目标

@@ -9,7 +9,7 @@
 | **CloudBase AI (混元 hy3-preview)** | 多模态 OCR + 错题分析 | analyzeBatch, englishVocabulary |
 | **CloudBase AI (deepseek-v4-flash)** | 验证卷出题 + 资源包生成 | generatePaper, learningResource |
 | **CloudBase 云存储** | 图片/PDF 存储 | uploadAndAnalyze, generatePaper |
-| **CloudBase 云数据库** | 10 collections | 所有云函数 |
+| **CloudBase 云数据库** | 12 collections | 所有云函数 |
 | **微信 wx.cloud** | 前端→云函数调用 | miniprogram/utils/cloud.js |
 
 ## AI 调用模式

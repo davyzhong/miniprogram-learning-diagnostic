@@ -93,7 +93,7 @@
 
 #### 第五步：生成验证试卷
 
-验证试卷用于确认学习卡点是否真实存在、是否已经改善。当前规则是覆盖待验证细卡点（BN/CHI），按置信度分层出题：高置信 3 题、中置信 2 题、低置信 1 题。
+验证试卷用于确认学习卡点是否真实存在、是否已经改善。当前规则是覆盖待验证细卡点（BN/CHI），按置信度分层出题：高置信 3 题、中置信 2 题、低置信 1 题。页面会按粗类/卡点组展示覆盖范围，避免把几十个细卡点挤成一整段文字。
 
 <p align="center">
   <img src="docs/user-guide/images/05-generate-verification.png" alt="生成验证试卷页面截图" width="320" />
@@ -102,6 +102,7 @@
 | 配置项 | 当前规则 |
 |--------|----------|
 | 选择卡点 | 自动覆盖待验证细卡点；手动兜底最多 80 个目标 |
+| 覆盖范围 | 按粗类、卡点组和细卡点分层展示 |
 | 每个目标 | 按置信度 1-3 道题 |
 | 题目结构 | 核心验证题为主，高/中置信目标补迁移延展题 |
 | 输出格式 | A4 PDF，包含学生卷和答案页 |
@@ -117,6 +118,7 @@
 | 你要做什么 | 点击哪里 |
 |------------|----------|
 | 看试卷内容 | 查看页面中的试卷内容预览 |
+| 看覆盖卡点 | 查看“覆盖卡点”层级卡片，先看粗类和组名，再展开细卡点 |
 | 打印 | 点击下载 PDF 或分享打印 |
 | 完成作答后上传 | 点击“作答完成，上传验证” |
 | 查看反馈 | 上传后回到试卷工作台或学习记录查看验证反馈 |
@@ -174,6 +176,8 @@ flowchart LR
 - 下一步应该上传新试卷，还是先复测验证卷。
 
 > **验证卷自动生成**：诊断报告完成后，系统先创建验证卷生成记录；家长点击查看时由前端驱动分批生成，避免云函数超时。验证卷以细卡点（BN/CHI）为出题单位，按置信度生成 1-3 题，并附含解题思路；任一批次失败会标记失败而不是伪装成 ready。
+
+> **学习任务包**：学习卡点中心和卡点详情页的“学一下”入口按细卡点生成小程序内任务包。同一个粗卡点下面的不同细卡点必须使用不同 `targetId`，避免进入同一份学习内容。
 
 ### 2. 第一次使用
 
@@ -352,7 +356,7 @@ flowchart LR
 | 后端 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI（图像） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI（文本） | CloudBase AI `deepseek-v4-flash` | 用于生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 11 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 12 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / learningResourcePacks |
 | PDF 生成 | pdfkit | 云函数内生成 A4 试卷/报告 PDF |
 | 测试 | Node.js 内置 test runner | `node --test`，无外部测试框架依赖 |
 
@@ -371,7 +375,7 @@ miniprogram-learning-diagnostic/
 │                                #   bottleneck-center / bottleneck-detail / english-practice /
 │                                #   english-dictation / generate-verification /
 │                                #   default-paper / paper-preview）
-├── cloudfunctions/              # 云函数后端（10 个）
+├── cloudfunctions/              # 云函数后端（13 个）
 │   ├── uploadAndAnalyze/        #   入口：校验 → 创建报告 → 触发分析
 │   ├── analyzePhotos/           #   主控：分批 → 串行分析 → 去重 → 合并 → 对比
 │   ├── analyzeBatch/            #   单批次 AI 分析 + 结果标准化
@@ -380,12 +384,14 @@ miniprogram-learning-diagnostic/
 │   ├── studentData/             #   访问感知的学习资料聚合读取
 │   ├── reportFeedback/          #   家长反馈和复核线索
 │   ├── englishVocabulary/       #   英语个人词库、熟悉度练习和纸面听写
+│   ├── learningResource/        #   学习卡点任务包生成、读取和完成状态
+│   ├── regenerateVerificationPaper/ # 验证卷短任务续跑
+│   ├── reanalyzeMathHistory/    #   历史数学报告重算维护工具
 │   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF（双栏布局+解题思路）
-│   ├── generateReportPDF/       #   生成报告 PDF
-│   └── analyzePhotos/           #   照片分析主流程 + auto-verification.js（验证卷自动生成）
+│   └── generateReportPDF/       #   生成报告 PDF
 ├── services/skills/             # P0 Skill 能力内核
 ├── cli/ldx.js                   # 本地 CLI 入口
-├── tests/                       # 单元自动化测试（545 个用例 + 真实图片 E2E 脚本）
+├── tests/                       # 单元自动化测试（583 个用例 + 真实图片 E2E 脚本）
 ├── scripts/                     # check-js.js、preview-pdf.js（PDF预览）、DevTools E2E、指标导出
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
@@ -435,6 +441,7 @@ cd miniprogram-learning-diagnostic
 - `englishImportBatches`
 - `studentEnglishWords`
 - `englishPracticeSessions`
+- `learningResourcePacks`
 
 详细步骤参见 [SETUP.md](./SETUP.md)。
 
@@ -446,7 +453,7 @@ cd miniprogram-learning-diagnostic
 
 | 类别 | 说明 | 命令 |
 |------|------|------|
-| **单元自动化测试** | 545 个离线用例：云函数、Presenter、工具、数据层、合同、知识库一致性和诊断回归 | `npm run test:unit` 或 `npm test` |
+| **单元自动化测试** | 583 个离线用例：云函数、Presenter、工具、数据层、合同、知识库一致性和诊断回归 | `npm run test:unit` 或 `npm test` |
 | **CLI E2E 核心页** | 微信开发者工具 CLI 驱动 17 页面和基础跨页流程 | `npm run test:e2e:core` |
 | **CLI E2E 数学** | 数学数据驱动场景、细卡点、知识地图和学习资源链路 | `npm run test:e2e:math` |
 | **CLI E2E 语文** | 语文工作台、诊断报告、错项复测出卷轻量链路 | `npm run test:e2e:chinese` |

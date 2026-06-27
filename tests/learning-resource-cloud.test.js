@@ -50,6 +50,39 @@ test('learningResource generatePack stores a ready math pack', async () => {
   assert.equal(rows[0].externalResources.length, 1)
 })
 
+test('learningResource cache uses fine targetId before coarse LP code', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    learningResourcePacks: [{
+      _id: 'pack-existing',
+      studentId: 'student-1',
+      subject: 'math',
+      targetId: 'LP-001',
+      lpCode: 'LP-001',
+      title: '粗颗粒计算基础',
+      llmEnhanced: true,
+      enhancedAt: '2026-06-16T10:00:00+08:00'
+    }]
+  })
+  const { handler } = loadLearningResource(db)
+
+  const result = await handler.main({
+    action: 'generatePack',
+    studentId: 'student-1',
+    subject: 'math',
+    target: {
+      targetId: 'LP-001:小数乘法拆分后加法求和错误',
+      lpCode: 'LP-001',
+      title: '小数乘法拆分后加法求和错误'
+    }
+  })
+
+  assert.equal(result.success, true)
+  assert.notEqual(result.packId, 'pack-existing')
+  assert.equal(result.pack.targetId, 'LP-001:小数乘法拆分后加法求和错误')
+  assert.equal(db.dump('learningResourcePacks').length, 2)
+})
+
 test('learningResource denies non-members when generating packs', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],

@@ -1,6 +1,6 @@
 # 测试指南（TESTING）
 
-> 更新日期：2026-06-20
+> 更新日期：2026-06-27
 > 适用对象：本项目的开发者与后续维护 agent
 > 配套文档：`docs/TEST_FRAMEWORK_DESIGN.md`、`docs/TEST_STRATEGY_V2.md`、`docs/TEST_MATRIX.md`
 
@@ -31,7 +31,7 @@ CLI E2E 使用：
 | 命令 | 用途 | 备注 |
 |---|---|---|
 | `npm test` | 运行全部单元自动化测试 | `npm run test:unit` 的别名 |
-| `npm run test:unit` | 运行全部离线测试 | 当前基线 545 个用例 |
+| `npm run test:unit` | 运行全部离线测试 | 当前基线 583 个用例 |
 | `npm run test:coverage` | 单元测试覆盖率 | 行/函数 80% 门槛 |
 | `npm run check` | JS 语法检查 | 扫描项目 JS 文件 |
 | `npm run verify` | 提交前本地门禁 | `test:unit + check` |

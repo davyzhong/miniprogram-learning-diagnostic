@@ -696,6 +696,56 @@ test('bottleneck pages expose learning task pack actions before verification', (
   assert.match(centerWxml, /onOpenLearningResource/)
 })
 
+test('bottleneck center opens learning resources for the tapped fine bottleneck', async () => {
+  let requestedTarget = null
+  const cloud = {
+    getStudentDashboard: async () => ({
+      student: { _id: 'student-1', name: '钟青羽' },
+      subjectProfiles: [{
+        subject: 'math',
+        currentBottlenecks: [{
+          lpCode: 'LP-001',
+          lpName: '计算基础',
+          status: 'persisting',
+          candidateBottlenecks: [
+            { title: '小数乘法拆分后加法求和错误', evidenceStrength: 'medium' },
+            { title: '异分母分数加减法通分方法不熟练', evidenceStrength: 'medium' }
+          ]
+        }]
+      }]
+    }),
+    generateLearningResourcePack: async payload => {
+      requestedTarget = payload.target
+      return { success: true, packId: 'pack-2' }
+    }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/bottleneck-center/bottleneck-center.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await loadPageAndWait(page, { studentId: 'student-1', studentName: encodeURIComponent('钟青羽') })
+
+  const second = page.data.filteredBottlenecks.find(item => item.displayName === '异分母分数加减法通分方法不熟练')
+  assert.ok(second)
+  await page.onOpenLearningResource({
+    currentTarget: {
+      dataset: {
+        subject: second.subject,
+        lpCode: second.lpCode,
+        bottleneckId: second.bottleneckId,
+        viewId: second.viewId
+      }
+    }
+  })
+
+  assert.equal(requestedTarget.title, '异分母分数加减法通分方法不熟练')
+  assert.equal(requestedTarget.lpCode, 'LP-001')
+  assert.equal(requestedTarget.targetId, second.viewId)
+  assert.match(wx.calls.filter(call => call.name === 'navigateTo').pop().payload.url, /packId=pack-2/)
+})
+
 
 test('bottleneck detail builds a focused evidence workbench without repetitive report and paper lists', async () => {
   let dashboardArgs = null
@@ -2424,6 +2474,8 @@ test('paper preview loads a saved paper and opens its upload flow', async () => 
   assert.equal(page.data.typeText, '验证试卷')
   assert.equal(page.data.paperCodeText, '数学-20260613-01')
   assert.equal(page.data.bottleneckText, '计算错误')
+  assert.equal(page.data.bottleneckHierarchy.hasHierarchy, true)
+  assert.equal(page.data.bottleneckHierarchy.totalCount, 1)
   assert.equal(page.data.paperDate, '2026-06-13')
   assert.equal(page.data.pageSummary, '学生卷 1 页 · 答案 1 页 · 共 2 页')
   assert.equal(page.data.pdfDownloaded, true)
@@ -2473,6 +2525,8 @@ test('paper preview falls back to question bottleneck names for legacy papers', 
   await page.loadPaper('paper-1')
 
   assert.equal(page.data.bottleneckText, '计算错误、审题错误')
+  assert.equal(page.data.bottleneckHierarchy.hasHierarchy, true)
+  assert.equal(page.data.bottleneckHierarchy.totalCount, 2)
 })
 
 test('paper preview allows multiple downloads (user may lose the file)', async () => {

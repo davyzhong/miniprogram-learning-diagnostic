@@ -21,14 +21,14 @@ pages/
 │
 ├── report/                 诊断报告
 │   └── report-presenter.js 全量卡点(profile.currentBottlenecks) + 知识地图
-├── bottleneck-center/      卡点中心
-├── bottleneck-detail/      卡点详情
+├── bottleneck-center/      卡点中心（学一下按细 targetId 打开任务包）
+├── bottleneck-detail/      卡点详情（细卡点证据 + 学习/验证入口）
 ├── knowledge-map/          知识地图（category→family→node→BN）
-├── learning-resource/      学习资源包
+├── learning-resource/      学习资源包（targetId 绑定细卡点）
 │
 ├── generate-verification/  验证卷生成（历史兼容页，主流程自动）
 ├── default-paper/          默认诊断卷
-├── paper-preview/          试卷预览/下载（_regeneratePdf PDF）
+├── paper-preview/          试卷预览/下载（覆盖卡点层级 + _regeneratePdf PDF）
 │
 ├── english-practice/       英语口语练习
 ├── english-dictation/      英语听写（OCR）
@@ -58,7 +58,14 @@ report.js → getReportDetail → report-presenter.js
 # 验证卷预览页 (paper-preview)
 paper-preview.js → getPaperDetail → paper-preview-presenter.js
   → buildTaskPackView (verificationPack.pages)
+  → buildPaperDisplay / bottleneckHierarchy (覆盖卡点层级)
   → onDownload → callGeneratePaper(_regeneratePdf) → PDF
+
+# 学习卡点中心/详情 (bottleneck-center / bottleneck-detail)
+onOpenLearningResource / onOpenLearning
+  → targetId = bottleneckId || viewId || lpCode
+  → cloud.generateLearningResourcePack
+  → learning-resource?packId=...
 
 # 学科首页 (subject-home)
 subject-home.js → getSubjectDashboard → subject-home-presenter.js
@@ -74,7 +81,7 @@ utils/
 ├── bottleneck-view.js        卡点视图构建 + 细BN展开
 ├── math-bottleneck-hierarchy.js  taxonomy 层级分组
 ├── math-learning-map.js      知识地图(加载 .seed.js)
-├── paper-display.js          试卷编号格式化
+├── paper-display.js          试卷编号格式化 + 覆盖卡点层级
 ├── shared-navigation.js      统一导航（含 reportId 传递）
 ├── traceable-actions.js      可追踪操作 URL
 ├── learning-records.js       学习记录展示

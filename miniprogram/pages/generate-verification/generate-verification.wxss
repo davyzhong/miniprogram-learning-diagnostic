@@ -264,8 +264,17 @@
 .confidence-low { background: #e0f2fe; color: #075985; }
 
 .bottleneck-date {
+  display: block;
   font-size: 22rpx;
   color: #8a9aab;
+}
+
+.bottleneck-hierarchy {
+  color: #52677d;
+  display: block;
+  font-size: 21rpx;
+  line-height: 1.4;
+  margin-top: 6rpx;
 }
 
 .empty-tip {

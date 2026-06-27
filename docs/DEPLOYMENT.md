@@ -102,6 +102,38 @@ studentData:getStudentDashboard 请求超时，请稍后重试
 
 先确认 `app.json` 中页面已注册，然后重新编译小程序。
 
+如果控制台出现：
+
+```text
+onPageNotFound error: page "" is not found
+```
+
+这通常不是业务页面丢失，而是微信开发者工具的本机私有启动配置为空。检查被 Git 忽略的 `project.private.config.json`，确保 `condition.miniprogram.list` 至少包含首页：
+
+```json
+{
+  "condition": {
+    "miniprogram": {
+      "list": [
+        {
+          "name": "首页",
+          "pathName": "pages/index/index",
+          "query": "",
+          "launchMode": "default"
+        }
+      ]
+    }
+  }
+}
+```
+
+修复后清理编译缓存并重新预览：
+
+```bash
+/Applications/wechatwebdevtools.app/Contents/MacOS/cli cache --clean compile --project "/Users/qiming/Downloads/GoogleDrive/AI Learning/miniprogram-learning-diagnostic"
+/Applications/wechatwebdevtools.app/Contents/MacOS/cli preview --project "/Users/qiming/Downloads/GoogleDrive/AI Learning/miniprogram-learning-diagnostic" --qr-output terminal --lang zh
+```
+
 ### 报告页信息大量缺失
 
 优先确认 `studentData` 已部署。报告页会在聚合读取失败时回退到直接读取报告，但权限、关联试卷和反馈信息仍依赖相关云函数。

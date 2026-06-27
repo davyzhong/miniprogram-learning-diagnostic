@@ -132,7 +132,7 @@ async function generatePack(event, openId) {
 
   // 缓存检查：同一卡点是否已有增强后的 pack（集合不存在时自动建空）
   const target = event.target || {}
-  const targetId = target.bottleneckId || target.lpCode || target.id || ''
+  const targetId = target.bottleneckId || target.targetId || target.lpCode || target.id || ''
   if (targetId) {
     const cached = await queryPacks(
       { studentId, subject, targetId, llmEnhanced: true },

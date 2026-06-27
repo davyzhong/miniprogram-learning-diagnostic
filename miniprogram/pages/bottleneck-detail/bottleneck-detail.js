@@ -366,6 +366,7 @@ Page({
         subject: this.data.subject,
         sourceReportId: this.data.relatedReports[0] && this.data.relatedReports[0]._id,
         target: {
+          targetId: this.data.bottleneckId || bottleneck.bottleneckId || this.data.viewId || bottleneck.viewId || lpCode,
           bottleneckId: this.data.bottleneckId || bottleneck.bottleneckId || '',
           lpCode,
           title: bottleneck.displayName || bottleneck.shortName || '学习卡点',

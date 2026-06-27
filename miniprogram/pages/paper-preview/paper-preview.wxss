@@ -255,27 +255,91 @@
   font-weight: 850;
 }
 
-.paper-info {
-  padding: 22rpx 28rpx;
+.coverage-card {
+  padding: 26rpx 28rpx;
 }
 
-.info-row {
+.coverage-group {
+  border-top: 1rpx solid #edf2f7;
+  padding: 20rpx 0 4rpx;
+}
+
+.coverage-group:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.coverage-group-head,
+.coverage-family-head {
+  align-items: center;
   display: flex;
+  gap: 12rpx;
+  justify-content: space-between;
 }
 
-.info-label {
-  color: #718096;
-  flex-shrink: 0;
-  font-size: 25rpx;
-  width: 150rpx;
-}
-
-.info-value {
-  color: #1f2937;
+.coverage-group-title {
+  color: #17365d;
   flex: 1;
-  font-size: 25rpx;
+  font-size: 28rpx;
+  font-weight: 800;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.coverage-group-count {
+  background: #eaf2ff;
+  border-radius: 999rpx;
+  color: #245ea8;
+  flex-shrink: 0;
+  font-size: 20rpx;
+  font-weight: 750;
+  padding: 5rpx 12rpx;
+}
+
+.coverage-family {
+  background: #f8fafc;
+  border: 1rpx solid #e5edf5;
+  border-radius: 14rpx;
+  margin-top: 14rpx;
+  padding: 14rpx;
+}
+
+.coverage-family-title {
+  color: #304155;
+  flex: 1;
+  font-size: 24rpx;
+  font-weight: 760;
+  line-height: 1.35;
+  min-width: 0;
+}
+
+.coverage-family-count {
+  color: #7b8ca1;
+  flex-shrink: 0;
+  font-size: 20rpx;
+}
+
+.coverage-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-top: 12rpx;
+}
+
+.coverage-chip {
+  background: #fff;
+  border: 1rpx solid #dce7f2;
+  border-radius: 8rpx;
+  max-width: 100%;
+  padding: 8rpx 12rpx;
+}
+
+.coverage-chip-title {
+  color: #25364a;
+  display: block;
+  font-size: 22rpx;
   font-weight: 650;
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .question-card,
