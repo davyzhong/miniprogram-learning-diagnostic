@@ -163,6 +163,8 @@ test('index family workbench renders actionable card sections instead of old lat
   assert.match(wxml, /child-priority-action/)
   assert.match(wxml, /secondary-action-grid/)
   assert.match(wxml, /child-quick-grid/)
+  assert.match(wxml, /AI 用量/)
+  assert.match(wxml, /\/pages\/ai-usage\/ai-usage/)
   assert.doesNotMatch(wxml, /child-latest-row/)
   assert.doesNotMatch(wxml, /child-next-row/)
 

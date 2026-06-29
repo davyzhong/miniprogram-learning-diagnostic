@@ -73,6 +73,7 @@ function loadGeneratePaperForTest(db, options = {}) {
 test('uploadAndAnalyze creates a report and starts analysis for an owned student', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    userConsents: [{ _id: 'consent-1', _openid: 'owner-1', betaConsented: true }],
     subjectProfiles: [{ _id: 'profile-1', studentId: 'student-1', subject: 'math' }],
     reports: []
   })
@@ -103,6 +104,7 @@ test('uploadAndAnalyze creates a report and starts analysis for an owned student
 test('uploadAndAnalyze marks default diagnosis paper sources correctly', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    userConsents: [{ _id: 'consent-1', _openid: 'owner-1', betaConsented: true }],
     subjectProfiles: [{ _id: 'profile-1', studentId: 'student-1', subject: 'math' }],
     papers: [{
       _id: 'paper-1',
@@ -131,6 +133,7 @@ test('uploadAndAnalyze marks default diagnosis paper sources correctly', async (
 test('uploadAndAnalyze rejects invalid uploads and students owned by another user', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    userConsents: [{ _id: 'consent-other', _openid: 'other-owner', betaConsented: true }],
     reports: []
   })
   const handler = loadModule('cloudfunctions/uploadAndAnalyze/index.js', {
@@ -160,6 +163,31 @@ test('uploadAndAnalyze rejects invalid uploads and students owned by another use
   assert.equal(db.dump('reports').length, 0)
 })
 
+test('uploadAndAnalyze rejects real uploads before beta consent is recorded', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    subjectProfiles: [{ _id: 'profile-1', studentId: 'student-1', subject: 'math' }],
+    userConsents: [],
+    reports: []
+  })
+  const cloud = createCloudMock({ db })
+  const handler = loadModule('cloudfunctions/uploadAndAnalyze/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({
+    fileIDs: ['cloud://photo-1'],
+    studentId: 'student-1',
+    subject: 'math',
+    mode: 'diagnosis'
+  })
+
+  assert.equal(result.success, false)
+  assert.match(result.error, /内测授权/)
+  assert.equal(db.dump('reports').length, 0)
+  assert.equal(cloud.calls.some(call => call.name === 'callFunction'), false)
+})
+
 test('joined parent can perform learning workflow operations', async () => {
   const questions = Array.from({ length: 5 }, (_, index) => ({
     index: index + 1,
@@ -171,6 +199,7 @@ test('joined parent can perform learning workflow operations', async () => {
   }))
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    userConsents: [{ _id: 'consent-viewer', _openid: 'viewer-1', betaConsented: true }],
     studentMembers: [{ _id: 'member-1', studentId: 'student-1', ownerOpenId: 'owner-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }],
     subjectProfiles: [{
       _id: 'profile-1',
@@ -314,6 +343,7 @@ test('viewer can read analysis progress for a joined child', async () => {
 test('uploadAndAnalyze requires a matching verification paper for verification reports', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    userConsents: [{ _id: 'consent-1', _openid: 'owner-1', betaConsented: true }],
     papers: [{
       _id: 'default-paper',
       _openid: 'owner-1',
@@ -345,6 +375,7 @@ test('uploadAndAnalyze requires a matching verification paper for verification r
 test('uploadAndAnalyze stores verification upload evidence time', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    userConsents: [{ _id: 'consent-1', _openid: 'owner-1', betaConsented: true }],
     subjectProfiles: [{ _id: 'profile-1', studentId: 'student-1', subject: 'math' }],
     papers: [{
       _id: 'paper-1',
@@ -2052,10 +2083,9 @@ test('generateReportPDF allows an active joined parent to download a readable re
 })
 
 test('uploadAndAnalyze rejects paper mode without a paperId', async () => {
-  // paper 模式语义上必须关联试卷；当前实现没有强制校验。此测试记录该行为，
-  // 若未来增加校验，断言应改为 success:false + 明确错误文案。
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    userConsents: [{ _id: 'consent-1', _openid: 'owner-1', betaConsented: true }],
     subjectProfiles: [{ _id: 'profile-1', studentId: 'student-1', subject: 'math' }],
     reports: []
   })
@@ -2071,10 +2101,9 @@ test('uploadAndAnalyze rejects paper mode without a paperId', async () => {
     mode: 'paper'
   })
 
-  // Known gap: server currently accepts paper mode without paperId and falls back to sourceType='photo'.
-  assert.equal(result.success, true)
-  assert.equal(db.dump('reports')[0].sourceType, 'photo')
-  assert.equal(db.dump('reports')[0].paperId, '')
+  assert.equal(result.success, false)
+  assert.match(result.error, /paperId/)
+  assert.equal(db.dump('reports').length, 0)
 })
 
 test('analyzePhotos marks task and profile as failed when a batch returns failure', async () => {

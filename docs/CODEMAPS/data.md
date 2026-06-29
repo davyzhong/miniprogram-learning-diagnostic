@@ -2,7 +2,7 @@
 
 <!-- Generated: 2026-06-25 | Files scanned: 254 | Token estimate: ~800 -->
 
-## 数据库集合（12 collections）
+## 数据库集合（15 collections）
 
 | 集合 | 作用 | 关键字段 |
 |------|------|----------|
@@ -18,6 +18,9 @@
 | `studentEnglishWords` | 学生英语词库 | studentId, word, familiarity |
 | `englishPracticeSessions` | 英语练习 | studentId, sessionType, words[] |
 | `reportFeedback` | 反馈 | reportId, feedbackType, content |
+| `aiUsageEvents` | AI 用量账本 | eventId, openid, studentId, feature, status, usage, estimatedCostCny, createdAt |
+| `userConsents` | 内测授权 | openid, betaConsented, dataProcessingConsented, privacyVersion, updatedAt |
+| `dataDeletionRequests` | 数据删除请求 | openid, scope, status, requestedAt, processedAt |
 
 ## 实体关系
 
@@ -28,6 +31,9 @@ students 1──N reports             (诊断+验证报告)
 students 1──N papers              (验证卷)
 students 1──N learningResourcePacks
 students 1──N englishPracticeSessions
+students 1──N aiUsageEvents        (可选 studentId 维度成本归因)
+openid   1──1 userConsents         (内测授权)
+openid   1──N dataDeletionRequests (删除请求)
 
 reports N──1 papers               (report.verificationPaperId ↔ paper.triggeredByReport)
 reports 1──N reportFeedback       (反馈学习)

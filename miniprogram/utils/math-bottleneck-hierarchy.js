@@ -5,6 +5,118 @@ const categoriesById = new Map((categorySeed.categories || []).map(item => [item
 const familiesById = new Map((categorySeed.families || []).map(item => [item.familyId, item]))
 const bottlenecksById = new Map((bottleneckSeed.bottlenecks || []).map(item => [item.bottleneckId, item]))
 
+const LEGACY_FINE_BOTTLENECKS = {
+  // 长方形/面积公式类历史 AI 变体
+  'BN-APP-RECT-AREA': {
+    title: '长方形周长和面积公式混淆',
+    categoryId: 'MATH-CAT-GEOMETRY',
+    familyId: 'MATH-FAM-CIRCLE-FORMULA'
+  },
+  'BN-APP-RECT-PERIMETER-AREA': {
+    title: '长方形周长和面积公式混淆',
+    categoryId: 'MATH-CAT-GEOMETRY',
+    familyId: 'MATH-FAM-CIRCLE-FORMULA'
+  },
+  'BN-GEO-RECT-AREA-CONFUSE': {
+    title: '长方形周长和面积公式混淆',
+    categoryId: 'MATH-CAT-GEOMETRY',
+    familyId: 'MATH-FAM-CIRCLE-FORMULA'
+  },
+  'BN-RECT-PERIM-AREA-CONFUSE': {
+    title: '长方形周长和面积公式混淆',
+    categoryId: 'MATH-CAT-GEOMETRY',
+    familyId: 'MATH-FAM-CIRCLE-FORMULA'
+  },
+  'BN-RECT-AREA-PERIM-CONFUSE': {
+    title: '长方形周长和面积公式混淆',
+    categoryId: 'MATH-CAT-GEOMETRY',
+    familyId: 'MATH-FAM-CIRCLE-FORMULA'
+  },
+
+  // 面积单位换算类历史 AI 变体
+  'BN-AREA-CONVERSION-RATE': {
+    title: '面积单位换算进率记忆不稳',
+    categoryId: 'MATH-CAT-MEASURE',
+    familyId: 'MATH-FAM-UNIT-CONVERT'
+  },
+  'BN-AREA-CONVERT-RATE': {
+    title: '面积单位换算进率记忆不稳',
+    categoryId: 'MATH-CAT-MEASURE',
+    familyId: 'MATH-FAM-UNIT-CONVERT'
+  },
+  'BN-AREA-UNIT-CONVERT': {
+    title: '面积单位换算进率记忆不稳',
+    categoryId: 'MATH-CAT-MEASURE',
+    familyId: 'MATH-FAM-UNIT-CONVERT'
+  },
+  'BN-AREA-UNIT-CONVERT-ERROR': {
+    title: '面积单位换算进率记忆不稳',
+    categoryId: 'MATH-CAT-MEASURE',
+    familyId: 'MATH-FAM-UNIT-CONVERT'
+  },
+  'BN-AREA-UNIT-KM2-HA': {
+    title: '平方千米与公顷换算不稳',
+    categoryId: 'MATH-CAT-MEASURE',
+    familyId: 'MATH-FAM-UNIT-CONVERT'
+  },
+  'BN-AREA-UNIT-RATE': {
+    title: '面积单位换算进率记忆不稳',
+    categoryId: 'MATH-CAT-MEASURE',
+    familyId: 'MATH-FAM-UNIT-CONVERT'
+  },
+  'BN-UNIT-AREA-CONVERT': {
+    title: '面积单位换算进率记忆不稳',
+    categoryId: 'MATH-CAT-MEASURE',
+    familyId: 'MATH-FAM-UNIT-CONVERT'
+  },
+
+  // 小数除法/乘法计算规则历史 AI 变体
+  'BN-DEC-DIV-POINT-MOVE': {
+    title: '除数是小数时小数点移动规则不熟练',
+    categoryId: 'MATH-CAT-CALC-RULE',
+    familyId: 'MATH-FAM-DECIMAL-POINT'
+  },
+  'BN-DEC-DIV-TRIAL': {
+    title: '小数除法试商与补零规则不熟练',
+    categoryId: 'MATH-CAT-CALC-RULE',
+    familyId: 'MATH-FAM-LONG-DIVISION'
+  },
+  'BN-DEC-MUL-CARRY': {
+    title: '小数乘法连续进位计算不稳',
+    categoryId: 'MATH-CAT-CALC-RULE',
+    familyId: 'MATH-FAM-DECIMAL-POINT'
+  },
+  'BN-DEC-MUL-CARRY-ADD': {
+    title: '小数乘法进位后加法求和错误',
+    categoryId: 'MATH-CAT-CALC-RULE',
+    familyId: 'MATH-FAM-DECIMAL-POINT'
+  },
+  'BN-DEC-MUL-CARRY-ERROR': {
+    title: '小数乘法连续进位计算不稳',
+    categoryId: 'MATH-CAT-CALC-RULE',
+    familyId: 'MATH-FAM-DECIMAL-POINT'
+  },
+  'BN-DEC-MUL-SPLIT-ADD': {
+    title: '小数乘法拆分后加法求和错误',
+    categoryId: 'MATH-CAT-CALC-RULE',
+    familyId: 'MATH-FAM-DECIMAL-POINT'
+  },
+
+  // 异分母通分类历史 AI 变体
+  'BN-FRACTION-ADD-COMMON': { canonicalId: 'BN-FRACTION-ADD-DENOM-MISMATCH' },
+  'BN-FRACTION-ADD-LCM': { canonicalId: 'BN-FRACTION-ADD-DENOM-MISMATCH' },
+  'BN-FRACTION-ADD-NO-COMMON-DENOMINATOR': { canonicalId: 'BN-FRACTION-ADD-DENOM-MISMATCH' },
+  'BN-FRACTION-ADD-SUB-COMMON': { canonicalId: 'BN-FRACTION-ADD-DENOM-MISMATCH' },
+  'BN-FRACTION-ADD-UNLIKE': { canonicalId: 'BN-FRACTION-ADD-DENOM-MISMATCH' },
+  'BN-FRACTION-ADD-UNLIKE-LCM': { canonicalId: 'BN-FRACTION-ADD-DENOM-MISMATCH' },
+  'BN-FRACTION-COMMON-DENOMINATOR': { canonicalId: 'BN-FRACTION-ADD-DENOM-MISMATCH' },
+
+  // 小数乘法标准 BN 的历史写法
+  'BN-DEC-MUL-POINT': { canonicalId: 'BN-DEC-MUL-POINT-COUNT' },
+  'BN-DEC-MUL-POINT-ERROR': { canonicalId: 'BN-DEC-MUL-POINT-COUNT' },
+  'BN-DEC-MUL-DECIMAL-COUNT': { canonicalId: 'BN-DEC-MUL-POINT-COUNT' }
+}
+
 function categoryOf(categoryId) {
   return categoriesById.get(categoryId) || null
 }
@@ -17,6 +129,18 @@ function bottleneckOf(bottleneckId) {
   return bottlenecksById.get(bottleneckId) || null
 }
 
+function legacyBottleneckOf(bottleneckId) {
+  const legacy = LEGACY_FINE_BOTTLENECKS[bottleneckId]
+  if (!legacy) return null
+  const canonical = legacy.canonicalId ? bottleneckOf(legacy.canonicalId) : null
+  return {
+    ...legacy,
+    ...(canonical || {}),
+    bottleneckId: legacy.canonicalId || bottleneckId,
+    rawBottleneckId: bottleneckId
+  }
+}
+
 function categoryTitleOf(categoryId) {
   return (categoryOf(categoryId) || {}).title || '待归类'
 }
@@ -27,17 +151,21 @@ function familyTitleOf(familyId) {
 
 function normalizeFineBottleneck(input = {}) {
   const bottleneckId = input.bottleneckId || input.id || ''
-  const seed = bottleneckOf(bottleneckId) || {}
+  const seed = bottleneckOf(bottleneckId) || legacyBottleneckOf(bottleneckId) || {}
   const categoryId = input.categoryId || seed.categoryId || ''
   const familyId = input.familyId || seed.familyId || ''
   const category = categoryOf(categoryId) || {}
   const family = familyOf(familyId) || {}
-  const title = input.title || input.lpName || input.displayName || input.name || seed.title || bottleneckId || '待确认细卡点'
+  const rawTitle = input.title || input.lpName || input.displayName || input.name || seed.title || ''
+  const title = /^BN-[A-Z0-9-]+$/.test(rawTitle)
+    ? (seed.title || '待确认细卡点')
+    : (rawTitle || '待确认细卡点')
 
   return {
     ...seed,
     ...input,
-    bottleneckId: bottleneckId || seed.bottleneckId || '',
+    bottleneckId: seed.bottleneckId || bottleneckId || '',
+    rawBottleneckId: seed.rawBottleneckId || input.rawBottleneckId || '',
     categoryId,
     familyId,
     categoryTitle: input.categoryTitle || seed.categoryTitle || category.title || '待归类',
@@ -52,9 +180,18 @@ function normalizeFineBottleneck(input = {}) {
 
 function groupBottlenecksByHierarchy(items = []) {
   const categoryMap = new Map()
+  const seenItemKeys = new Set()
 
   for (const raw of items || []) {
     const item = normalizeFineBottleneck(raw)
+    const itemKey = [
+      item.categoryId || 'UNKNOWN',
+      item.familyId || 'UNKNOWN',
+      item.displayTitle || item.title || item.bottleneckId || ''
+    ].join('|')
+    if (seenItemKeys.has(itemKey)) continue
+    seenItemKeys.add(itemKey)
+
     const categoryKey = item.categoryId || 'UNKNOWN'
     const familyKey = item.familyId || 'UNKNOWN'
 

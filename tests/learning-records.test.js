@@ -168,6 +168,38 @@ test('paper display helper resolves raw fine target ids to taxonomy titles', () 
   assert.doesNotMatch(item.displayName, /^BN-/)
 })
 
+test('paper display helper resolves legacy AI variant target ids to readable titles', () => {
+  const display = buildPaperDisplay({
+    _id: 'paper-variant-targets',
+    subject: 'math',
+    type: 'verification',
+    verificationPack: {
+      pages: [{
+        targetIds: [
+          'BN-APP-RECT-AREA',
+          'BN-AREA-CONVERSION-RATE',
+          'BN-AREA-CONVERT-RATE',
+          'BN-FRACTION-ADD-COMMON',
+          'BN-FRACTION-ADD-UNLIKE',
+          'BN-DEC-DIV-TRIAL'
+        ]
+      }]
+    }
+  }, '数学')
+
+  const names = display.bottleneckHierarchy.groups
+    .flatMap(group => group.families)
+    .flatMap(family => family.items)
+    .map(item => item.displayName)
+
+  assert.ok(names.includes('长方形周长和面积公式混淆'))
+  assert.ok(names.includes('面积单位换算进率记忆不稳'))
+  assert.ok(names.includes('异分母分数加减通分不稳定'))
+  assert.ok(names.includes('小数除法试商与补零规则不熟练'))
+  assert.equal(names.some(name => /^BN-/.test(name)), false)
+  assert.equal(names.length, new Set(names).size)
+})
+
 test('paper display helper assigns readable legacy codes by subject and paper date', () => {
   const codeMap = buildPaperCodeMap([
     {

@@ -15,6 +15,70 @@ function loadLearningResource(db, openId = 'owner-1') {
   return { handler, cloud }
 }
 
+function loadLearningResourceWithDelayedLedger(db, openId = 'owner-1') {
+  const cloud = createCloudMock({ db, openId })
+  cloud.init = () => ({
+    ai: {
+      createModel: () => ({
+        generateText: async () => ({
+          text: JSON.stringify({
+            summary: '小数点定位规则不稳。',
+            concept: '位数累计错误 → 没有先数两个因数的小数位。',
+            workedExample: { question: '0.3 × 0.2 = ?', steps: ['3×2=6', '一共有2位小数', '结果是0.06'] },
+            commonMistake: { mistake: '写成0.6', correction: '应为0.06', explanation: '先数小数位数' },
+            practice: [{ question: '0.4×0.2=?', answer: '0.08', explanation: '共有2位小数' }]
+          }),
+          usage: { inputTokens: 10, outputTokens: 5 }
+        })
+      })
+    }
+  })
+  let successCompleted = false
+  const handler = loadModule('cloudfunctions/learningResource/index.js', {
+    'wx-server-sdk': cloud,
+    './usage-ledger': {
+      recordUsageStart: async () => 'usage-1',
+      recordUsageSuccess: async () => {
+        await new Promise(resolve => setTimeout(resolve, 20))
+        successCompleted = true
+      },
+      recordUsageFailure: async () => {}
+    }
+  }, { setTimeout })
+  return { handler, wasUsageSuccessCompleted: () => successCompleted }
+}
+
+function loadLearningResourceWithFailingLedger(db, openId = 'owner-1') {
+  const cloud = createCloudMock({ db, openId })
+  cloud.init = () => ({
+    ai: {
+      createModel: () => ({
+        generateText: async () => ({
+          text: JSON.stringify({
+            summary: '小数点定位规则不稳。',
+            concept: '位数累计错误 → 没有先数两个因数的小数位。',
+            workedExample: { question: '0.3 × 0.2 = ?', steps: ['3×2=6', '一共有2位小数', '结果是0.06'] },
+            commonMistake: { mistake: '写成0.6', correction: '应为0.06', explanation: '先数小数位数' },
+            practice: [{ question: '0.4×0.2=?', answer: '0.08', explanation: '共有2位小数' }]
+          }),
+          usage: { inputTokens: 10, outputTokens: 5 }
+        })
+      })
+    }
+  })
+  const handler = loadModule('cloudfunctions/learningResource/index.js', {
+    'wx-server-sdk': cloud,
+    './usage-ledger': {
+      recordUsageStart: async () => 'usage-1',
+      recordUsageSuccess: async () => {
+        throw new Error('ledger write failed')
+      },
+      recordUsageFailure: async () => {}
+    }
+  }, { setTimeout })
+  return { handler }
+}
+
 test('learningResource generatePack stores a ready math pack', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
@@ -48,6 +112,50 @@ test('learningResource generatePack stores a ready math pack', async () => {
   assert.equal(rows[0]._openid, 'owner-1')
   assert.ok(rows[0].blocks.some(block => block.type === 'practice'))
   assert.equal(rows[0].externalResources.length, 1)
+})
+
+test('learningResource waits for usage success write before returning generated pack', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    learningResourcePacks: []
+  })
+  const { handler, wasUsageSuccessCompleted } = loadLearningResourceWithDelayedLedger(db)
+
+  const result = await handler.main({
+    action: 'generatePack',
+    studentId: 'student-1',
+    subject: 'math',
+    target: {
+      bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+      lpCode: 'LP-001',
+      title: '小数乘法中积的小数位数判断错误'
+    }
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(wasUsageSuccessCompleted(), true)
+})
+
+test('learningResource does not fail the pack when usage success write fails', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
+    learningResourcePacks: []
+  })
+  const { handler } = loadLearningResourceWithFailingLedger(db)
+
+  const result = await handler.main({
+    action: 'generatePack',
+    studentId: 'student-1',
+    subject: 'math',
+    target: {
+      bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+      lpCode: 'LP-001',
+      title: '小数乘法中积的小数位数判断错误'
+    }
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(db.dump('learningResourcePacks').length, 1)
 })
 
 test('learningResource cache uses fine targetId before coarse LP code', async () => {

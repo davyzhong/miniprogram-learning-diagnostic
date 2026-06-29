@@ -258,14 +258,14 @@ ${taxonomyContext}
       temperature: 0.4,
     })
     if (eventId) {
-      recordUsageSuccess({
+      await recordUsageSuccess({
         db, eventId, usage: result && result.usage, outputText: result && result.text,
         model: 'deepseek-v4-flash'
       }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
     }
   } catch (err) {
     if (eventId) {
-      recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'deepseek-v4-flash' })
+      await recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'deepseek-v4-flash' })
         .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
     }
     throw err

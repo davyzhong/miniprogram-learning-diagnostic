@@ -599,6 +599,9 @@ MVP 数学卡点当前包含：
 | subjectProfiles ← reports | 逻辑关联 | subjectProfiles.currentAnalysisId = reports._id | 指向当前正在分析的报告 |
 | students → studentMembers | 1:N | studentMembers.studentId = students._id | 一个孩子档案可以有多个家长成员 |
 | students → studentInvites | 1:N | studentInvites.studentId = students._id | 拥有者可为孩子档案创建多个邀请 |
+| users(openid) → userConsents | 1:1 | userConsents._openid = auth.openid | 体验版内测授权状态；真实上传前由前端和 `uploadAndAnalyze` 服务端双重校验 |
+| users(openid) → aiUsageEvents | 1:N | aiUsageEvents._openid = auth.openid | 当前微信的 AI 用量事件；账单页按北京时间自然月聚合 |
+| users(openid) → dataDeletionRequests | 1:N | dataDeletionRequests._openid = auth.openid | 用户发起的数据删除请求和处理状态 |
 
 ---
 
@@ -625,6 +628,8 @@ MVP 数学卡点当前包含：
 | `learningResourcePacks` | `studentId`, `subject`, `updatedAt` | 升序, 升序, 降序 | 学习卡点任务包列表和学习记录时间线 |
 | `aiUsageEvents` | `_openid`, `createdAt` | 升序, 降序 | AI 用量账单页按用户读取本月事件 |
 | `aiUsageEvents` | `studentId`, `createdAt` | 升序, 降序 | 维护者按孩子统计用量（预留） |
+| `dataDeletionRequests` | `_openid`, `createdAt` | 升序, 降序 | 用户查看自己发起的删除请求 |
+| `userConsents` | `_openid`, `updatedAt` | 升序, 降序 | 上传前读取当前用户内测授权状态 |
 
 ### 索引设计要点
 
@@ -660,7 +665,8 @@ MVP 数学卡点当前包含：
 |--------|----------|
 | `studentAccess` | 基于当前 OPENID 校验 owner/viewer 关系；owner 才能邀请和移除家长 |
 | `studentData` | 基于当前 OPENID 校验 owner/viewer 关系；聚合返回学习资料和角色权限 |
-| `uploadAndAnalyze` | 通过共享 access helper 校验当前 OPENID 是否可操作对应学生/试卷 |
+| `uploadAndAnalyze` | 先校验 `userConsents.betaConsented=true`，再通过共享 access helper 校验当前 OPENID 是否可操作对应学生/试卷 |
+| `aiUsage` | 所有读写都按当前 OPENID 限定；`listEvents/getSummary` 使用北京时间自然月范围查询 |
 | `analyzePhotos` | 通过共享 access helper 校验触发者或当前用户是否可操作对应报告 |
 | `getAnalysisProgress` | 通过共享 access helper 校验当前 OPENID 是否可读取对应报告进度 |
 | `generatePaper` | 通过共享 access helper 校验当前 OPENID 是否可为对应学生生成试卷 |
@@ -679,12 +685,13 @@ MVP 数学卡点当前包含：
 | studentId 非空 | uploadAndAnalyze, generatePaper | 字符串非空 |
 | subject 枚举 | uploadAndAnalyze, analyzeBatch, generatePaper | 仅限 `math/chinese/english` |
 | mode 枚举 | uploadAndAnalyze | 仅限 `diagnosis/verification/paper/default-paper` |
+| 内测授权 | uploadAndAnalyze | 当前 openid 必须已有 `userConsents.betaConsented=true`，否则不能创建 reports 或触发分析 |
 | type 枚举 | generatePaper | 仅限 `verification/default-diagnosis` |
 | targets 格式 | generatePaper | 验证卷兼容 `LP-*` 粗卡点、`BN-*` 细卡点、`CHI-*` 语文错项目标，任务包模式最多 80 个；自动验证卷续跑时每次只传 1 个目标；默认诊断卷不使用 targets |
 | paperId 归属 | regenerateVerificationPaper | `paper.studentId === studentId` 且 `paper.subject === subject`；如传 `reportId`，还要求 `report.studentId/subject` 一致 |
 | grade 范围 | generatePaper | default-diagnosis 模式要求 1-6 |
 | questionCount 范围 | generatePaper | 6-20，默认 12 |
-| paperId 关联校验 | uploadAndAnalyze | paper.studentId === studentId，type 与 mode 匹配 |
+| paperId 关联校验 | uploadAndAnalyze | `verification/paper/default-paper` 模式必须传 `paperId`；paper.studentId === studentId，type 与 mode 匹配 |
 | wordLimit 范围 | englishVocabulary.generatePracticeSession | 1-40，默认 20 |
 | 内置词库导入 | englishVocabulary.seedPersonalVocabulary | 仅接收 `studentId`；固定使用项目内置钟青羽 PEP 个人词库 |
 | dictation judgment 枚举 | englishVocabulary.submitDictationAttempt | 仅返回 `correct/incorrect/unclear`，由云函数根据识别文本判定 |
@@ -718,3 +725,65 @@ MVP 数学卡点当前包含：
 | `verificationScheduledAt` | Date | 加入验证时间 |
 | `createdAt` | Date | 创建时间 |
 | `updatedAt` | Date | 更新时间 |
+
+---
+
+## aiUsageEvents
+
+`aiUsageEvents` 是追加式 AI 用量账本。每一次真实 AI 请求写入一条 `pending` 事件，并在请求成功或失败后补写为 `succeeded/failed`。账单页按当前 `_openid` 和北京时间自然月读取，不用于表达用户应付款项。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `_id` | String | 事件 ID |
+| `_openid` | String | 发起 AI 调用的微信 openid |
+| `studentId` | String | 关联孩子，可为空 |
+| `subject` | String | `math / chinese / english` |
+| `eventType` | String | `photo_analysis / paper_generation / learning_resource_pack / dictation_grading` 等 |
+| `sourceId` | String | reportId、paperId、resourcePackId、sessionId 等 |
+| `sourceType` | String | `report / paper / resource_pack / english_session` 等 |
+| `cloudFunction` | String | 触发调用的云函数 |
+| `provider` | String | 第一阶段为 `cloudbase_ai` |
+| `model` | String | `hy3-preview`、`deepseek-v4-flash` 等 |
+| `inputTokens` | Number | 输入 token；没有真实 usage 时为估算 |
+| `outputTokens` | Number | 输出 token；没有真实 usage 时为估算 |
+| `totalTokens` | Number | 输入 + 输出 token |
+| `imageCount` | Number | 图片数量，文本模型通常为 0 |
+| `pageCount` | Number | 页数或批次数 |
+| `estimatedCostCny` | Number | 平台成本估算，单位元 |
+| `pricingVersion` | String | 当前价格表版本 |
+| `costSource` | String | `provider_usage / estimated_by_chars / estimated_by_image_count` |
+| `isEstimate` | Boolean | 是否含估算 |
+| `isTest` | Boolean | 是否为测试或 mock 事件 |
+| `status` | String | `pending / succeeded / failed` |
+| `errorMessage` | String | 失败原因摘要 |
+| `createdAt` | Date | 事件创建时间 |
+| `completedAt` | Date | 成功或失败补写时间 |
+
+## userConsents
+
+`userConsents` 保存体验版内测授权。上传页会读取它决定是否展示授权弹层；`uploadAndAnalyze` 服务端也会再次校验，防止老客户端或直接云函数调用绕过授权。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `_id` | String | 授权记录 ID |
+| `_openid` | String | 当前微信 openid |
+| `betaConsented` | Boolean | 是否同意体验版内测说明 |
+| `consentedAt` | Date | 最近一次授权/取消授权时间 |
+| `updatedAt` | Date | 更新时间 |
+
+## dataDeletionRequests
+
+`dataDeletionRequests` 保存用户在 AI 用量页发起的数据删除请求。第一阶段只负责记录请求和状态，后续由维护者或维护脚本处理。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `_id` | String | 请求 ID |
+| `_openid` | String | 发起请求的微信 openid |
+| `studentId` | String | 目标孩子，可为空 |
+| `scope` | String | `student_all / photos_only / usage_only` |
+| `reason` | String | 用户填写或系统默认原因 |
+| `status` | String | `requested / processing / completed / rejected` |
+| `createdAt` | Date | 发起时间 |
+| `processedAt` | Date | 处理时间 |
+| `processedBy` | String | 处理者 |
+| `note` | String | 处理说明 |

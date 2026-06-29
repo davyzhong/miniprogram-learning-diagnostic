@@ -266,6 +266,7 @@ test('E2E test framework V2 package scripts expose unit and subject CLI suites',
   assert.match(scripts['test:e2e:math'], /test:e2e:knowledge-map/)
   assert.equal(scripts['test:e2e:chinese'], 'node scripts/devtools-e2e-chinese.js')
   assert.equal(scripts['test:e2e:english'], 'node scripts/devtools-english-e2e.js')
+  assert.equal(scripts['test:e2e:ai-usage'], 'node scripts/devtools-ai-usage-e2e.js')
   assert.match(scripts['test:e2e:all'], /test:e2e:core/)
   assert.match(scripts['test:e2e:all'], /test:e2e:math/)
   assert.match(scripts['test:e2e:all'], /test:e2e:chinese/)

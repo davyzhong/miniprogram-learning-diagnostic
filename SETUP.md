@@ -57,9 +57,14 @@
    - `studentData`
    - `reportFeedback`
    - `englishVocabulary`
+   - `learningResource`
+   - `regenerateVerificationPaper`
+   - `reanalyzeMathHistory`
+   - `aiUsage`
 
 ### 注意：
-- `uploadAndAnalyze` 会在服务端创建报告并 fire-and-forget 启动 `analyzePhotos`，客户端提交成功后即可返回学科主页
+- `uploadAndAnalyze` 会先校验内测授权、学生权限、上传模式与 `paperId` 关联，再在服务端创建报告并 fire-and-forget 启动 `analyzePhotos`
+- `aiUsage` 提供内测授权、AI 用量账本和删除请求；体验版内测前必须部署，并与各 AI 云函数的 `pricing.js` / `usage-ledger.js` 副本保持一致
 - 所有云函数执行超时需保持在微信平台允许的 **60 秒以内**；长耗时分析通过任务进度、轮询和手动重试恢复
 - `analyzeBatch` 按图片返回 OCR 摘要；`analyzePhotos` 使用归一化摘要标记疑似重复照片，并只汇总唯一页面
 - 每个云函数的 `package.json` 都已写好，云端会自动安装依赖
@@ -83,6 +88,10 @@
 | `englishImportBatches` | 云函数访问 | 英语词库候选导入批次 |
 | `studentEnglishWords` | 云函数访问 | 单个孩子的个人英语单词库 |
 | `englishPracticeSessions` | 云函数访问 | 英语 20 词听写会话与逐题记录 |
+| `learningResourcePacks` | 仅创建者可读写 | 数学学习卡点任务包 |
+| `aiUsageEvents` | 仅创建者可读写 | AI 用量追加式事件账本 |
+| `dataDeletionRequests` | 仅创建者可读写 | 用户发起的数据删除请求 |
+| `userConsents` | 仅创建者可读写 | 体验版内测授权记录 |
 
 ### 数据库安全规则（推荐配置）
 主学习数据集合（`students` / `subjectProfiles` / `reports` / `papers` / `analysisTasks`）建议保持创建者直接读写规则：
@@ -112,6 +121,8 @@
 | `papers` | `studentId`, `subject`, `type`, `grade`, `paperKey`, `_openid` | 全部升序 |
 | `learningResourcePacks` | `studentId`, `subject`, `updatedAt`, `_openid` | 升序、升序、降序、升序 |
 | `aiUsageEvents` | `_openid`, `createdAt` | 升序、降序 |
+| `dataDeletionRequests` | `_openid`, `createdAt` | 升序、降序 |
+| `userConsents` | `_openid`, `updatedAt` | 升序、降序 |
 | `studentEnglishWords` | `studentId`, `masteryStatus`, `nextReviewAt` | 升序、升序、升序 |
 | `englishPracticeSessions` | `studentId`, `createdAt`, `_openid` | 升序、降序、升序 |
 
@@ -217,10 +228,10 @@ miniprogram-learning-diagnostic/
 │   └── englishVocabulary/    ✅
 ├── services/skills/          ✅（P0 Skill 能力内核）
 ├── cli/ldx.js                ✅（本地 CLI 入口）
-├── tests/                    ✅（常规测试文件 + 真实图片 E2E 脚本 + helpers，353 常规用例）
-├── scripts/check-js.js       ✅（121 文件语法检查）
+├── tests/                    ✅（常规测试文件 + 真实图片 E2E 脚本 + helpers，636 常规用例）
+├── scripts/check-js.js       ✅（217 文件语法检查）
 ├── project.config.json        ✅
-├── package.json              ✅（npm scripts: test / test:coverage / test:e2e-real-image / test:devtools-parent-timeline / test:real-data-smoke / check / verify / release:check）
+├── package.json              ✅（npm scripts: test / test:coverage / test:e2e:* / check / verify / release:check）
 ├── PROJECT_PLAN.md          ✅
 ├── PRD.md                   ✅（v2.9）
 ├── SETUP.md                ✅（本文件）

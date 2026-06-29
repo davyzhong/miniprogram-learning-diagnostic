@@ -117,12 +117,13 @@ test('subject home applies per-subject navigation bar colors and falls back to m
   assert.equal(fallbackCall.payload.backgroundColor, '#1f4f82')
 })
 
-// ========== uploadAndAnalyze mode=paper without paperId (documenting current behaviour) ==========
+// ========== uploadAndAnalyze mode=paper without paperId ==========
 
-test('uploadAndAnalyze accepts paper mode without paperId but leaves sourceType as photo (known gap)', async () => {
+test('uploadAndAnalyze rejects paper mode without paperId', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽' }],
     subjectProfiles: [{ _id: 'profile-1', studentId: 'student-1', subject: 'math' }],
+    userConsents: [{ _id: 'consent-1', _openid: 'owner-1', betaConsented: true }],
     reports: []
   })
   const cloud = createCloudMock({ db })
@@ -137,9 +138,7 @@ test('uploadAndAnalyze accepts paper mode without paperId but leaves sourceType 
     mode: 'paper'
   })
 
-  // Documenting known gap: server currently allows paper mode without paperId.
-  // A future fix should change this assertion to expect success:false with a clear error.
-  assert.equal(result.success, true)
-  assert.equal(db.dump('reports')[0].sourceType, 'photo')
-  assert.equal(db.dump('reports')[0].paperId, '')
+  assert.equal(result.success, false)
+  assert.match(result.error, /paperId/)
+  assert.equal(db.dump('reports').length, 0)
 })

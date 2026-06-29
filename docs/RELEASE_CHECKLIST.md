@@ -53,10 +53,13 @@ npm run check:deployment && npm run verify && npm run test:coverage
 | `studentData` | 首页、学科、报告、试卷、学习记录聚合逻辑变化 |
 | `reportFeedback` | 家长反馈数据结构或权限逻辑变化 |
 | `englishVocabulary` | 英语词库、20 词听写、AI 判定或掌握度规则变化 |
+| `learningResource` | 学习卡点任务包生成、缓存、状态或 AI 用量写入变化 |
+| `aiUsage` | 内测授权、AI 用量账本、删除请求或成本聚合变化 |
 | `uploadAndAnalyze` | 上传、报告创建、验证卷作答入口变化 |
 | `analyzePhotos` | 诊断合并、验证证据、报告质量、学习卡点更新变化 |
 | `analyzeBatch` | AI prompt、图片识别、字段归一要求变化 |
 | `generatePaper` | 试卷生成、PDF、验证题结构变化 |
+| `regenerateVerificationPaper` | 验证卷续跑、补题、最终 PDF 生成变化 |
 | `generateReportPDF` | 诊断报告 PDF 内容变化 |
 | `getAnalysisProgress` | 分析进度轮询或 timeout 状态变化 |
 
@@ -64,6 +67,13 @@ npm run check:deployment && npm run verify && npm run test:coverage
 
 ```bash
 REAL_DATA_STUDENT_ID=student-id REAL_DATA_STUDENT_NAME=钟青羽 npm run test:e2e:real-data
+```
+
+体验版内测或 AI 用量账本变更后，额外执行：
+
+```bash
+npm run test:e2e:doctor
+npm run test:e2e:ai-usage
 ```
 
 ## 4. 发布后验收
@@ -78,6 +88,8 @@ REAL_DATA_STUDENT_ID=student-id REAL_DATA_STUDENT_NAME=钟青羽 npm run test:e2
 6. 学习记录能看到诊断报告、验证试卷、验证反馈和照片证据。
 7. 英语工作台无词库时能导入钟青羽 PEP 个人词库；导入后能进入“开始 20 词听写”，并能看到个人词库统计和高频错词。
 8. 如果本次改动涉及指标脚本，使用脱敏 JSON 跑一次 `npm run metrics:student`。
+9. AI 用量页可从首页进入，能展示本月汇总/空态和“内测成本估算，不代表应付款项”提示。
+10. 未同意内测授权的账号不能通过上传页或直接调用 `uploadAndAnalyze` 创建真实报告。
 
 ## 5. 回滚流程
 

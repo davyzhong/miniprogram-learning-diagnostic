@@ -337,7 +337,7 @@ flowchart LR
 - ✅ 英语词库管理：PEP 个人词库种子、批量导入、熟悉度和拼写双维度进度追踪
 - ✅ Skill / CLI P0：封装诊断、报告、卡点、验证卷、反馈和时间线能力，提供 `ldx` 本地 CLI 合同测试
 - ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 自动化测试：353 个常规用例通过，JS 语法检查 121 文件通过，测试套件 < 2s
+- ✅ 自动化测试：636 个常规用例通过，JS 语法检查 217 文件通过，AI 用量专项 DevTools E2E 5/5 通过
 
 ### 待完善
 
@@ -356,7 +356,7 @@ flowchart LR
 | 后端 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI（图像） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI（文本） | CloudBase AI `deepseek-v4-flash` | 用于生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 12 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / learningResourcePacks |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 15 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / learningResourcePacks / aiUsageEvents / dataDeletionRequests / userConsents |
 | PDF 生成 | pdfkit | 云函数内生成 A4 试卷/报告 PDF |
 | 测试 | Node.js 内置 test runner | `node --test`，无外部测试框架依赖 |
 
@@ -375,7 +375,7 @@ miniprogram-learning-diagnostic/
 │                                #   bottleneck-center / bottleneck-detail / english-practice /
 │                                #   english-dictation / generate-verification /
 │                                #   default-paper / paper-preview）
-├── cloudfunctions/              # 云函数后端（13 个）
+├── cloudfunctions/              # 云函数后端（14 个）
 │   ├── uploadAndAnalyze/        #   入口：校验 → 创建报告 → 触发分析
 │   ├── analyzePhotos/           #   主控：分批 → 串行分析 → 去重 → 合并 → 对比
 │   ├── analyzeBatch/            #   单批次 AI 分析 + 结果标准化
@@ -387,11 +387,12 @@ miniprogram-learning-diagnostic/
 │   ├── learningResource/        #   学习卡点任务包生成、读取和完成状态
 │   ├── regenerateVerificationPaper/ # 验证卷短任务续跑
 │   ├── reanalyzeMathHistory/    #   历史数学报告重算维护工具
+│   ├── aiUsage/                 #   AI 用量账本、内测授权、删除请求
 │   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF（双栏布局+解题思路）
 │   └── generateReportPDF/       #   生成报告 PDF
 ├── services/skills/             # P0 Skill 能力内核
 ├── cli/ldx.js                   # 本地 CLI 入口
-├── tests/                       # 单元自动化测试（583 个用例 + 真实图片 E2E 脚本）
+├── tests/                       # 单元自动化测试（636 个用例 + 真实图片 E2E 脚本）
 ├── scripts/                     # check-js.js、preview-pdf.js（PDF预览）、DevTools E2E、指标导出
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
@@ -442,6 +443,9 @@ cd miniprogram-learning-diagnostic
 - `studentEnglishWords`
 - `englishPracticeSessions`
 - `learningResourcePacks`
+- `aiUsageEvents`
+- `dataDeletionRequests`
+- `userConsents`
 
 详细步骤参见 [SETUP.md](./SETUP.md)。
 
@@ -453,11 +457,12 @@ cd miniprogram-learning-diagnostic
 
 | 类别 | 说明 | 命令 |
 |------|------|------|
-| **单元自动化测试** | 583 个离线用例：云函数、Presenter、工具、数据层、合同、知识库一致性和诊断回归 | `npm run test:unit` 或 `npm test` |
+| **单元自动化测试** | 636 个离线用例：云函数、Presenter、工具、数据层、合同、知识库一致性和诊断回归 | `npm run test:unit` 或 `npm test` |
 | **CLI E2E 核心页** | 微信开发者工具 CLI 驱动 17 页面和基础跨页流程 | `npm run test:e2e:core` |
 | **CLI E2E 数学** | 数学数据驱动场景、细卡点、知识地图和学习资源链路 | `npm run test:e2e:math` |
 | **CLI E2E 语文** | 语文工作台、诊断报告、错项复测出卷轻量链路 | `npm run test:e2e:chinese` |
 | **CLI E2E 英语** | 英语工作台、词库、熟悉度、纸面听写和学习记录 | `npm run test:e2e:english` |
+| **CLI E2E AI 用量** | AI 用量账单页、首页入口、上传授权检查和 aiUsage 云函数结构 | `npm run test:e2e:ai-usage` |
 | **真实数据/真实图片** | 真实学生数据页面烟测、真实图片诊断、真实云函数可用性 | `npm run test:e2e:real-data` / `npm run test:e2e:real-image` / `npm run test:e2e:real-cloud` |
 
 ```bash
@@ -480,6 +485,7 @@ npm run test:e2e:core         # 17 页面核心回归
 npm run test:e2e:math         # 数学专项 E2E（当前最完整）
 npm run test:e2e:chinese      # 语文轻量专项 E2E
 npm run test:e2e:english      # 英语专项 E2E
+npm run test:e2e:ai-usage     # AI 用量账本专项 E2E
 npm run test:e2e:all           # 聚合所有 E2E + 报告
 
 # 发布前

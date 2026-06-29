@@ -65,22 +65,47 @@ function publicDeletionRequest(item) {
   }
 }
 
-// 月份过滤：createdAt 为 Date 或 serverDate，按 YYYY-MM 前缀匹配。
-// mock 与真实 DB 的 createdAt 可能是 Date 或字符串，统一转 ISO 比较。
-function inMonth(item, month) {
-  if (!month) return true
-  const raw = item.createdAt
-  const iso = raw instanceof Date ? raw.toISOString() : String(raw || '')
-  return iso.startsWith(month)
+function beijingMonthRange(month) {
+  const matched = String(month || '').match(/^(\d{4})-(\d{2})$/)
+  if (!matched) return null
+  const year = Number(matched[1])
+  const monthIndex = Number(matched[2]) - 1
+  if (!Number.isInteger(year) || monthIndex < 0 || monthIndex > 11) return null
+  const start = new Date(Date.UTC(year, monthIndex, 1) - 8 * 60 * 60 * 1000)
+  const end = new Date(Date.UTC(year, monthIndex + 1, 1) - 8 * 60 * 60 * 1000)
+  return { start, end }
+}
+
+function currentMonth() {
+  const now = new Date(Date.now() + 8 * 60 * 60 * 1000)
+  return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
+}
+
+function monthFilter(openId, month) {
+  const filter = { _openid: openId }
+  const range = beijingMonthRange(month)
+  const _ = db.command
+  if (range && _ && typeof _.and === 'function') {
+    filter.createdAt = _.and([_.gte(range.start), _.lt(range.end)])
+  }
+  return filter
+}
+
+function inBeijingMonth(item, month) {
+  const range = beijingMonthRange(month)
+  if (!range) return true
+  const time = new Date(item.createdAt).getTime()
+  return time >= range.start.getTime() && time < range.end.getTime()
 }
 
 // ── listEvents：列出当前用户本月用量事件 ──
 async function listEvents(event, openId) {
   if (!openId) return { success: false, error: '未登录' }
+  const month = event.month || currentMonth()
   let res
   try {
     res = await db.collection('aiUsageEvents')
-      .where({ _openid: openId })
+      .where(monthFilter(openId, month))
       .orderBy('createdAt', 'desc')
       .limit(MAX_EVENTS)
       .get()
@@ -88,7 +113,7 @@ async function listEvents(event, openId) {
     if (isMissingCollectionError(error)) return { success: true, items: [], hasMore: false }
     throw error
   }
-  const all = (res.data || []).filter(item => inMonth(item, event.month))
+  const all = (res.data || []).filter(item => inBeijingMonth(item, month))
   return {
     success: true,
     items: all.map(publicEvent),
@@ -99,24 +124,20 @@ async function listEvents(event, openId) {
 // ── getSummary：聚合本月用量 ──
 async function getSummary(event, openId) {
   if (!openId) return { success: false, error: '未登录' }
+  const month = event.month || currentMonth()
   let res
   try {
     res = await db.collection('aiUsageEvents')
-      .where({ _openid: openId })
+      .where(monthFilter(openId, month))
       .orderBy('createdAt', 'desc')
       .limit(500)
       .get()
   } catch (error) {
-    if (isMissingCollectionError(error)) return emptySummary(event.month || currentMonth())
+    if (isMissingCollectionError(error)) return emptySummary(month)
     throw error
   }
-  const events = (res.data || []).filter(item => inMonth(item, event.month))
-  return aggregateSummary(events, event.month || currentMonth())
-}
-
-function currentMonth() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  const events = (res.data || []).filter(item => inBeijingMonth(item, month))
+  return aggregateSummary(events, month)
 }
 
 function emptySummary(month) {

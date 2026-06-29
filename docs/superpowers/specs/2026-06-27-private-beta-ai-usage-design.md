@@ -1,9 +1,25 @@
 # 体验版内测与 AI 用量账本设计
 
 > 日期：2026-06-27  
-> 状态：已确认设计，待实施计划  
+> 状态：已实施第一阶段，并完成服务端门禁与专项 E2E
 > 范围：微信小程序体验版真实家庭内测、隐私授权、数据删除、AI 用量账本、估算成本展示  
 > 不在本阶段范围：正式上架、公开搜索访问、充值、扣费、微信支付、套餐定价
+
+## 0. 当前实现状态（2026-06-27）
+
+第一阶段已落地：
+
+- `aiUsage` 云函数提供 `listEvents/getSummary/createDeletionRequest/getDeletionRequests/getBetaAuth/setBetaAuth`。
+- `aiUsageEvents` 作为追加式账本，接入 `analyzeBatch`、`generatePaper`、`learningResource`、`englishVocabulary` 的真实 AI 调用边界。
+- `userConsents` 记录内测授权；上传页前端会提示授权，`uploadAndAnalyze` 服务端也会校验 `betaConsented=true`。
+- `dataDeletionRequests` 支持用户在 AI 用量页发起删除请求。
+- 账单页 `pages/ai-usage` 展示本月汇总、功能拆分、按天明细和“内测成本估算，不代表应付款项”提示。
+- 首页顶部增加全局「AI 用量」入口，多孩子家庭工作台和单孩子档案均可进入。
+- `listEvents/getSummary` 使用北京时间自然月边界，并在数据库查询阶段限定 `createdAt` 后再分页/聚合。
+- AI 用量成功/失败补写会等待落库，减少 `pending` 事件长期残留。
+- 专项验证命令：`npm run test:e2e:ai-usage`。
+
+仍不包含：余额、充值、扣费、微信支付、自动停用、维护者后台。
 
 ## 1. 背景
 
@@ -101,7 +117,12 @@
 
 ### 4.1 首次授权
 
-首次进入真实上传能力前，展示内测授权页或弹窗。用户必须明确确认后，才能创建孩子档案或上传试卷。
+首次进入真实上传能力前，展示内测授权页或弹窗。用户必须明确确认后，才能上传真实试卷或作业照片。
+
+当前实现是“双层门禁”：
+
+- 前端上传页读取 `aiUsage.getBetaAuth`，未同意时弹出内测说明。
+- 服务端 `uploadAndAnalyze` 再查 `userConsents`，没有 `betaConsented=true` 时直接拒绝创建报告和触发 AI 分析，避免老客户端或直接云函数调用绕过授权。
 
 授权说明应包含：
 
@@ -200,8 +221,8 @@
 推荐模式：
 
 1. 云函数开始调用 AI 前写入 `pending` 事件。
-2. AI 返回后更新为 `succeeded`，写入 token、成本和完成时间。
-3. AI 调用失败时更新为 `failed`，保留输入规模、模型和错误摘要。
+2. AI 返回后更新为 `succeeded`，写入 token、成本和完成时间；业务函数等待这次补写完成后再返回。
+3. AI 调用失败时更新为 `failed`，保留输入规模、模型和错误摘要；业务函数同样等待失败补写完成后再抛出/返回错误。
 
 若某个函数已有复杂重试机制，应避免重复记账：
 
@@ -339,12 +360,12 @@
 
 实施阶段应补充：
 
-- 授权状态 helper 测试：未授权不能进入真实上传。
-- AI 用量事件写入测试：成功、失败、缓存命中、重试。
-- 成本估算测试：真实 usage 优先、无 usage 降级估算、价格版本保存。
-- 账单 presenter 测试：按月汇总、按功能分组、明细排序、失败事件展示。
-- 权限测试：用户只能看自己可访问孩子的用量事件。
-- 删除请求测试：创建请求、状态流转、归档标记。
+- `ai-usage-ledger.test.js`：三态记账、真实 usage 优先、估算降级、缺集合自动创建、北京时间月份聚合、授权和删除请求。
+- `ai-usage-presenter.test.js`：账单页汇总卡片、功能拆分、按天明细、空态和估算提示。
+- `cloud-functions.test.js`：`uploadAndAnalyze` 未同意内测授权不能创建报告；`paper/default-paper` 必须关联 `paperId`。
+- `learning-resource-cloud.test.js`：学习任务包生成在返回前等待用量成功补写。
+- `index-page-flows.test.js`：首页全局「AI 用量」入口存在。
+- `npm run test:e2e:ai-usage`：账单页、首页入口、上传授权检查、`aiUsage.getSummary/getBetaAuth` 结构。
 
 ### 10.2 真机验收
 
@@ -366,7 +387,7 @@
 | --- | --- |
 | 用户误以为需要付款 | 页面不用“欠费/扣费/应付”等词，明确内测估算不代表应付款项 |
 | 成本估算不准 | 显示估算标记，保留 `costSource` 和 `pricingVersion` |
-| 重试导致成本漏记 | 在真实 AI 请求边界写事件，业务任务重试保留多条事件 |
+| 重试导致成本漏记 | 在真实 AI 请求边界写事件，业务任务重试保留多条事件；成功/失败补写等待落库 |
 | 用户上传过多敏感信息 | 首次授权和上传页提示只上传必要试卷内容 |
 | 删除误伤排查能力 | 第一阶段软删除优先，物理删除由维护流程二次确认 |
 | 后续收费返工 | 第一阶段分离 `aiUsageEvents` 与未来 `walletTransactions` |

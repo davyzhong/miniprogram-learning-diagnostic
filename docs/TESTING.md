@@ -31,7 +31,7 @@ CLI E2E 使用：
 | 命令 | 用途 | 备注 |
 |---|---|---|
 | `npm test` | 运行全部单元自动化测试 | `npm run test:unit` 的别名 |
-| `npm run test:unit` | 运行全部离线测试 | 当前基线 583 个用例 |
+| `npm run test:unit` | 运行全部离线测试 | 当前基线 636 个用例 |
 | `npm run test:coverage` | 单元测试覆盖率 | 行/函数 80% 门槛 |
 | `npm run check` | JS 语法检查 | 扫描项目 JS 文件 |
 | `npm run verify` | 提交前本地门禁 | `test:unit + check` |
@@ -55,7 +55,8 @@ E2E 套件：
 | `npm run test:e2e:math` | 数学 | 数据驱动诊断、细卡点、知识地图、学习资源 | `tmp/e2e/math-data/`、`tmp/e2e/math-knowledge-map/` |
 | `npm run test:e2e:chinese` | 语文 | 语文工作台、诊断报告、错项复测出卷页 | `tmp/e2e/chinese/` |
 | `npm run test:e2e:english` | 英语 | 工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 | `tmp/e2e/english/` |
-| `npm run test:e2e:all` | 聚合套件 | core + math + english + 聚合报告 | `tmp/e2e/aggregate/` |
+| `npm run test:e2e:ai-usage` | AI 用量 | 账单页、首页入口、上传授权检查、`aiUsage` 云函数结构 | `tmp/e2e/ai-usage/` |
+| `npm run test:e2e:all` | 聚合套件 | core + math + chinese + english + 聚合报告 | `tmp/e2e/aggregate/` |
 | `npm run test:e2e:real-data` | 真实数据烟测 | 指定真实学生页面打开和截图 | `tmp/e2e/real-data/` |
 | `npm run test:e2e:real-image` | 真实图片链路 | mock、单图或 manifest 图片诊断 | `tmp/e2e-real-image-report.json` |
 | `npm run test:e2e:real-cloud` | 真实云函数 | 真实云端 analyzeBatch 结构校验 | 需要 `RUN_REAL_CLOUD=1` |
@@ -71,6 +72,15 @@ E2E 套件：
 | `npm run test:real-cloud` | `npm run test:e2e:real-cloud` |
 
 ## 4. 真实数据和真实图片
+
+AI 用量专项 E2E：
+
+```bash
+npm run test:e2e:doctor
+npm run test:e2e:ai-usage
+```
+
+该脚本使用微信开发者工具 automator 打开真实小程序页面，验证账单页渲染、首页全局入口、上传页内测授权检查，以及 `aiUsage.getSummary/getBetaAuth` 的返回结构。截图输出到 `tmp/e2e/ai-usage/`，不提交仓库。
 
 真实数据烟测：
 

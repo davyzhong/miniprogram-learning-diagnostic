@@ -236,7 +236,7 @@ function pageCodeSetFromReport(report) {
 
 function targetTextOf(targets = []) {
   return (targets || [])
-    .map(target => target.displayName || target.title || target.targetId || target.lpCode)
+    .map(target => target.displayName || target.title || target.targetText || target.lpName || target.name)
     .filter(Boolean)
     .join('、')
 }
@@ -271,6 +271,18 @@ function buildTaskPackView(paper = {}, report = null) {
     }
   })
   const completedPages = taskPackPages.filter(page => page.status === 'completed').length
+  if (completedPages === 0) {
+    return {
+      taskPack: {
+        hasTaskPack: false,
+        totalPages: taskPackPages.length,
+        completedPages: 0,
+        pendingPages: taskPackPages.length,
+        progressText: ''
+      },
+      taskPackPages: []
+    }
+  }
   return {
     taskPack: {
       hasTaskPack: true,

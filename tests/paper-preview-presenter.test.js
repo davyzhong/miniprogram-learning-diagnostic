@@ -133,7 +133,31 @@ test('paper preview lifecycle sends completed feedback to the report', () => {
   assert.deepEqual(state.lifecycleSteps.map(step => step.status), ['completed', 'completed', 'completed'])
 })
 
-test('paper preview exposes verification task-pack page progress', () => {
+test('paper preview hides task-pack page progress before any answer page is returned', () => {
+  const paper = {
+    ...basePaper(),
+    verificationPack: {
+      totalTargets: 7,
+      pages: [
+        { pageCode: 'MATH-V-20260616-01-P01', targets: [{ displayName: '细分卡点 1' }, { displayName: '细分卡点 2' }] },
+        { pageCode: 'MATH-V-20260616-01-P02', targets: [{ displayName: '细分卡点 3' }] },
+        { pageCode: 'MATH-V-20260616-01-P03', targets: [{ displayName: '细分卡点 4' }] }
+      ]
+    }
+  }
+  const state = buildPaperPreviewState({
+    paper,
+    detail: { student: { name: '钟青羽' } },
+    subjectName: '数学',
+    pdfDownloaded: true
+  })
+
+  assert.equal(state.taskPack.hasTaskPack, false)
+  assert.equal(state.taskPack.progressText, '')
+  assert.deepEqual(state.taskPackPages, [])
+})
+
+test('paper preview exposes returned answer-page progress without internal page codes', () => {
   const paper = {
     ...basePaper(),
     verificationPack: {
@@ -164,6 +188,7 @@ test('paper preview exposes verification task-pack page progress', () => {
   assert.equal(state.taskPack.progressText, '已回传 1/3 页')
   assert.deepEqual(state.taskPackPages.map(page => page.status), ['pending', 'completed', 'pending'])
   assert.equal(state.taskPackPages[0].targetText, '细分卡点 1、细分卡点 2')
+  assert.equal(state.taskPackPages.some(page => /^MATH-/.test(page.displayCode || '')), false)
 })
 
 // ── Page-level helper (migrated from page-flows.test.js) ──
@@ -193,6 +218,20 @@ test('paper-preview.wxml 不再有冗余的 action-bar（下载PDF+分享打印�
   assert.ok(!/onSharePrint/.test(wxml), '不应再绑定 onSharePrint')
   // 底部 bottom-bar 应该保留（统一主按钮）
   assert.match(wxml, /class="bottom-bar"/, '应有 bottom-bar 主操作区')
+})
+
+test('paper-preview.wxml does not expose internal task-page codes or empty target placeholders', () => {
+  const fs = require('fs')
+  const path = require('path')
+  const wxml = fs.readFileSync(
+    path.join(__dirname, '..', 'miniprogram/pages/paper-preview/paper-preview.wxml'),
+    'utf8'
+  )
+
+  assert.doesNotMatch(wxml, /任务页进度/)
+  assert.doesNotMatch(wxml, /目标待补充/)
+  assert.doesNotMatch(wxml, /task-page-code/)
+  assert.match(wxml, /作答回传进度/)
 })
 
 test('paper-preview.js 不再有 onSharePrint 方法', () => {

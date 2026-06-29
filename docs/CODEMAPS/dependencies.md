@@ -9,7 +9,7 @@
 | **CloudBase AI (混元 hy3-preview)** | 多模态 OCR + 错题分析 | analyzeBatch, englishVocabulary |
 | **CloudBase AI (deepseek-v4-flash)** | 验证卷出题 + 资源包生成 | generatePaper, learningResource |
 | **CloudBase 云存储** | 图片/PDF 存储 | uploadAndAnalyze, generatePaper |
-| **CloudBase 云数据库** | 12 collections | 所有云函数 |
+| **CloudBase 云数据库** | 15 collections | 所有云函数 |
 | **微信 wx.cloud** | 前端→云函数调用 | miniprogram/utils/cloud.js |
 
 ## AI 调用模式
@@ -20,6 +20,11 @@ analyzeBatch:   ai.createModel('cloudbase').generateText({ model:'hy3-preview', 
 
 # 文本生成（出题）
 generatePaper:  ai.createModel('cloudbase').generateText({ model:'deepseek-v4-flash', messages:[{role:'user', content:prompt}] })
+learningResource: 同模型生成学习任务包内容
+englishVocabulary: hy3-preview 识别/导入英语词表
+
+# 用量账本
+aiUsageEvents: analyzeBatch / generatePaper / learningResource / englishVocabulary 在真实 AI 调用边界写入 pending → success|failed 事件
 ```
 
 ## PDF 生成
@@ -35,8 +40,9 @@ PDFKit (pdfkit)  → cloudfunctions/generatePaper/pdf-renderer.js
 
 ```
 Node.js 内置 test runner (node --test)
-tests/*.test.js  共 611 tests
+tests/*.test.js  共 636 tests
 tests/helpers/   cloud-function-harness.js (mock cloud/db)
+scripts/devtools-*.js  微信开发者工具 E2E（doctor / ai-usage 等）
 ```
 
 ## 无第三方 npm 运行时依赖

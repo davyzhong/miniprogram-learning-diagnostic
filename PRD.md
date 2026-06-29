@@ -1,6 +1,6 @@
 # Learning Diagnostic MVP 产品设计文档（PRD）
 
-> 版本：v2.9 | 日期：2026-06-15 | 状态：MVP 编码完成，常规自动化测试 353/353 通过，JS 语法检查 121 文件通过，待真机验收
+> 版本：v2.9 | 日期：2026-06-27 | 状态：MVP 编码完成，常规自动化测试 636/636 通过，JS 语法检查 217 文件通过，AI 用量专项 E2E 通过，待真机验收
 
 ---
 
@@ -436,7 +436,7 @@
 1. **上传阶段**（Page 4）
    - 用户选择照片 → 逐张上传到云存储 → 获得 fileID 列表
    - 上传进度实时显示
-   - 全部上传完成 → 调用 `uploadAndAnalyze` → 服务端创建 `reports` + 启动 `analyzePhotos` → 客户端成功后返回 Page 3
+   - 全部上传完成 → 调用 `uploadAndAnalyze` → 服务端校验内测授权、学生权限、上传模式和 `paperId` 关联 → 创建 `reports` + 启动 `analyzePhotos` → 客户端成功后返回 Page 3
 
 2. **分析阶段**（云函数，后台执行）
    - `analyzePhotos` 读取报告 → 按 5 张/批拆分 → 串行调用 `analyzeBatch`
@@ -460,6 +460,8 @@ cloudfunctions/
   generatePaper/       # 生成验证/默认试卷题目 + A4 PDF（支持 preview 模式）
   generateReportPDF/   # 生成报告 PDF，回写 reports.pdfFileId
 ```
+
+> 体验版内测说明：真实上传能力需要先同意内测授权。上传页会展示授权弹层，`uploadAndAnalyze` 服务端也会校验 `userConsents.betaConsented=true`，避免老客户端或直接云函数调用绕过授权。AI 用量账本由 `aiUsage` 云函数和各 AI 云函数的 `usage-ledger.js` 副本记录，账单页只展示内测成本估算，不代表应付款项。
 
 ---
 
@@ -582,8 +584,8 @@ cloudfunctions/
 | 学习卡点短名称展示 | ✅ | `utils/util.js` 将 LP 编号转为家长可读的短摘要，如“小数分数”“单位换算” |
 | Skill / CLI P0 | ✅ | `services/skills` 与 `cli/ldx.js` 封装诊断、报告、卡点、验证卷、反馈和时间线能力 |
 | 数据归属校验（openID）+ 参数白名单 | ✅ | 各云函数入口 |
-| 自动化测试覆盖（353 常规用例全绿） | ✅ | `npm test`；真实图片 E2E 脚本需通过 `npm run test:e2e-real-image` 单独运行 |
-| JS 语法检查 | ✅ | `npm run check`（121 个文件） |
+| 自动化测试覆盖（636 常规用例全绿） | ✅ | `npm test`；真实图片和 DevTools E2E 脚本按需单独运行 |
+| JS 语法检查 | ✅ | `npm run check`（217 个文件） |
 | 微信订阅消息推送 | ⚠️ | `sendNotification()` 仍为空实现，待申请模板 |
 | 上传与分析解耦 | ✅ | `uploadAndAnalyze` 不等待 `analyzePhotos` 完成 |
 | 默认试卷跨学生共享模板 | ⚠️ | 仅同学生复用 |

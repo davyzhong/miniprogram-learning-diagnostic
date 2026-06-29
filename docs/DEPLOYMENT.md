@@ -37,6 +37,10 @@ git diff --check
 | `studentData` | 访问感知的学生主页、学科、报告、试卷、学习记录聚合读取 |
 | `reportFeedback` | 收集家长对报告、卡点、错题、照片的纠错反馈 |
 | `englishVocabulary` | 英语个人词库、20 词听写、AI 判定和掌握度更新 |
+| `learningResource` | 数学学习卡点任务包生成、读取、完成和验证安排 |
+| `regenerateVerificationPaper` | 自动验证卷短任务续跑和 PDF 最终生成 |
+| `reanalyzeMathHistory` | 历史数学报告重算维护工具 |
+| `aiUsage` | 体验版内测授权、AI 用量账本、成本估算和删除请求 |
 
 ## 3. 微信开发者工具部署步骤
 
@@ -53,14 +57,20 @@ git diff --check
 2. `studentData`
 3. `reportFeedback`
 4. `englishVocabulary`
-5. `uploadAndAnalyze`
-6. `analyzePhotos`
-7. `analyzeBatch`
-8. `generatePaper`
-9. `generateReportPDF`
-10. `getAnalysisProgress`
+5. `learningResource`
+6. `aiUsage`
+7. `uploadAndAnalyze`
+8. `analyzePhotos`
+9. `analyzeBatch`
+10. `generatePaper`
+11. `regenerateVerificationPaper`
+12. `generateReportPDF`
+13. `getAnalysisProgress`
+14. `reanalyzeMathHistory`
 
 如果只改了单个云函数，可以只部署该函数；但涉及报告结构、卡点更新、反馈或访问权限时，优先部署相关函数组合，避免前后端结构不一致。
+
+AI 用量账本相关改动需要同步部署 `aiUsage`、`analyzeBatch`、`generatePaper`、`learningResource`、`englishVocabulary`；这些函数内的 `pricing.js` 与 `usage-ledger.js` 是部署自包含副本，必须保持一致。
 
 ## 4. 数据库索引
 
@@ -74,6 +84,9 @@ git diff --check
 | `papers` | `studentId`, `subject`, `type`, `grade`, `paperKey`, `_openid` | 全部升序 |
 | `learningResourcePacks` | `studentId`, `subject`, `updatedAt`, `_openid` | 升序、升序、降序、升序 |
 | `studentEnglishWords` | `studentId`, `masteryStatus`, `nextReviewAt` | 升序、升序、升序 |
+| `aiUsageEvents` | `_openid`, `createdAt` | 升序、降序 |
+| `dataDeletionRequests` | `_openid`, `createdAt` | 升序、降序 |
+| `userConsents` | `_openid`, `updatedAt` | 升序、降序 |
 
 操作路径：`云开发控制台 → 数据库 → 对应集合 → 索引管理 → 新建索引`。开发者工具中 `cloud://createindex` 链接经常超时，直接到控制台手动建更可靠。创建后通常需等待几十秒到数分钟生效。
 
@@ -104,6 +117,8 @@ git diff --check
 6. 学习记录能展示报告、试卷和反馈事件。
 7. 英语工作台在无词库时能导入钟青羽 PEP 个人词库；导入后能展示个人词库统计，并能进入 20 词听写页。
 8. 英语听写页能基于 `studentEnglishWords` 生成单词队列；真机上麦克风/语音识别不可用时有可读降级提示。
+9. AI 用量页能打开，显示“内测成本估算”提示；首页顶部有「AI 用量」入口。
+10. 上传页在未同意内测授权时完成授权检查并阻止真实上传；同意后 `uploadAndAnalyze` 服务端允许继续。
 
 如果出现 `timeout`，查看 vConsole 中的错误上下文。现在前端会尽量显示类似：
 
