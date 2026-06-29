@@ -7,6 +7,7 @@ const { getSubjectName } = require('../../utils/constants')
 const { sharedNavigation, OWNER_PERMISSIONS } = require('../../utils/shared-navigation')
 
 const HOME_CACHE_TTL_MS = 30 * 1000
+const HOME_LOADING_TIMEOUT_MS = 12 * 1000
 
 function applyProfileStats(viewModel, profiles) {
   let totalReports = 0
@@ -36,6 +37,7 @@ Page({
     activeStudent: null,
     permissions: {},
     hasStudents: false,
+    errorText: '',
     homeMode: 'empty',
     home: null,
     childCards: [],
@@ -71,12 +73,29 @@ Page({
     return this.data.loading === false && (this.data.hasStudents || this.data.homeMode === 'empty')
   },
 
+  startHomeLoadingWatchdog(loadToken) {
+    if (this._homeLoadingTimer) {
+      clearTimeout(this._homeLoadingTimer)
+    }
+    this._homeLoadingTimer = setTimeout(() => {
+      if (this._activeHomeLoadToken !== loadToken || !this.data.loading) return
+      this.setData({
+        loading: false,
+        errorText: '首页加载时间过长，请重试，或先添加孩子档案。'
+      })
+      wx.hideLoading()
+    }, HOME_LOADING_TIMEOUT_MS)
+  },
+
   async loadStudents(options = {}) {
     if (!options.force && this.hasFreshHomeSnapshot()) {
       return
     }
 
-    this.setData({ loading: true })
+    const loadToken = (this._activeHomeLoadToken || 0) + 1
+    this._activeHomeLoadToken = loadToken
+    this.setData({ loading: true, errorText: '' })
+    this.startHomeLoadingWatchdog(loadToken)
     wx.showLoading({ title: '加载中...' })
 
     try {
@@ -107,6 +126,7 @@ Page({
           home: null,
           childCards: [],
           familyHero: null,
+          errorText: '',
           loading: false
         })
         this._lastHomeLoadedAt = Date.now()
@@ -209,16 +229,30 @@ Page({
         home,
         childCards,
         familyHero,
+        errorText: '',
         loading: false
       })
       this._lastHomeLoadedAt = Date.now()
     } catch (err) {
       console.error('加载学生列表失败', err)
       wx.showToast({ title: '加载失败', icon: 'none' })
-      this.setData({ loading: false })
+      this.setData({
+        loading: false,
+        hasStudents: false,
+        homeMode: 'empty',
+        errorText: '学习档案加载失败，请重试，或先添加孩子档案。'
+      })
     } finally {
+      if (this._activeHomeLoadToken === loadToken && this._homeLoadingTimer) {
+        clearTimeout(this._homeLoadingTimer)
+        this._homeLoadingTimer = null
+      }
       wx.hideLoading()
     }
+  },
+
+  onRetryLoadStudents() {
+    return this.loadStudents({ force: true })
   },
 
   onStudentTap(e) {

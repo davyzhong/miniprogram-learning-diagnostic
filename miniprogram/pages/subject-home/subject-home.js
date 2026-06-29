@@ -7,7 +7,7 @@ const { buildSubjectHomeView } = require('./subject-home-presenter')
 const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
 const { getSubjectColor } = require('../../utils/constants')
 
-const SUBJECT_HOME_CACHE_TTL_MS = 30 * 1000
+const SUBJECT_HOME_CACHE_TTL_MS = 60 * 1000
 
 Page({
   data: {

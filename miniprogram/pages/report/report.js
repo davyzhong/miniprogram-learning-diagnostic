@@ -566,11 +566,13 @@ Page({
 
   onHide() {
     if (this._poller) this._poller.stop()
+    if (this._verificationPollTimer) { clearTimeout(this._verificationPollTimer); this._verificationPollTimer = null }
     stopVerificationPoller()
   },
 
   onUnload() {
     if (this._poller) this._poller.stop()
+    if (this._verificationPollTimer) { clearTimeout(this._verificationPollTimer); this._verificationPollTimer = null }
     stopVerificationPoller()
   },
 
@@ -582,6 +584,14 @@ Page({
     // 没有待验证卡点则不触发
     var hasBottleneck = view && view.bottleneckCount > 0
     if (!hasBottleneck && !(this.data.pendingCount > 0)) return
+    // 延迟 3s 再检查验证卷状态，避免用户快速划过时触发无效请求
+    this._verificationPollTimer = setTimeout(() => {
+      this._verificationPollTimer = null
+      this._checkVerificationPaper(report, view)
+    }, 3000)
+  },
+
+  async _checkVerificationPaper(report, view) {
     try {
       var result = await cloud.getActiveVerificationPaper(report.studentId, report.subject, this.data.reportId)
       var status = result.status || 'none'

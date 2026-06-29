@@ -4,6 +4,15 @@
     <text>正在整理学习档案...</text>
   </view>
 
+  <view class="home-error-state" wx:elif="{{errorText}}">
+    <text class="text">首页暂时没有加载出来</text>
+    <text class="sub-text">{{errorText}}</text>
+    <view class="home-error-actions">
+      <view class="empty-action" bindtap="onRetryLoadStudents">重新加载</view>
+      <view class="secondary-action" bindtap="onAddStudent">添加孩子</view>
+    </view>
+  </view>
+
   <view class="profile-home" wx:elif="{{hasStudents}}">
     <view class="top-row">
       <view class="top-copy">
