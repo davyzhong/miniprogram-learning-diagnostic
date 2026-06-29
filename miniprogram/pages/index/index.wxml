@@ -12,6 +12,7 @@
       </view>
       <view class="manage-actions">
         <view class="manage-link" wx:if="{{homeMode === 'single-profile' && permissions.canManageParents}}" bindtap="onParentManagement">家长管理</view>
+        <view class="manage-link" bindtap="onTraceableUrlTap" data-url="/pages/ai-usage/ai-usage">AI 用量</view>
         <view class="manage-link" bindtap="onManageStudents">{{homeMode === 'family-workbench' ? '添加孩子' : '管理孩子'}}</view>
       </view>
     </view>

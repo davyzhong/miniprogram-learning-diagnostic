@@ -30,7 +30,7 @@
 | CLI E2E 数学 | `npm run test:e2e:math` | 微信开发者工具 CLI | 数学工作台、诊断报告、细卡点、知识地图、资源、验证卷 | 报告无失败场景 |
 | CLI E2E 语文 | `npm run test:e2e:chinese` | 微信开发者工具 CLI | 语文错项复习和验证卷链路 | 初期允许指向核心页面占位，后续补专属脚本 |
 | CLI E2E 英语 | `npm run test:e2e:english` | 微信开发者工具 CLI | 英语工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 | 报告无失败用例 |
-| CLI E2E 全量 | `npm run test:e2e:all` | 微信开发者工具 CLI | core + math + english + 聚合报告 | 聚合报告无失败 |
+| CLI E2E 全量 | `npm run test:e2e:all` | 微信开发者工具 CLI | core + math + chinese + english + 聚合报告 | 聚合报告无失败 |
 | 真实数据烟测 | `npm run test:e2e:real-data` | 微信开发者工具 CLI + 真实 CloudBase 数据 | 指定学生真实页面渲染 | 页面可打开且截图输出 |
 | 真实图片 E2E | `npm run test:e2e:real-image` | Node.js + 真实图片或 mock | 上传图片到诊断报告链路 | mock 或指定 manifest 通过 |
 | 真实云 E2E | `npm run test:e2e:real-cloud` | Node.js + 真实云函数 | 真实云函数可用性 | `RUN_REAL_CLOUD=1` 时通过 |

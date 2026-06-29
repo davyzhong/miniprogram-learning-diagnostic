@@ -36,7 +36,7 @@
                            │ CloudBase DB + Storage + AI
 ┌──────────────────────────▼──────────────────────────────┐
 │                    CloudBase 基础设施                     │
-│  数据库(12 collections) | 云存储(PDF/图片) | AI(混元/deepseek)│
+│  数据库(15 collections) | 云存储(PDF/图片) | AI(混元/deepseek)│
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -49,6 +49,7 @@
 4. 用户打印/作答/拍照   upload → analyzePhotos(mode=verification)
 5. 反馈学习闭环        reportFeedback → reports.verification → profile 更新
 6. 针对卡点学习        learningResource(targetId) → learningResourcePacks
+7. 内测用量记录        usage-ledger → aiUsageEvents → ai-usage 页面
 ```
 
 ## 服务边界

@@ -1,7 +1,7 @@
 # 学习诊断小程序测试框架设计 V2
 
 > 更新日期：2026-06-27
-> 基线：`npm test` / `npm run test:unit` 当前 583 个离线用例通过
+> 基线：`npm test` / `npm run test:unit` 当前 636 个离线用例通过
 > 配套执行计划：`docs/TEST_STRATEGY_V2.md`
 
 ## 一、设计目标
@@ -34,6 +34,7 @@
     ├── math：数学完整链路
     ├── chinese：语文轻量链路
     ├── english：英语完整链路
+    ├── ai-usage：AI 用量账本与内测授权
     ├── real-data：真实学生数据烟测
     ├── real-image：真实图片诊断链路
     └── real-cloud：真实云函数可用性
@@ -104,7 +105,7 @@ npm run test:e2e:doctor
 | math | `npm run test:e2e:math` | 数学数据驱动诊断 + 知识地图 + 学习资源 |
 | chinese | `npm run test:e2e:chinese` | 语文工作台、诊断报告、错项复测出卷轻量链路 |
 | english | `npm run test:e2e:english` | 英语工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 |
-| all | `npm run test:e2e:all` | core + math + english + 聚合报告 |
+| all | `npm run test:e2e:all` | core + math + chinese + english + 聚合报告 |
 | real-data | `npm run test:e2e:real-data` | 指定真实学生数据页面烟测 |
 | real-image | `npm run test:e2e:real-image` | 真实图片或 manifest 诊断链路 |
 | real-cloud | `npm run test:e2e:real-cloud` | 真实云函数结构校验 |

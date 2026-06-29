@@ -71,14 +71,13 @@
 
   <view class="task-pack-card card" wx:if="{{taskPack.hasTaskPack}}">
     <view class="section-title-row">
-      <text class="section-title">任务页进度</text>
+      <text class="section-title">作答回传进度</text>
       <text class="section-action">{{taskPack.progressText}}</text>
     </view>
     <view class="task-page-row task-page-{{item.status}}" wx:for="{{taskPackPages}}" wx:key="pageCode">
       <view class="task-page-main">
         <text class="task-page-title">第 {{item.pageIndex}} 页</text>
-        <text class="task-page-code">{{item.pageCode}}</text>
-        <text class="task-page-targets">{{item.targetText || '目标待补充'}}</text>
+        <text class="task-page-targets" wx:if="{{item.targetText}}">{{item.targetText}}</text>
       </view>
       <text class="task-page-status">{{item.statusText}}</text>
     </view>

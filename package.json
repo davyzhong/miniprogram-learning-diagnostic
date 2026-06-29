@@ -13,6 +13,7 @@
     "test:e2e:math": "npm run test:e2e:data-driven && npm run test:e2e:knowledge-map",
     "test:e2e:chinese": "node scripts/devtools-e2e-chinese.js",
     "test:e2e:english": "node scripts/devtools-english-e2e.js",
+    "test:e2e:ai-usage": "node scripts/devtools-ai-usage-e2e.js",
     "test:e2e:real-data": "node scripts/devtools-real-data-smoke.js",
     "test:e2e:real-image": "node tests/e2e-real-image.test.js",
     "test:e2e:real-cloud": "RUN_REAL_CLOUD=1 node --test tests/e2e-real-cloud.test.js",

@@ -155,7 +155,7 @@ function loadAiUsage(db, openId = 'owner-1') {
 }
 
 function seedEvents() {
-  const base = new Date('2026-06-15T10:00:00+08:00').toISOString()
+  const base = new Date('2026-06-15T10:00:00+08:00')
   return [
     { _id: 'e1', _openid: 'owner-1', eventType: 'photo_analysis', model: 'hy3-preview', studentId: 's1', subject: 'math', totalTokens: 800, estimatedCostCny: 0.05, status: 'succeeded', createdAt: base },
     { _id: 'e2', _openid: 'owner-1', eventType: 'paper_generation', model: 'deepseek-v4-flash', studentId: 's1', subject: 'math', totalTokens: 500, estimatedCostCny: 0.01, status: 'succeeded', createdAt: base },
@@ -175,12 +175,77 @@ test('listEvents returns only the callers own events, scoped to month', async ()
   assert.equal(result.items[0].eventType, 'photo_analysis') // createdAt desc
 })
 
+test('listEvents uses Beijing month boundaries before limiting rows', async () => {
+  const newerJulyEvents = Array.from({ length: 60 }, (_, index) => ({
+    _id: `jul-${index}`,
+    _openid: 'owner-1',
+    eventType: 'paper_generation',
+    model: 'deepseek-v4-flash',
+    totalTokens: 10,
+    estimatedCostCny: 0.001,
+    status: 'succeeded',
+    createdAt: new Date(`2026-07-${String((index % 20) + 1).padStart(2, '0')}T10:00:00+08:00`)
+  }))
+  const beijingJuneEvent = {
+    _id: 'bj-june-1',
+    _openid: 'owner-1',
+    eventType: 'photo_analysis',
+    model: 'hy3-preview',
+    totalTokens: 100,
+    estimatedCostCny: 0.02,
+    status: 'succeeded',
+    // UTC 仍是 5 月 31 日，但北京时间已经是 6 月 1 日。
+    createdAt: new Date('2026-05-31T16:30:00.000Z')
+  }
+  const db = createDatabase({ aiUsageEvents: [...newerJulyEvents, beijingJuneEvent] })
+  const { handler } = loadAiUsage(db)
+
+  const result = await handler.main({ action: 'listEvents', month: '2026-06' })
+
+  assert.equal(result.success, true)
+  assert.deepEqual(result.items.map(item => item._id), ['bj-june-1'])
+})
+
 test('listEvents returns empty gracefully when collection is missing', async () => {
   const db = createDatabase({}, { missingCollections: ['aiUsageEvents'] })
   const { handler } = loadAiUsage(db)
   const result = await handler.main({ action: 'listEvents', month: '2026-06' })
   assert.equal(result.success, true)
   assert.equal(result.items.length, 0)
+})
+
+test('getSummary uses Beijing month boundaries before limiting rows', async () => {
+  const newerJulyEvents = Array.from({ length: 520 }, (_, index) => ({
+    _id: `jul-${index}`,
+    _openid: 'owner-1',
+    eventType: 'paper_generation',
+    model: 'deepseek-v4-flash',
+    studentId: 's-july',
+    totalTokens: 10,
+    estimatedCostCny: 0.001,
+    status: 'succeeded',
+    createdAt: new Date(`2026-07-${String((index % 20) + 1).padStart(2, '0')}T10:00:00+08:00`)
+  }))
+  const beijingJuneEvent = {
+    _id: 'bj-june-summary',
+    _openid: 'owner-1',
+    eventType: 'photo_analysis',
+    model: 'hy3-preview',
+    studentId: 's-june',
+    totalTokens: 250,
+    estimatedCostCny: 0.03,
+    status: 'succeeded',
+    createdAt: new Date('2026-05-31T16:30:00.000Z')
+  }
+  const db = createDatabase({ aiUsageEvents: [...newerJulyEvents, beijingJuneEvent] })
+  const { handler } = loadAiUsage(db)
+
+  const result = await handler.main({ action: 'getSummary', month: '2026-06' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.callCount, 1)
+  assert.equal(result.totalTokens, 250)
+  assert.equal(result.studentCount, 1)
 })
 
 test('getSummary aggregates tokens, cost, and per-event-type breakdown', async () => {

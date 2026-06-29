@@ -258,7 +258,7 @@ async function callAI(imageUrls, subject, verificationPlan, ledgerContext = {}) 
 
     // 记账成功（优先真实 usage，无则估算）
     if (eventId) {
-      recordUsageSuccess({
+      await recordUsageSuccess({
         db, eventId, usage: result && result.usage, outputText: result && result.text,
         model: 'hy3-preview', imageCount: imageUrls.length
       }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
@@ -267,7 +267,7 @@ async function callAI(imageUrls, subject, verificationPlan, ledgerContext = {}) 
     return result.text;
   } catch (err) {
     if (eventId) {
-      recordUsageFailure({
+      await recordUsageFailure({
         db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length
       }).catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
     }

@@ -2,7 +2,7 @@
 
 <!-- Generated: 2026-06-25 | Files scanned: 254 | Token estimate: ~950 -->
 
-## 云函数清单（13 个）
+## 云函数清单（14 个）
 
 | 函数 | 职责 | AI 模型 | 关键 actions |
 |------|------|---------|-------------|
@@ -19,6 +19,7 @@
 | `getAnalysisProgress` | 轮询分析进度 | — | — |
 | `reanalyzeMathHistory` | 历史报告重分析(token) | — | — |
 | `reportFeedback` | 反馈学习 | — | createFeedback, listFeedbackByReport |
+| `aiUsage` | AI 用量账本、内测授权、删除请求 | — | listEvents, getSummary, getBetaAuth, setBetaAuth |
 
 ## 调用链路
 
@@ -63,6 +64,11 @@ cloudfunctions/generatePaper/
 
 cloudfunctions/learningResource/
   index.js              任务包生成/复用，缓存键=bottleneckId||targetId||lpCode||id
+
+cloudfunctions/aiUsage/
+  index.js              月度用量聚合、内测授权、删除请求
+  usage-ledger.js       AI 用量事件 start/success/failure 三态写入
+  pricing.js            模型价格与估算规则
 ```
 
 ## 权限模型

@@ -8,6 +8,7 @@ function clone(value) {
 
 function matches(document, filter) {
   return Object.entries(filter || {}).every(([key, value]) => {
+    if (value && value.__queryOp === 'and') return value.conditions.every(condition => matches({ [key]: document[key] }, { [key]: condition }))
     if (value && value.__queryOp === 'lt') return document[key] < value.value
     if (value && value.__queryOp === 'lte') return document[key] <= value.value
     if (value && value.__queryOp === 'gt') return document[key] > value.value
@@ -109,7 +110,8 @@ function createDatabase(initial = {}, options = {}) {
       lt: value => ({ __queryOp: 'lt', value }),
       lte: value => ({ __queryOp: 'lte', value }),
       gt: value => ({ __queryOp: 'gt', value }),
-      gte: value => ({ __queryOp: 'gte', value })
+      gte: value => ({ __queryOp: 'gte', value }),
+      and: conditions => ({ __queryOp: 'and', conditions })
     },
     serverDate: () => new Date('2026-06-11T12:00:00+08:00'),
     dump: name => clone(getItems(name))

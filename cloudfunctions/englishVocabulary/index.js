@@ -315,14 +315,14 @@ async function extractCandidatesFromImages(pageFileIDs = [], context = {}) {
       temperature: 0.1
     })
     if (eventId) {
-      recordUsageSuccess({
+      await recordUsageSuccess({
         db, eventId, usage: result && result.usage, outputText: result && result.text,
         model: 'hy3-preview', imageCount: imageUrls.length
       }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
     }
   } catch (err) {
     if (eventId) {
-      recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length })
+      await recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length })
         .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
     }
     throw err
@@ -734,14 +734,14 @@ ${JSON.stringify(candidates)}
       temperature: 0.1
     })
     if (eventId) {
-      recordUsageSuccess({
+      await recordUsageSuccess({
         db, eventId, usage: result && result.usage, outputText: result && result.text,
         model: 'hy3-preview', imageCount: imageUrls.length
       }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
     }
   } catch (err) {
     if (eventId) {
-      recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length })
+      await recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length })
         .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
     }
     throw err

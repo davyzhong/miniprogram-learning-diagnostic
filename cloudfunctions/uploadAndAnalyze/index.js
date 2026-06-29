@@ -8,6 +8,26 @@ const db = cloud.database();
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const MODES = new Set(['diagnosis', 'verification', 'paper', 'default-paper']);
 
+function isMissingCollectionError(error) {
+  const text = String((error && (error.errMsg || error.message || error.code || error.errCode)) || '');
+  return Boolean(error && error.errCode === -502005)
+    || /collection not exists|Db or Table not exist|DATABASE_COLLECTION_NOT_EXIST|ResourceNotFound/i.test(text);
+}
+
+async function hasBetaConsent(openId) {
+  if (!openId) return false;
+  try {
+    const res = await db.collection('userConsents')
+      .where({ _openid: openId, betaConsented: true })
+      .limit(1)
+      .get();
+    return (res.data || []).length > 0;
+  } catch (error) {
+    if (isMissingCollectionError(error)) return false;
+    throw error;
+  }
+}
+
 // ========== 主函数 ==========
 exports.main = async (event, context) => {
   const { fileIDs, imageMetas = [], studentId, subject = 'math', mode = 'diagnosis', paperId = '' } = event;
@@ -30,10 +50,16 @@ exports.main = async (event, context) => {
   if (mode === 'verification' && !paperId) {
     return { success: false, error: '验证分析必须关联验证试卷' };
   }
+  if ((mode === 'paper' || mode === 'default-paper') && !paperId) {
+    return { success: false, error: '试卷上传必须关联 paperId' };
+  }
 
   try {
     // 1. 获取学生信息（用于报告显示）
     const currentOpenId = cloud.getWXContext().OPENID;
+    if (!await hasBetaConsent(currentOpenId)) {
+      return { success: false, error: '请先同意内测授权后再上传' };
+    }
     const access = await getStudentAccess(db, studentId, currentOpenId);
     const student = access.student;
     if (!student) {

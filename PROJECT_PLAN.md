@@ -2,7 +2,7 @@
 
 **创建日期**: 2026-06-09
 **最后更新**: 2026-06-15
-**项目状态**: MVP 编码完成，常规自动化测试通过（353/353），JS 语法检查 121 文件通过，测试套件 < 2s，待真机验收
+**项目状态**: MVP 编码完成，常规自动化测试通过（636/636），JS 语法检查 217 文件通过，AI 用量专项 DevTools E2E 通过，待真机验收
 **负责人**: qiming
 
 ---
@@ -97,7 +97,7 @@ miniprogram-learning-diagnostic/
 │       ├── default-paper/           # Page 8：默认诊断试卷选择
 │       └── paper-preview/           # Page 9：试卷预览/打印
 │
-├── cloudfunctions/                  # 云函数（后端，10 个）
+├── cloudfunctions/                  # 云函数（后端，14 个）
 │   ├── uploadAndAnalyze/            # 入口：校验参数、创建 reports、后台触发 analyzePhotos
 │   ├── analyzePhotos/               # 主控：拆分批次、串行分析、去重、合并、对比、落库
 │   │   ├── index.js                 #   主流程
@@ -110,9 +110,13 @@ miniprogram-learning-diagnostic/
 │   ├── studentAccess/               # 家长成员、邀请和加入管理
 │   ├── studentData/                 # 访问感知的学习资料聚合读取
 │   ├── generatePaper/               # 生成验证/默认试卷 + A4 PDF（支持 preview）
+│   ├── regenerateVerificationPaper/  # 验证卷短任务续跑
 │   ├── generateReportPDF/           # 生成报告 PDF，回写 reports.pdfFileId
 │   ├── reportFeedback/              # 家长反馈入口，记录报告/卡点/错题/照片纠错
-│   └── englishVocabulary/           # 英语个人词库、20 词听写、AI 判定和掌握度更新
+│   ├── englishVocabulary/           # 英语个人词库、20 词听写、AI 判定和掌握度更新
+│   ├── learningResource/            # 学习卡点任务包生成和状态更新
+│   ├── reanalyzeMathHistory/        # 历史数学报告重算维护工具
+│   └── aiUsage/                     # AI 用量账本、内测授权、删除请求
 │
 ├── cloud1-d6gneg68m5a7a3876/        # cloudbaseRoot 本地映射（微信开发者工具使用）
 ├── services/skills/                 # P0 Skill 能力内核
@@ -146,7 +150,7 @@ miniprogram-learning-diagnostic/
     └── superpowers/plans/           # 规划辅助材料
 ```
 
-**文件总数**: 107 个 JavaScript 文件（`npm run check` 校验），334 个常规自动化测试用例（`npm test`）。另有 `tests/e2e-real-image.test.js` 端到端真实图片脚本，需通过 `npm run test:e2e-real-image` 单独运行。
+**文件总数**: 217 个 JavaScript 文件（`npm run check` 校验），636 个常规自动化测试用例（`npm test`）。另有真实图片与 DevTools E2E 脚本，需按需单独运行。
 
 ### 2.2 相关文件索引
 
@@ -435,7 +439,7 @@ System Prompt 包含：
 | 类别 | 状态 | 说明 |
 |------|------|------|
 | **前端页面（16个）** | ✅ | `index` / `student-profile` / `add-student` / `subject-select` / `subject-home` / `upload` / `upload-history` / `parent-management` / `join-student` / `report` / `bottleneck-center` / `bottleneck-detail` / `english-practice` / `generate-verification` / `default-paper` / `paper-preview`，全部四件套完整且 WXML 事件绑定正确 |
-| **云函数（10个）** | ✅ | `uploadAndAnalyze` / `analyzePhotos`（含 comparison.js、photo-dedup.js）/ `analyzeBatch`（含 result-normalizer.js）/ `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `generateReportPDF` / `reportFeedback` / `englishVocabulary` |
+| **云函数（14个）** | ✅ | `uploadAndAnalyze` / `analyzePhotos`（含 comparison.js、photo-dedup.js）/ `analyzeBatch`（含 result-normalizer.js）/ `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `regenerateVerificationPaper` / `generateReportPDF` / `reportFeedback` / `englishVocabulary` / `learningResource` / `reanalyzeMathHistory` / `aiUsage` |
 | **数据访问层** | ✅ | `utils/cloud.js` 封装学生/学科档案/报告/试卷/分析进度/云函数调用；无过时 photos 集合引用 |
 | **通用轮询器** | ✅ | `utils/poller.js` 支持 stop/onTimeout/异步 request，被 subject-home 与 report 使用 |
 | **卡点短名称展示** | ✅ | `utils/util.js` 提供 `formatBottleneckDisplayName/List`，页面不再向家长展示裸 LP 编号 |
@@ -448,9 +452,9 @@ System Prompt 包含：
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 索引 + 字体 + 云函数部署） |
 | **学习卡点透出体系** | ✅ | 首页高优先级卡点、卡点中心、单卡点工作台和验证卷 `targetCode` 闭环已接通 |
 | **Skill / CLI P0** | ✅ | `services/skills` 和 `cli/ldx.js` 覆盖诊断、报告、卡点、验证卷、反馈和时间线能力 |
-| **自动化测试** | ✅ | 334 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、英语词库听写、工具函数、Skill/CLI 和覆盖缺口补全 |
+| **自动化测试** | ✅ | 636 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、英语词库听写、AI 用量账本、工具函数、Skill/CLI 和覆盖缺口补全 |
 | **端到端真实图片脚本** | ✅ | `tests/e2e-real-image.test.js` 单独运行，串通上传 → AI 分析 → 报告生成链路 |
-| **JS 语法检查** | ✅ | `npm run check` 校验 107 个文件 |
+| **JS 语法检查** | ✅ | `npm run check` 校验 217 个文件 |
 | **学科隔离** | ✅ | 数/语/英三科独立档案，家庭页和个人页都提供可点击学科入口，单学科工作台承接具体操作 |
 | **20张照片支持** | ✅ | `upload` 页面限制 20 张，`analyzePhotos` 自动分批（5张/批） |
 | **学习记录** | ✅ | `upload-history` 按天展示诊断报告、验证试卷、验证批复和原始照片 |
@@ -492,8 +496,10 @@ System Prompt 包含：
 1. 左侧文件树找到 `cloudfunctions/<函数名>`
 2. **右键** → "上传并部署：云端安装依赖（不上传 node_modules）"
 3. 等待控制台显示"上传成功"
-4. 对 `cloudfunctions/` 下全部十个云函数重复：`uploadAndAnalyze` / `analyzePhotos` / `analyzeBatch` / `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `generateReportPDF` / `reportFeedback` / `englishVocabulary`
+4. 对 `cloudfunctions/` 下全部 14 个云函数重复：`uploadAndAnalyze` / `analyzePhotos` / `analyzeBatch` / `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `regenerateVerificationPaper` / `generateReportPDF` / `reportFeedback` / `englishVocabulary` / `learningResource` / `reanalyzeMathHistory` / `aiUsage`
 5. 在云开发控制台确认各云函数执行超时均不超过 **60 秒**
+
+AI 用量账本或体验版内测相关变更还需要同步部署：`aiUsage`、`analyzeBatch`、`generatePaper`、`learningResource`、`englishVocabulary`、`uploadAndAnalyze`。其中 `uploadAndAnalyze` 负责服务端内测授权门禁，其他 AI 云函数负责真实调用边界的用量事件写入。
 
 ### Step 3: 确认云函数配置
 

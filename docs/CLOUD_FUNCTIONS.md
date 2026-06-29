@@ -293,7 +293,7 @@ wx.cloud.callFunction({
     studentId: 'stu_xxx',
     subject: 'math',        // math | chinese | english
     mode: 'diagnosis',      // diagnosis | verification | paper | default-paper
-    paperId: ''             // 仅验证模式必填
+    paperId: ''             // verification/paper/default-paper 模式必填
   }
 })
 ```
@@ -307,7 +307,7 @@ wx.cloud.callFunction({
 | studentId | string | 是 | 学生文档 ID，必须属于当前 openid | `'stu_xxx'` |
 | subject | string | 否 | 学科，默认 `'math'`；可选 `math / chinese / english` | `'math'` |
 | mode | string | 否 | 分析模式，默认 `'diagnosis'`；可选 `diagnosis / verification / paper / default-paper` | `'verification'` |
-| paperId | string | 条件必填 | `mode === 'verification'` 时必填，且该试卷必须为 `type === 'verification'` | `'paper_xxx'` |
+| paperId | string | 条件必填 | `mode === 'verification' / 'paper' / 'default-paper'` 时必填；verification 必须关联验证卷，default-paper 关联默认诊断卷 | `'paper_xxx'` |
 
 ### 输出格式
 
@@ -317,7 +317,7 @@ wx.cloud.callFunction({
 {
   "success": true,
   "reportId": "report_xxx",
-  "message": "分析完成"
+  "message": "分析已启动"
 }
 ```
 
@@ -339,7 +339,9 @@ wx.cloud.callFunction({
 | 图片参数无效 | fileIDs 长度 > 20，或存在非字符串 / 不以 `cloud://` 开头的项 |
 | 学科或分析模式无效 | subject 不在白名单，或 mode 不在白名单 |
 | 验证分析必须关联验证试卷 | mode 为 verification 但 paperId 为空，或关联试卷 type 不是 verification |
+| 试卷上传必须关联 paperId | mode 为 paper/default-paper 但 paperId 为空 |
 | 验证试卷必须使用验证分析模式 | 关联试卷为 verification 但 mode 不是 verification |
+| 请先同意内测授权后再上传 | 当前 openid 在 userConsents 中没有 `betaConsented=true` 记录 |
 | 学生不存在 | students 集合查无此 doc |
 | 无权执行该操作 | 当前微信不是该孩子档案成员，不能上传并触发新分析 |
 | 关联试卷不存在或无权访问 | papers 查不到 / studentId 不匹配 / openid 不匹配 |
@@ -352,7 +354,7 @@ wx.cloud.callFunction({
 
 ### 依赖的外部服务
 
-- 微信云数据库（students、studentMembers、papers、subjectProfiles、reports 集合）
+- 微信云数据库（students、studentMembers、papers、subjectProfiles、reports、userConsents 集合）
 - 微信云存储（fileID 引用）
 - 内部云函数：`analyzePhotos`
 
@@ -1326,8 +1328,8 @@ AI 用量与成本估算账本、数据删除请求和内测授权。读操作�
 
 | action | 输入 | 输出 | 说明 |
 | --- | --- | --- | --- |
-| `listEvents` | `month?` (YYYY-MM) | `{ success, items, hasMore }` | 列出当前用户本月用量事件（最多 50 条，按 createdAt 倒序） |
-| `getSummary` | `month?` | `{ success, month, totalTokens, totalCostCny, callCount, studentCount, byEventType[], byModel[] }` | 聚合本月用量 |
+| `listEvents` | `month?` (YYYY-MM) | `{ success, items, hasMore }` | 列出当前用户本月用量事件（最多 50 条，按 createdAt 倒序，按北京时间自然月过滤） |
+| `getSummary` | `month?` | `{ success, month, totalTokens, totalCostCny, callCount, studentCount, byEventType[], byModel[] }` | 聚合本月用量（按北京时间自然月过滤） |
 | `createDeletionRequest` | `studentId?, scope, reason?` | `{ success, requestId }` | 发起数据删除请求（scope ∈ student_all/photos_only/usage_only） |
 | `getDeletionRequests` | — | `{ success, items[] }` | 查看自己的删除请求 |
 | `getBetaAuth` | — | `{ success, consented, consentedAt }` | 读取内测授权状态 |
@@ -1341,12 +1343,13 @@ AI 用量与成本估算账本、数据删除请求和内测授权。读操作�
 
 ### 成本估算策略
 
-优先使用 AI 返回的真实 `result.usage`（`costSource: provider_usage`）；无 usage 时按输出字符数估算 token、按图片数附加成本（`costSource: estimated_by_chars|estimated_by_image_count`，`isEstimate: true`）。价格表常量维护在 `pricing.js`（5 个 AI 云函数 + aiUsage 各一份副本，由 deployment-readiness 测试守护一致性）。
+优先使用 AI 返回的真实 `result.usage`（`costSource: provider_usage`）；无 usage 时按输出字符数估算 token、按图片数附加成本（`costSource: estimated_by_chars|estimated_by_image_count`，`isEstimate: true`）。价格表常量维护在 `pricing.js`（5 个 AI 云函数 + aiUsage 各一份副本，由 deployment-readiness 测试守护一致性）。月度查询使用北京时间自然月边界，并先在数据库查询阶段限定 `createdAt` 范围，再做分页/聚合，避免 UTC 月末边界和先 limit 再过滤导致漏算。
 
 ### 注意事项
 
-- 事件写入失败绝不阻断业务流程（观测层）。
+- 事件 start 写入失败不阻断业务流程；成功/失败补写在 AI 调用返回后等待落库，减少长期 `pending` 残留。
 - 账单页强制显示"当前为内测成本估算，不代表应付款项"。
+- `uploadAndAnalyze` 会在服务端校验 `userConsents.betaConsented=true`，不能只依赖前端弹窗。
 - 详见设计文档 §5（账本）、§6（账单页）、§9（合规）。
 
 ---
