@@ -1453,7 +1453,8 @@
   margin-top: 5rpx;
 }
 
-.empty-state {
+.empty-state,
+.home-error-state {
   min-height: 82vh;
   display: flex;
   flex-direction: column;
@@ -1489,13 +1490,15 @@
   box-shadow: 0 12rpx 30rpx rgba(26, 94, 173, .16);
 }
 
-.empty-state .text {
+.empty-state .text,
+.home-error-state .text {
   font-size: 31rpx;
   font-weight: 800;
   color: #1f2937;
 }
 
-.empty-state .sub-text {
+.empty-state .sub-text,
+.home-error-state .sub-text {
   margin-top: 10rpx;
   color: #64748b;
   font-size: 24rpx;
@@ -1505,6 +1508,21 @@
 .empty-action {
   width: 320rpx;
   margin-top: 30rpx;
+}
+
+.home-error-actions {
+  width: 100%;
+  max-width: 520rpx;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14rpx;
+  margin-top: 30rpx;
+}
+
+.home-error-actions .empty-action,
+.home-error-actions .secondary-action {
+  width: auto;
+  margin-top: 0;
 }
 
 /* 知识地图卡片 */

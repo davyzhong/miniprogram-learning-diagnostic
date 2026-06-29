@@ -76,6 +76,53 @@ test('empty index stays in add-first-child mode', async () => {
   assert.equal(page.data.childCards.length, 0)
 })
 
+test('index shows a recovery state when student loading fails', async () => {
+  const cloud = {
+    getAccessibleStudents: async () => { throw new Error('shared access down') },
+    getStudents: async () => { throw new Error('legacy access down') }
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    wx,
+    setTimeout: () => 1,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.loadStudents({ force: true })
+
+  assert.equal(page.data.loading, false)
+  assert.equal(page.data.hasStudents, false)
+  assert.match(page.data.errorText, /学习档案加载失败/)
+  assert.equal(wx.calls.some(call => call.name === 'showToast' && call.payload.title === '加载失败'), true)
+})
+
+test('index leaves a visible recovery state when first paint loading times out', () => {
+  let watchdog = null
+  const cloud = {
+    getAccessibleStudents: async () => new Promise(() => {})
+  }
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    setTimeout: callback => {
+      watchdog = callback
+      return 1
+    },
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  page.loadStudents({ force: true })
+  assert.equal(page.data.loading, true)
+  watchdog()
+
+  assert.equal(page.data.loading, false)
+  assert.match(page.data.errorText, /首页加载时间过长/)
+})
+
 test('page lifecycle handlers do not return promises to the mini program runtime', () => {
   const cloud = {
     getAccessibleStudents: async () => [],
@@ -159,6 +206,8 @@ test('index family workbench renders actionable card sections instead of old lat
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
 
   assert.match(wxml, /family-workbench-hero/)
+  assert.match(wxml, /home-error-state/)
+  assert.match(wxml, /onRetryLoadStudents/)
   assert.doesNotMatch(wxml, /\/assets\/images\//)
   assert.match(wxml, /child-priority-action/)
   assert.match(wxml, /secondary-action-grid/)

@@ -333,17 +333,11 @@ Page({
           : await this.uploadOne(image, i)
         fileIds.push(fileId)
 
-        const updatedImages = this.data.images.map((item, index) => index === i
-          ? {
-              ...item,
-              fileId,
-              uploaded: true,
-              uploadError: ''
-            }
-          : item)
         const progress = Math.round(((i + 1) / images.length) * 100)
         this.setData({
-          images: updatedImages,
+          [`images[${i}].fileId`]: fileId,
+          [`images[${i}].uploaded`]: true,
+          [`images[${i}].uploadError`]: '',
           uploadedCount: i + 1,
           uploadProgress: progress
         })
