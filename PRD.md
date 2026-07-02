@@ -1,6 +1,6 @@
 # Learning Diagnostic MVP 产品设计文档（PRD）
 
-> 版本：v2.9 | 日期：2026-06-27 | 状态：MVP 编码完成，常规自动化测试 636/636 通过，JS 语法检查 217 文件通过，AI 用量专项 E2E 通过，待真机验收
+> 版本：v2.9 | 日期：2026-07-02 | 状态：MVP 编码完成，常规自动化测试 638/638 通过，JS 语法检查 217 文件通过，AI 用量专项 E2E 通过，待真机验收
 
 ---
 
@@ -13,6 +13,18 @@
 **核心假设**：学习中的卡点可以被发现、定位、改善和复测。
 
 **MVP 成功标准**：一个不懂教育、不懂技术的家长，能独立完成「看懂孩子学习档案 → 上传试卷 → 拿到报告 → 生成验证试卷」这条完整链路，且能理解当前结论来自哪些样本。
+
+### 关键界面截图
+
+以下截图由自动化脚本使用匿名 mock 数据生成，只用于说明当前产品形态，不包含真实学生资料。
+
+| 场景 | 截图 |
+|---|---|
+| 家庭学习工作台 | ![家庭学习工作台](docs/user-guide/images/01-family-workbench.png) |
+| 个人学习档案 | ![个人学习档案](docs/user-guide/images/02-student-profile.png) |
+| 学科工作台 | ![学科工作台](docs/user-guide/images/03-subject-workbench.png) |
+| 诊断报告 | ![诊断报告](docs/user-guide/images/04-report.png) |
+| 验证试卷预览 | ![验证试卷预览](docs/user-guide/images/06-paper-preview.png) |
 
 ---
 
@@ -33,7 +45,7 @@
 
 ---
 
-## 3. 页面设计（共 17 页）
+## 3. 页面设计（当前 app.json 注册 20 页，以下按业务页面组说明）
 
 ### Page 1：首页 / 家庭学习工作台
 
@@ -43,12 +55,12 @@
 |------|------|
 | 空态 | 没有孩子档案时显示添加第一个孩子 |
 | 单孩子 | 直接进入该孩子学习档案，不额外显示家庭工作台 |
-| 多孩子 | 显示高密度家庭学习工作台：家庭图示总览、孩子待办、今日优先行动、三科学习状态和快捷入口 |
+| 多孩子 | 显示高密度家庭学习工作台：家庭行动总览、孩子待办、今日优先行动、三科学习状态和快捷入口 |
 | 交互原则 | 卡片内的图示、状态块、数字、学科块、报告和试卷入口都可点击，直接进入对应列表、学科页、报告页或试卷页 |
 
 **交互**：点击孩子卡片主体 → 进入 Page 1A；点击具体状态块 → 进入对应筛选后的学习记录或学科工作台；点击「添加孩子」→ 跳转 `add-student` 页。
 
-**实现状态**：✅ 已上线。多孩子模式由 `child-workbench.js` 生成家庭图示总览和孩子行动卡；单孩子模式复用个人学习工作台视图。
+**实现状态**：✅ 已上线。多孩子模式由 `child-workbench.js` 生成家庭行动总览和孩子行动卡；单孩子模式复用个人学习工作台视图。
 
 ### Page 1A：单孩子学习档案
 
@@ -57,30 +69,19 @@
 | 区域 | 内容 |
 |------|------|
 | 顶部 | 孩子姓名、年级、家长管理、返回首页 |
-| 个人插图 | 单孩子学习档案插图和综合摘要，点击进入今日主行动 |
+| 个人行动摘要 | 单孩子学习档案综合摘要，点击进入今日主行动 |
 | 今日行动 | 生成验证卷、上传新试卷或查看学习记录 |
 | 最新报告 | 透出最新诊断报告的生成时间、证据时间、主要结论、照片数、相关错题数和阅读完整报告入口 |
 | 行动队列 | 学习卡点、上传新作业、数学知识地图、学习记录 |
 | 学科入口 | 数学/语文/英语三科入口，进入单学科工作台 |
 
-**交互**：点击个人插图/今日行动 → 当前主任务；点击最新报告 → Page 6；点击卡点/知识地图/学习记录 → 对应工具页；点击学科 → Page 3；点击家长管理 → Page 5A。个人页不再重复堆叠样本覆盖、指标条和最近记录列表。
+**交互**：点击个人行动摘要/今日行动 → 当前主任务；点击最新报告 → Page 6；点击卡点/知识地图/学习记录 → 对应工具页；点击学科 → Page 3；点击家长管理 → Page 5A。个人页不再重复堆叠样本覆盖、指标条和最近记录列表。
 
 ---
 
-### Page 2：学科入口页（兼容路由）
+### Page 2：（已移除）
 
-**路由**：`pages/subject-select/subject-select`
-
-| 区域 | 内容 |
-|------|------|
-| 顶部 | 返回箭头 + 学生姓名 |
-| 主体 | 三个学科卡片：数学（蓝）、语文（绿）、英语（琥珀），每个显示最近报告数量和待验证卡点数 |
-
-**交互**：点击学科卡片 → 进入 Page 3
-
-**数据**：首次进入某学科时，`subjectProfiles` 集合自动创建该学科的档案记录。
-
-**实现状态**：✅ 已上线。该页已从主入口降级为兼容的学科入口，通过 `cloud.ensureSubjectProfile()` 保证幂等创建。
+原 `pages/subject-select/subject-select` 学科入口页已从当前 `app.json` 移除。首页、个人学习档案和家庭工作台现在直接提供数学/语文/英语入口，并跳转到 `pages/subject-home/subject-home`。首次进入某学科时，由数据层和云函数保证学科档案可读取或创建。
 
 ---
 
@@ -494,7 +495,6 @@ cloudfunctions/
     "pages/index/index",
     "pages/student-profile/student-profile",
     "pages/add-student/add-student",
-    "pages/subject-select/subject-select",
     "pages/subject-home/subject-home",
     "pages/upload/upload",
     "pages/upload-history/upload-history",
@@ -503,14 +503,20 @@ cloudfunctions/
     "pages/report/report",
     "pages/bottleneck-center/bottleneck-center",
     "pages/bottleneck-detail/bottleneck-detail",
+    "pages/knowledge-map/knowledge-map",
+    "pages/learning-resource/learning-resource",
+    "pages/english-practice/english-practice",
+    "pages/english-dictation/english-dictation",
+    "pages/english-wrong-words/english-wrong-words",
     "pages/generate-verification/generate-verification",
     "pages/default-paper/default-paper",
-    "pages/paper-preview/paper-preview"
+    "pages/paper-preview/paper-preview",
+    "pages/ai-usage/ai-usage"
   ]
 }
 ```
 
-共 17 个注册页面。`app.json` 中已按上述顺序注册。
+共 20 个注册页面。`app.json` 中已按上述顺序注册。
 
 ---
 
@@ -522,7 +528,7 @@ cloudfunctions/
 |------|------|------|
 | 家庭工作台 / 学习档案 | Page 1 / Page 1A | 多孩子显示家庭工作台，单孩子直接进入学习档案 |
 | 学生与家长管理 | Page 1 / Page 5A / Page 5B | 添加孩子、邀请共同家长、扫码加入孩子档案 |
-| 学科入口 | Page 1/2 | 首页直接进入学科详情，Page 2 作为兼容入口 |
+| 学科入口 | Page 1 / Page 1A / Page 3 | 首页和个人档案直接进入学科工作台；原 Page 2 学科选择页已下线 |
 | 拍照诊断 | Page 3→4 | 上传→异步分析→报告 |
 | 诊断报告 | Page 6 | 卡点排行 + 错题详情 |
 | 验证试卷生成 | Page 3→7→9 | 配置出题范围→生成 PDF→打印 |
@@ -556,12 +562,12 @@ cloudfunctions/
 
 ---
 
-## 10. MVP 实现状态总览（2026-06-14）
+## 10. MVP 实现状态总览（2026-07-02）
 
 | 能力 | 状态 | 备注 |
 |------|------|------|
-| 17 个页面 + 四件套文件 | ✅ | `project-integrity.test.js` 校验 |
-| 家庭工作台 + 个人学习工作台 | ✅ | `index` 处理 0/1/多孩子分流；多孩子显示家庭图示总览和孩子行动卡，单孩子与 `student-profile` 共享个人工作台 |
+| 20 个页面 + 四件套文件 | ✅ | `deployment-readiness.test.js` 校验 |
+| 家庭工作台 + 个人学习工作台 | ✅ | `index` 处理 0/1/多孩子分流；多孩子显示家庭行动总览和孩子行动卡，单孩子与 `student-profile` 共享个人工作台 |
 | 家长成员管理 | ✅ | owner 可邀请/移除共同家长，viewer 除成员管理外可参与学习流程 |
 | 添加学生并同步创建三条学科档案 | ✅ | `cloud.createStudentWithProfiles()` |
 | 学科隔离与学科工作台 | ✅ | `subject-home-presenter.js` 生成 primaryTask、taskQueue、tools |
@@ -580,11 +586,12 @@ cloudfunctions/
 | 试卷预览/打印/分享 | ✅ | `paper-preview.js` 支持 paperId 与 fileId 两种模式，并记录已下载状态 |
 | 学习记录时间线 + 原图预览 | ✅ | `upload-history.js` 按天聚合报告、试卷、验证上传和照片 |
 | 学习卡点中心 + 单卡点工作台 | ✅ | `bottleneck-center` / `bottleneck-detail` 基于共享 `BottleneckView` 展示卡点、证据链和验证入口 |
-| 英语个人词库 + 20 词语音听写 | ✅ | `englishVocabulary` + `english-practice`，只做单词掌握，AI 自动判定 correct/incorrect/unclear |
+| 英语个人词库 + 认词练习 + 纸面听写 + 错词本 | ✅ | `englishVocabulary` + `english-practice` / `english-dictation` / `english-wrong-words`，只做词汇掌握和书面证据闭环 |
+| AI 用量账本、内测授权和数据删除请求 | ✅ | `aiUsage` 云函数 + `pages/ai-usage/ai-usage`，首页和上传页接入授权/账单入口 |
 | 学习卡点短名称展示 | ✅ | `utils/util.js` 将 LP 编号转为家长可读的短摘要，如“小数分数”“单位换算” |
 | Skill / CLI P0 | ✅ | `services/skills` 与 `cli/ldx.js` 封装诊断、报告、卡点、验证卷、反馈和时间线能力 |
 | 数据归属校验（openID）+ 参数白名单 | ✅ | 各云函数入口 |
-| 自动化测试覆盖（636 常规用例全绿） | ✅ | `npm test`；真实图片和 DevTools E2E 脚本按需单独运行 |
+| 自动化测试覆盖（638 常规用例全绿） | ✅ | `npm test`；真实图片和 DevTools E2E 脚本按需单独运行 |
 | JS 语法检查 | ✅ | `npm run check`（217 个文件） |
 | 微信订阅消息推送 | ⚠️ | `sendNotification()` 仍为空实现，待申请模板 |
 | 上传与分析解耦 | ✅ | `uploadAndAnalyze` 不等待 `analyzePhotos` 完成 |

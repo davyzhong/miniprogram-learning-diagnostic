@@ -40,7 +40,7 @@ PDFKit (pdfkit)  → cloudfunctions/generatePaper/pdf-renderer.js
 
 ```
 Node.js 内置 test runner (node --test)
-tests/*.test.js  共 636 tests
+tests/*.test.js  共 638 tests
 tests/helpers/   cloud-function-harness.js (mock cloud/db)
 scripts/devtools-*.js  微信开发者工具 E2E（doctor / ai-usage 等）
 ```

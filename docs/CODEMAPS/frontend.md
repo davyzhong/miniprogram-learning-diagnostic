@@ -1,8 +1,8 @@
 # Frontend (Mini Program)
 
-<!-- Generated: 2026-06-25 | Files scanned: 254 | Token estimate: ~850 -->
+<!-- Generated: 2026-07-02 | Files scanned: 254 | Token estimate: ~850 -->
 
-## 页面树（19 pages）
+## 页面树（20 pages）
 
 ```
 pages/
@@ -29,9 +29,10 @@ pages/
 ├── generate-verification/  验证卷生成（历史兼容页，主流程自动）
 ├── default-paper/          默认诊断卷
 ├── paper-preview/          试卷预览/下载（覆盖卡点层级 + _regeneratePdf PDF）
+├── ai-usage/               AI 用量账本、内测授权、删除请求
 │
-├── english-practice/       英语口语练习
-├── english-dictation/      英语听写（OCR）
+├── english-practice/       英语认词练习
+├── english-dictation/      英语纸面听写（OCR）
 └── english-wrong-words/    英语错词本
 ```
 

@@ -2,7 +2,8 @@
 
 日期：2026-06-20
 
-> 2026-06-20 落地补充：家庭页方案已扩展为“家庭与个人学习工作台”双页重构。个人页新增个人插图、今日行动、最新诊断报告、行动队列和三科学科入口，详见 [家庭与个人学习工作台重构落地设计](./2026-06-20-actionable-family-and-personal-workbenches-design.md)。
+> 2026-06-20 落地补充：家庭页方案已扩展为“家庭与个人学习工作台”双页重构。个人页新增个人行动摘要、今日行动、最新诊断报告、行动队列和三科学科入口，详见 [家庭与个人学习工作台重构落地设计](./2026-06-20-actionable-family-and-personal-workbenches-design.md)。
+> 2026-07-02 文档同步：当前界面截图保留在 `docs/user-guide/images/`，例如 ![家庭学习工作台](../../user-guide/images/01-family-workbench.png)。
 
 ## 背景
 

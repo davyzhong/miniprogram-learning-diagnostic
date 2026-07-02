@@ -13,7 +13,7 @@
 | `regenerateVerificationPaper` | 手动重新生成验证卷 | — | start, continue, finalize, fail |
 | `studentData` | 读：仪表盘/报告/试卷/验证卷/时间线 | — | getSubjectDashboard, getReportDetail, getPaperDetail... |
 | `studentAccess` | 权限：学生列表/成员/邀请 | — | getAccessibleStudents, acceptInviteByCode... |
-| `englishVocabulary` | 英语双功能：口语+听写+OCR | hy3-preview | submitRecognitionAttempt, submitDictationPhoto... |
+| `englishVocabulary` | 英语词汇闭环：认词+纸面听写+OCR | hy3-preview | submitRecognitionAttempt, submitDictationPhoto... |
 | `learningResource` | 学习资源包（按细 targetId 缓存） | deepseek-v4-flash | generatePack, getPack, completePack |
 | `generateReportPDF` | 报告→PDF | — | — |
 | `getAnalysisProgress` | 轮询分析进度 | — | — |

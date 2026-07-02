@@ -25,13 +25,13 @@
 
 > 隐私说明：本文档中的界面截图由自动化脚本使用匿名 mock 数据生成，只展示“学生示例”“孩子A”“家长A”等脱敏信息，不包含真实学生姓名、真实试卷照片、真实诊断报告或任何可识别个人身份的信息。正式使用时，也建议在对外分享截图前遮挡孩子姓名、头像、学校、班级、微信号和原始试卷照片。
 
-![数学学习诊断引导图](miniprogram/assets/images/math-diagnostic-guide.jpg)
+![家庭学习工作台示意图](docs/user-guide/images/01-family-workbench.png)
 
 ### 界面截图版快速上手
 
 #### 第一步：进入家庭学习工作台
 
-多个孩子时，首页会显示家庭学习工作台；只有一个孩子时，会直接进入该孩子的个人学习工作台。家庭页顶部有图示总览卡，每个孩子卡片里的数字、状态、今日行动、学科和快捷入口都可以点击，直接进入对应页面。
+多个孩子时，首页会显示家庭学习工作台；只有一个孩子时，会直接进入该孩子的个人学习工作台。家庭页顶部有行动总览，每个孩子卡片里的数字、状态、今日行动、学科和快捷入口都可以点击，直接进入对应页面。
 
 <p align="center">
   <img src="docs/user-guide/images/01-family-workbench.png" alt="家庭学习工作台截图，使用匿名学生示例数据" width="320" />
@@ -47,7 +47,7 @@
 
 #### 第二步：查看孩子学习档案
 
-个人学习工作台是单个孩子的行动页，最重要的是看“今天先做什么”和“最新诊断报告”。这里会显示个人插图入口、今日行动、报告生成时间、证据时间、相关错题数、卡点/知识地图/学习记录入口和三科学科入口。
+个人学习工作台是单个孩子的行动页，最重要的是看“今天先做什么”和“最新诊断报告”。这里会显示个人行动摘要、今日行动、报告生成时间、证据时间、相关错题数、卡点/知识地图/学习记录入口和三科学科入口。
 
 <p align="center">
   <img src="docs/user-guide/images/02-student-profile.png" alt="孩子学习档案截图，姓名已匿名化为学生示例" width="320" />
@@ -55,7 +55,7 @@
 
 | 区域 | 用途 |
 |------|------|
-| 个人插图 | 点击进入今天的主行动 |
+| 个人行动摘要 | 点击进入今天的主行动 |
 | 今日行动 | 生成验证卷、上传新试卷或查看学习记录 |
 | 最新诊断报告 | 查看最近一次 AI 诊断结论、照片数和相关错题数 |
 | 接下来可以做什么 | 进入学习卡点、上传新作业、数学知识地图或学习记录 |
@@ -315,9 +315,9 @@ flowchart LR
 ### 已实现
 
 - ✅ 学生管理：添加/选择学生，每人独立档案
-- ✅ 家庭学习工作台：0 个孩子显示空态，1 个孩子直接进入个人学习工作台，多个孩子显示带图示总览的高密度家庭工作台
+- ✅ 家庭学习工作台：0 个孩子显示空态，1 个孩子直接进入个人学习工作台，多个孩子显示高密度家庭行动工作台
 - ✅ 家长共享：孩子档案支持 owner / viewer 家长成员，共同家长除家庭成员管理外可查看、上传、生成试卷和重试分析
-- ✅ 个人学习工作台：个人插图、今日行动、最新诊断报告、行动队列和三科学科入口均可点击操作
+- ✅ 个人学习工作台：个人行动摘要、今日行动、最新诊断报告、行动队列和三科学科入口均可点击操作
 - ✅ 学习卡点透出：首页展示当前高优先级卡点，支持进入卡点中心和单卡点工作台
 - ✅ 学习卡点中心：按学科和状态筛选待验证、持续出现、复发和已改善卡点
 - ✅ 学科工作台：数学/语文/英语三科独立，学科页只承载待处理队列、主任务和工具入口
@@ -337,7 +337,7 @@ flowchart LR
 - ✅ 英语词库管理：PEP 个人词库种子、批量导入、熟悉度和拼写双维度进度追踪
 - ✅ Skill / CLI P0：封装诊断、报告、卡点、验证卷、反馈和时间线能力，提供 `ldx` 本地 CLI 合同测试
 - ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 自动化测试：636 个常规用例通过，JS 语法检查 217 文件通过，AI 用量专项 DevTools E2E 5/5 通过
+- ✅ 自动化测试：638 个常规用例通过，JS 语法检查 217 文件通过，AI 用量专项 DevTools E2E 5/5 通过
 
 ### 待完善
 
@@ -367,14 +367,15 @@ flowchart LR
 ```
 miniprogram-learning-diagnostic/
 ├── miniprogram/                 # 小程序前端
-│   ├── app.js / app.json        # 全局入口与配置（16 个页面路由）
+│   ├── app.js / app.json        # 全局入口与配置（20 个页面路由）
 │   ├── utils/                   # cloud.js（数据访问层）、poller.js（轮询器）、util.js
-│   └── pages/                   # 16 个页面（index / student-profile / add-student /
-│                                #   subject-select / subject-home / upload / upload-history /
-│                                #   parent-management / join-student / report /
-│                                #   bottleneck-center / bottleneck-detail / english-practice /
-│                                #   english-dictation / generate-verification /
-│                                #   default-paper / paper-preview）
+│   └── pages/                   # 20 个页面（index / student-profile / add-student /
+│                                #   subject-home / upload / upload-history / parent-management /
+│                                #   join-student / report / bottleneck-center / bottleneck-detail /
+│                                #   knowledge-map / learning-resource / english-practice /
+│                                #   english-dictation / english-wrong-words /
+│                                #   generate-verification / default-paper / paper-preview /
+│                                #   ai-usage）
 ├── cloudfunctions/              # 云函数后端（14 个）
 │   ├── uploadAndAnalyze/        #   入口：校验 → 创建报告 → 触发分析
 │   ├── analyzePhotos/           #   主控：分批 → 串行分析 → 去重 → 合并 → 对比
@@ -392,7 +393,7 @@ miniprogram-learning-diagnostic/
 │   └── generateReportPDF/       #   生成报告 PDF
 ├── services/skills/             # P0 Skill 能力内核
 ├── cli/ldx.js                   # 本地 CLI 入口
-├── tests/                       # 单元自动化测试（636 个用例 + 真实图片 E2E 脚本）
+├── tests/                       # 单元自动化测试（638 个用例 + 真实图片 E2E 脚本）
 ├── scripts/                     # check-js.js、preview-pdf.js（PDF预览）、DevTools E2E、指标导出
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
@@ -457,8 +458,8 @@ cd miniprogram-learning-diagnostic
 
 | 类别 | 说明 | 命令 |
 |------|------|------|
-| **单元自动化测试** | 636 个离线用例：云函数、Presenter、工具、数据层、合同、知识库一致性和诊断回归 | `npm run test:unit` 或 `npm test` |
-| **CLI E2E 核心页** | 微信开发者工具 CLI 驱动 17 页面和基础跨页流程 | `npm run test:e2e:core` |
+| **单元自动化测试** | 638 个离线用例：云函数、Presenter、工具、数据层、合同、知识库一致性和诊断回归 | `npm run test:unit` 或 `npm test` |
+| **CLI E2E 核心页** | 微信开发者工具 CLI 驱动核心页面和基础跨页流程 | `npm run test:e2e:core` |
 | **CLI E2E 数学** | 数学数据驱动场景、细卡点、知识地图和学习资源链路 | `npm run test:e2e:math` |
 | **CLI E2E 语文** | 语文工作台、诊断报告、错项复测出卷轻量链路 | `npm run test:e2e:chinese` |
 | **CLI E2E 英语** | 英语工作台、词库、熟悉度、纸面听写和学习记录 | `npm run test:e2e:english` |
@@ -481,7 +482,7 @@ open tmp/preview-verification.pdf
 
 # CLI E2E（需先打开微信开发者工具并开启服务端口）
 npm run test:e2e:doctor       # 环境探测
-npm run test:e2e:core         # 17 页面核心回归
+npm run test:e2e:core         # 核心页面回归
 npm run test:e2e:math         # 数学专项 E2E（当前最完整）
 npm run test:e2e:chinese      # 语文轻量专项 E2E
 npm run test:e2e:english      # 英语专项 E2E
