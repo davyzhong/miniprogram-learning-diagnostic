@@ -79,19 +79,32 @@ Page({
         }
       }
 
-      if (!student.name && typeof cloud.getStudents === 'function') {
-        const students = await cloud.getStudents()
-        student = students.find(item => item._id === studentId) || student
+      const [
+        fallbackStudents,
+        fallbackProfiles,
+        fallbackReports,
+        fallbackPapers
+      ] = await Promise.all([
+        !student.name && typeof cloud.getStudents === 'function'
+          ? cloud.getStudents().catch(() => [])
+          : Promise.resolve(null),
+        !profiles.length && typeof cloud.getSubjectProfiles === 'function'
+          ? cloud.getSubjectProfiles(studentId).catch(() => [])
+          : Promise.resolve(null),
+        !reports.length && typeof cloud.getReports === 'function'
+          ? cloud.getReports(studentId).catch(() => [])
+          : Promise.resolve(null),
+        !papers.length && typeof cloud.getPapers === 'function'
+          ? cloud.getPapers({ studentId }).catch(() => [])
+          : Promise.resolve(null)
+      ])
+
+      if (fallbackStudents) {
+        student = fallbackStudents.find(item => item._id === studentId) || student
       }
-      if (!profiles.length && typeof cloud.getSubjectProfiles === 'function') {
-        profiles = await cloud.getSubjectProfiles(studentId)
-      }
-      if (!reports.length && typeof cloud.getReports === 'function') {
-        reports = await cloud.getReports(studentId)
-      }
-      if (!papers.length && typeof cloud.getPapers === 'function') {
-        papers = await cloud.getPapers({ studentId })
-      }
+      if (fallbackProfiles) profiles = fallbackProfiles
+      if (fallbackReports) reports = fallbackReports
+      if (fallbackPapers) papers = fallbackPapers
 
       permissions = permissions || student.permissions || OWNER_PERMISSIONS
       const home = buildLearningProfileHomeView({
