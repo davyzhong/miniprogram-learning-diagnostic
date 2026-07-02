@@ -196,13 +196,12 @@ PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sen
 miniprogram-learning-diagnostic/
 ├── miniprogram/
 │   ├── app.js                 ✅
-│   ├── app.json               ✅（16 个页面路径）
+│   ├── app.json               ✅（20 个页面路径）
 │   ├── app.wxss               ✅
-│   └── pages/                ✅（17 个页面）
+│   └── pages/                ✅（20 个页面）
 │       ├── index/
 │       ├── student-profile/
 │       ├── add-student/
-│       ├── subject-select/
 │       ├── subject-home/
 │       ├── upload/
 │       ├── upload-history/
@@ -211,10 +210,15 @@ miniprogram-learning-diagnostic/
 │       ├── report/
 │       ├── bottleneck-center/
 │       ├── bottleneck-detail/
+│       ├── knowledge-map/
+│       ├── learning-resource/
 │       ├── english-practice/
+│       ├── english-dictation/
+│       ├── english-wrong-words/
 │       ├── generate-verification/
 │       ├── default-paper/
-│       └── paper-preview/
+│       ├── paper-preview/
+│       └── ai-usage/
 ├── cloudfunctions/
 │   ├── analyzeBatch/         ✅
 │   ├── analyzePhotos/        ✅
@@ -225,10 +229,14 @@ miniprogram-learning-diagnostic/
 │   ├── studentAccess/        ✅
 │   ├── studentData/          ✅
 │   ├── reportFeedback/       ✅
-│   └── englishVocabulary/    ✅
+│   ├── englishVocabulary/    ✅
+│   ├── learningResource/     ✅
+│   ├── reanalyzeMathHistory/ ✅
+│   ├── regenerateVerificationPaper/ ✅
+│   └── aiUsage/              ✅
 ├── services/skills/          ✅（P0 Skill 能力内核）
 ├── cli/ldx.js                ✅（本地 CLI 入口）
-├── tests/                    ✅（常规测试文件 + 真实图片 E2E 脚本 + helpers，636 常规用例）
+├── tests/                    ✅（常规测试文件 + 真实图片 E2E 脚本 + helpers，638 常规用例）
 ├── scripts/check-js.js       ✅（217 文件语法检查）
 ├── project.config.json        ✅
 ├── package.json              ✅（npm scripts: test / test:coverage / test:e2e:* / check / verify / release:check）

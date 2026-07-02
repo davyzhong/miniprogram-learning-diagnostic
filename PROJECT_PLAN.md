@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序 — 项目开发计划
 
 **创建日期**: 2026-06-09
-**最后更新**: 2026-06-15
-**项目状态**: MVP 编码完成，常规自动化测试通过（636/636），JS 语法检查 217 文件通过，AI 用量专项 DevTools E2E 通过，待真机验收
+**最后更新**: 2026-07-02
+**项目状态**: MVP 编码完成，常规自动化测试通过（638/638），JS 语法检查 217 文件通过，AI 用量专项 DevTools E2E 通过，待真机验收
 **负责人**: qiming
 
 ---
@@ -19,6 +19,14 @@
 
 面向家长的轻量级学习诊断工具：拍照上传试卷 → AI 定位学习卡点 → 生成报告 → 出验证卷 → 上传作答反馈。
 
+### 1.2A 当前界面截图
+
+文档截图位于 `docs/user-guide/images/`，由匿名 mock 数据生成，可用于产品说明和验收对照：
+
+| 家庭工作台 | 学科工作台 | 诊断报告 |
+|---|---|---|
+| ![家庭工作台](docs/user-guide/images/01-family-workbench.png) | ![学科工作台](docs/user-guide/images/03-subject-workbench.png) | ![诊断报告](docs/user-guide/images/04-report.png) |
+
 ### 1.3 核心功能（V1）
 
 MVP 三条诊断路径：
@@ -33,8 +41,8 @@ MVP 三条诊断路径：
 
 | 功能 | 说明 |
 |------|------|
-| 个人学习工作台 | 个人插图、今日行动、最新诊断报告、行动队列和三科学科入口 |
-| 家庭工作台 / 学生管理 | 0/1/多孩子自适应入口，多孩子显示带图示总览的家庭工作台，单孩子直接进入个人学习工作台 |
+| 个人学习工作台 | 个人行动摘要、今日行动、最新诊断报告、行动队列和三科学科入口 |
+| 家庭工作台 / 学生管理 | 0/1/多孩子自适应入口，多孩子显示行动总览的家庭工作台，单孩子直接进入个人学习工作台 |
 | 家长成员管理 | owner 可邀请共同家长，共同家长除成员管理外具备学习流程操作权限 |
 | 学科工作台 | 数/语/英三科独立，学科页承接主任务、待处理队列和工具入口 |
 | 拍照上传 | 支持最多 20 张，支持 HEIF 转换或提示，上传即返回，分析异步进行 |
@@ -67,7 +75,7 @@ miniprogram-learning-diagnostic/
 │
 ├── miniprogram/                     # 小程序前端代码
 │   ├── app.js                       # 全局入口，初始化云开发（env: cloud1-d6gneg68m5a7a3876）
-│   ├── app.json                     # 全局配置（16 个页面路由）
+│   ├── app.json                     # 全局配置（20 个页面路由）
 │   ├── app.wxss                     # 全局样式
 │   ├── sitemap.json                 # 站点地图配置
 │   │
@@ -77,13 +85,11 @@ miniprogram-learning-diagnostic/
 │   │   └── poller.js                # 通用轮询器（createPoller）
 │   │
 │   ├── components/                  # 自定义组件目录（当前为空占位）
-│   ├── images/                      # 静态图片资源目录（当前为空占位）
 │   │
-│   └── pages/                       # 16 个注册页面
+│   └── pages/                       # 20 个注册页面
 │       ├── index/                   # Page 1：首页（空态/家庭工作台/单孩子分流）
 │       ├── student-profile/         # Page 1A：单孩子学习档案
 │       ├── add-student/             # 添加学生页（创建学生+三条学科档案）
-│       ├── subject-select/          # Page 2：学科入口（兼容路由）
 │       ├── subject-home/            # Page 3：学科工作台（主任务 + 待处理队列 + 工具）
 │       ├── upload/                  # Page 4：拍照上传（异步）
 │       ├── upload-history/          # Page 4A：学习记录时间线
@@ -92,10 +98,15 @@ miniprogram-learning-diagnostic/
 │       ├── report/                  # Page 6：诊断/验证报告（含 presenter）
 │       ├── bottleneck-center/       # Page 6A：学习卡点中心
 │       ├── bottleneck-detail/       # Page 6B：单卡点详情与证据链
-│       ├── english-practice/        # Page 6C：英语 20 词语音听写
+│       ├── knowledge-map/           # 数学知识地图
+│       ├── learning-resource/       # 学习资源包/任务包
+│       ├── english-practice/        # 英语认词练习
+│       ├── english-dictation/       # 英语纸面听写
+│       ├── english-wrong-words/     # 英语错词本
 │       ├── generate-verification/   # Page 7：验证试卷出卷配置器
 │       ├── default-paper/           # Page 8：默认诊断试卷选择
-│       └── paper-preview/           # Page 9：试卷预览/打印
+│       ├── paper-preview/           # Page 9：试卷预览/打印
+│       └── ai-usage/                # AI 用量账本、内测授权和数据删除入口
 │
 ├── cloudfunctions/                  # 云函数（后端，14 个）
 │   ├── uploadAndAnalyze/            # 入口：校验参数、创建 reports、后台触发 analyzePhotos
@@ -150,7 +161,7 @@ miniprogram-learning-diagnostic/
     └── superpowers/plans/           # 规划辅助材料
 ```
 
-**文件总数**: 217 个 JavaScript 文件（`npm run check` 校验），636 个常规自动化测试用例（`npm test`）。另有真实图片与 DevTools E2E 脚本，需按需单独运行。
+**文件总数**: 217 个 JavaScript 文件（`npm run check` 校验），638 个常规自动化测试用例（`npm test`）。另有真实图片与 DevTools E2E 脚本，需按需单独运行。
 
 ### 2.2 相关文件索引
 
@@ -174,7 +185,7 @@ miniprogram-learning-diagnostic/
 | 后端服务 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI 模型（图像） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI 模型（文本） | CloudBase AI `deepseek-v4-flash` | 用于 generatePaper 生成题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 12 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / learningResourcePacks |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 15 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / learningResourcePacks / aiUsageEvents / dataDeletionRequests / userConsents |
 | 图片存储 | 云开发云存储 | 试卷照片上传至云存储，生成临时 URL 供 AI 分析 |
 | PDF 生成 | pdfkit（云函数内） | 生成 A4 试卷/报告 PDF，上传云存储；云函数内置 Noto CJK 中文字体 |
 | 本地测试 | Node.js 内置 test runner | `npm test` 显式运行常规测试文件，真实图片 E2E 单独运行，无需 Jest/Mocha |
@@ -331,9 +342,8 @@ miniprogram-learning-diagnostic/
 
 | 页面 | 路径 | 参数 | 功能 |
 |------|------|------|------|
-| 首页 | `pages/index/index` | — | 学习档案首页：综合摘要、样本覆盖、重点提示、学习记录、下一步建议 |
+| 首页 | `pages/index/index` | — | 家庭学习工作台 / 单孩子个人学习工作台 |
 | 添加学生 | `pages/add-student/add-student` | — | 创建学生并同步生成三条学科档案 |
-| 学科入口 | `pages/subject-select/subject-select` | `?studentId=&name=&grade=` | 兼容路由：数/语/英三科卡片 |
 | 学科主页 | `pages/subject-home/subject-home` | `?studentId=&subject=&subjectName=&studentName=&grade=` | 学科工作台：主任务 + 待处理队列 + 工具入口 + 分析状态轮询 |
 | 拍照上传 | `pages/upload/upload` | `?mode=diagnosis\|verification\|paper&studentId=&subject=&paperId=` | 上传照片，最多 20 张；创建报告后立即返回 |
 | 学习记录 | `pages/upload-history/upload-history` | `?studentId=&subject=&subjectName=&studentName=` | 按天聚合报告、试卷、验证上传、照片、OCR 摘要和重复标记 |
@@ -342,7 +352,7 @@ miniprogram-learning-diagnostic/
 | 默认诊断试卷 | `pages/default-paper/default-paper` | `?studentId=&subject=&subjectName=&studentName=&grade=` | 选年级/套题 → 缓存复用或 AI 生成 |
 | 试卷预览/打印 | `pages/paper-preview/paper-preview` | `?paperId=` 或 `?fileId=&type=` | A4 预览 + 下载 PDF + 分享打印 + 跳转上传答题 |
 
-> 注：原"AI 分析中"独立页面已移除；分析状态在学科主页和报告页通过 `createPoller()` 每 10s 轮询展示。
+> 注：原"AI 分析中"独立页面和 `pages/subject-select/subject-select` 学科选择页已移除；分析状态在学科主页和报告页通过 `createPoller()` 每 10s 轮询展示。
 
 ---
 
@@ -432,13 +442,13 @@ System Prompt 包含：
 
 ---
 
-## 六、当前进度（2026-06-15 更新）
+## 六、当前进度（2026-07-02 更新）
 
 ### 6.1 已完成（代码 + 自动化测试）
 
 | 类别 | 状态 | 说明 |
 |------|------|------|
-| **前端页面（16个）** | ✅ | `index` / `student-profile` / `add-student` / `subject-select` / `subject-home` / `upload` / `upload-history` / `parent-management` / `join-student` / `report` / `bottleneck-center` / `bottleneck-detail` / `english-practice` / `generate-verification` / `default-paper` / `paper-preview`，全部四件套完整且 WXML 事件绑定正确 |
+| **前端页面（20个）** | ✅ | `index` / `student-profile` / `add-student` / `subject-home` / `upload` / `upload-history` / `parent-management` / `join-student` / `report` / `bottleneck-center` / `bottleneck-detail` / `knowledge-map` / `learning-resource` / `english-practice` / `english-dictation` / `english-wrong-words` / `generate-verification` / `default-paper` / `paper-preview` / `ai-usage`，全部四件套完整且 WXML 事件绑定正确 |
 | **云函数（14个）** | ✅ | `uploadAndAnalyze` / `analyzePhotos`（含 comparison.js、photo-dedup.js）/ `analyzeBatch`（含 result-normalizer.js）/ `getAnalysisProgress` / `studentAccess` / `studentData` / `generatePaper` / `regenerateVerificationPaper` / `generateReportPDF` / `reportFeedback` / `englishVocabulary` / `learningResource` / `reanalyzeMathHistory` / `aiUsage` |
 | **数据访问层** | ✅ | `utils/cloud.js` 封装学生/学科档案/报告/试卷/分析进度/云函数调用；无过时 photos 集合引用 |
 | **通用轮询器** | ✅ | `utils/poller.js` 支持 stop/onTimeout/异步 request，被 subject-home 与 report 使用 |
@@ -452,7 +462,7 @@ System Prompt 包含：
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 索引 + 字体 + 云函数部署） |
 | **学习卡点透出体系** | ✅ | 首页高优先级卡点、卡点中心、单卡点工作台和验证卷 `targetCode` 闭环已接通 |
 | **Skill / CLI P0** | ✅ | `services/skills` 和 `cli/ldx.js` 覆盖诊断、报告、卡点、验证卷、反馈和时间线能力 |
-| **自动化测试** | ✅ | 636 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、英语词库听写、AI 用量账本、工具函数、Skill/CLI 和覆盖缺口补全 |
+| **自动化测试** | ✅ | 638 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、英语词库听写、AI 用量账本、工具函数、Skill/CLI 和覆盖缺口补全 |
 | **端到端真实图片脚本** | ✅ | `tests/e2e-real-image.test.js` 单独运行，串通上传 → AI 分析 → 报告生成链路 |
 | **JS 语法检查** | ✅ | `npm run check` 校验 217 个文件 |
 | **学科隔离** | ✅ | 数/语/英三科独立档案，家庭页和个人页都提供可点击学科入口，单学科工作台承接具体操作 |
@@ -461,7 +471,7 @@ System Prompt 包含：
 | **试卷下载状态** | ✅ | `paper-preview` 对已下载 PDF 显示「已下载」，防止重复下载 |
 | **PDF 中文字体内置** | ✅ | `generatePaper` 与 `generateReportPDF` 使用函数目录内的 Noto CJK 字体，缺失时直接返回明确错误 |
 | **AI 模型通过 CloudBase AI 调用** | ✅ | `analyzeBatch` 与 `generatePaper` 使用 `@cloudbase/node-sdk`，不再读取 SECRET_ID/SECRET_KEY/AI_API_KEY |
-| **英语单词听写** | ✅ | 英语工作台改为个人词库掌握首页，`english-practice` 默认 20 词语音听写，AI 自动判定 correct/incorrect/unclear 并更新复测节奏 |
+| **英语词汇闭环** | ✅ | 英语工作台改为个人词库掌握首页，`english-practice` 做认词练习，`english-dictation` 做纸面听写与 OCR 批改，`english-wrong-words` 汇总错词与复测 |
 
 ### 6.2 待完成（部署 + 配置 + 真机验收）
 

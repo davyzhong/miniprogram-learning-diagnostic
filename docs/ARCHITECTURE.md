@@ -290,14 +290,13 @@ student-profile（孩子学习档案）
 join-student（扫码加入孩子档案）
   └── acceptInvite 成功后 → redirect/reLaunch → index 或 subject-home
 
-subject-select（学科入口兼容页）
-  └── navigateTo → subject-home（学科主页）
-
 subject-home（学科工作台）
   ├── navigateTo → upload?mode=diagnosis（拍照诊断）
   ├── navigateTo → generate-verification（生成验证试卷，可带 targetCode）
   ├── navigateTo → bottleneck-center（统计块/待处理/已改善入口）
   ├── navigateTo → default-paper（默认诊断试卷）
+  ├── navigateTo → knowledge-map / learning-resource（数学知识地图与学习资源）
+  ├── navigateTo → english-practice / english-dictation / english-wrong-words（英语词汇闭环）
   ├── navigateTo → upload-history（学习记录）
   ├── navigateTo → report?id=xxx（查看报告）
   └── navigateTo → report?id=currentAnalysisId（分析中报告）
@@ -336,6 +335,10 @@ bottleneck-detail（学习卡点详情）
   ├── navigateTo → report?id=xxx（证据报告）
   ├── navigateTo → paper-preview?paperId=xxx（关联验证卷）
   └── redirectTo → bottleneck-center（返回中心，避免回退栈绕路）
+
+ai-usage（AI 用量账本）
+  ├── callFunction aiUsage.getSummary / listEvents
+  └── callFunction aiUsage.getBetaAuth / setBetaAuth / requestDataDeletion
 ```
 
 ### 全局交互原则：信息即入口
@@ -366,14 +369,21 @@ bottleneck-detail（学习卡点详情）
 | `pages/add-student/add-student` | 新增学生 + 自动创建三科档案 | cloud.createStudentWithProfiles |
 | `pages/parent-management/parent-management` | 家长成员列表、生成扫码邀请、移除协同家长 | cloud.listStudentMembers, createStudentInvite, revokeStudentMember |
 | `pages/join-student/join-student` | 通过邀请扫码加入孩子档案 | cloud.getStudentInvite, acceptStudentInvite |
-| `pages/subject-select/subject-select` | 学科入口兼容页 | cloud.getSubjectProfiles, ensureSubjectProfile |
 | `pages/subject-home/subject-home` | 学科工作台：主任务、待处理队列、工具入口、状态轮询 | cloud.getSubjectProfile, getReports, getLatestReport, getAnalysisProgress; poller |
 | `pages/upload/upload` | 拍照/选图 + 上传 + 触发分析 | cloud.uploadPhoto, callUploadAndAnalyze, getReports |
 | `pages/upload-history/upload-history` | 学习记录时间线 | cloud.getLearningTimeline, getReports, getPapers, getTempFileURLs |
 | `pages/report/report` | 报告详情 + 分析进度轮询 + PDF 生成 | cloud.getReport, getSubjectProfile, getAnalysisProgress, callAnalyzePhotos, callGenerateReportPDF; poller |
+| `pages/bottleneck-center/bottleneck-center` | 学习卡点中心：筛选待验证、持续出现、复发和已改善卡点 | cloud.getStudentDashboard, callGeneratePaper |
+| `pages/bottleneck-detail/bottleneck-detail` | 单卡点详情：证据链、学习资源、验证入口 | cloud.getStudentDashboard, getReportDetail, generateLearningResourcePack |
+| `pages/knowledge-map/knowledge-map` | 数学知识地图：按知识层级展示掌握状态和学习入口 | cloud.getSubjectDashboard, generateLearningResourcePack |
+| `pages/learning-resource/learning-resource` | 学习资源包：读取/完成任务包并回写学习记录 | cloud.getLearningResourcePack, completeLearningResourcePack |
+| `pages/english-practice/english-practice` | 英语认词练习 | cloud.generateEnglishRecognitionSession, submitEnglishRecognitionAttempt, submitEnglishPracticeResult |
+| `pages/english-dictation/english-dictation` | 英语纸面听写与 OCR 批改 | cloud.generateEnglishPaperDictationSession, submitEnglishDictationPhoto, analyzeEnglishDictationPhoto |
+| `pages/english-wrong-words/english-wrong-words` | 英语错词本与复测入口 | cloud.getEnglishVocabularySummary |
 | `pages/generate-verification/generate-verification` | 出卷配置器：选择范围 → 分层展示覆盖卡点 → 生成验证试卷 | cloud.getSubjectProfile, callGeneratePaper |
 | `pages/default-paper/default-paper` | 选年级 → 生成/选择默认诊断试卷 | cloud.getPapers, callGeneratePaper |
 | `pages/paper-preview/paper-preview` | 预览/下载试卷 PDF，展示覆盖卡点层级，记录已下载状态 | cloud.getPaper, getStudent |
+| `pages/ai-usage/ai-usage` | AI 用量账本、内测授权和数据删除请求 | cloud.getAiUsageSummary, getAiUsageEvents, createDeletionRequest |
 
 ### 聚合读取与降级原则
 
@@ -439,14 +449,21 @@ bottleneck-detail（学习卡点详情）
 | add-student | createStudentWithProfiles |
 | parent-management | listStudentMembers, createStudentInvite, revokeStudentMember |
 | join-student | getStudentInvite, acceptStudentInvite |
-| subject-select | getSubjectProfiles, ensureSubjectProfile |
 | subject-home | getSubjectDashboard, getSubjectProfile, getReports, getLatestReport, getReport, getAnalysisProgress |
 | upload | getReports, uploadPhoto*, callUploadAndAnalyze |
 | upload-history | getLearningTimeline, getReports, getPapers, getTempFileURLs |
 | report | getReportDetail, getReport, getSubjectProfile, getAnalysisProgress, callAnalyzePhotos, callGenerateReportPDF |
+| bottleneck-center | getStudentDashboard, callGeneratePaper |
+| bottleneck-detail | getStudentDashboard, getReportDetail, generateLearningResourcePack |
+| knowledge-map | getSubjectDashboard, generateLearningResourcePack |
+| learning-resource | getLearningResourcePack, completeLearningResourcePack |
+| english-practice | generateEnglishRecognitionSession, submitEnglishRecognitionAttempt, submitEnglishPracticeResult |
+| english-dictation | generateEnglishPaperDictationSession, uploadPhoto, submitEnglishDictationPhoto, analyzeEnglishDictationPhoto |
+| english-wrong-words | getEnglishVocabularySummary |
 | generate-verification | getSubjectProfile, callGeneratePaper |
 | default-paper | getPapers, callGeneratePaper |
 | paper-preview | getPaperDetail, getPaper, getStudent |
+| ai-usage | getAiUsageSummary, getAiUsageEvents, createDeletionRequest |
 
 > *uploadPhoto 在 upload 页面内部使用 wx.cloud.uploadFile 直接上传，cloud.js 中的 uploadPhoto 封装了路径生成逻辑。
 

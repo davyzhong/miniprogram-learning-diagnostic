@@ -1,7 +1,7 @@
 # 学习诊断小程序测试框架设计 V2
 
-> 更新日期：2026-06-27
-> 基线：`npm test` / `npm run test:unit` 当前 636 个离线用例通过
+> 更新日期：2026-07-02
+> 基线：`npm test` / `npm run test:unit` 当前 638 个离线用例通过
 > 配套执行计划：`docs/TEST_STRATEGY_V2.md`
 
 ## 一、设计目标
@@ -101,7 +101,7 @@ npm run test:e2e:doctor
 
 | 套件 | 命令 | 说明 |
 |---|---|---|
-| core | `npm run test:e2e:core` | 17 个通用页面和基础跨页流程 |
+| core | `npm run test:e2e:core` | 核心通用页面和基础跨页流程 |
 | math | `npm run test:e2e:math` | 数学数据驱动诊断 + 知识地图 + 学习资源 |
 | chinese | `npm run test:e2e:chinese` | 语文工作台、诊断报告、错项复测出卷轻量链路 |
 | english | `npm run test:e2e:english` | 英语工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 |

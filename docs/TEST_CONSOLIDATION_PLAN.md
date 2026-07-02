@@ -5,6 +5,8 @@
 > **目标状态**：~200 个测试，~22 个文件
 > **原则**：每个测试必须能回答"它在保护什么风险"——答不上来的就删。
 
+> 2026-07-02 复核：本文是历史收敛计划，当前测试体系已升级为 V2，最新基线见 `docs/TESTING.md`、`docs/TEST_FRAMEWORK_DESIGN.md` 和 `docs/TEST_MATRIX.md`。当前常规自动化为 638 个用例，`subject-select` 页面已从 `app.json` 移除。
+
 ---
 
 ## 一、问题诊断
@@ -82,7 +84,7 @@
 | 新文件 | 用例数 | 内容 |
 |--------|:------:|------|
 | `index-and-profile-flows.test.js` | ~6 | add student、single/multi-child index、student profile |
-| `subject-and-workflow.test.js` | ~8 | subject-select、subject-home、english-practice、english-dictation |
+| `subject-and-workflow.test.js` | ~8 | subject-home、english-practice、english-dictation、english-wrong-words；`subject-select` 已下线，不再纳入新合并目标 |
 | `upload-and-paper-flows.test.js` | ~6 | upload、verification、default-paper、paper-preview |
 | `report-and-history-flows.test.js` | ~5 | report、upload-history、learning records |
 

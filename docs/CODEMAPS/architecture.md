@@ -1,6 +1,6 @@
 # Architecture
 
-<!-- Generated: 2026-06-25 | Files scanned: 254 | Token estimate: ~900 -->
+<!-- Generated: 2026-07-02 | Files scanned: 254 | Token estimate: ~900 -->
 
 ## 项目类型
 
@@ -11,16 +11,16 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    微信小程序前端                         │
-│  miniprogram/ (19 pages, 20 utils, 17471 lines JS)       │
+│  miniprogram/ (20 pages, 20 utils, 18290 lines JS)       │
 │  ├── 首页/学生档案/学科首页                                │
 │  ├── 拍照诊断 → 诊断报告                                  │
 │  ├── 验证卷生成/预览/下载（覆盖卡点层级展示）                 │
 │  ├── 知识地图/卡点中心/学习资源（细 targetId 任务包）          │
-│  └── 英语双功能（口语+听写）                               │
+│  └── 英语词汇闭环（认词+纸面听写+错词本）                    │
 └──────────────────────────┬──────────────────────────────┘
                            │ wx.cloud.callFunction
 ┌──────────────────────────▼──────────────────────────────┐
-│              CloudBase 云函数 (12,645 lines)              │
+│              CloudBase 云函数 (14,562 lines)              │
 │                                                          │
 │  诊断闭环：                                                │
 │  uploadAndAnalyze → analyzePhotos → analyzeBatch(AI)      │

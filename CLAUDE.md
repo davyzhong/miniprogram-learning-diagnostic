@@ -35,7 +35,7 @@ The test framework is **V2 (two categories)** — see `docs/TEST_STRATEGY_V2.md`
 | Pre-deployment readiness | `npm run check:deployment` |
 | Full pre-release gate | `npm run release:check` (deployment + verify + coverage) |
 
-`npm test` is now an **alias** of `npm run test:unit`; it no longer enumerates files inline. The `tests/` directory holds 56 `.test.js` files — ~567 unit tests, <3s. To add a new test file you still must list it in **both** `test:unit` and `test:coverage` in `package.json` (no glob).
+`npm test` is now an **alias** of `npm run test:unit`; it no longer enumerates files inline. The `tests/` directory holds 70 `.test.js` files; `test:unit` currently enumerates 62 files and passes 638 unit tests in the local baseline. To add a new test file you still must list it in **both** `test:unit` and `test:coverage` in `package.json` (no glob).
 
 **CLI E2E** (WeChat DevTools CLI + `miniprogram-automator`, organized **by subject**, output → `tmp/e2e/<suite>/report.json`). Not in `npm test`; require a running DevTools instance. Run `npm run test:e2e:doctor` first to verify the environment.
 
@@ -56,10 +56,10 @@ Deferred (not yet done): Chinese subject-specific DevTools scripts beyond the ba
 ## Architecture
 
 ```
-Mini Program (19 pages, WXML/WXSS/JS)
+Mini Program (20 pages, WXML/WXSS/JS)
     │  wx.cloud.callFunction()  /  direct wx.cloud.database() reads
     ▼
-CloudBase (serverless, 13 cloud functions)
+CloudBase (serverless, 14 cloud functions)
     ├─ uploadAndAnalyze   → creates report record, fire-and-forget starts analyzePhotos
     ├─ analyzePhotos      → splits into batches of 5, calls analyzeBatch serially, dedups, merges, writes report/profile
     │                        (also triggers auto-verification-paper record creation on report completion)
@@ -73,6 +73,7 @@ CloudBase (serverless, 13 cloud functions)
     ├─ reportFeedback     → parent feedback on reports, bottlenecks, errors, photos
     ├─ englishVocabulary  → personal word library, recognition/dictation practice, paper-dictation photo OCR
     ├─ learningResource   → per-subject resource generation (math map seeds, english vocab)
+    ├─ aiUsage            → AI usage ledger, private-beta consent, data deletion requests
     └─ reanalyzeMathHistory → re-runs analyzeBatch over historical math reports
 ```
 
@@ -236,7 +237,7 @@ When the user asks to sync / pull / align with GitHub, **GitHub is the source of
 - Default-paper caching (`default-paper.js`) is keyed per-student; cross-student reuse of the same grade/A-B template is not implemented.
 - A bottleneck is marked "improved" when a verification upload surfaces no errors for it — the system does not yet distinguish correct answers from blank/ambiguous/OCR-missed responses (this is a **forward constraint**, see 证据与状态判定 above — evidence must be recorded as blank/unclear/wrong/partial/correct separately).
 - WechatSI ASR transcribes but does not score — English oral scoring relies on parent/paper-OCR judgment, not voice confidence.
-- All page hero illustrations (`miniprogram/assets/images/*-hero.*`) were added then deleted in `57821ed`; `miniprogram/utils/page-illustrations.js` still exists but carries only `alt` text, no image paths. `README.md` still references the deleted `math-diagnostic-guide.jpg` (broken link).
+- All page hero illustrations (`miniprogram/assets/images/*-hero.*`) were added then deleted in `57821ed`; `miniprogram/utils/page-illustrations.js` still exists but carries only `alt` text, no image paths. Do not reintroduce static page hero assets into the miniprogram main package without re-checking the 2MB preview limit.
 
 ## Reference docs
 

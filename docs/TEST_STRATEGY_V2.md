@@ -26,7 +26,7 @@
 | 单元自动化测试 | `npm run test:unit` / `npm test` | 本地 Node.js | 云函数、Presenter、工具函数、数据层、合同、知识库一致性、诊断回归 | `node:test` 全部通过 |
 | 单元覆盖率 | `npm run test:coverage` | 本地 Node.js | 与单元自动化同源 | 行覆盖率和函数覆盖率达到 80% |
 | CLI E2E 环境检查 | `npm run test:e2e:doctor` | 微信开发者工具 CLI | CLI、项目配置、automator 可用性 | 退出码 0 |
-| CLI E2E 核心页面 | `npm run test:e2e:core` | 微信开发者工具 CLI | 17 页面 + 跨页基础流程 | 报告无失败页面 |
+| CLI E2E 核心页面 | `npm run test:e2e:core` | 微信开发者工具 CLI | 核心页面 + 跨页基础流程 | 报告无失败页面 |
 | CLI E2E 数学 | `npm run test:e2e:math` | 微信开发者工具 CLI | 数学工作台、诊断报告、细卡点、知识地图、资源、验证卷 | 报告无失败场景 |
 | CLI E2E 语文 | `npm run test:e2e:chinese` | 微信开发者工具 CLI | 语文错项复习和验证卷链路 | 初期允许指向核心页面占位，后续补专属脚本 |
 | CLI E2E 英语 | `npm run test:e2e:english` | 微信开发者工具 CLI | 英语工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 | 报告无失败用例 |

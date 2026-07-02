@@ -1,6 +1,6 @@
 # 测试指南（TESTING）
 
-> 更新日期：2026-06-27
+> 更新日期：2026-07-02
 > 适用对象：本项目的开发者与后续维护 agent
 > 配套文档：`docs/TEST_FRAMEWORK_DESIGN.md`、`docs/TEST_STRATEGY_V2.md`、`docs/TEST_MATRIX.md`
 
@@ -31,7 +31,7 @@ CLI E2E 使用：
 | 命令 | 用途 | 备注 |
 |---|---|---|
 | `npm test` | 运行全部单元自动化测试 | `npm run test:unit` 的别名 |
-| `npm run test:unit` | 运行全部离线测试 | 当前基线 636 个用例 |
+| `npm run test:unit` | 运行全部离线测试 | 当前基线 638 个用例 |
 | `npm run test:coverage` | 单元测试覆盖率 | 行/函数 80% 门槛 |
 | `npm run check` | JS 语法检查 | 扫描项目 JS 文件 |
 | `npm run verify` | 提交前本地门禁 | `test:unit + check` |
@@ -51,7 +51,7 @@ E2E 套件：
 
 | 命令 | 学科/范围 | 覆盖重点 | 输出目录 |
 |---|---|---|---|
-| `npm run test:e2e:core` | 通用核心页面 | 17 页面 + 基础跨页流程 | `tmp/e2e/core/` |
+| `npm run test:e2e:core` | 通用核心页面 | 核心页面 + 基础跨页流程 | `tmp/e2e/core/` |
 | `npm run test:e2e:math` | 数学 | 数据驱动诊断、细卡点、知识地图、学习资源 | `tmp/e2e/math-data/`、`tmp/e2e/math-knowledge-map/` |
 | `npm run test:e2e:chinese` | 语文 | 语文工作台、诊断报告、错项复测出卷页 | `tmp/e2e/chinese/` |
 | `npm run test:e2e:english` | 英语 | 工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 | `tmp/e2e/english/` |

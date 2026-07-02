@@ -16,7 +16,7 @@
 | 命令 | 结果 |
 | --- | --- |
 | `npm run check` | 通过，217 个 JavaScript 文件 |
-| `npm test` | 通过，636/636 |
+| `npm test` | 2026-06-27 原报告：通过，636/636；2026-07-02 复跑通过，638/638 |
 | `git diff --check` | 通过 |
 | `npm run test:e2e:doctor` | 通过，5/5 |
 | `npm run test:e2e:ai-usage` | 通过，5/5 |
