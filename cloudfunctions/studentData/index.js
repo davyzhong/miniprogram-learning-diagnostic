@@ -84,6 +84,23 @@ function withAccess(access, data = {}) {
   });
 }
 
+function publicFeedback(item = {}) {
+  return {
+    _id: item._id,
+    reportId: item.reportId,
+    studentId: item.studentId,
+    subject: item.subject,
+    type: item.type,
+    targetType: item.targetType,
+    targetId: item.targetId,
+    reason: item.reason,
+    note: item.note,
+    status: item.status,
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  };
+}
+
 async function getSubjectProfiles(studentId) {
   const res = await db.collection('subjectProfiles').where({ studentId }).get();
   return (res.data || []).sort((a, b) => toTime(b.updatedAt) - toTime(a.updatedAt));
@@ -588,6 +605,43 @@ async function cleanupStaleLearningRecords(openId, studentId, subjectValue, dryR
   });
 }
 
+async function getReportSubjectProfile(report) {
+  try {
+    const profileRes = await db.collection('subjectProfiles')
+      .where({ studentId: report.studentId, subject: normalizeSubject(report.subject) })
+      .limit(1)
+      .get();
+    return (profileRes.data || [])[0] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function getLinkedPaper(report) {
+  if (!report.paperId) return null;
+  try {
+    const paperRes = await db.collection('papers').doc(report.paperId).get();
+    return paperRes.data || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function getReportFeedbackItems(report) {
+  try {
+    const feedbackRes = await db.collection('reportFeedback')
+      .where({ reportId: report._id })
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get();
+    return (feedbackRes.data || []).map(publicFeedback);
+  } catch (error) {
+    if (isMissingCollectionError(error)) return [];
+    console.warn('[studentData] report feedback unavailable:', error && error.message ? error.message : error);
+    return [];
+  }
+}
+
 async function getReportDetail(openId, reportId) {
   if (!reportId) return failure('缺少 reportId');
   const reportRes = await db.collection('reports').doc(reportId).get();
@@ -595,31 +649,17 @@ async function getReportDetail(openId, reportId) {
   if (!report) return failure('报告不存在');
   const access = await getAccess(report.studentId, openId);
   if (!access.allowed) return failure('无权访问该学生');
-  let profile = null;
-  try {
-    const profileRes = await db.collection('subjectProfiles')
-      .where({ studentId: report.studentId, subject: normalizeSubject(report.subject) })
-      .limit(1)
-      .get();
-    profile = (profileRes.data || [])[0] || null;
-  } catch (e) {
-    profile = null;
-  }
+  const [profile, linkedPaper, feedback] = await Promise.all([
+    getReportSubjectProfile(report),
+    getLinkedPaper(report),
+    getReportFeedbackItems(report),
+  ]);
   const pendingCount = profile
     ? (Array.isArray(profile.currentBottlenecks)
       ? profile.currentBottlenecks.filter(item => item.status !== 'improved').length
       : (profile.pendingBottlenecks || []).length)
     : 0;
-  let linkedPaper = null;
-  if (report.paperId) {
-    try {
-      const paperRes = await db.collection('papers').doc(report.paperId).get();
-      linkedPaper = paperRes.data || null;
-    } catch (e) {
-      linkedPaper = null;
-    }
-  }
-  return withAccess(access, { student: access.student, report, linkedPaper, profile, pendingCount });
+  return withAccess(access, { student: access.student, report, linkedPaper, profile, pendingCount, feedback });
 }
 
 async function getPaperDetail(openId, paperId) {

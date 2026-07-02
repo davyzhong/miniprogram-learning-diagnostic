@@ -217,12 +217,12 @@ async function getReport(reportId) {
 
 async function getTempFileURLs(fileIDs) {
   const uniqueFileIDs = Array.from(new Set((fileIDs || []).filter(Boolean)))
-  const results = []
+  const chunks = []
   for (let i = 0; i < uniqueFileIDs.length; i += 50) {
-    const res = await wx.cloud.getTempFileURL({ fileList: uniqueFileIDs.slice(i, i + 50) })
-    results.push(...(res.fileList || []))
+    chunks.push(uniqueFileIDs.slice(i, i + 50))
   }
-  return results
+  const responses = await Promise.all(chunks.map(fileList => wx.cloud.getTempFileURL({ fileList })))
+  return responses.reduce((items, res) => items.concat(res.fileList || []), [])
 }
 
 async function getPapers(filter) {

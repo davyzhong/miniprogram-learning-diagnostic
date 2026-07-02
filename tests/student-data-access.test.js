@@ -34,6 +34,9 @@ function seedDatabase() {
     papers: [
       { _id: 'paper-1', _openid: 'owner-1', studentId: 'student-1', subject: 'math', type: 'verification', paperCode: 'MATH-20260613-01', paperDisplayCode: '数学-20260613-01', bottleneckTargets: ['LP-008'], bottleneckSummaries: ['审题理解'], questionCount: 6, pdfFileId: 'cloud://paper-1.pdf', createdAt: '2026-06-13T08:00:00Z' },
       { _id: 'other-paper', _openid: 'owner-2', studentId: 'student-2', subject: 'math', type: 'verification', createdAt: '2026-06-12T08:00:00Z' }
+    ],
+    reportFeedback: [
+      { _id: 'feedback-1', reportId: 'report-1', studentId: 'student-1', subject: 'math', targetType: 'bottleneck', targetId: 'LP-008', type: 'wrong_bottleneck', reason: '卡点需要复核', status: 'submitted', createdAt: '2026-06-13T10:00:00Z' }
     ]
   })
 }
@@ -91,6 +94,8 @@ test('viewer can read subject dashboard, report detail, paper detail and timelin
   assert.equal(report.report.summary, '发现审题理解卡点')
   assert.equal(report.profile.subject, 'math')
   assert.equal(report.pendingCount, 1)
+  assert.equal(report.feedback.length, 1)
+  assert.equal(report.feedback[0].targetId, 'LP-008')
 
   const verificationReport = await handler.main({ action: 'getReportDetail', reportId: 'report-2' })
   assert.equal(verificationReport.success, true)
