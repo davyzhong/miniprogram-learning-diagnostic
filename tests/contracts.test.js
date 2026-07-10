@@ -284,6 +284,28 @@ test('E2E test framework V2 package scripts expose unit and subject CLI suites',
   assert.equal(scripts['test:real-cloud'], 'npm run test:e2e:real-cloud')
 })
 
+test('core page performance timing waits for usable content instead of a fixed delay', () => {
+  const source = read('scripts/devtools-e2e-fullpage.js')
+  const start = source.indexOf('async function runPageAssertion')
+  const end = source.indexOf('async function runScenario')
+  const pageRunner = source.slice(start, end)
+
+  assert.ok(start >= 0 && end > start, 'page assertion runner should exist')
+  assert.match(pageRunner, /waitUntilPageReady\(page, spec\)/)
+  assert.doesNotMatch(pageRunner, /waitFor\(1500\)/)
+  assert.match(pageRunner, /readyMs/)
+  assert.match(pageRunner, /cloudCallCount/)
+  assert.match(pageRunner, /cloudPayloadBytes/)
+
+  const scripts = packageScripts()
+  assert.equal(scripts['perf:baseline'], 'node scripts/performance-report.js')
+
+  const performanceSource = read('scripts/performance-report.js')
+  assert.match(performanceSource, /coldSamples/)
+  assert.match(performanceSource, /warmSamples/)
+  assert.match(performanceSource, /PERF_SAMPLE_COUNT/)
+})
+
 test('E2E test framework V2 aggregator reads standardized tmp/e2e suite reports', () => {
   const source = read('scripts/e2e-report-aggregator.js')
 
