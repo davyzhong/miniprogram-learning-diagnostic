@@ -88,6 +88,7 @@ const pages = [
       text: ['家庭学习工作台', '钟青羽', '添加孩子'],
       notText: ['加载中', '页面不存在'],
       minChildren: 1,
+      maxCloudCalls: 1,
     },
   },
   {
@@ -352,6 +353,10 @@ async function installCloudMocks(miniProgram) {
         }
         if (name === 'studentData') {
           const a = data && data.action
+          if (a === 'getHomeDashboard') return { result: { success: true, children: [
+            { student: { ...student, role: 'owner', permissions }, role: 'owner', permissions, subjectProfiles, recentReports: reports.slice(0, 1), recentPapers: papers.slice(0, 1) },
+            { student: { ...student2, role: 'owner', permissions }, role: 'owner', permissions, subjectProfiles: [], recentReports: [], recentPapers: [] },
+          ] } }
           if (a === 'getStudentDashboard') return { result: { success: true, student, permissions, subjectProfiles, recentReports: reports, recentPapers: papers } }
           if (a === 'getSubjectDashboard') return { result: { success: true, student, permissions, profile: subjectProfiles[0], reports, papers } }
           if (a === 'getLearningTimeline') return { result: { success: true, student, permissions, reports, papers } }
@@ -379,6 +384,8 @@ async function installCloudMocks(miniProgram) {
       globalThis.__cloudCallMetrics.push({
         name: options && options.name || '',
         action: options && options.data && options.data.action || '',
+        success: result && result.result && result.result.success,
+        error: result && result.result && result.result.error || '',
         durationMs: Date.now() - startedAt,
         requestBytes,
         resultBytes,
@@ -408,6 +415,11 @@ async function installCloudMocks(miniProgram) {
   }, { student, student2, permissions: ownerPermissions, subjectProfiles, reports, papers, members })
 }
 
+async function settleBeforeHomeMeasurement(miniProgram) {
+  const page = await miniProgram.reLaunch('/pages/add-student/add-student')
+  await page.waitFor(250)
+}
+
 async function runPageAssertion(spec, miniProgram) {
   const entry = { name: spec.name, route: spec.route, status: 'PASS', assertions: [] }
   const t0 = Date.now()
@@ -422,11 +434,19 @@ async function runPageAssertion(spec, miniProgram) {
     await waitUntilPageReady(page, spec)
     entry.readyMs = Date.now() - t0
     const cloudMetrics = await miniProgram.evaluate(() => (globalThis.__cloudCallMetrics || []).slice())
+    entry.cloudCalls = cloudMetrics.map(item => ({ name: item.name, action: item.action, success: item.success, error: item.error }))
     entry.cloudCallCount = cloudMetrics.length
     entry.cloudDurationMs = cloudMetrics.reduce((sum, item) => sum + (Number(item.durationMs) || 0), 0)
     entry.cloudPayloadBytes = cloudMetrics.reduce((sum, item) => (
       sum + (Number(item.requestBytes) || 0) + (Number(item.resultBytes) || 0)
     ), 0)
+    if (Number.isFinite(spec.expect.maxCloudCalls)) {
+      if (entry.cloudCallCount > spec.expect.maxCloudCalls) {
+        entry.assertions.push({ name: 'maxCloudCalls', fail: `云调用 ${entry.cloudCallCount} 次，预算 ${spec.expect.maxCloudCalls} 次` })
+      } else {
+        entry.assertions.push({ name: 'maxCloudCalls', ok: `${entry.cloudCallCount}/${spec.expect.maxCloudCalls}` })
+      }
+    }
 
     // 1. 根节点存在
     const rootCheck = await safe(async () => {
@@ -590,6 +610,7 @@ async function main() {
     console.log(`系统: platform=${systemInfo.platform} SDK=${systemInfo.SDKVersion} model=${systemInfo.model}\n`)
 
     await installCloudMocks(miniProgram)
+    await settleBeforeHomeMeasurement(miniProgram)
 
     // === Phase 1: 单页加载 + 渲染断言 ===
     console.log('--- Phase 1: 单页加载 (17 页) ---')
@@ -662,6 +683,7 @@ module.exports = {
   pages,
   loadAutomator,
   installCloudMocks,
+  settleBeforeHomeMeasurement,
   runPageAssertion,
   waitUntilPageReady,
 }

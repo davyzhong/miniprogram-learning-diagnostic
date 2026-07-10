@@ -551,6 +551,72 @@ test('index shared dashboard path avoids duplicate legacy profile reads', async 
   assert.equal(page.data.students[0].totalReports, 2)
 })
 
+test('index loads every child through one home dashboard cloud call', async () => {
+  let homeCalls = 0
+  const cloud = {
+    getHomeDashboard: async () => {
+      homeCalls += 1
+      return {
+        children: [
+          {
+            student: { _id: 'student-1', name: '钟青羽', grade: 6, permissions: { canView: true } },
+            role: 'owner',
+            permissions: { canView: true, canManageParents: true, canUpload: true, canGeneratePaper: true },
+            subjectProfiles: [{ subject: 'math', totalReports: 2, currentBottlenecks: [] }],
+            recentReports: [],
+            recentPapers: []
+          },
+          {
+            student: { _id: 'student-2', name: '钟筱雨', grade: 3, permissions: { canView: true } },
+            role: 'viewer',
+            permissions: { canView: true, canManageParents: false, canUpload: true, canGeneratePaper: true },
+            subjectProfiles: [],
+            recentReports: [],
+            recentPapers: []
+          }
+        ]
+      }
+    },
+    getAccessibleStudents: async () => { throw new Error('legacy access must not run') },
+    getStudentDashboard: async () => { throw new Error('per-child dashboard must not run') },
+    getSubjectProfiles: async () => { throw new Error('legacy profiles must not run') },
+    getReports: async () => { throw new Error('legacy reports must not run') },
+    getPapers: async () => { throw new Error('legacy papers must not run') }
+  }
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.loadStudents()
+
+  assert.equal(homeCalls, 1)
+  assert.equal(page.data.students.length, 2)
+  assert.equal(page.data.homeMode, 'family-workbench')
+})
+
+test('index keeps an empty aggregate home response to one cloud call', async () => {
+  let homeCalls = 0
+  const cloud = {
+    getHomeDashboard: async () => {
+      homeCalls += 1
+      return { children: [] }
+    },
+    getStudents: async () => { throw new Error('empty aggregate response must not use legacy reads') }
+  }
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.loadStudents()
+
+  assert.equal(homeCalls, 1)
+  assert.equal(page.data.homeMode, 'empty')
+  assert.equal(page.data.loading, false)
+})
+
 test('index onShow reuses a fresh dashboard snapshot instead of refetching immediately', async () => {
   let accessibleCalls = 0
   let dashboardCalls = 0

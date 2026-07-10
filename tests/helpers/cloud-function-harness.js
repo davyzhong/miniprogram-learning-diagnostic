@@ -13,6 +13,7 @@ function matches(document, filter) {
     if (value && value.__queryOp === 'lte') return document[key] <= value.value
     if (value && value.__queryOp === 'gt') return document[key] > value.value
     if (value && value.__queryOp === 'gte') return document[key] >= value.value
+    if (value && value.__queryOp === 'in') return value.values.includes(document[key])
     return document[key] === value
   })
 }
@@ -85,6 +86,7 @@ function createDatabase(initial = {}, options = {}) {
         let selected = items.filter(item => matches(item, filter))
         let offset = 0
         let count = null
+        let projection = null
         const query = {
           orderBy(field, direction) {
             selected = selected.slice().sort((a, b) => {
@@ -102,8 +104,22 @@ function createDatabase(initial = {}, options = {}) {
             offset = Math.max(0, Number(nextOffset) || 0)
             return query
           },
+          field(fields) {
+            projection = fields
+            return query
+          },
           get: async () => ({
-            data: clone(selected.slice(offset, count === null ? undefined : offset + count))
+            data: clone(selected
+              .slice(offset, count === null ? undefined : offset + count)
+              .map(item => {
+                if (!projection) return item
+                const projected = {}
+                for (const [key, include] of Object.entries(projection)) {
+                  if (include && item[key] !== undefined) projected[key] = item[key]
+                }
+                if (projection._id !== false && item._id !== undefined) projected._id = item._id
+                return projected
+              }))
           })
         }
         return query
@@ -124,6 +140,7 @@ function createDatabase(initial = {}, options = {}) {
       lte: value => ({ __queryOp: 'lte', value }),
       gt: value => ({ __queryOp: 'gt', value }),
       gte: value => ({ __queryOp: 'gte', value }),
+      in: values => ({ __queryOp: 'in', values: clone(values || []) }),
       and: conditions => ({ __queryOp: 'and', conditions })
     },
     serverDate: () => new Date('2026-06-11T12:00:00+08:00'),

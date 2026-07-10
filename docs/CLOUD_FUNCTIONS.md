@@ -144,6 +144,7 @@ wx.cloud.callFunction({
 
 | action | 必填参数 | 返回重点 |
 | --- | --- | --- |
+| `getHomeDashboard` | 无 | `children[]`；每个孩子仅含基础档案、role/permissions、三科摘要、最新有效报告摘要和最新试卷摘要，不返回题目、图片或原始 AI 明细 |
 | `getStudentDashboard` | `studentId` | student、subjectProfiles、latestReport、latestPaper、recentReports、recentPapers |
 | `getSubjectDashboard` | `studentId`, `subject` | student、profile、reports、papers |
 | `getLearningTimeline` | `studentId`；`subject` 可选 | reports、papers、englishSessions、items 派生时间线 |
