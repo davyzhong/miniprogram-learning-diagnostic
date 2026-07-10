@@ -453,11 +453,10 @@ test('learning records render English familiarity and paper dictation sessions',
       type: 'word-familiarity',
       status: 'completed',
       wordItems: Array.from({ length: 20 }, (_, index) => ({ wordId: `word-${index}`, word: `word${index}` })),
-      attempts: [
-        { judgment: { status: 'correct' } },
-        { judgment: { status: 'incorrect' } },
-        { judgment: { status: 'unclear' } }
-      ],
+      attemptCount: 3,
+      correctAttemptCount: 1,
+      incorrectAttemptCount: 1,
+      unclearAttemptCount: 1,
       createdAt: '2026-06-16T09:00:00+08:00'
     },
     {

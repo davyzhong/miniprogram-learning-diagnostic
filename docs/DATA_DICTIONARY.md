@@ -15,6 +15,7 @@
 | `englishImportBatches` | 英语词库候选导入批次 | 导入 PEP 单词表图片或结构化候选时 | englishVocabulary 云函数 |
 | `studentEnglishWords` | 单个孩子的个人英语单词库 | 家长确认英语导入批次后 | englishVocabulary 云函数 |
 | `englishPracticeSessions` | 英语单词熟悉度、纸面听写会话和逐题/照片证据记录 | 开始英语练习时 | englishVocabulary 云函数 |
+| `englishPracticeAttempts` | 英语熟悉度与旧版逐题听写的独立作答记录 | 每次提交语音识别结果时 | englishVocabulary 云函数 |
 | `learningResourcePacks` | 数学学习卡点任务包 | 点击“学一下”生成或读取时 | learningResource 云函数 |
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
 | `analysisTasks` | 异步分析任务进度追踪 | analyzePhotos 启动时 | analyzePhotos 云函数 |
@@ -414,12 +415,33 @@ MVP 数学卡点当前包含：
 | `status` | String | `in_progress` \| `submitted` \| `completed` | `"in_progress"` |
 | `analysisStatus` | String | 纸面听写分析状态：`waiting_upload` \| `pending_analysis` \| `completed`；熟悉度会话可为空 | `"pending_analysis"` |
 | `wordItems` | Array\<Object\> | 本轮词队列，默认 20 个词，中文/英文提示约各半 | `[{ "word": "science" }]` |
-| `attempts` | Array\<Object\> | 逐题识别和 AI 判定记录 | 见下方 |
+| `attempts` | Array\<Object\> | 旧会话的逐题识别记录；新会话不再增长此数组 | 见下方 |
+| `attemptCount` | Number | 新会话的作答总数摘要，使用原子自增 | `20` |
+| `correctAttemptCount` | Number | 判定正确的作答数摘要 | `15` |
+| `incorrectAttemptCount` | Number | 判定错误的作答数摘要 | `3` |
+| `unclearAttemptCount` | Number | 无法确认的作答数摘要 | `2` |
 | `photoFileIds` | Array\<String\> | 纸面听写上传的答案照片 fileID | `["cloud://xxx"]` |
 | `dictationResults` | Array\<Object\> | 候选词约束 OCR 后的逐词批改结果，只服务纸面听写 | `[{ "targetWord": "science", "verdict": "correct" }]` |
 | `durationMs` | Number | 熟悉度逐题答题耗时或纸面听写整场耗时，静默记录用于后续区分不会/不熟/粗心 | `4200` |
 
-`attempts` 子结构：`wordId`、`targetWord`、`promptType`、`recognizedText`、`audioFileID`、`durationMs`、`judgment.status`（`correct/incorrect/unclear`）、`retryCount`、`reviewedAt`。`unclear` 只安排本轮重听，不更新正误计数。
+`attempts` 子结构仅用于兼容旧记录。2026-07-10 起，新逐题记录写入 `englishPracticeAttempts`，会话只保存固定大小的计数摘要，首屏历史查询不再返回持续增长的完整作答数组。
+
+#### englishPracticeAttempts
+
+| 字段名 | 类型 | 描述 | 示例值 |
+|--------|------|------|--------|
+| `_id` | String | 由客户端 attemptId 或稳定请求字段计算的唯一 ID，用于幂等去重 | `attempt_a1b2...` |
+| `attemptId` | String | 客户端幂等键；未提供时使用服务端生成的稳定键 | `session-1:word-1:0:0` |
+| `sessionId` | String | 关联 englishPracticeSessions._id | `session_xxx` |
+| `studentId` | String | 关联 students._id，并与会话和单词归属交叉校验 | `stu_xxx` |
+| `kind` | String | `recognition` \| `dictation` | `recognition` |
+| `wordId` | String | 本次作答对应的 studentEnglishWords._id | `word_xxx` |
+| `queueKey` | String | 本轮队列中的稳定题目标识 | `word_xxx:0:0` |
+| `judgment` | Object | 判定状态、原因和标准化识别结果 | `{ "status": "correct" }` |
+| `recognizedText` | String | 识别出的答案文本 | `science` |
+| `retryCount` | Number | 本轮重试序号 | `0` |
+| `reviewedAt` | String | 作答日期，`YYYY-MM-DD` | `2026-07-10` |
+| `createdAt` | Date | 作答记录创建时间 | `2026-07-10T08:00:00.000Z` |
 
 `dictationResults` 子结构：`queueKey`、`wordId`、`targetWord`、`recognizedText`、`verdict`（`correct/incorrect/unclear`）、`reason`、`confidence`、`editDistance`。缺失、空白、模糊或无法对应候选词的项统一落到 `unclear`；AI/OCR 返回后会用目标词和识别文本做确定性拼写复核，不直接信任 AI verdict。
 
@@ -625,6 +647,7 @@ MVP 数学卡点当前包含：
 | `englishImportBatches` | `studentId`, `status`, `createdAt` | 升序, 升序, 降序 | 英语候选词库导入和确认 |
 | `studentEnglishWords` | `studentId`, `masteryStatus`, `nextReviewAt` | 升序, 升序, 升序 | 英语听写抽取待练、错词和待复测词 |
 | `englishPracticeSessions` | `studentId`, `createdAt` | 升序, 降序 | 英语听写历史记录 |
+| `englishPracticeAttempts` | `sessionId`, `createdAt` | 升序, 降序 | 按需读取某次会话的逐题证据；首屏只使用会话摘要 |
 | `learningResourcePacks` | `studentId`, `subject`, `updatedAt` | 升序, 升序, 降序 | 学习卡点任务包列表和学习记录时间线 |
 | `aiUsageEvents` | `_openid`, `createdAt` | 升序, 降序 | AI 用量账单页按用户读取本月事件 |
 | `aiUsageEvents` | `studentId`, `createdAt` | 升序, 降序 | 维护者按孩子统计用量（预留） |

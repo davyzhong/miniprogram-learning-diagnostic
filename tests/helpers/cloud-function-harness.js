@@ -56,6 +56,11 @@ function createDatabase(initial = {}, options = {}) {
         assertCollectionExists(name)
         const items = getItems(name)
         const _id = data._id || `${name}-${nextId++}`
+        if (items.some(item => item._id === _id)) {
+          const error = new Error(`${name}/${_id} already exists`)
+          error.errCode = -502001
+          throw error
+        }
         items.push({ _id, ...clone(data) })
         return { _id }
       },
