@@ -52,6 +52,7 @@ E2E 套件：
 | 命令 | 学科/范围 | 覆盖重点 | 输出目录 |
 |---|---|---|---|
 | `npm run test:e2e:core` | 通用核心页面 | 核心页面 + 基础跨页流程 | `tmp/e2e/core/` |
+| `npm run perf:baseline` | 性能汇总 | 5 次清缓存重入 + 5 次暖重入的 P50/P90/P95 和阈值判断 | `tmp/e2e/performance-baseline/report.json` |
 | `npm run test:e2e:math` | 数学 | 数据驱动诊断、细卡点、知识地图、学习资源 | `tmp/e2e/math-data/`、`tmp/e2e/math-knowledge-map/` |
 | `npm run test:e2e:chinese` | 语文 | 语文工作台、诊断报告、错项复测出卷页 | `tmp/e2e/chinese/` |
 | `npm run test:e2e:english` | 英语 | 工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 | `tmp/e2e/english/` |

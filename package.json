@@ -18,6 +18,7 @@
     "test:e2e:real-image": "node tests/e2e-real-image.test.js",
     "test:e2e:real-cloud": "RUN_REAL_CLOUD=1 node --test tests/e2e-real-cloud.test.js",
     "test:e2e:fullpage": "npm run test:e2e:core",
+    "perf:baseline": "node scripts/performance-report.js",
     "test:e2e-real-image": "npm run test:e2e:real-image",
     "test:devtools-english": "npm run test:e2e:english",
     "test:devtools-parent-timeline": "node scripts/devtools-parent-timeline-e2e.js",

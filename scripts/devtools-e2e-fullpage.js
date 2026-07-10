@@ -273,6 +273,35 @@ async function pageText(page) {
   return (await root.text()).replace(/\s+/g, ' ')
 }
 
+async function waitUntilPageReady(page, spec, options = {}) {
+  const timeoutMs = Number(options.timeoutMs) || 8000
+  const pollMs = Number(options.pollMs) || 100
+  const deadline = Date.now() + timeoutMs
+  let lastState = { hasRoot: false, missing: [], forbidden: [], childCount: 0 }
+
+  while (Date.now() < deadline) {
+    const root = await page.$('.page')
+    const text = root ? await pageText(page) : ''
+    const expected = (spec.expect && spec.expect.text) || []
+    const forbiddenText = (spec.expect && spec.expect.notText) || []
+    const missing = expected.filter(item => !text.includes(item))
+    const forbidden = forbiddenText.filter(item => text.includes(item))
+    const children = spec.expect && spec.expect.minChildren
+      ? await page.$$('.child-card')
+      : []
+    const childCount = children.length
+    const childReady = !spec.expect || !spec.expect.minChildren || childCount >= spec.expect.minChildren
+
+    lastState = { hasRoot: Boolean(root), missing, forbidden, childCount }
+    if (root && missing.length === 0 && forbidden.length === 0 && childReady) {
+      return { text, childCount }
+    }
+    await page.waitFor(pollMs)
+  }
+
+  throw new Error(`页面在 ${timeoutMs}ms 内未就绪: ${JSON.stringify(lastState)}`)
+}
+
 async function tapByText(page, selector, text) {
   const els = await page.$$(selector)
   for (const el of els) {
@@ -302,6 +331,7 @@ async function installCloudMocks(miniProgram) {
     const { student, student2, permissions, subjectProfiles, reports, papers, members } = cfg
     globalThis.__pageErrors = []
     globalThis.__consoleErrors = []
+    globalThis.__cloudCallMetrics = []
     const origErr = console.error
     console.error = function (...args) {
       try {
@@ -338,6 +368,23 @@ async function installCloudMocks(miniProgram) {
         return { result: { success: false, error: 'mock throw' } }
       }
     }
+    const mockCallFunction = wx.cloud.callFunction
+    wx.cloud.callFunction = async options => {
+      const startedAt = Date.now()
+      const result = await mockCallFunction(options)
+      let requestBytes = 0
+      let resultBytes = 0
+      try { requestBytes = JSON.stringify(options && options.data || {}).length } catch {}
+      try { resultBytes = JSON.stringify(result && result.result || {}).length } catch {}
+      globalThis.__cloudCallMetrics.push({
+        name: options && options.name || '',
+        action: options && options.data && options.data.action || '',
+        durationMs: Date.now() - startedAt,
+        requestBytes,
+        resultBytes,
+      })
+      return result
+    }
 
     const base = { students: [student], subjectProfiles, reports, papers, studentMembers: members }
     const matchesFilter = (item, filter = {}) => !filter || Object.keys(filter).length === 0 || Object.keys(filter).every(k => item[k] === filter[k])
@@ -365,8 +412,21 @@ async function runPageAssertion(spec, miniProgram) {
   const entry = { name: spec.name, route: spec.route, status: 'PASS', assertions: [] }
   const t0 = Date.now()
   try {
+    await miniProgram.evaluate(() => {
+      globalThis.__pageErrors = []
+      globalThis.__consoleErrors = []
+      globalThis.__cloudCallMetrics = []
+    })
     const page = await miniProgram.reLaunch(spec.route)
-    await page.waitFor(1500)
+    entry.navigationMs = Date.now() - t0
+    await waitUntilPageReady(page, spec)
+    entry.readyMs = Date.now() - t0
+    const cloudMetrics = await miniProgram.evaluate(() => (globalThis.__cloudCallMetrics || []).slice())
+    entry.cloudCallCount = cloudMetrics.length
+    entry.cloudDurationMs = cloudMetrics.reduce((sum, item) => sum + (Number(item.durationMs) || 0), 0)
+    entry.cloudPayloadBytes = cloudMetrics.reduce((sum, item) => (
+      sum + (Number(item.requestBytes) || 0) + (Number(item.resultBytes) || 0)
+    ), 0)
 
     // 1. 根节点存在
     const rootCheck = await safe(async () => {
@@ -430,7 +490,9 @@ async function runPageAssertion(spec, miniProgram) {
     entry.status = 'ERROR'
     entry.assertions.push({ name: 'load', fail: e && (e.message || String(e)) })
   }
-  entry.durationMs = Date.now() - t0
+  entry.totalMs = Date.now() - t0
+  entry.assertionMs = Math.max(0, entry.totalMs - (entry.readyMs || entry.navigationMs || 0))
+  entry.durationMs = entry.readyMs || entry.totalMs
   return entry
 }
 
@@ -587,7 +649,19 @@ async function main() {
   process.exit(failed.length ? 1 : 0)
 }
 
-main().catch(err => {
-  console.error('执行异常:', err && (err.stack || err.message || String(err)))
-  process.exit(1)
-})
+if (require.main === module) {
+  main().catch(err => {
+    console.error('执行异常:', err && (err.stack || err.message || String(err)))
+    process.exit(1)
+  })
+}
+
+module.exports = {
+  cliPath,
+  projectPath,
+  pages,
+  loadAutomator,
+  installCloudMocks,
+  runPageAssertion,
+  waitUntilPageReady,
+}
