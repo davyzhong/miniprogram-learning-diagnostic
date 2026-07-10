@@ -87,14 +87,14 @@ The current CLI timings contain fixed waits and are suitable for coarse regressi
 - Test: `tests/ai-usage-ledger.test.js`
 - Modify: `docs/CLOUD_FUNCTIONS.md`
 
-- [ ] Add a test with more than 500 monthly events and assert totals include every event.
-- [ ] Add a boundary test proving events outside the Beijing month are excluded.
-- [ ] Run `node --test tests/ai-usage-ledger.test.js`; expect the >500 test to fail.
-- [ ] Replace the single `.limit(500)` query with cursor pagination, or maintain a transactionally updated monthly aggregate document.
-- [ ] Return aggregation metadata: `isComplete`, `eventCount`, and `aggregatedAt`.
-- [ ] Add a reconciliation helper test comparing aggregate output with raw events.
-- [ ] Run `npm test`; expect 638 existing tests plus the new tests to pass.
-- [ ] Commit: `fix: make monthly AI usage totals complete`.
+- [x] Add a test with more than 500 monthly events and assert totals include every event.
+- [x] Add a boundary test proving events outside the Beijing month are excluded.
+- [x] Run `node --test tests/ai-usage-ledger.test.js`; expect the >500 test to fail.
+- [x] Replace the single `.limit(500)` query with cursor pagination, or maintain a transactionally updated monthly aggregate document.
+- [x] Return aggregation metadata: `isComplete`, `eventCount`, and `aggregatedAt`.
+- [x] Add a reconciliation helper test comparing aggregate output with raw events.
+- [x] Run `npm test`; expect 638 existing tests plus the new tests to pass.
+- [x] Commit: `fix: make monthly AI usage totals complete`.
 
 ### Task 3: Make English Attempt Writes Bounded and Atomic
 

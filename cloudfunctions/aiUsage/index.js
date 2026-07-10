@@ -16,6 +16,7 @@ cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
 
 const MAX_EVENTS = 50
+const SUMMARY_PAGE_SIZE = 100
 const DELETION_SCOPES = new Set(['student_all', 'photos_only', 'usage_only'])
 const DELETION_NOTE_MAX = 300
 
@@ -125,18 +126,25 @@ async function listEvents(event, openId) {
 async function getSummary(event, openId) {
   if (!openId) return { success: false, error: '未登录' }
   const month = event.month || currentMonth()
-  let res
+  const events = []
+  let offset = 0
   try {
-    res = await db.collection('aiUsageEvents')
-      .where(monthFilter(openId, month))
-      .orderBy('createdAt', 'desc')
-      .limit(500)
-      .get()
+    while (true) {
+      const res = await db.collection('aiUsageEvents')
+        .where(monthFilter(openId, month))
+        .orderBy('createdAt', 'desc')
+        .skip(offset)
+        .limit(SUMMARY_PAGE_SIZE)
+        .get()
+      const page = (res.data || []).filter(item => inBeijingMonth(item, month))
+      events.push(...page)
+      if ((res.data || []).length < SUMMARY_PAGE_SIZE) break
+      offset += SUMMARY_PAGE_SIZE
+    }
   } catch (error) {
     if (isMissingCollectionError(error)) return emptySummary(month)
     throw error
   }
-  const events = (res.data || []).filter(item => inBeijingMonth(item, month))
   return aggregateSummary(events, month)
 }
 
@@ -147,9 +155,12 @@ function emptySummary(month) {
     totalTokens: 0,
     totalCostCny: 0,
     callCount: 0,
+    eventCount: 0,
     studentCount: 0,
     byEventType: [],
-    byModel: []
+    byModel: [],
+    isComplete: true,
+    aggregatedAt: new Date()
   }
 }
 
@@ -186,9 +197,12 @@ function aggregateSummary(events, month) {
     totalTokens,
     totalCostCny: round4(totalCostCny),
     callCount: events.length,
+    eventCount: events.length,
     studentCount: students.size,
     byEventType: Object.values(byEventTypeMap).sort((a, b) => b.totalCostCny - a.totalCostCny),
-    byModel: Object.values(byModelMap).sort((a, b) => b.totalCostCny - a.totalCostCny)
+    byModel: Object.values(byModelMap).sort((a, b) => b.totalCostCny - a.totalCostCny),
+    isComplete: true,
+    aggregatedAt: new Date()
   }
 }
 

@@ -1329,7 +1329,7 @@ AI 用量与成本估算账本、数据删除请求和内测授权。读操作�
 | action | 输入 | 输出 | 说明 |
 | --- | --- | --- | --- |
 | `listEvents` | `month?` (YYYY-MM) | `{ success, items, hasMore }` | 列出当前用户本月用量事件（最多 50 条，按 createdAt 倒序，按北京时间自然月过滤） |
-| `getSummary` | `month?` | `{ success, month, totalTokens, totalCostCny, callCount, studentCount, byEventType[], byModel[] }` | 聚合本月用量（按北京时间自然月过滤） |
+| `getSummary` | `month?` | `{ success, month, totalTokens, totalCostCny, callCount, eventCount, studentCount, byEventType[], byModel[], isComplete, aggregatedAt }` | 分页聚合本月全部用量（按北京时间自然月过滤） |
 | `createDeletionRequest` | `studentId?, scope, reason?` | `{ success, requestId }` | 发起数据删除请求（scope ∈ student_all/photos_only/usage_only） |
 | `getDeletionRequests` | — | `{ success, items[] }` | 查看自己的删除请求 |
 | `getBetaAuth` | — | `{ success, consented, consentedAt }` | 读取内测授权状态 |
