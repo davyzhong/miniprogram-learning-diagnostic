@@ -78,6 +78,8 @@ function createDatabase(initial = {}, options = {}) {
         assertCollectionExists(name)
         const items = getItems(name)
         let selected = items.filter(item => matches(item, filter))
+        let offset = 0
+        let count = null
         const query = {
           orderBy(field, direction) {
             selected = selected.slice().sort((a, b) => {
@@ -87,11 +89,17 @@ function createDatabase(initial = {}, options = {}) {
             })
             return query
           },
-          limit(count) {
-            selected = selected.slice(0, count)
+          limit(nextCount) {
+            count = Number(nextCount)
             return query
           },
-          get: async () => ({ data: clone(selected) })
+          skip(nextOffset) {
+            offset = Math.max(0, Number(nextOffset) || 0)
+            return query
+          },
+          get: async () => ({
+            data: clone(selected.slice(offset, count === null ? undefined : offset + count))
+          })
         }
         return query
       }
