@@ -1,5 +1,6 @@
 const cloud = require('wx-server-sdk')
 const tcb = require('@cloudbase/node-sdk')
+const crypto = require('node:crypto')
 const { getStudentAccess, canReadLearning, canOperateLearning } = require('./access')
 const {
   cleanText,
@@ -123,6 +124,45 @@ async function getDocument(name, id) {
 
 async function updateDocument(name, id, data) {
   return db.collection(name).doc(id).update({ data })
+}
+
+function attemptDocumentId(event, kind) {
+  const queueIdentity = cleanText(event.queueKey, 120) || `${event.wordId}:${Number(event.retryCount) || 0}`
+  const identity = cleanText(event.attemptId, 120) || [event.sessionId, queueIdentity, kind].join('|')
+  return `attempt_${crypto.createHash('sha256').update(identity).digest('hex').slice(0, 32)}`
+}
+
+async function claimAttempt(event, kind, attempt) {
+  const _id = attemptDocumentId(event, kind)
+  const document = {
+    _id,
+    attemptId: cleanText(event.attemptId, 120) || _id,
+    sessionId: event.sessionId,
+    studentId: event.studentId,
+    kind,
+    ...attempt
+  }
+  try {
+    await addDocument('englishPracticeAttempts', document)
+    return { claimed: true, attempt: document }
+  } catch (error) {
+    const existing = await getDocument('englishPracticeAttempts', _id)
+    if (existing) return { claimed: false, attempt: existing }
+    throw error
+  }
+}
+
+async function updateAttemptSummary(sessionId, judgment) {
+  const status = judgment && judgment.status
+  const data = {
+    status: 'in_progress',
+    attemptCount: db.command.inc(1),
+    updatedAt: nowDate()
+  }
+  if (status === 'correct') data.correctAttemptCount = db.command.inc(1)
+  else if (status === 'incorrect') data.incorrectAttemptCount = db.command.inc(1)
+  else data.unclearAttemptCount = db.command.inc(1)
+  await updateDocument('englishPracticeSessions', sessionId, data)
 }
 
 async function getVocabularySummaryCache(studentId, today) {
@@ -531,7 +571,10 @@ async function generatePracticeSession(event, openId) {
     status: 'in_progress',
     wordItems,
     patternItems: [],
-    attempts: [],
+    attemptCount: 0,
+    correctAttemptCount: 0,
+    incorrectAttemptCount: 0,
+    unclearAttemptCount: 0,
     createdAt: nowDate(),
     updatedAt: nowDate()
   })
@@ -557,7 +600,10 @@ async function generateRecognitionSession(event, openId) {
     status: 'in_progress',
     wordItems,
     patternItems: [],
-    attempts: [],
+    attemptCount: 0,
+    correctAttemptCount: 0,
+    incorrectAttemptCount: 0,
+    unclearAttemptCount: 0,
     createdAt: nowDate(),
     updatedAt: nowDate()
   })
@@ -803,9 +849,9 @@ async function submitRecognitionAttempt(event) {
   // IDOR 防御：用 session 自身的 studentId 反查权限
   const ownerAuth = await authorizeResourceOwner(session.studentId, event.studentId, true)
   if (!ownerAuth.allowed) return fail(ownerAuth.error)
-  const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
-  const word = words.find(item => item._id === event.wordId)
+  const word = await getDocument('studentEnglishWords', event.wordId)
   if (!word) return fail('单词不存在')
+  if (word.studentId !== session.studentId) return fail('单词归属与练习记录不匹配')
   const sessionItem = findSessionItem(session, event)
   if (!sessionItem) return fail('练习题目不存在')
 
@@ -833,6 +879,17 @@ async function submitRecognitionAttempt(event) {
     createdAt: nowDate()
   }
 
+  const claim = await claimAttempt(event, 'recognition', attempt)
+  if (!claim.claimed) {
+    const existingJudgment = claim.attempt.judgment || judgment
+    return ok({
+      judgment: existingJudgment,
+      shouldRepeat: existingJudgment.status !== 'correct',
+      attempt: claim.attempt,
+      duplicate: true
+    })
+  }
+
   if (judgment.status !== 'unclear') {
     const updated = applyWordDimensionAttempt(word, 'familiarity', {
       judgment,
@@ -853,17 +910,13 @@ async function submitRecognitionAttempt(event) {
     await markVocabularySummaryDirty(event.studentId)
   }
 
-  const attempts = [...(session.attempts || []), attempt]
-  await updateDocument('englishPracticeSessions', event.sessionId, {
-    status: 'in_progress',
-    attempts,
-    updatedAt: nowDate()
-  })
+  await updateAttemptSummary(event.sessionId, judgment)
 
   return ok({
     judgment,
     shouldRepeat: judgment.status !== 'correct',
-    attempt
+    attempt: claim.attempt,
+    duplicate: false
   })
 }
 
@@ -873,9 +926,9 @@ async function submitDictationAttempt(event) {
   // IDOR 防御：用 session 自身的 studentId 反查权限
   const ownerAuth = await authorizeResourceOwner(session.studentId, event.studentId, true)
   if (!ownerAuth.allowed) return fail(ownerAuth.error)
-  const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
-  const word = words.find(item => item._id === event.wordId)
+  const word = await getDocument('studentEnglishWords', event.wordId)
   if (!word) return fail('单词不存在')
+  if (word.studentId !== session.studentId) return fail('单词归属与练习记录不匹配')
 
   const judgment = judgeSpokenWord({
     targetWord: event.targetWord || word.word,
@@ -895,6 +948,17 @@ async function submitDictationAttempt(event) {
     createdAt: nowDate()
   }
 
+  const claim = await claimAttempt(event, 'dictation', attempt)
+  if (!claim.claimed) {
+    const existingJudgment = claim.attempt.judgment || judgment
+    return ok({
+      judgment: existingJudgment,
+      shouldRepeat: existingJudgment.status !== 'correct',
+      attempt: claim.attempt,
+      duplicate: true
+    })
+  }
+
   if (judgment.status !== 'unclear') {
     const updated = applyWordDictationAttempt(word, {
       judgment,
@@ -911,17 +975,13 @@ async function submitDictationAttempt(event) {
     await markVocabularySummaryDirty(event.studentId)
   }
 
-  const attempts = [...(session.attempts || []), attempt]
-  await updateDocument('englishPracticeSessions', event.sessionId, {
-    status: 'in_progress',
-    attempts,
-    updatedAt: nowDate()
-  })
+  await updateAttemptSummary(event.sessionId, judgment)
 
   return ok({
     judgment,
     shouldRepeat: judgment.status !== 'correct',
-    attempt
+    attempt: claim.attempt,
+    duplicate: false
   })
 }
 

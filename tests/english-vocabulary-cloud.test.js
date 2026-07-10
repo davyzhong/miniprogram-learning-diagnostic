@@ -295,7 +295,8 @@ test('submitting English dictation attempts uses AI judgment and updates word st
       studentId: 'student-1',
       status: 'in_progress',
       attempts: []
-    }]
+    }],
+    englishPracticeAttempts: []
   })
   const handler = loadEnglishVocabulary(db)
 
@@ -339,7 +340,8 @@ test('submitting English dictation attempts uses AI judgment and updates word st
   assert.equal(words.find(item => item._id === 'word-2').masteryStatus, 'needs_practice')
   assert.equal(words.find(item => item._id === 'word-2').wrongCount, 1)
   assert.equal(words.find(item => item._id === 'word-3').masteryStatus, 'untested')
-  assert.equal(db.dump('englishPracticeSessions')[0].attempts.length, 3)
+  assert.equal(db.dump('englishPracticeAttempts').length, 3)
+  assert.equal(db.dump('englishPracticeSessions')[0].attemptCount, 3)
 })
 
 test('English recognition sessions generate twenty familiarity words without updating progress', async () => {
@@ -398,6 +400,7 @@ test('submitting English recognition attempts updates only familiarity progress'
       attempts: [],
       wordItems: [{ queueKey: 'word-1:0:0', wordId: 'word-1', word: 'science', direction: 'en2cn' }]
     }],
+    englishPracticeAttempts: [],
     studentEnglishVocabularyStats: [{
       _id: 'stats-1',
       studentId: 'student-1',
@@ -435,8 +438,162 @@ test('submitting English recognition attempts updates only familiarity progress'
     lastTestedAt: '2026-06-15',
     nextReviewAt: '2026-06-16'
   })
-  assert.equal(db.dump('englishPracticeSessions')[0].attempts.length, 1)
+  assert.equal(db.dump('englishPracticeAttempts').length, 1)
+  assert.equal(db.dump('englishPracticeSessions')[0].attemptCount, 1)
   assert.equal(db.dump('studentEnglishVocabularyStats')[0].dirty, true)
+})
+
+test('English attempts load the requested word document instead of scanning the vocabulary', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [{
+      _id: 'word-1',
+      studentId: 'student-1',
+      word: 'science',
+      meanings: ['科学'],
+      masteryStatus: 'untested',
+      correctCount: 0,
+      wrongCount: 0
+    }],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      functionType: 'familiarity',
+      status: 'in_progress',
+      wordItems: [{ queueKey: 'word-1:0:0', wordId: 'word-1', word: 'science', direction: 'cn2en' }]
+    }],
+    englishPracticeAttempts: [],
+    studentEnglishVocabularyStats: []
+  })
+  const originalCollection = db.collection
+  db.collection = name => {
+    const collection = originalCollection(name)
+    if (name === 'studentEnglishWords') {
+      collection.where = () => {
+        throw new Error('studentEnglishWords must be loaded by document id')
+      }
+    }
+    return collection
+  }
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'submitRecognitionAttempt',
+    attemptId: 'attempt-direct-read',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    queueKey: 'word-1:0:0',
+    wordId: 'word-1',
+    direction: 'cn2en',
+    recognizedText: 'science'
+  })
+
+  assert.equal(result.success, true)
+})
+
+test('concurrent English attempts are stored separately without overwriting each other', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [
+      { _id: 'word-1', studentId: 'student-1', word: 'science', masteryStatus: 'untested', correctCount: 0, wrongCount: 0 },
+      { _id: 'word-2', studentId: 'student-1', word: 'museum', masteryStatus: 'untested', correctCount: 0, wrongCount: 0 }
+    ],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      status: 'in_progress',
+      attempts: []
+    }],
+    englishPracticeAttempts: [],
+    studentEnglishVocabularyStats: []
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const results = await Promise.all([
+    handler.main({
+      action: 'submitDictationAttempt',
+      attemptId: 'attempt-1',
+      studentId: 'student-1',
+      sessionId: 'session-1',
+      queueKey: 'word-1:0:0',
+      wordId: 'word-1',
+      recognizedText: 'science'
+    }),
+    handler.main({
+      action: 'submitDictationAttempt',
+      attemptId: 'attempt-2',
+      studentId: 'student-1',
+      sessionId: 'session-1',
+      queueKey: 'word-2:1:0',
+      wordId: 'word-2',
+      recognizedText: 'museum'
+    })
+  ])
+
+  assert.equal(results.every(result => result.success), true)
+  assert.equal(db.dump('englishPracticeAttempts').length, 2)
+  assert.equal(db.dump('englishPracticeSessions')[0].attemptCount, 2)
+})
+
+test('retrying the same English attempt is idempotent', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [{
+      _id: 'word-1',
+      studentId: 'student-1',
+      word: 'science',
+      masteryStatus: 'untested',
+      correctCount: 0,
+      wrongCount: 0
+    }],
+    englishPracticeSessions: [{ _id: 'session-1', studentId: 'student-1', status: 'in_progress', attempts: [] }],
+    englishPracticeAttempts: [],
+    studentEnglishVocabularyStats: []
+  })
+  const handler = loadEnglishVocabulary(db)
+  const event = {
+    action: 'submitDictationAttempt',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    queueKey: 'word-1:0:0',
+    wordId: 'word-1',
+    recognizedText: 'science',
+    reviewedAt: '2026-06-11T23:59:00+08:00'
+  }
+
+  const first = await handler.main(event)
+  const retry = await handler.main({ ...event, reviewedAt: '2026-06-12T00:01:00+08:00' })
+
+  assert.equal(first.success, true)
+  assert.equal(retry.success, true)
+  assert.equal(retry.duplicate, true)
+  assert.equal(db.dump('englishPracticeAttempts').length, 1)
+  assert.equal(db.dump('englishPracticeSessions')[0].attemptCount, 1)
+  assert.equal(db.dump('studentEnglishWords')[0].correctCount, 1)
+})
+
+test('English attempts reject a word owned by another student', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [{ _id: 'word-other', studentId: 'student-2', word: 'science' }],
+    englishPracticeSessions: [{ _id: 'session-1', studentId: 'student-1', status: 'in_progress', attempts: [] }],
+    englishPracticeAttempts: []
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'submitDictationAttempt',
+    attemptId: 'attempt-wrong-owner',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    queueKey: 'word-other:0:0',
+    wordId: 'word-other',
+    recognizedText: 'science'
+  })
+
+  assert.equal(result.success, false)
+  assert.match(result.error, /归属/)
+  assert.equal(db.dump('englishPracticeAttempts').length, 0)
 })
 
 test('English paper dictation sessions generate spelling words without updating progress', async () => {

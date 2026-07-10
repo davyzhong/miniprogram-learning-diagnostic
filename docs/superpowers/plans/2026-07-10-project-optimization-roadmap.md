@@ -105,15 +105,15 @@ The current CLI timings contain fixed waits and are suitable for coarse regressi
 - Test: `tests/english-vocabulary.test.js`
 - Modify: `docs/DATA_DICTIONARY.md`
 
-- [ ] Add a test proving recognition/dictation reads `studentEnglishWords.doc(wordId)` rather than the full student vocabulary.
-- [ ] Add a concurrent-attempt test that submits two attempts and preserves both.
-- [ ] Run the focused tests and verify they fail with the current implementation.
-- [ ] Load the word by document ID and reject it unless `word.studentId === session.studentId`.
-- [ ] Append attempts with an atomic database command or store attempts as separate `englishPracticeAttempts` documents keyed by session.
-- [ ] Keep mastery updates idempotent by adding an attempt ID and rejecting duplicates.
-- [ ] Rebuild session summaries from attempts without returning full attempt history on first paint.
-- [ ] Run `node --test tests/english-vocabulary*.test.js` and the English DevTools suite.
-- [ ] Commit: `perf: bound and atomically persist English attempts`.
+- [x] Add a test proving recognition/dictation reads `studentEnglishWords.doc(wordId)` rather than the full student vocabulary.
+- [x] Add a concurrent-attempt test that submits two attempts and preserves both.
+- [x] Run the focused tests and verify they fail with the current implementation.
+- [x] Load the word by document ID and reject it unless `word.studentId === session.studentId`.
+- [x] Append attempts with an atomic database command or store attempts as separate `englishPracticeAttempts` documents keyed by session.
+- [x] Keep mastery updates idempotent by adding an attempt ID and rejecting duplicates.
+- [x] Rebuild session summaries from attempts without returning full attempt history on first paint.
+- [x] Run `node --test tests/english-vocabulary*.test.js` and the English DevTools suite.
+- [x] Commit: `perf: bound and atomically persist English attempts`.
 
 ### Task 4: Add a Single Lightweight Home Dashboard Endpoint
 

@@ -350,9 +350,16 @@ function buildEnglishSessionEvent(session = {}, subjectName = '英语', urlByFil
   const isSpelling = session.functionType === 'spelling' || session.type === 'word-dictation-paper'
   const eventTime = sessionTimeOf(session)
   const wordCount = session.wordCount || (session.wordItems || []).length
-  const counts = isSpelling
-    ? countVerdicts(session.dictationResults || [], item => item.verdict)
-    : countVerdicts(session.attempts || [], item => item.judgment && item.judgment.status)
+  const hasAttemptSummary = !isSpelling && session.attemptCount !== undefined
+  const counts = hasAttemptSummary
+    ? {
+        correctCount: Number(session.correctAttemptCount) || 0,
+        incorrectCount: Number(session.incorrectAttemptCount) || 0,
+        unclearCount: Number(session.unclearAttemptCount) || 0
+      }
+    : (isSpelling
+        ? countVerdicts(session.dictationResults || [], item => item.verdict)
+        : countVerdicts(session.attempts || [], item => item.judgment && item.judgment.status))
   const hasResult = counts.correctCount + counts.incorrectCount + counts.unclearCount > 0
   const photoCount = (session.photoFileIds || []).length
   const title = isSpelling ? `${subjectName}纸面听写` : `${subjectName}单词熟悉度`
