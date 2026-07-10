@@ -71,6 +71,7 @@ async function collectBaselineSamples() {
     loadAutomator,
     installCloudMocks,
     runPageAssertion,
+    settleBeforeHomeMeasurement,
   } = require('./devtools-e2e-fullpage')
   const automator = loadAutomator()
   const indexSpec = pages.find(item => item.route === '/pages/index/index') || pages[0]
@@ -82,9 +83,11 @@ async function collectBaselineSamples() {
     for (let index = 0; index < PERF_SAMPLE_COUNT; index += 1) {
       await miniProgram.callWxMethod('clearStorageSync')
       await installCloudMocks(miniProgram)
+      await settleBeforeHomeMeasurement(miniProgram)
       coldSamples.push(await runPageAssertion(indexSpec, miniProgram))
     }
     for (let index = 0; index < PERF_SAMPLE_COUNT; index += 1) {
+      await settleBeforeHomeMeasurement(miniProgram)
       warmSamples.push(await runPageAssertion(indexSpec, miniProgram))
     }
   } finally {
@@ -95,8 +98,8 @@ async function collectBaselineSamples() {
   const report = {
     timestamp: new Date().toISOString(),
     measurement: 'event-driven home ready',
-    coldDefinition: 'storage-cleared relaunch in one DevTools process; first sample includes fresh automator launch',
-    warmDefinition: 'relaunch with retained storage and DevTools process',
+    coldDefinition: 'storage-cleared, neutral-route-isolated relaunch in one DevTools process',
+    warmDefinition: 'neutral-route-isolated relaunch with retained storage and DevTools process',
     sampleCount: PERF_SAMPLE_COUNT,
     coldSamples,
     warmSamples,

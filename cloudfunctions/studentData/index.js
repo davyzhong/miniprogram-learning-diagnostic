@@ -10,6 +10,7 @@ cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 
 const ACTIONS = new Set([
+  'getHomeDashboard',
   'getStudentDashboard',
   'getSubjectDashboard',
   'getLearningTimeline',
@@ -21,6 +22,8 @@ const ACTIONS = new Set([
 
 const STATUS_REPORT_STATES = new Set(['pending', 'uploading', 'analyzing', 'failed', 'timeout']);
 const STALE_STATUS_MS = 30 * 60 * 1000;
+const HOME_SUBJECTS = ['math', 'chinese', 'english'];
+const HOME_BATCH_LIMIT = 100;
 
 function success(data = {}) {
   return { success: true, ...data };
@@ -81,6 +84,136 @@ function withAccess(access, data = {}) {
     role: access.role,
     permissions: permissionsForRole(access.role),
     ...data,
+  });
+}
+
+function homeStudent(student, role) {
+  return {
+    _id: student._id,
+    name: student.name || '',
+    grade: student.grade || '',
+    avatarColor: student.avatarColor || '',
+    createdAt: student.createdAt || '',
+    updatedAt: student.updatedAt || '',
+    role,
+    permissions: permissionsForRole(role),
+  };
+}
+
+function homeReport(report = {}) {
+  return {
+    _id: report._id,
+    studentId: report.studentId,
+    subject: report.subject,
+    subjectName: report.subjectName || '',
+    type: report.type || '',
+    status: report.status || '',
+    isEffective: report.isEffective,
+    summary: report.summary || '',
+    comparisonSummary: report.comparisonSummary || '',
+    changeSummary: report.changeSummary || '',
+    bottlenecks: Array.isArray(report.bottlenecks) ? report.bottlenecks : [],
+    totalErrors: Number(report.totalErrors) || 0,
+    evidenceTime: report.evidenceTime || '',
+    createdAt: report.createdAt || '',
+  };
+}
+
+function homePaper(paper = {}) {
+  return {
+    _id: paper._id,
+    studentId: paper.studentId,
+    subject: paper.subject,
+    subjectName: paper.subjectName || '',
+    type: paper.type || '',
+    generationStatus: paper.generationStatus || '',
+    paperCode: paper.paperCode || '',
+    paperDisplayCode: paper.paperDisplayCode || '',
+    questionCount: Number(paper.questionCount) || 0,
+    totalPages: Number(paper.totalPages) || 0,
+    bottleneckSummaries: Array.isArray(paper.bottleneckSummaries) ? paper.bottleneckSummaries : [],
+    pdfFileId: paper.pdfFileId || '',
+    generatedAt: paper.generatedAt || '',
+    createdAt: paper.createdAt || '',
+  };
+}
+
+async function getAccessibleHomeStudents(openId) {
+  const [ownedRes, memberRes] = await Promise.all([
+    db.collection('students').where({ _openid: openId }).get(),
+    db.collection('studentMembers').where({ memberOpenId: openId, status: 'active' }).get()
+      .catch(error => (isMissingCollectionError(error) ? { data: [] } : Promise.reject(error))),
+  ]);
+  const byId = new Map((ownedRes.data || []).map(student => [student._id, { student, role: 'owner' }]));
+  const members = memberRes.data || [];
+  const memberByStudentId = new Map(members.map(member => [member.studentId, member]));
+  const joinedIds = Array.from(memberByStudentId.keys()).filter(studentId => !byId.has(studentId));
+  if (joinedIds.length > 0) {
+    const joinedRes = await db.collection('students').where({ _id: db.command.in(joinedIds) }).get();
+    for (const student of joinedRes.data || []) {
+      const member = memberByStudentId.get(student._id);
+      byId.set(student._id, { student, role: (member && member.role) || 'viewer' });
+    }
+  }
+  return Array.from(byId.values()).sort((a, b) => toTime(b.student.createdAt) - toTime(a.student.createdAt));
+}
+
+async function getHomeDashboard(openId) {
+  const accessible = await getAccessibleHomeStudents(openId);
+  if (accessible.length === 0) return success({ children: [] });
+  const studentIds = accessible.map(item => item.student._id);
+  const studentFilter = { studentId: db.command.in(studentIds) };
+  const [profilesRes, reportsRes, papersRes] = await Promise.all([
+    db.collection('subjectProfiles').where(studentFilter).field({
+      studentId: true, subject: true, subjectName: true, totalReports: true,
+      currentSummary: true, currentBottlenecks: true, pendingBottlenecks: true,
+      improvedBottlenecks: true, hidden: true, visible: true, updatedAt: true,
+    }).limit(HOME_BATCH_LIMIT).get(),
+    db.collection('reports').where(studentFilter).field({
+      studentId: true, subject: true, subjectName: true, type: true, status: true,
+      isEffective: true, summary: true, comparisonSummary: true, changeSummary: true,
+      bottlenecks: true, totalErrors: true, evidenceTime: true, createdAt: true,
+      isArchived: true, archivedAt: true,
+    }).orderBy('createdAt', 'desc').limit(HOME_BATCH_LIMIT).get(),
+    db.collection('papers').where(studentFilter).field({
+      studentId: true, subject: true, subjectName: true, type: true, generationStatus: true,
+      paperCode: true, paperDisplayCode: true, questionCount: true, totalPages: true,
+      bottleneckSummaries: true, pdfFileId: true, generatedAt: true, createdAt: true,
+    }).orderBy('createdAt', 'desc').limit(HOME_BATCH_LIMIT).get(),
+  ]);
+  const profiles = profilesRes.data || [];
+  const reports = visibleReports(reportsRes.data || []).map(homeReport);
+  const papers = (papersRes.data || []).map(homePaper);
+
+  return success({
+    children: accessible.map(({ student, role }) => {
+      const studentProfiles = profiles.filter(profile => profile.studentId === student._id);
+      const latestReport = reports.find(report => (
+        report.studentId === student._id
+        && report.status === 'completed'
+        && (report.isEffective === undefined || report.isEffective === true)
+      ));
+      const latestPaper = papers.find(paper => (
+        paper.studentId === student._id
+        && (paper.type === 'verification' || paper.paperDisplayCode || paper.paperCode)
+      ));
+      return {
+        student: homeStudent(student, role),
+        role,
+        permissions: permissionsForRole(role),
+        subjectProfiles: HOME_SUBJECTS.map(subject => (
+          studentProfiles.find(profile => profile.subject === subject) || {
+            studentId: student._id,
+            subject,
+            totalReports: 0,
+            currentSummary: '',
+            currentBottlenecks: [],
+          }
+        )),
+        recentReports: latestReport ? [latestReport] : [],
+        recentPapers: latestPaper ? [latestPaper] : [],
+      };
+    }),
   });
 }
 
@@ -745,6 +878,9 @@ exports.main = async (event = {}) => {
   }
 
   try {
+    if (action === 'getHomeDashboard') {
+      return getHomeDashboard(openId);
+    }
     if (action === 'getStudentDashboard') {
       return getStudentDashboard(openId, event.studentId, {
         includeRecent: event.includeRecent,

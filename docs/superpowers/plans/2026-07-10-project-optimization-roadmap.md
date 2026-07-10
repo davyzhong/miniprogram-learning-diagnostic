@@ -127,17 +127,17 @@ The current CLI timings contain fixed waits and are suitable for coarse regressi
 - Test: `tests/student-data-access.test.js`
 - Test: `tests/index-page-flows.test.js`
 
-- [ ] Define `getHomeDashboard` returning accessible students, role/permissions, three subject summaries, latest actionable report summary, and latest paper summary.
-- [ ] Add contract tests that forbid full `questions`, `errorDetails`, `pageResults`, and `imageFiles` fields in this response.
-- [ ] Add a two-owned/two-shared-child test and assert a bounded number of DB queries with no serial member loop.
-- [ ] Run focused tests and verify the endpoint is missing.
-- [ ] Batch joined student reads with `command.in` or a bounded `Promise.all` fallback.
-- [ ] Query lightweight report/paper projections for all accessible student IDs.
-- [ ] Switch the home page to one cloud call and retain its 30-second in-page cache.
-- [ ] Keep the legacy path behind a temporary feature flag for one release, then remove it in Task 10.
-- [ ] Run `npm test`, `npm run test:e2e:core`, and the new performance baseline.
-- [ ] Acceptance: one home cloud call for any tested child count; response payload budget passes.
-- [ ] Commit: `perf: aggregate lightweight family home data`.
+- [x] Define `getHomeDashboard` returning accessible students, role/permissions, three subject summaries, latest actionable report summary, and latest paper summary.
+- [x] Add contract tests that forbid full `questions`, `errorDetails`, `pageResults`, and `imageFiles` fields in this response.
+- [x] Add a two-owned/two-shared-child test and assert a bounded number of DB queries with no serial member loop.
+- [x] Run focused tests and verify the endpoint is missing.
+- [x] Batch joined student reads with `command.in` or a bounded `Promise.all` fallback.
+- [x] Query lightweight report/paper projections for all accessible student IDs.
+- [x] Switch the home page to one cloud call and retain its 30-second in-page cache.
+- [x] Keep the legacy path behind a temporary feature flag for one release, then remove it in Task 10.
+- [x] Run `npm test`, `npm run test:e2e:core`, and the new performance baseline.
+- [x] Acceptance: one home cloud call for any tested child count; response payload budget passes.
+- [x] Commit: `perf: aggregate lightweight family home data`.
 
 ### Task 5: Project Timeline Fields and Index the Hot Queries
 

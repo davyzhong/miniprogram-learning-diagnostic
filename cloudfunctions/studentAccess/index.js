@@ -195,11 +195,19 @@ async function getAccessibleStudents(openId) {
     byId.set(student._id, serializeStudent(student, 'owner'));
   }
 
-  for (const member of joinedMembers) {
-    if (byId.has(member.studentId)) continue;
-    const student = await getStudent(member.studentId);
-    if (!student) continue;
-    byId.set(member.studentId, serializeStudent(student, member.role || 'viewer'));
+  const joinedByStudentId = new Map(joinedMembers.map(member => [member.studentId, member]));
+  const joinedStudentIds = Array.from(joinedByStudentId.keys()).filter(studentId => !byId.has(studentId));
+  let joinedStudents = [];
+  if (joinedStudentIds.length > 0 && db.command && typeof db.command.in === 'function') {
+    const joinedRes = await db.collection('students').where({ _id: db.command.in(joinedStudentIds) }).get();
+    joinedStudents = joinedRes.data || [];
+  } else if (joinedStudentIds.length > 0) {
+    joinedStudents = (await Promise.all(joinedStudentIds.map(getStudent))).filter(Boolean);
+  }
+
+  for (const student of joinedStudents) {
+    const member = joinedByStudentId.get(student._id);
+    byId.set(student._id, serializeStudent(student, (member && member.role) || 'viewer'));
   }
 
   const students = Array.from(byId.values())

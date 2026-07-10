@@ -78,6 +78,77 @@ test('student dashboard can skip recent reports and papers for lightweight pages
   assert.deepEqual(JSON.parse(JSON.stringify(result.recentPapers)), [])
 })
 
+test('home dashboard batches owned and shared children into lightweight summaries', async () => {
+  const students = [
+    { _id: 'owned-1', _openid: 'viewer-1', name: '自有一', grade: 6, createdAt: '2026-06-04T00:00:00Z' },
+    { _id: 'owned-2', _openid: 'viewer-1', name: '自有二', grade: 5, createdAt: '2026-06-03T00:00:00Z' },
+    { _id: 'shared-1', _openid: 'owner-2', name: '共享一', grade: 4, createdAt: '2026-06-02T00:00:00Z' },
+    { _id: 'shared-2', _openid: 'owner-3', name: '共享二', grade: 3, createdAt: '2026-06-01T00:00:00Z' }
+  ]
+  const db = createDatabase({
+    students,
+    studentMembers: [
+      { _id: 'member-1', studentId: 'shared-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' },
+      { _id: 'member-2', studentId: 'shared-2', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }
+    ],
+    subjectProfiles: students.flatMap(student => ['math', 'chinese', 'english'].map(subject => ({
+      _id: `${student._id}-${subject}`,
+      studentId: student._id,
+      subject,
+      totalReports: 1,
+      currentSummary: `${subject} summary`,
+      currentBottlenecks: []
+    }))),
+    reports: students.map((student, index) => ({
+      _id: `report-${index}`,
+      studentId: student._id,
+      subject: 'math',
+      status: 'completed',
+      summary: '轻量报告',
+      bottlenecks: [],
+      questions: Array.from({ length: 100 }, () => ({ raw: 'must not leak' })),
+      errorDetails: [{ raw: 'must not leak' }],
+      pageResults: [{ raw: 'must not leak' }],
+      imageFiles: [{ fileID: 'cloud://must-not-leak' }],
+      createdAt: `2026-06-${String(index + 10).padStart(2, '0')}T00:00:00Z`
+    })),
+    papers: students.map((student, index) => ({
+      _id: `paper-${index}`,
+      studentId: student._id,
+      subject: 'math',
+      type: 'verification',
+      paperDisplayCode: `MATH-${index}`,
+      questionCount: 6,
+      questions: Array.from({ length: 100 }, () => ({ raw: 'must not leak' })),
+      createdAt: `2026-06-${String(index + 10).padStart(2, '0')}T01:00:00Z`
+    }))
+  })
+  let queryCount = 0
+  const originalCollection = db.collection
+  db.collection = name => {
+    const collection = originalCollection(name)
+    const originalWhere = collection.where
+    collection.where = filter => {
+      queryCount += 1
+      return originalWhere(filter)
+    }
+    return collection
+  }
+  const handler = loadStudentData(db, 'viewer-1')
+
+  const result = await handler.main({ action: 'getHomeDashboard' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.children.length, 4)
+  assert.equal(result.children.filter(child => child.role === 'owner').length, 2)
+  assert.equal(result.children.filter(child => child.role === 'viewer').length, 2)
+  assert.equal(result.children.every(child => child.subjectProfiles.length === 3), true)
+  assert.equal(queryCount <= 6, true, `expected at most 6 batched queries, got ${queryCount}`)
+  const json = JSON.stringify(result)
+  assert.doesNotMatch(json, /questions|errorDetails|pageResults|imageFiles|must not leak/)
+  assert.equal(Buffer.byteLength(json) < 64 * 1024, true)
+})
+
 test('viewer can read subject dashboard, report detail, paper detail and timeline', async () => {
   const db = seedDatabase()
   const handler = loadStudentData(db, 'viewer-1')

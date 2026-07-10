@@ -62,6 +62,8 @@ E2E 套件：
 | `npm run test:e2e:real-image` | 真实图片链路 | mock、单图或 manifest 图片诊断 | `tmp/e2e-real-image-report.json` |
 | `npm run test:e2e:real-cloud` | 真实云函数 | 真实云端 analyzeBatch 结构校验 | 需要 `RUN_REAL_CLOUD=1` |
 
+核心 E2E 对首页设置 `cloudCallCount <= 1` 的回归预算。`perf:baseline` 每个样本先切换到无云请求的中性页面，再重新进入首页，避免开发者工具启动时旧页面的异步请求污染调用数和载荷统计。
+
 兼容旧命令：
 
 | 旧命令 | 新命令 |

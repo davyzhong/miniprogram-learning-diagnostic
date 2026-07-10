@@ -295,6 +295,7 @@ test('core page performance timing waits for usable content instead of a fixed d
   assert.doesNotMatch(pageRunner, /waitFor\(1500\)/)
   assert.match(pageRunner, /readyMs/)
   assert.match(pageRunner, /cloudCallCount/)
+  assert.match(pageRunner, /maxCloudCalls/)
   assert.match(pageRunner, /cloudPayloadBytes/)
 
   const scripts = packageScripts()

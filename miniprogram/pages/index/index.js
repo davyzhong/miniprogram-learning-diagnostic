@@ -8,6 +8,7 @@ const { sharedNavigation, OWNER_PERMISSIONS } = require('../../utils/shared-navi
 
 const HOME_CACHE_TTL_MS = 30 * 1000
 const HOME_LOADING_TIMEOUT_MS = 12 * 1000
+const HOME_DASHBOARD_ENABLED = true
 
 function applyProfileStats(viewModel, profiles) {
   let totalReports = 0
@@ -101,8 +102,25 @@ Page({
     try {
       let students = []
       let usedSharedAccess = false
+      let homeDashboardChildren = null
+      if (HOME_DASHBOARD_ENABLED && typeof cloud.getHomeDashboard === 'function') {
+        try {
+          const dashboard = await cloud.getHomeDashboard()
+          homeDashboardChildren = dashboard.children || []
+          students = homeDashboardChildren.map(child => ({
+            ...(child.student || {}),
+            role: child.role,
+            permissions: child.permissions || (child.student && child.student.permissions) || {}
+          }))
+          usedSharedAccess = true
+        } catch (error) {
+          console.warn('聚合首页不可用，回退到兼容读取', error && error.message ? error.message : error)
+        }
+      }
       try {
-        if (typeof cloud.getAccessibleStudents === 'function') {
+        if (homeDashboardChildren) {
+          // The aggregate endpoint already returned every accessible child.
+        } else if (typeof cloud.getAccessibleStudents === 'function') {
           usedSharedAccess = true
           students = await cloud.getAccessibleStudents()
         } else {
@@ -112,7 +130,7 @@ Page({
         console.warn('共享档案入口不可用，回退到旧档案读取', error && error.message ? error.message : error)
         students = typeof cloud.getStudents === 'function' ? await cloud.getStudents() : []
       }
-      if (usedSharedAccess && !students.length && typeof cloud.getStudents === 'function') {
+      if (!homeDashboardChildren && usedSharedAccess && !students.length && typeof cloud.getStudents === 'function') {
         students = await cloud.getStudents()
       }
       if (!students.length) {
@@ -151,7 +169,16 @@ Page({
       const papersByStudentId = {}
       const permissionsByStudentId = {}
 
-      if (typeof cloud.getStudentDashboard === 'function') {
+      ;(homeDashboardChildren || []).forEach(child => {
+        const studentId = child.student && child.student._id
+        if (!studentId) return
+        profileLists[studentId] = child.subjectProfiles || []
+        reportsByStudentId[studentId] = child.recentReports || []
+        papersByStudentId[studentId] = child.recentPapers || []
+        permissionsByStudentId[studentId] = child.permissions || child.student.permissions || OWNER_PERMISSIONS
+      })
+
+      if (!homeDashboardChildren && typeof cloud.getStudentDashboard === 'function') {
         await Promise.all(viewModels.map(async student => {
           try {
             const dashboard = await cloud.getStudentDashboard(student._id)
