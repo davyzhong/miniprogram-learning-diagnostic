@@ -419,7 +419,7 @@ MVP 数学卡点当前包含：
 | `dictationResults` | Array\<Object\> | 候选词约束 OCR 后的逐词批改结果，只服务纸面听写 | `[{ "targetWord": "science", "verdict": "correct" }]` |
 | `durationMs` | Number | 熟悉度逐题答题耗时或纸面听写整场耗时，静默记录用于后续区分不会/不熟/粗心 | `4200` |
 
-`attempts` 子结构：`wordId`、`targetWord`、`promptType`、`recognizedText`、`audioFileID`、`durationMs`、`judgment.status`（`correct/incorrect/unclear`）、`retryCount`、`reviewedAt`。`unclear` 只安排本轮重听，不更新正误计数。
+`attempts` 子结构：`attemptId`（幂等键，格式 `att-{sessionId}-{wordId}-{timestamp}-{random}`）、`wordId`、`targetWord`、`promptType`、`recognizedText`、`audioFileID`、`durationMs`、`judgment.status`（`correct/incorrect/unclear`）、`retryCount`、`reviewedAt`。`unclear` 只安排本轮重听，不更新正误计数。每次提交通过 `db.command.push` 原子追加，避免并发覆盖。
 
 `dictationResults` 子结构：`queueKey`、`wordId`、`targetWord`、`recognizedText`、`verdict`（`correct/incorrect/unclear`）、`reason`、`confidence`、`editDistance`。缺失、空白、模糊或无法对应候选词的项统一落到 `unclear`；AI/OCR 返回后会用目标词和识别文本做确定性拼写复核，不直接信任 AI verdict。
 

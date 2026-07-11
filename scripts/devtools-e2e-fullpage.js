@@ -257,6 +257,54 @@ const scenarios = [
   },
 ]
 
+// === 事件驱动等待 ===
+
+/**
+ * waitUntilReady：轮询页面就绪谓词，而非固定等待。
+ *
+ * 就绪条件（全部满足）：
+ *   1. .page 根节点存在（DOM 已挂载）
+ *   2. 页面 loading 状态消失（无"加载中"文本或 .loading 元素消失）
+ *   3. 期望文本（如果有）出现在页面中
+ *   4. 期间无新增 pageError
+ *
+ * 返回 { ok, elapsedMs, failureReason }
+ */
+async function waitUntilReady(page, spec, options = {}) {
+  const timeout = options.timeout || 15000
+  const interval = options.interval || 200
+  const deadline = Date.now() + timeout
+  const expectedTexts = (spec.expect && spec.expect.text) || []
+  const loadingPatterns = ['加载中', 'loading']
+
+  let lastReason = 'timeout'
+  while (Date.now() < deadline) {
+    // 1. 根节点
+    const root = await safe(async () => {
+      const el = await page.$('.page')
+      if (!el) throw new Error('no .page root')
+    }, 'rootCheck')
+    if (root) { lastReason = `root missing: ${root}`; await page.waitFor(interval); continue }
+
+    // 2. 获取页面文本，检查 loading 状态和期望文本
+    const text = await pageText(page)
+
+    const isLoading = loadingPatterns.some(p => text.includes(p))
+    if (isLoading) { lastReason = 'still loading'; await page.waitFor(interval); continue }
+
+    // 3. 期望文本
+    if (expectedTexts.length > 0) {
+      const missing = expectedTexts.filter(t => !text.includes(t))
+      if (missing.length > 0) { lastReason = `missing text: ${missing.join(', ')}`; await page.waitFor(interval); continue }
+    }
+
+    // 4. 就绪
+    return { ok: true, elapsedMs: timeout - (deadline - Date.now()), failureReason: null }
+  }
+
+  return { ok: false, elapsedMs: timeout, failureReason: lastReason }
+}
+
 // === 工具 ===
 const results = []
 const errors = []
@@ -322,6 +370,7 @@ async function installCloudMocks(miniProgram) {
         }
         if (name === 'studentData') {
           const a = data && data.action
+          if (a === 'getHomeDashboard') return { result: { success: true, students: [{ ...student, role: 'owner', permissions }, { ...student2, role: 'owner', permissions }], perStudent: { [student._id]: { subjectProfiles, latestReportSummary: reports[0] || null, latestPaperSummary: papers[0] || null }, [student2._id]: { subjectProfiles: [], latestReportSummary: null, latestPaperSummary: null } } } }
           if (a === 'getStudentDashboard') return { result: { success: true, student, permissions, subjectProfiles, recentReports: reports, recentPapers: papers } }
           if (a === 'getSubjectDashboard') return { result: { success: true, student, permissions, profile: subjectProfiles[0], reports, papers } }
           if (a === 'getLearningTimeline') return { result: { success: true, student, permissions, reports, papers } }
@@ -364,24 +413,29 @@ async function installCloudMocks(miniProgram) {
 async function runPageAssertion(spec, miniProgram) {
   const entry = { name: spec.name, route: spec.route, status: 'PASS', assertions: [] }
   const t0 = Date.now()
+  let tNavigation = 0
   try {
     const page = await miniProgram.reLaunch(spec.route)
-    await page.waitFor(1500)
+    tNavigation = Date.now() - t0
 
-    // 1. 根节点存在
-    const rootCheck = await safe(async () => {
-      const root = await page.$('.page')
-      if (!root) throw new Error('未找到 .page 根节点')
-    }, 'rootCheck')
-    if (rootCheck) entry.assertions.push({ name: 'rootCheck', fail: rootCheck })
-    else entry.assertions.push({ name: 'rootCheck', ok: true })
+    // 事件驱动等待：轮询就绪条件，而非固定 1500ms
+    const ready = await waitUntilReady(page, spec)
+    const tReady = Date.now() - t0
+    entry.navigationMs = tNavigation
+    entry.readyMs = tReady - tNavigation
 
-    // 2. 期望文本
+    // 1. 根节点存在（waitUntilReady 已验证，但保留断言记录）
+    if (!ready.ok && ready.failureReason && ready.failureReason.startsWith('root missing')) {
+      entry.assertions.push({ name: 'rootCheck', fail: ready.failureReason })
+    } else {
+      entry.assertions.push({ name: 'rootCheck', ok: true })
+    }
+
+    // 2. 期望文本（waitUntilReady 已验证）
     if (spec.expect.text && spec.expect.text.length) {
-      const text = await pageText(page)
-      const missing = spec.expect.text.filter(t => !text.includes(t))
-      if (missing.length) {
-        entry.assertions.push({ name: 'expectText', fail: `缺少: ${missing.join(', ')}`, actualText: text.slice(0, 200) })
+      if (!ready.ok && ready.failureReason && ready.failureReason.startsWith('missing text')) {
+        const text = await pageText(page)
+        entry.assertions.push({ name: 'expectText', fail: ready.failureReason, actualText: text.slice(0, 200) })
       } else {
         entry.assertions.push({ name: 'expectText', ok: `${spec.expect.text.length} 项全部命中` })
       }

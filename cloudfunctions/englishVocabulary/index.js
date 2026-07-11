@@ -803,9 +803,9 @@ async function submitRecognitionAttempt(event) {
   // IDOR 防御：用 session 自身的 studentId 反查权限
   const ownerAuth = await authorizeResourceOwner(session.studentId, event.studentId, true)
   if (!ownerAuth.allowed) return fail(ownerAuth.error)
-  const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
-  const word = words.find(item => item._id === event.wordId)
-  if (!word) return fail('单词不存在')
+  // 有界读取：只拉取目标 word 文档，而非整个学生词汇库
+  const word = await getDocument('studentEnglishWords', event.wordId)
+  if (!word || word.studentId !== event.studentId) return fail('单词不存在')
   const sessionItem = findSessionItem(session, event)
   if (!sessionItem) return fail('练习题目不存在')
 
@@ -818,7 +818,9 @@ async function submitRecognitionAttempt(event) {
     recognizedText: event.recognizedText
   })
   const reviewedAt = event.reviewedAt || new Date()
+  const attemptId = `att-${event.sessionId}-${event.wordId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const attempt = {
+    attemptId,
     queueKey: cleanText(event.queueKey || sessionItem.queueKey, 120),
     wordId: word._id,
     targetWord: word.word,
@@ -853,11 +855,14 @@ async function submitRecognitionAttempt(event) {
     await markVocabularySummaryDirty(event.studentId)
   }
 
-  const attempts = [...(session.attempts || []), attempt]
-  await updateDocument('englishPracticeSessions', event.sessionId, {
-    status: 'in_progress',
-    attempts,
-    updatedAt: nowDate()
+  // 原子追加：用 db.command.push 避免全量替换导致的并发覆盖
+  const _ = db.command
+  await db.collection('englishPracticeSessions').doc(event.sessionId).update({
+    data: {
+      status: 'in_progress',
+      attempts: _.push(attempt),
+      updatedAt: nowDate()
+    }
   })
 
   return ok({
@@ -873,16 +878,18 @@ async function submitDictationAttempt(event) {
   // IDOR 防御：用 session 自身的 studentId 反查权限
   const ownerAuth = await authorizeResourceOwner(session.studentId, event.studentId, true)
   if (!ownerAuth.allowed) return fail(ownerAuth.error)
-  const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
-  const word = words.find(item => item._id === event.wordId)
-  if (!word) return fail('单词不存在')
+  // 有界读取：只拉取目标 word 文档，而非整个学生词汇库
+  const word = await getDocument('studentEnglishWords', event.wordId)
+  if (!word || word.studentId !== event.studentId) return fail('单词不存在')
 
   const judgment = judgeSpokenWord({
     targetWord: event.targetWord || word.word,
     recognizedText: event.recognizedText
   })
   const reviewedAt = event.reviewedAt || new Date()
+  const attemptId = `att-${event.sessionId}-${event.wordId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const attempt = {
+    attemptId,
     queueKey: cleanText(event.queueKey, 120),
     wordId: word._id,
     targetWord: word.word,
@@ -911,11 +918,14 @@ async function submitDictationAttempt(event) {
     await markVocabularySummaryDirty(event.studentId)
   }
 
-  const attempts = [...(session.attempts || []), attempt]
-  await updateDocument('englishPracticeSessions', event.sessionId, {
-    status: 'in_progress',
-    attempts,
-    updatedAt: nowDate()
+  // 原子追加：用 db.command.push 避免全量替换导致的并发覆盖
+  const _ = db.command
+  await db.collection('englishPracticeSessions').doc(event.sessionId).update({
+    data: {
+      status: 'in_progress',
+      attempts: _.push(attempt),
+      updatedAt: nowDate()
+    }
   })
 
   return ok({

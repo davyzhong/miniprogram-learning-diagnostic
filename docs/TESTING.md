@@ -31,7 +31,7 @@ CLI E2E 使用：
 | 命令 | 用途 | 备注 |
 |---|---|---|
 | `npm test` | 运行全部单元自动化测试 | `npm run test:unit` 的别名 |
-| `npm run test:unit` | 运行全部离线测试 | 当前基线 638 个用例 |
+| `npm run test:unit` | 运行全部离线测试 | 当前基线 662 个用例 |
 | `npm run test:coverage` | 单元测试覆盖率 | 行/函数 80% 门槛 |
 | `npm run check` | JS 语法检查 | 扫描项目 JS 文件 |
 | `npm run verify` | 提交前本地门禁 | `test:unit + check` |
@@ -223,7 +223,25 @@ assert.ok(wx.calls.some(call => call.name === 'setNavigationBarTitle'))
 - 单个测试文件过大时，按业务域拆分。
 - 发现 bug 后先写失败测试，再修复。
 
-## 9. CI 与发布
+## 9. 性能基线
+
+E2E 核心套件使用事件驱动等待（`waitUntilReady`）替代固定延迟。每个页面记录：
+
+- `navigationMs`：`reLaunch` 到页面 DOM 挂载的时间
+- `readyMs`：DOM 挂载到就绪条件满足（loading 消失 + 期望文本出现）的时间
+- `durationMs`：端到端总耗时
+
+生成性能基线报告（P50/P90/P95）：
+
+```bash
+npm run test:e2e:core   # 先生成含事件驱动指标的 E2E 报告
+npm run perf:baseline    # 从 tmp/e2e/core/report.json 提取统计
+```
+
+报告输出到 `tmp/perf/baseline-report.json`。后续性能优化（Task 4-6）完成后，
+重新运行并对比 readyMs 的 P95 是否回归。
+
+## 10. CI 与发布
 
 最小 CI 只需要跑：
 
