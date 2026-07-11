@@ -42,6 +42,7 @@ exports.main = async (event) => {
       completedBatches: task.completedBatches || 0,
       totalBatches: task.totalBatches || 0,
       createdAt: task.createdAt,
+      error: task.error || '',  // 失败时暴露具体错误信息给前端
     };
   } catch (err) {
     console.error('getAnalysisProgress 失败：', err);

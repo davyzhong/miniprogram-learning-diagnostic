@@ -37,6 +37,16 @@ function analysisErrorMessage(err) {
   return (message || '图片分析失败，请稍后重试').slice(0, 240);
 }
 
+// 判断错误是否对用户有意义（这类错误应直接展示给用户，而非笼统吞掉）
+function isUserFacingAnalysisError(err) {
+  const msg = String(err && err.message || '');
+  // 验证试卷相关错误（getVerificationPaper 抛出的）—— 这些消息对用户有指导意义
+  if (/验证试卷|验证卷|归属不一致|没有.*卡点|试卷.*不存在|试卷.*删除/i.test(msg)) return true;
+  // 权限相关
+  if (/无权|未授权|权限/i.test(msg)) return true;
+  return false;
+}
+
 function wait(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -211,16 +221,30 @@ async function getHistoricalContext(studentId, subject, options = {}) {
 
 async function getVerificationPaper(report) {
   if (!report.paperId) {
-    throw new Error('验证报告没有关联验证试卷');
+    throw new Error('验证报告没有关联验证试卷，请重新从最新的验证卷上传答题');
   }
-  const paperRes = await db.collection('papers').doc(report.paperId).get();
+  let paperRes
+  try {
+    paperRes = await db.collection('papers').doc(report.paperId).get();
+  } catch (e) {
+    throw new Error(`关联的验证试卷（${report.paperId}）无法读取：${e.message || '试卷可能已被删除'}`);
+  }
   const paper = paperRes.data;
-  if (!paper || paper.studentId !== report.studentId || (paper._openid && report._openid && paper._openid !== report._openid)) {
-    throw new Error('关联验证试卷归属不一致');
+  if (!paper) {
+    throw new Error(`关联的验证试卷（${report.paperId}）不存在，可能已被更新替换，请使用最新的验证卷重新上传答题`);
+  }
+  if (paper.studentId !== report.studentId) {
+    throw new Error('关联验证试卷与学生归属不一致，请重新生成验证卷');
+  }
+  if (paper._openid && report._openid && paper._openid !== report._openid) {
+    throw new Error('关联验证试卷归属不一致，请使用自己档案下的验证卷');
   }
   const targets = Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : [];
-  if (paper.type !== 'verification' || targets.length === 0) {
-    throw new Error('关联验证试卷没有有效学习卡点');
+  if (paper.type !== 'verification') {
+    throw new Error('关联的试卷类型不是验证试卷，请使用验证卷上传答题');
+  }
+  if (targets.length === 0) {
+    throw new Error('关联验证试卷没有学习卡点，请重新生成验证卷');
   }
   return { paper, targets, plan: buildVerificationPlan(paper) };
 }
@@ -824,11 +848,13 @@ exports.main = async (event) => {
   } catch (err) {
     console.error('analyzePhotos 失败：', err);
     const debugError = analysisErrorMessage(err);
+    // 对用户可读的错误（如验证试卷不存在），直接用原始消息而非笼统的"图片分析失败"
+    const userError = isUserFacingAnalysisError(err) ? debugError : '图片分析失败，请稍后重试';
 
     // 更新 reports 状态为 failed
     if (reportId) {
       await db.collection('reports').doc(reportId).update({
-        data: { status: 'failed', error: '图片分析失败，请稍后重试', debugError, updatedAt: new Date() },
+        data: { status: 'failed', error: userError, debugError, updatedAt: new Date() },
       }).catch(() => {});
     }
     if (taskId) {
@@ -840,6 +866,6 @@ exports.main = async (event) => {
       await clearSubjectProfileAnalysis(report.studentId, report.subject).catch(() => {});
     }
 
-    return { success: false, error: '图片分析失败，请稍后重试', reportId };
+    return { success: false, error: userError, reportId };
   }
 };
