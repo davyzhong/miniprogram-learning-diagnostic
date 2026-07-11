@@ -84,7 +84,8 @@ Page({
     pdfReady: false,
     pdfDownloaded: false,
     downloading: false,
-    uploadBtnText: '作答完成，拍照上传'
+    uploadBtnText: '作答完成，拍照上传',
+    paperLoadError: ''  // 试卷加载失败时的错误信息（非空时禁用上传）
   },
 
   onLoad(options) {
@@ -118,7 +119,14 @@ Page({
 
       if (!p) {
         wx.hideLoading()
-        wx.showToast({ title: '试卷不存在', icon: 'none' })
+        const msg = '试卷不存在，可能已被更新替换'
+        this.setData({ paperLoadError: msg })
+        wx.showModal({
+          title: '试卷不可用',
+          content: '这份验证卷可能已被新的验证卷替换，请从学科工作台或报告页进入最新的验证卷。',
+          showCancel: false,
+          confirmText: '我知道了'
+        })
         return
       }
 
@@ -141,7 +149,9 @@ Page({
 
     } catch (err) {
       console.error('加载试卷失败', err)
-      wx.showToast({ title: '加载失败', icon: 'none' })
+      const msg = (err && err.message) || '加载试卷失败'
+      this.setData({ paperLoadError: msg })
+      wx.showToast({ title: '试卷加载失败，暂时无法上传答题', icon: 'none' })
     } finally {
       wx.hideLoading()
     }
@@ -230,6 +240,11 @@ Page({
 
   // 拍照上传
   onUpload() {
+    // 试卷加载失败时阻止上传（防止用过期 paperId 分析失败）
+    if (this.data.paperLoadError) {
+      wx.showToast({ title: '试卷不可用，无法上传', icon: 'none' })
+      return
+    }
     const { paperId, studentId, subject, studentName, subjectName, grade, paperCodeText } = this.data
     const isVerification = this.data.typeText === '验证试卷'
     const uploadMode = isVerification ? 'verification' : 'paper'

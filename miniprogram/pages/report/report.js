@@ -501,8 +501,11 @@ Page({
         this.loadReport(reportId)
       },
       onFailed: (report) => {
-        wx.showToast({ title: '分析失败', icon: 'none' })
-        this.setData({ analysisStatusText: '分析失败' })
+        // 优先展示 report 上的具体错误信息（验证试卷不存在等用户可读错误）
+        const failReason = (report && (report.error || report.debugError)) || ''
+        const statusText = failReason ? failReason.slice(0, 60) : '分析失败'
+        wx.showToast({ title: statusText, icon: 'none', duration: 4000 })
+        this.setData({ analysisStatusText: statusText, analysisError: failReason })
         appStatus.registerOperation({
           studentId: report && report.studentId || '',
           subject: report && report.subject || '',
