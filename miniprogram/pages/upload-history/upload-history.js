@@ -11,6 +11,7 @@ const {
   photoFromDataset,
   evidenceFromDataset
 } = require('./upload-history-presenter')
+const { bindPageStatus } = require('../../utils/app-status')
 
 const EMPTY_CLEANUP = {
   hasCandidates: false,
@@ -87,7 +88,26 @@ Page({
       titleText: buildTitleText(studentName)
     })
     wx.setNavigationBarTitle({ title: '学习记录' })
+
+    // 统一状态感知：操作完成时刷新时间线
+    bindPageStatus(this, {
+      studentIdGetter: () => this.data.studentId,
+      subjectGetter: () => this.data.subject,
+      handlers: {
+        onOperationCompleted: () => {
+          this.loadHistory({ keepVisible: true })
+        }
+      }
+    })
+
     this.loadHistory()
+  },
+
+  onShow() {
+    // 页面回前台时刷新（分析完成后用户可能从报告页返回这里）
+    if (this.data.studentId && !this.data.loading) {
+      this.loadHistory({ keepVisible: true })
+    }
   },
 
   updateCleanupPreview(cleanupPreview, permissions = {}) {

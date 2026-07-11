@@ -6,6 +6,7 @@ const {
   paperTitleOf
 } = require('../../utils/paper-display')
 const { getSubjectName } = require('../../utils/constants')
+const { appStatus, OP_TYPES, OP_STATUS, EVENTS } = require('../../utils/app-status')
 
 function getFileName(filePath, index) {
   const cleanPath = String(filePath || '').split('?')[0]
@@ -363,7 +364,7 @@ Page({
       wx.hideLoading()
 
       // 2. 云函数创建报告并 fire-and-forget 启动分析（秒回）
-      await cloud.callUploadAndAnalyze({
+      const uploadResult = await cloud.callUploadAndAnalyze({
         fileIDs: fileIds,
         imageMetas: this.data.images.map(image => ({
           fileName: image.fileName,
@@ -375,9 +376,30 @@ Page({
         paperId: paperId || ''
       })
 
+      const reportId = uploadResult && uploadResult.reportId ? uploadResult.reportId : ''
+
+      // 注册到统一状态感知体系 —— 首页/学科页/学习记录页会收到通知
+      const opType = mode === 'verification' ? OP_TYPES.VERIFICATION_ANALYSIS : OP_TYPES.ANALYSIS
+      const label = mode === 'verification' ? '验证卷分析' : '试卷诊断分析'
+      appStatus.registerOperation({
+        studentId, subject, opType,
+        status: OP_STATUS.ANALYZING,
+        progress: 0,
+        label,
+        reportId
+      })
+      appStatus.emit(EVENTS.CACHE_INVALIDATED, { studentId, subject })
+
       this.invalidatePreviousSubjectHome()
       wx.showToast({ title: '已提交，AI 正在分析', icon: 'success', duration: 2000 })
-      setTimeout(() => wx.navigateBack(), 1200)
+      // 跳转到报告页轮询分析结果（而非 navigateBack 回不确定的页面）
+      setTimeout(() => {
+        if (reportId) {
+          wx.navigateTo({ url: `/pages/report/report?id=${reportId}` })
+        } else {
+          wx.navigateBack()
+        }
+      }, 1200)
     } catch (err) {
       wx.hideLoading()
       const failedIndex = this.data.images.findIndex(image => !image.uploaded)

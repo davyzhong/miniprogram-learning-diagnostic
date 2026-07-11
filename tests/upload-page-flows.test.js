@@ -69,7 +69,7 @@ test('upload converts HEIF selections to JPEG before upload', async () => {
 })
 
 
-test('upload submits file metadata and navigates back on success', async () => {
+test('upload submits file metadata and navigates to report page on success', async () => {
   let submitted = null
   const cloud = {
     callUploadAndAnalyze: async payload => {
@@ -99,7 +99,10 @@ test('upload submits file metadata and navigates back on success', async () => {
   )
   assert.equal(page.data.uploadProgress, 100)
   assert.equal(wx.calls.find(call => call.name === 'showToast').payload.title, '已提交，AI 正在分析')
-  assert.ok(wx.calls.some(call => call.name === 'navigateBack'))
+  // 上传成功后跳转到报告页轮询分析结果（而非 navigateBack）
+  const navCalls = wx.calls.filter(call => call.name === 'navigateTo')
+  assert.ok(navCalls.length > 0, 'should navigateTo to report page')
+  assert.match(navCalls[0].payload.url, /pages\/report\/report\?id=report-1/)
 })
 
 test('verification upload page shows the paper code context', async () => {

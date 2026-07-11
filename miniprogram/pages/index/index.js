@@ -5,6 +5,7 @@ const { buildLearningProfileHomeView } = require('./index-presenter')
 const { buildChildWorkbenchCards, buildFamilyWorkbenchHero } = require('../../utils/child-workbench')
 const { getSubjectName } = require('../../utils/constants')
 const { sharedNavigation, OWNER_PERMISSIONS } = require('../../utils/shared-navigation')
+const { bindPageStatus } = require('../../utils/app-status')
 
 const HOME_CACHE_TTL_MS = 30 * 1000
 const HOME_LOADING_TIMEOUT_MS = 12 * 1000
@@ -48,6 +49,23 @@ Page({
 
   onShow() {
     this._cloud = cloud
+    // 首次 onShow 时绑定统一状态感知（操作完成时强制刷新首页）
+    if (!this._statusBound) {
+      this._statusBound = true
+      bindPageStatus(this, {
+        studentIdGetter: () => this.data.activeStudentId,
+        subjectGetter: () => '',
+        handlers: {
+          onOperationCompleted: () => {
+            this._lastHomeLoadedAt = 0 // 失效缓存
+            this.loadStudents({ force: true }).catch(() => {})
+          },
+          onCacheInvalidated: () => {
+            this._lastHomeLoadedAt = 0
+          }
+        }
+      })
+    }
     this.loadStudents().catch(error => {
       console.error('首页加载失败', error)
     })
