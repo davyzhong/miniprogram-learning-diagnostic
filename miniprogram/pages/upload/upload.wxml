@@ -76,4 +76,16 @@
       {{submitBtnText}}
     </button>
   </view>
+
+  <!-- 内测授权遮罩（系统 modal 不可靠时的 fallback） -->
+  <view class="consent-overlay" wx:if="{{showConsentOverlay}}">
+    <view class="consent-card">
+      <view class="consent-title">内测说明与授权</view>
+      <view class="consent-body">本小程序为内测版本，会收集孩子姓名、年级、试卷照片和 AI 识别结果，用于生成学习诊断、验证卷和卡点追踪。\n\nAI 诊断可能出错，仅供家庭学习参考，不替代老师或专业评估。内测期间数据保留用于连续学习记录和问题排查。家长可在「AI 用量」页申请删除。\n\n请尽量只上传试卷内容，避免含身份证号、住址等敏感信息。</view>
+      <view class="consent-actions">
+        <view class="consent-btn consent-decline" catchtap="onConsentDecline">暂不同意</view>
+        <view class="consent-btn consent-agree" catchtap="onConsentAgree">同意并继续</view>
+      </view>
+    </view>
+  </view>
 </view>
