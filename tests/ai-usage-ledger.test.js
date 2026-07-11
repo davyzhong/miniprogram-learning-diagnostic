@@ -305,3 +305,74 @@ test('setBetaAuth records consent and getBetaAuth reads it back', async () => {
   assert.equal(get.consented, true)
   assert.equal(db.dump('userConsents').length, 1)
 })
+
+// ── getSummary 完整性：>500 条不截断 ──
+
+function generateEvents(count, options = {}) {
+  const month = options.month || '2026-06'
+  const [year, monthIdx] = month.split('-').map(Number)
+  const tokens = options.totalTokens || 10
+  const cost = options.estimatedCostCny || 0.001
+  return Array.from({ length: count }, (_, index) => ({
+    _id: `ev-${index}`,
+    _openid: 'owner-1',
+    eventType: 'paper_generation',
+    model: 'deepseek-v4-flash',
+    studentId: 's1',
+    subject: 'math',
+    totalTokens: tokens,
+    estimatedCostCny: cost,
+    status: 'succeeded',
+    // 分布在整个月内，避免同一天排序歧义
+    createdAt: new Date(Date.UTC(year, monthIdx - 1, (index % 28) + 1, 10, 0, 0) - 8 * 60 * 60 * 1000)
+  }))
+}
+
+test('getSummary includes ALL events beyond 500 (cursor pagination)', async () => {
+  const events = generateEvents(750, { totalTokens: 10, estimatedCostCny: 0.001 })
+  const db = createDatabase({ aiUsageEvents: events })
+  const { handler } = loadAiUsage(db)
+
+  const result = await handler.main({ action: 'getSummary', month: '2026-06' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.callCount, 750, 'must count every event, not just 500')
+  assert.equal(result.totalTokens, 750 * 10)
+  assert.equal(result.totalCostCny, round4(750 * 0.001))
+  assert.equal(result.isComplete, true, 'summary must report completeness')
+  assert.equal(result.eventCount, 750, 'summary must report event count')
+  assert.ok(result.aggregatedAt, 'summary must report aggregation timestamp')
+})
+
+test('getSummary returns isComplete=false marker shape on partial failure', async () => {
+  // 即使只有少量事件，返回也必须带 isComplete/eventCount/aggregatedAt
+  const events = generateEvents(3, { totalTokens: 100, estimatedCostCny: 0.02 })
+  const db = createDatabase({ aiUsageEvents: events })
+  const { handler } = loadAiUsage(db)
+
+  const result = await handler.main({ action: 'getSummary', month: '2026-06' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.callCount, 3)
+  assert.equal(result.isComplete, true)
+  assert.equal(result.eventCount, 3)
+  assert.ok(result.aggregatedAt)
+})
+
+test('getSummary excludes events outside the Beijing month across pages', async () => {
+  // 600 条 6 月事件 + 50 条 7 月事件（不应计入 6 月聚合）
+  const juneEvents = generateEvents(600, { totalTokens: 10, estimatedCostCny: 0.001 })
+  const julyEvents = generateEvents(50, { totalTokens: 999, estimatedCostCny: 0.5, month: '2026-07' })
+  const db = createDatabase({ aiUsageEvents: [...juneEvents, ...julyEvents] })
+  const { handler } = loadAiUsage(db)
+
+  const result = await handler.main({ action: 'getSummary', month: '2026-06' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.callCount, 600, 'july events must not leak into june summary')
+  assert.equal(result.totalTokens, 6000)
+})
+
+function round4(value) {
+  return Math.round((Number(value) || 0) * 10000) / 10000
+}

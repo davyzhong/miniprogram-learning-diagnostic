@@ -125,6 +125,7 @@
 | `userConsents` | `_openid`, `updatedAt` | 升序、降序 |
 | `studentEnglishWords` | `studentId`, `masteryStatus`, `nextReviewAt` | 升序、升序、升序 |
 | `englishPracticeSessions` | `studentId`, `createdAt`, `_openid` | 升序、降序、升序 |
+| `analysisTasks` | `reportId`, `createdAt` | 升序、降序 |
 
 `subjectProfiles` 现在仅按 `studentId` 查询，再从最多三条学科档案中筛选 `subject`，因此不再依赖原来的 `studentId + subject + _openid` 三字段复合索引。若安全规则要求按创建者读取，仍应创建上表中的 `studentId + _openid` 索引。
 

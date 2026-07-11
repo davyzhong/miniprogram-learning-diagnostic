@@ -146,8 +146,8 @@ wx.cloud.callFunction({
 | --- | --- | --- |
 | `getStudentDashboard` | `studentId` | student、subjectProfiles、latestReport、latestPaper、recentReports、recentPapers |
 | `getSubjectDashboard` | `studentId`, `subject` | student、profile、reports、papers |
-| `getLearningTimeline` | `studentId`；`subject` 可选 | reports、papers、englishSessions、items 派生时间线 |
-| `getReportDetail` | `reportId` | student、report |
+| `getLearningTimeline` | `studentId`；`subject` 可选 | reports、papers、englishSessions、learningResourcePacks（投影轻量字段，不含 items） |
+| `getReportDetail` | `reportId` | report（剥离 pageResults/rawPages/aiRaw）、linkedPaper、profile、pendingCount；反馈按需加载（前端调 `reportFeedback.listFeedbackByReport`） |
 | `getPaperDetail` | `paperId` | student、paper |
 | `getActiveVerificationPaper` | `studentId`、`subject` | paper、status（ready/generating/failed/none）。验证卷自动生成场景的状态查询 |
 | `cleanupStaleLearningRecords` | `studentId`；`subject` 可选；`dryRun` 可选 | owner 清理长时间中断的分析记录；`dryRun=true` 只返回可清理数量和记录 ID，不写库 |

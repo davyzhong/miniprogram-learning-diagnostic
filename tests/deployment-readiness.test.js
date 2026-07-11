@@ -257,21 +257,20 @@ test('cloud functions do not reference ../_shared (CloudBase only packages per-f
   assert.deepEqual(offenders, [], `这些文件仍引用 ../_shared，部署后会报错: ${offenders.join(', ')}`)
 })
 
-test('各云函数的共享文件副本互相保持一致', () => {
-  // 共享文件直接复制成各云函数的根级文件（不再用 _shared 子目录或顶层源目录）。
-  // 这里检查同一文件名的所有副本内容一致——改了其中一个就要同步全部。
+test('各云函数的共享文件副本与 _shared-templates 规范源保持一致', () => {
+  // 共享文件的单一规范源在 cloudfunctions/_shared-templates/。
+  // 改了规范源后，运行 node scripts/sync-cloudfunction-shared.js 同步到各云函数。
   const sharedFiles = {
-    'access.js': ['generateReportPDF', 'getAnalysisProgress', 'learningResource', 'reportFeedback', 'studentAccess', 'studentData', 'uploadAndAnalyze', 'englishVocabulary', 'generatePaper', 'aiUsage'],
-    'pricing.js': ['aiUsage', 'analyzeBatch', 'generatePaper', 'learningResource', 'englishVocabulary'],
-    'usage-ledger.js': ['aiUsage', 'analyzeBatch', 'generatePaper', 'learningResource', 'englishVocabulary'],
-    'constants.js': ['generateReportPDF', 'generatePaper'],
+    'access.js': ['aiUsage', 'englishVocabulary', 'generatePaper', 'generateReportPDF', 'getAnalysisProgress', 'learningResource', 'reportFeedback', 'studentAccess', 'studentData', 'uploadAndAnalyze'],
+    'pricing.js': ['aiUsage', 'analyzeBatch', 'englishVocabulary', 'generatePaper', 'learningResource'],
+    'usage-ledger.js': ['aiUsage', 'analyzeBatch', 'englishVocabulary', 'generatePaper', 'learningResource'],
+    'constants.js': ['analyzeBatch', 'generatePaper', 'generateReportPDF'],
     'bottleneck-name.js': ['analyzeBatch', 'generatePaper'],
   }
 
   const mismatches = []
   for (const [file, dirs] of Object.entries(sharedFiles)) {
-    // 以第一个目录的副本作为基准
-    const baseline = read(`cloudfunctions/${dirs[0]}/${file}`)
+    const baseline = read(`cloudfunctions/_shared-templates/${file}`)
     for (const dir of dirs) {
       const copyPath = `cloudfunctions/${dir}/${file}`
       if (!exists(copyPath)) {
@@ -280,18 +279,97 @@ test('各云函数的共享文件副本互相保持一致', () => {
       }
       const copyContent = read(copyPath)
       if (baseline !== copyContent) {
-        mismatches.push(`${copyPath} 与 ${dirs[0]}/${file} 不一致`)
+        mismatches.push(`cloudfunctions/${dir}/${file} 与规范源不一致`)
       }
     }
   }
-  assert.deepEqual(mismatches, [], `共享文件副本不一致，请同步:\n${mismatches.join('\n')}`)
+  assert.deepEqual(mismatches, [], `共享文件副本不一致，请运行同步:\n  node scripts/sync-cloudfunction-shared.js\n${mismatches.join('\n')}`)
 })
 
-test('cloudfunctions 下不再有 _shared 目录（避免微信工具误上传）', () => {
+test('cloudfunctions 下除 _shared-templates 外不再有其他下划线目录', () => {
   // 微信开发者工具会把 cloudfunctions/ 下的子目录当作云函数上传，
-  // _shared 以下划线开头会导致 FunctionName 报错，且各云函数的 _shared 子目录
-  // 上传时会被跳过。重构后共享文件已是各云函数的根级文件，_shared 目录应完全消失。
+  // _shared 以下划线开头会导致 FunctionName 报错。_shared-templates 是规范源目录（不会被上传），
+  // 其余下划线开头的目录应完全消失。
   const dirs = fs.readdirSync(path.join(root, 'cloudfunctions'))
-  const violations = dirs.filter(d => d === '_shared' || d.startsWith('_'))
-  assert.deepEqual(violations, [], `cloudfunctions/ 下仍有下划线开头的目录:\n${violations.join('\n')}`)
+  const violations = dirs.filter(d => d.startsWith('_') && d !== '_shared-templates')
+  assert.deepEqual(violations, [], `cloudfunctions/ 下有意外的下划线目录:\n${violations.join('\n')}`)
+})
+
+// ── Task 7: 主包体积预算 ──
+
+test('all pages are registered in either main package or subPackages', () => {
+  const app = JSON.parse(read('miniprogram/app.json'))
+  const mainPages = new Set(app.pages || [])
+  const subPages = new Set()
+  for (const pkg of (app.subPackages || [])) {
+    for (const page of (pkg.pages || [])) {
+      subPages.add(`${pkg.root}/${page}`)
+    }
+  }
+  // 关键页面必须在主包（启动页 + 核心学习流程）
+  for (const must of ['pages/index/index', 'pages/student-profile/student-profile', 'pages/upload/upload']) {
+    assert.ok(mainPages.has(must), `${must} must be in main package`)
+  }
+  // 分包页面不能同时出现在主包
+  for (const subPage of subPages) {
+    assert.ok(!mainPages.has(subPage), `${subPage} should not be in both main and sub package`)
+  }
+})
+
+// ── Task 11: 数据删除请求操作化 ──
+
+test('data deletion request processing script exists with state machine and dry-run support', () => {
+  const source = read('scripts/process-data-deletion-request.js')
+  // 状态转换定义
+  assert.match(source, /VALID_TRANSITIONS/, 'must define valid state transitions')
+  assert.match(source, /requested.*processing/, 'must allow requested → processing')
+  assert.match(source, /processing.*completed/, 'must allow processing → completed')
+  assert.match(source, /processing.*rejected/, 'must allow processing → rejected')
+  // dry-run 支持
+  assert.match(source, /--dry-run/, 'must support --dry-run flag')
+  assert.match(source, /previewImpact/, 'must have a preview/impact function')
+  // 审计要求
+  assert.match(source, /--operator/, 'must require operator identity')
+  assert.match(source, /processedBy/, 'must record operator in audit field')
+  // 状态转换校验
+  assert.match(source, /validateTransition/, 'must validate state transitions')
+})
+
+// ── Task 8: 构建可复现 ──
+
+test('cloud function dependencies do not use latest for reproducible builds', () => {
+  const functionsDir = path.join(root, 'cloudfunctions')
+  for (const entry of fs.readdirSync(functionsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const pkgPath = path.join(functionsDir, entry.name, 'package.json')
+    if (!fs.existsSync(pkgPath)) continue
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+    const deps = { ...(pkg.dependencies || {}), ...(pkg.devDependencies || {}) }
+    for (const [dep, version] of Object.entries(deps)) {
+      assert.notEqual(version, 'latest', `${entry.name}: ${dep} must not use "latest"`)
+      assert.doesNotMatch(String(version), /^\^?latest$/i, `${entry.name}: ${dep} must not use "latest"`)
+    }
+  }
+})
+
+test('cloud function dependency versions are consistent across functions', () => {
+  const functionsDir = path.join(root, 'cloudfunctions')
+  const versionMap = {}
+  for (const entry of fs.readdirSync(functionsDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
+    const pkgPath = path.join(functionsDir, entry.name, 'package.json')
+    if (!fs.existsSync(pkgPath)) continue
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'))
+    for (const [dep, version] of Object.entries(pkg.dependencies || {})) {
+      if (!versionMap[dep]) versionMap[dep] = new Set()
+      versionMap[dep].add(version)
+    }
+  }
+  const mismatches = []
+  for (const [dep, versions] of Object.entries(versionMap)) {
+    if (versions.size > 1) {
+      mismatches.push(`${dep}: ${Array.from(versions).join(', ')}`)
+    }
+  }
+  assert.deepEqual(mismatches, [], `依赖版本不一致:\n${mismatches.join('\n')}`)
 })

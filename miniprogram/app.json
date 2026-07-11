@@ -6,21 +6,68 @@
     "pages/subject-home/subject-home",
     "pages/upload/upload",
     "pages/upload-history/upload-history",
-    "pages/parent-management/parent-management",
-    "pages/join-student/join-student",
-    "pages/report/report",
-    "pages/bottleneck-center/bottleneck-center",
-    "pages/bottleneck-detail/bottleneck-detail",
-    "pages/knowledge-map/knowledge-map",
-    "pages/learning-resource/learning-resource",
-    "pages/english-practice/english-practice",
-    "pages/english-dictation/english-dictation",
-    "pages/english-wrong-words/english-wrong-words",
-    "pages/generate-verification/generate-verification",
-    "pages/default-paper/default-paper",
-    "pages/paper-preview/paper-preview",
-    "pages/ai-usage/ai-usage"
+    "pages/report/report"
   ],
+  "subPackages": [
+    {
+      "root": "pages/bottleneck-center",
+      "pages": ["bottleneck-center"]
+    },
+    {
+      "root": "pages/bottleneck-detail",
+      "pages": ["bottleneck-detail"]
+    },
+    {
+      "root": "pages/knowledge-map",
+      "pages": ["knowledge-map"]
+    },
+    {
+      "root": "pages/english-practice",
+      "pages": ["english-practice"]
+    },
+    {
+      "root": "pages/english-dictation",
+      "pages": ["english-dictation"]
+    },
+    {
+      "root": "pages/english-wrong-words",
+      "pages": ["english-wrong-words"]
+    },
+    {
+      "root": "pages/learning-resource",
+      "pages": ["learning-resource"]
+    },
+    {
+      "root": "pages/generate-verification",
+      "pages": ["generate-verification"]
+    },
+    {
+      "root": "pages/default-paper",
+      "pages": ["default-paper"]
+    },
+    {
+      "root": "pages/paper-preview",
+      "pages": ["paper-preview"]
+    },
+    {
+      "root": "pages/parent-management",
+      "pages": ["parent-management"]
+    },
+    {
+      "root": "pages/join-student",
+      "pages": ["join-student"]
+    },
+    {
+      "root": "pages/ai-usage",
+      "pages": ["ai-usage"]
+    }
+  ],
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": ["pages/bottleneck-center", "pages/english-practice", "pages/generate-verification"]
+    }
+  },
   "window": {
     "backgroundTextStyle": "dark",
     "navigationBarBackgroundColor": "#1a365d",
