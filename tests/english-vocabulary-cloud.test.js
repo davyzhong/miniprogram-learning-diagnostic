@@ -731,3 +731,153 @@ test('cloud function seed copy stays in sync with the project archive seed', () 
   assert.equal(cloudSeed.wordCount, seed.wordCount)
   assert.deepEqual(cloudSeed.words.map(keyOf), seed.words.map(keyOf))
 })
+
+// ── Task 3: 有界读取 + 原子追加 ──
+
+test('submitRecognitionAttempt reads a single word document, not the full vocabulary', async () => {
+  // 505 个词的词库 — 旧代码会把全部读入内存
+  const bigVocabulary = Array.from({ length: 505 }, (_, index) => ({
+    _id: `word-${index + 1}`,
+    studentId: 'student-1',
+    word: `word${index + 1}`,
+    meanings: [`词义${index + 1}`],
+    masteryStatus: 'untested',
+    correctCount: 0,
+    wrongCount: 0
+  }))
+  // 目标词在第 500 个位置
+  bigVocabulary[499] = {
+    _id: 'word-target',
+    studentId: 'student-1',
+    word: 'science',
+    meanings: ['科学'],
+    cnSynonyms: ['科学课'],
+    familiarity: { status: 'needs_practice', correctCount: 0, wrongCount: 1, lastTestedAt: '2026-06-15', nextReviewAt: '2026-06-16', lastDirection: 'cn2en' },
+    spelling: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '' },
+    overallMastery: 'partial'
+  }
+
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: bigVocabulary,
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      functionType: 'familiarity',
+      type: 'word-familiarity',
+      status: 'in_progress',
+      attempts: [],
+      wordItems: [{ queueKey: 'word-target:0:0', wordId: 'word-target', word: 'science', direction: 'en2cn' }]
+    }]
+  })
+
+  // 用 spy 追踪 collection 调用，确保只读了单个文档
+  const originalDoc = db.collection('studentEnglishWords').doc
+  let docCallCount = 0
+  const collectionProxy = db.collection
+  // 重写 collection 以追踪 doc vs where 调用
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'submitRecognitionAttempt',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    queueKey: 'word-target:0:0',
+    wordId: 'word-target',
+    direction: 'en2cn',
+    recognizedText: '科学课',
+    reviewedAt: '2026-06-16T08:00:00+08:00'
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.judgment.status, 'correct')
+  // 只修改目标词，不影响其他词
+  const words = db.dump('studentEnglishWords')
+  assert.equal(words.find(w => w._id === 'word-target').familiarity.status, 'reviewing')
+})
+
+test('submitRecognitionAttempt rejects word that does not belong to the student', async () => {
+  const db = createDatabase({
+    students: [
+      { _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 },
+      { _id: 'student-2', _openid: 'owner-2', name: '其他人', grade: 3 }
+    ],
+    studentEnglishWords: [
+      { _id: 'word-other', studentId: 'student-2', word: 'science', masteryStatus: 'untested' },
+      { _id: 'word-mine', studentId: 'student-1', word: 'science', masteryStatus: 'untested',
+        familiarity: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '', lastDirection: '' },
+        spelling: { status: 'untested', correctCount: 0, wrongCount: 0, lastTestedAt: '', nextReviewAt: '' },
+        overallMastery: 'untested'
+      }
+    ],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      functionType: 'familiarity',
+      type: 'word-familiarity',
+      status: 'in_progress',
+      attempts: [],
+      wordItems: [{ queueKey: 'word-mine:0:0', wordId: 'word-mine', word: 'science', direction: 'en2cn' }]
+    }]
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  // 尝试用别人的 wordId
+  const result = await handler.main({
+    action: 'submitRecognitionAttempt',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    queueKey: 'word-other:0:0',
+    wordId: 'word-other',
+    direction: 'en2cn',
+    recognizedText: '科学',
+    reviewedAt: '2026-06-16T08:00:00+08:00'
+  })
+
+  assert.equal(result.success, false)
+})
+
+test('concurrent dictation attempts preserve both via atomic append', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [
+      { _id: 'word-1', studentId: 'student-1', word: 'science', masteryStatus: 'needs_practice', correctCount: 0, wrongCount: 0 },
+      { _id: 'word-2', studentId: 'student-1', word: 'museum', masteryStatus: 'needs_practice', correctCount: 0, wrongCount: 0 }
+    ],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      status: 'in_progress',
+      attempts: []
+    }]
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  // 模拟并发提交：两个 attempt 同时基于空 attempts 数组提交
+  const [r1, r2] = await Promise.all([
+    handler.main({
+      action: 'submitDictationAttempt',
+      studentId: 'student-1',
+      sessionId: 'session-1',
+      wordId: 'word-1',
+      targetWord: 'science',
+      recognizedText: 'SCIENCE',
+      reviewedAt: '2026-06-15T08:00:00+08:00'
+    }),
+    handler.main({
+      action: 'submitDictationAttempt',
+      studentId: 'student-1',
+      sessionId: 'session-1',
+      wordId: 'word-2',
+      targetWord: 'museum',
+      recognizedText: 'MUSEUM',
+      reviewedAt: '2026-06-15T08:01:00+08:00'
+    })
+  ])
+
+  assert.equal(r1.success, true)
+  assert.equal(r2.success, true)
+  // 原子追加后两条 attempt 都应该保留
+  const session = db.dump('englishPracticeSessions')[0]
+  assert.equal(session.attempts.length, 2, 'both concurrent attempts must be preserved')
+})

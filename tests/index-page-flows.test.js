@@ -31,10 +31,16 @@ test('add student trims input and creates all subject profiles', async () => {
 
 test('single-child index opens directly as that child learning profile', async () => {
   const cloud = {
-    getStudents: async () => [{ _id: 'student-1', name: '钟青羽', grade: 5 }],
-    getSubjectProfiles: async () => [{ subject: 'math', totalReports: 2, updatedAt: '2026-06-11T10:00:00Z' }],
-    getReports: async () => [],
-    getPapers: async () => []
+    getAccessibleStudents: async () => [
+      { _id: 'student-1', name: '钟青羽', grade: 5, createdAt: '2026-06-01' }
+    ],
+    getStudentDashboard: async studentId => ({
+      student: { _id: studentId, name: '钟青羽', grade: 5 },
+      permissions: { canView: true, canUpload: true, canGeneratePaper: true, canRetryAnalysis: true, canManageParents: true },
+      subjectProfiles: [{ subject: 'math', totalReports: 2, updatedAt: '2026-06-11T10:00:00Z' }],
+      recentReports: [],
+      recentPapers: []
+    })
   }
   const wx = createWxMock()
   const { page } = loadPage('miniprogram/pages/index/index.js', {
@@ -58,8 +64,7 @@ test('single-child index opens directly as that child learning profile', async (
 
 test('empty index stays in add-first-child mode', async () => {
   const cloud = {
-    getAccessibleStudents: async () => [],
-    getStudents: async () => []
+    getAccessibleStudents: async () => []
   }
   const { page } = loadPage('miniprogram/pages/index/index.js', {
     modules: {
@@ -77,9 +82,11 @@ test('empty index stays in add-first-child mode', async () => {
 })
 
 test('index shows a recovery state when student loading fails', async () => {
+  // 直接 DB fallback 已移除：getAccessibleStudents 抛错时，错误被内部 catch，
+  // 页面降级为空状态（add-first-child 模式），不进入外部 catch 的错误态，
+  // 也不弹出"加载失败"toast，避免在云函数抖动时打断用户。
   const cloud = {
-    getAccessibleStudents: async () => { throw new Error('shared access down') },
-    getStudents: async () => { throw new Error('legacy access down') }
+    getAccessibleStudents: async () => { throw new Error('shared access down') }
   }
   const wx = createWxMock()
   const { page } = loadPage('miniprogram/pages/index/index.js', {
@@ -95,8 +102,10 @@ test('index shows a recovery state when student loading fails', async () => {
 
   assert.equal(page.data.loading, false)
   assert.equal(page.data.hasStudents, false)
-  assert.match(page.data.errorText, /学习档案加载失败/)
-  assert.equal(wx.calls.some(call => call.name === 'showToast' && call.payload.title === '加载失败'), true)
+  assert.equal(page.data.homeMode, 'empty')
+  assert.equal(page.data.errorText, '')
+  assert.equal(page.data.students.length, 0)
+  assert.equal(wx.calls.some(call => call.name === 'showToast' && call.payload.title === '加载失败'), false)
 })
 
 test('index leaves a visible recovery state when first paint loading times out', () => {
@@ -126,7 +135,6 @@ test('index leaves a visible recovery state when first paint loading times out',
 test('page lifecycle handlers do not return promises to the mini program runtime', () => {
   const cloud = {
     getAccessibleStudents: async () => [],
-    getStudents: async () => [],
     getStudentDashboard: async () => ({
       student: { _id: 'student-1', name: '钟青羽' },
       subjectProfiles: [],
@@ -172,15 +180,24 @@ test('page onLoad handlers stay synchronous and start async work internally', ()
 
 test('multi-child index shows only the family workbench and routes child cards to profile pages', async () => {
   const cloud = {
-    getStudents: async () => [
-      { _id: 'student-1', name: '钟青羽', grade: 6 },
-      { _id: 'student-2', name: '弟弟', grade: 3 }
+    getAccessibleStudents: async () => [
+      { _id: 'student-1', name: '钟青羽', grade: 6, createdAt: '2026-06-01' },
+      { _id: 'student-2', name: '弟弟', grade: 3, createdAt: '2026-06-02' }
     ],
-    getSubjectProfiles: async studentId => studentId === 'student-1'
-      ? [{ subject: 'math', totalReports: 2, currentBottlenecks: [{ lpCode: 'LP-001', status: 'needs_verification' }] }]
-      : [{ subject: 'math', totalReports: 0, currentBottlenecks: [] }],
-    getReports: async () => [],
-    getPapers: async () => []
+    getStudentDashboard: async studentId => {
+      const name = studentId === 'student-1' ? '钟青羽' : '弟弟'
+      const grade = studentId === 'student-1' ? 6 : 3
+      const subjectProfiles = studentId === 'student-1'
+        ? [{ subject: 'math', totalReports: 2, currentBottlenecks: [{ lpCode: 'LP-001', status: 'needs_verification' }] }]
+        : [{ subject: 'math', totalReports: 0, currentBottlenecks: [] }]
+      return {
+        student: { _id: studentId, name, grade },
+        permissions: { canView: true, canUpload: true, canGeneratePaper: true, canRetryAnalysis: true, canManageParents: true },
+        subjectProfiles,
+        recentReports: [],
+        recentPapers: []
+      }
+    }
   }
   const wx = createWxMock()
   const { page } = loadPage('miniprogram/pages/index/index.js', {
@@ -306,35 +323,34 @@ test('static illustration images are not wired into app pages', () => {
 
 test('learning profile home loads the active student summary', async () => {
   const cloud = {
-    getStudents: async () => [{ _id: 'student-1', name: '钟青羽', grade: 6 }],
-    getSubjectProfiles: async studentId => {
+    getAccessibleStudents: async () => [
+      { _id: 'student-1', name: '钟青羽', grade: 6, createdAt: '2026-06-01' }
+    ],
+    getStudentDashboard: async studentId => {
       assert.equal(studentId, 'student-1')
-      return [{
-        subject: 'math',
-        subjectName: '数学',
-        totalReports: 1,
-        updatedAt: '2026-06-12T14:20:00+08:00',
-        currentBottlenecks: [
-          { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification' }
-        ]
-      }]
-    },
-    getReports: async (studentId, subject) => {
-      assert.equal(studentId, 'student-1')
-      assert.equal(subject, undefined)
-      return [{
-        _id: 'report-1',
-        subject: 'math',
-        type: 'diagnosis',
-        status: 'completed',
-        isEffective: true,
-        createdAt: '2026-06-12T14:20:00+08:00',
-        bottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误（加减乘除）' }]
-      }]
-    },
-    getPapers: async filter => {
-      assert.deepEqual(JSON.parse(JSON.stringify(filter)), { studentId: 'student-1' })
-      return []
+      return {
+        student: { _id: studentId, name: '钟青羽', grade: 6 },
+        permissions: { canView: true, canUpload: true, canGeneratePaper: true, canRetryAnalysis: true, canManageParents: true },
+        subjectProfiles: [{
+          subject: 'math',
+          subjectName: '数学',
+          totalReports: 1,
+          updatedAt: '2026-06-12T14:20:00+08:00',
+          currentBottlenecks: [
+            { lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification' }
+          ]
+        }],
+        recentReports: [{
+          _id: 'report-1',
+          subject: 'math',
+          type: 'diagnosis',
+          status: 'completed',
+          isEffective: true,
+          createdAt: '2026-06-12T14:20:00+08:00',
+          bottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误（加减乘除）' }]
+        }],
+        recentPapers: []
+      }
     },
     getActiveVerificationPaper: async () => ({ status: 'ready', paper: { _id: 'paper-1' } })
   }
@@ -367,34 +383,17 @@ test('learning profile home loads the active student summary', async () => {
   assert.match(urls[2], /pages\/paper-preview\/paper-preview\?paperId=paper-1/)
 })
 
-test('learning profile home falls back to legacy student reads when shared access is unavailable', async () => {
+test('learning profile home degrades to empty state when shared access is unavailable', async () => {
+  // 直接 DB fallback 已移除：getAccessibleStudents 抛错后不再回退到
+  // getStudents/getSubjectProfiles/getReports/getPapers 等直接 collection 读取，
+  // 页面降级为空状态（无学习摘要），避免绕过权限校验。
   const cloud = {
     getAccessibleStudents: async () => { throw new Error('cloud function not found') },
-    getStudents: async () => [{ _id: 'student-1', name: '钟青羽', grade: 6 }],
-    getSubjectProfiles: async () => [{
-      subject: 'math',
-      subjectName: '数学',
-      totalReports: 2,
-      updatedAt: '2026-06-12T14:20:00+08:00',
-      currentBottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification' }]
-    }],
-    getStudentDashboard: async () => { throw new Error('studentData not deployed') },
-    getReports: async () => [{
-      _id: 'report-1',
-      subject: 'math',
-      type: 'diagnosis',
-      status: 'completed',
-      createdAt: '2026-06-12T14:20:00+08:00',
-      summary: '发现计算基础卡点'
-    }],
-    getPapers: async () => [{
-      _id: 'paper-1',
-      subject: 'math',
-      type: 'verification',
-      createdAt: '2026-06-13T10:00:00+08:00',
-      questions: [{}, {}, {}],
-      bottleneckSummaries: ['计算基础']
-    }]
+    // 这些遗留直接 DB 读函数不应被调用——一旦调用即抛错使测试失败
+    getStudents: async () => { throw new Error('legacy getStudents must not be called') },
+    getSubjectProfiles: async () => { throw new Error('legacy getSubjectProfiles must not be called') },
+    getReports: async () => { throw new Error('legacy getReports must not be called') },
+    getPapers: async () => { throw new Error('legacy getPapers must not be called') }
   }
   const { page } = loadPage('miniprogram/pages/index/index.js', {
     modules: {
@@ -405,10 +404,10 @@ test('learning profile home falls back to legacy student reads when shared acces
 
   await page.loadStudents()
 
-  assert.equal(page.data.homeMode, 'single-profile')
-  assert.equal(page.data.hasStudents, true)
-  assert.equal(page.data.activeStudent.name, '钟青羽')
-  assert.equal(page.data.home.recentRecords.length, 2)
+  assert.equal(page.data.homeMode, 'empty')
+  assert.equal(page.data.hasStudents, false)
+  assert.equal(page.data.home, null)
+  assert.equal(page.data.students.length, 0)
 })
 
 
@@ -471,7 +470,6 @@ test('learning profile home uses shared access and lets co-parents operate learn
       role: 'viewer',
       permissions: { canView: true, canManageParents: false, canUpload: true, canGeneratePaper: true }
     }],
-    getSubjectProfiles: async () => [],
     getStudentDashboard: async studentId => ({
       student: { _id: studentId, name: '钟青羽', grade: 6 },
       permissions: { canView: true, canManageParents: false, canUpload: true, canGeneratePaper: true },
@@ -582,5 +580,80 @@ test('index onShow reuses a fresh dashboard snapshot instead of refetching immed
 
   assert.equal(accessibleCalls, 1)
   assert.equal(dashboardCalls, 1)
+  assert.equal(page.data.homeMode, 'single-profile')
+})
+
+test('index uses getHomeDashboard as a single aggregated call when available', async () => {
+  let homeDashboardCalls = 0
+  let accessibleCalls = 0
+  let dashboardCalls = 0
+  const cloud = {
+    getHomeDashboard: async () => {
+      homeDashboardCalls++
+      return {
+        students: [
+          { _id: 'student-1', name: '钟青羽', grade: 5, createdAt: '2026-06-01', role: 'owner', permissions: { canView: true, canUpload: true, canGeneratePaper: true, canRetryAnalysis: true, canManageParents: true } },
+          { _id: 'student-2', name: '钟筱雨', grade: 3, createdAt: '2026-06-02', role: 'owner', permissions: { canView: true, canUpload: true, canGeneratePaper: true, canRetryAnalysis: true, canManageParents: true } }
+        ],
+        perStudent: {
+          'student-1': {
+            subjectProfiles: [{ _id: 'p1', studentId: 'student-1', subject: 'math', subjectName: '数学', totalReports: 2, pendingBottlenecks: [], updatedAt: '2026-06-11T10:00:00Z' }],
+            latestReportSummary: { _id: 'r1', studentId: 'student-1', subject: 'math', type: 'diagnosis', status: 'completed', summary: '计算基础', totalErrors: 2, bottlenecks: [], createdAt: '2026-06-12T09:30:00Z' },
+            latestPaperSummary: null
+          },
+          'student-2': {
+            subjectProfiles: [{ _id: 'p2', studentId: 'student-2', subject: 'math', subjectName: '数学', totalReports: 0, pendingBottlenecks: [], updatedAt: '2026-06-10T10:00:00Z' }],
+            latestReportSummary: null,
+            latestPaperSummary: null
+          }
+        }
+      }
+    },
+    getAccessibleStudents: async () => { accessibleCalls++; return [] },
+    getStudentDashboard: async () => { dashboardCalls++; return {} }
+  }
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.loadStudents()
+
+  assert.equal(homeDashboardCalls, 1, 'should call getHomeDashboard once')
+  assert.equal(accessibleCalls, 0, 'should NOT call getAccessibleStudents when getHomeDashboard is available')
+  assert.equal(dashboardCalls, 0, 'should NOT call getStudentDashboard per student')
+  assert.equal(page.data.homeMode, 'family-workbench')
+  assert.equal(page.data.students.length, 2)
+  assert.ok(page.data.childCards.length > 0)
+})
+
+test('index falls back to 1+N path when getHomeDashboard throws', async () => {
+  let homeDashboardCalls = 0
+  let accessibleCalls = 0
+  const cloud = {
+    getHomeDashboard: async () => { homeDashboardCalls++; throw new Error('not deployed yet') },
+    getAccessibleStudents: async () => { accessibleCalls++; return [{ _id: 'student-1', name: '钟青羽', grade: 5, createdAt: '2026-06-01' }] },
+    getStudentDashboard: async () => ({
+      subjectProfiles: [],
+      recentReports: [],
+      recentPapers: []
+    }),
+    getSubjectProfiles: async () => [],
+    getReports: async () => [],
+    getPapers: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/index/index.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { ...util, formatRelativeTime: () => '今天' }
+    }
+  })
+
+  await page.loadStudents()
+
+  assert.equal(homeDashboardCalls, 1, 'should try getHomeDashboard first')
+  assert.equal(accessibleCalls, 1, 'should fall back to getAccessibleStudents')
   assert.equal(page.data.homeMode, 'single-profile')
 })

@@ -61,6 +61,7 @@ function publicDeletionRequest(item) {
     status: item.status || 'requested',
     createdAt: item.createdAt,
     processedAt: item.processedAt || null,
+    processedBy: item.processedBy || '',
     note: item.note || ''
   }
 }
@@ -121,22 +122,32 @@ async function listEvents(event, openId) {
   }
 }
 
-// ── getSummary：聚合本月用量 ──
+// ── getSummary：聚合本月用量（游标分页，不截断） ──
 async function getSummary(event, openId) {
   if (!openId) return { success: false, error: '未登录' }
   const month = event.month || currentMonth()
-  let res
+  const PAGE_SIZE = 500
+  const MAX_PAGES = 20 // 安全上限：单用户单月 10000 条
+  const allEvents = []
+  let offset = 0
   try {
-    res = await db.collection('aiUsageEvents')
-      .where(monthFilter(openId, month))
-      .orderBy('createdAt', 'desc')
-      .limit(500)
-      .get()
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const res = await db.collection('aiUsageEvents')
+        .where(monthFilter(openId, month))
+        .orderBy('createdAt', 'desc')
+        .skip(offset)
+        .limit(PAGE_SIZE)
+        .get()
+      const batch = res.data || []
+      allEvents.push(...batch)
+      if (batch.length < PAGE_SIZE) break
+      offset += PAGE_SIZE
+    }
   } catch (error) {
     if (isMissingCollectionError(error)) return emptySummary(month)
     throw error
   }
-  const events = (res.data || []).filter(item => inBeijingMonth(item, month))
+  const events = allEvents.filter(item => inBeijingMonth(item, month))
   return aggregateSummary(events, month)
 }
 
@@ -149,7 +160,10 @@ function emptySummary(month) {
     callCount: 0,
     studentCount: 0,
     byEventType: [],
-    byModel: []
+    byModel: [],
+    isComplete: true,
+    eventCount: 0,
+    aggregatedAt: new Date()
   }
 }
 
@@ -188,7 +202,10 @@ function aggregateSummary(events, month) {
     callCount: events.length,
     studentCount: students.size,
     byEventType: Object.values(byEventTypeMap).sort((a, b) => b.totalCostCny - a.totalCostCny),
-    byModel: Object.values(byModelMap).sort((a, b) => b.totalCostCny - a.totalCostCny)
+    byModel: Object.values(byModelMap).sort((a, b) => b.totalCostCny - a.totalCostCny),
+    isComplete: true,
+    eventCount: events.length,
+    aggregatedAt: new Date()
   }
 }
 

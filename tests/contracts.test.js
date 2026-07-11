@@ -120,6 +120,14 @@ test('pages use the shared cloud data access layer', () => {
   }
 })
 
+test('home page does not fall back to direct database reads', () => {
+  const source = read('miniprogram/pages/index/index.js')
+  assert.doesNotMatch(source, /cloud\.getStudents\b/, 'index should not use direct DB getStudents')
+  assert.doesNotMatch(source, /cloud\.getReports\b/, 'index should not use direct DB getReports')
+  assert.doesNotMatch(source, /cloud\.getPapers\b/, 'index should not use direct DB getPapers')
+  assert.doesNotMatch(source, /cloud\.getSubjectProfiles\b/, 'index should not use direct DB getSubjectProfiles')
+})
+
 test('subject profile reads avoid a compound student and subject index', () => {
   for (const relativePath of [
     'miniprogram/utils/cloud.js',
@@ -207,8 +215,15 @@ test('user-facing bottleneck labels do not render LP codes as primary text', () 
 
 test('bottleneck center and detail pages are registered and share the bottleneck presenter', () => {
   const app = JSON.parse(read('miniprogram/app.json'))
-  assert.ok(app.pages.includes('pages/bottleneck-center/bottleneck-center'))
-  assert.ok(app.pages.includes('pages/bottleneck-detail/bottleneck-detail'))
+  // 页面可能在主包 pages 或分包 subPackages 中注册
+  const allPages = [...(app.pages || [])]
+  for (const pkg of (app.subPackages || [])) {
+    for (const page of (pkg.pages || [])) {
+      allPages.push(`${pkg.root}/${page}`)
+    }
+  }
+  assert.ok(allPages.includes('pages/bottleneck-center/bottleneck-center'))
+  assert.ok(allPages.includes('pages/bottleneck-detail/bottleneck-detail'))
 
   for (const relativePath of [
     'miniprogram/pages/index/index-presenter.js',
@@ -357,6 +372,60 @@ test('duplicate photos are retained but excluded from diagnostic aggregation', (
   assert.match(analyzer, /filter\(page => !page\.isDuplicate\)/)
   assert.match(analyzer, /if \(profileSummary\.isEffective\)/)
   assert.match(analyzer, /本次照片均疑似重复，未更新学习卡点/)
+})
+
+// ── Performance measurement ──
+
+test('E2E page timing waits for a page-specific ready predicate rather than an unconditional delay', () => {
+  const source = read('scripts/devtools-e2e-fullpage.js')
+  assert.match(source, /waitUntilReady/, 'must define a waitUntilReady helper')
+  // Must NOT use a bare unconditional waitFor as the sole timing mechanism
+  assert.doesNotMatch(
+    source,
+    /await page\.waitFor\(1500\)/,
+    'must not use an unconditional 1500ms waitFor for page readiness'
+  )
+})
+
+test('E2E page timing records event-driven metrics beyond a single durationMs', () => {
+  const source = read('scripts/devtools-e2e-fullpage.js')
+  assert.match(source, /navigationMs/, 'must record navigationMs')
+  assert.match(source, /readyMs/, 'must record readyMs')
+})
+
+test('performance baseline script exists and is wired in package.json', () => {
+  const scripts = packageScripts()
+  assert.match(scripts['perf:baseline'] || '', /performance-report/, 'perf:baseline must call performance-report.js')
+  assert.ok(
+    fs.existsSync(path.join(root, 'scripts', 'performance-report.js')),
+    'scripts/performance-report.js must exist'
+  )
+})
+
+// ── Timeline projection and progress query optimization ──
+
+test('timeline queries use field projection to avoid fetching heavy columns', () => {
+  const source = read('cloudfunctions/studentData/index.js')
+  assert.match(source, /REPORT_TIMELINE_FIELDS/, 'must define report projection fields')
+  assert.match(source, /\.field\(REPORT_TIMELINE_FIELDS\)/, 'getReports must project fields')
+  assert.match(source, /\.field\(PAPER_TIMELINE_FIELDS\)/, 'getPapers must project fields')
+  assert.match(source, /\.field\(ENGLISH_SESSION_FIELDS\)/, 'getEnglishSessions must project fields')
+  assert.match(source, /\.field\(RESOURCE_PACK_FIELDS\)/, 'getLearningResourcePacks must project fields')
+})
+
+test('timeline no longer returns a server-built items array', () => {
+  const source = read('cloudfunctions/studentData/index.js')
+  // buildTimeline function should be removed
+  assert.doesNotMatch(source, /function buildTimeline\b/, 'buildTimeline should be removed as dead code')
+  // items field should not be in the getLearningTimeline return
+  assert.doesNotMatch(source, /items:\s*buildTimeline/, 'timeline response should not include items')
+})
+
+test('analysis progress query uses orderBy and limit instead of in-memory sort', () => {
+  const source = read('cloudfunctions/getAnalysisProgress/index.js')
+  assert.match(source, /\.orderBy\('createdAt',\s*'desc'\)/, 'must orderBy createdAt desc')
+  assert.match(source, /\.limit\(1\)/, 'must limit to 1')
+  assert.doesNotMatch(source, /\.sort\(/, 'must not sort in memory')
 })
 
 // ── Dead code prevention ──
