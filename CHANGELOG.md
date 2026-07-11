@@ -8,6 +8,8 @@
 
 ### Added
 
+- **统一状态感知体系**：新建 `utils/status-store.js`（全局状态 Store + 事件总线）和 `utils/app-status.js`（app 级单例 + `bindPageStatus` 页面混入）。覆盖所有异步操作（诊断分析、验证卷生成、报告 PDF、听写批改），操作状态变更时自动通知所有订阅页面。上传成功后直接跳转报告页轮询（修复"AI 分析中之后无反馈"），首页/学科页/学习记录页收到 `operation:completed` 事件自动刷新。
+- **上传页授权遮罩修复**：内测授权守卫改用页内遮罩（WXML overlay）替代不可靠的 `wx.showModal`，修复"点击上传按钮无反应"。
 - **AI 用量与成本估算账本**（体验版内测）：`aiUsage` 云函数 + `aiUsageEvents` 追加式事件账本。各 AI 云函数（analyzeBatch/generatePaper/learningResource/englishVocabulary）在真实调用边界写入 pending→succeeded/failed 事件，成本优先用真实 token usage，无 usage 时按字符/图片数估算并标记。账单页（`pages/ai-usage`）展示月度汇总、按功能拆分和按天明细，强制标注"内测成本估算，不代表应付款项"。
 - **内测授权与数据删除**：首次上传前展示内测说明弹层（收集内容/用途/风险/删除方式），用户同意后才能继续；`userConsents` 集合记录授权；AI 用量页可发起 `dataDeletionRequests`。设计文档见 `docs/superpowers/specs/2026-06-27-private-beta-ai-usage-design.md`。
 - 验证卷预览页“覆盖卡点”层级展示：新增 `paperDisplay.bottleneckHierarchy`，按粗类、卡点家族、细卡点展示覆盖范围，并兼容旧 LP/摘要数据。

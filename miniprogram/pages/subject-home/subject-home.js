@@ -6,6 +6,7 @@ const { createAnalysisPoller } = require('../../utils/analysis-poller')
 const { buildSubjectHomeView } = require('./subject-home-presenter')
 const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
 const { getSubjectColor } = require('../../utils/constants')
+const { bindPageStatus } = require('../../utils/app-status')
 
 const SUBJECT_HOME_CACHE_TTL_MS = 60 * 1000
 
@@ -67,6 +68,21 @@ Page({
       title: subject === 'english' ? '英语词汇掌握' : `${decodedSubjectName}工作台`
     })
     this.setNavColor()
+
+    // 统一状态感知：收到操作完成/缓存失效事件时强制刷新学科档案
+    bindPageStatus(this, {
+      studentIdGetter: () => this.data.studentId,
+      subjectGetter: () => this.data.subject,
+      handlers: {
+        onOperationCompleted: () => {
+          this._profileCacheInvalidated = true
+          this.loadProfile({ force: true }).then(() => this.checkAnalysisStatus())
+        },
+        onCacheInvalidated: () => {
+          this._profileCacheInvalidated = true
+        }
+      }
+    })
   },
 
   onShow() {

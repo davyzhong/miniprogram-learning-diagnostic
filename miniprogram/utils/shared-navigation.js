@@ -6,6 +6,7 @@
 
 const { getSubjectName } = require('./constants')
 const { createPoller } = require('./poller')
+const { appStatus, OP_TYPES, OP_STATUS } = require('./app-status')
 
 // 验证卷轮询：每 5 秒一次，最多 24 次（2 分钟）
 const VERIFICATION_POLL_INTERVAL = 5000
@@ -253,12 +254,20 @@ async function navigateToVerificationPaper(cloudModule, { studentId, subject, re
 
   if (status === 'generating' || status === 'appending') {
     wx.showToast({ title: '验证卷正在后台生成，完成后自动跳转', icon: 'none', duration: 2500 })
+    appStatus.registerOperation({
+      studentId, subject, opType: OP_TYPES.VERIFICATION_PAPER,
+      status: OP_STATUS.GENERATING, progress: 0, label: '验证卷生成'
+    })
     startVerificationPoller(cloudModule, studentId, subject, reportId)
     return { status, paperId }
   }
 
   if (status === 'failed') {
     wx.showToast({ title: '验证卷后台生成失败，请稍后重新诊断或查看报告', icon: 'none', duration: 3000 })
+    appStatus.registerOperation({
+      studentId, subject, opType: OP_TYPES.VERIFICATION_PAPER,
+      status: OP_STATUS.FAILED, label: '验证卷生成'
+    })
     return { status, paperId }
   }
 
@@ -286,11 +295,19 @@ function startVerificationPoller(cloudModule, studentId, subject, reportId) {
       const st = result.status || 'none'
       const pid = result.paper && result.paper._id ? result.paper._id : ''
       if (st === 'ready' && pid) {
+        appStatus.registerOperation({
+          studentId, subject, opType: OP_TYPES.VERIFICATION_PAPER,
+          status: OP_STATUS.COMPLETED, progress: 100, paperId: pid, label: '验证卷生成'
+        })
         wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${pid}` })
         return false
       }
       if (st === 'failed') {
         wx.showToast({ title: '验证卷生成失败，请稍后重试', icon: 'none', duration: 3000 })
+        appStatus.registerOperation({
+          studentId, subject, opType: OP_TYPES.VERIFICATION_PAPER,
+          status: OP_STATUS.FAILED, label: '验证卷生成'
+        })
         return false
       }
       return true

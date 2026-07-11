@@ -5,6 +5,7 @@ const { createAnalysisPoller } = require('../../utils/analysis-poller')
 const { buildReportView } = require('./report-presenter')
 const { getSubjectName } = require('../../utils/constants')
 const { navigateToVerificationPaper, startVerificationPoller, stopVerificationPoller } = require('../../utils/shared-navigation')
+const { appStatus, OP_TYPES, OP_STATUS } = require('../../utils/app-status')
 
 function downloadCloudFile(fileID) {
   return new Promise((resolve, reject) => {
@@ -118,6 +119,14 @@ Page({
       this.loadReport(id)
     } else {
       wx.showToast({ title: '缺少报告信息', icon: 'none' })
+    }
+  },
+
+  onShow() {
+    // 从 onHide/onUnload 恢复后，如果报告仍在分析中且轮询已停，重新启动轮询
+    const report = this.data.report
+    if (report && report.status === 'analyzing' && (!this._poller || !this._poller.isRunning())) {
+      this.startPolling(this.data.reportId)
     }
   },
 
@@ -478,13 +487,29 @@ Page({
         return detail.report
       },
       loadProgress: () => cloud.getAnalysisProgress(reportId),
-      onCompleted: () => {
+      onCompleted: (report) => {
         wx.showToast({ title: '诊断完成', icon: 'success' })
+        // 同步到全局状态感知体系
+        appStatus.registerOperation({
+          studentId: report && report.studentId || '',
+          subject: report && report.subject || '',
+          opType: report && report.type === 'verification' ? OP_TYPES.VERIFICATION_ANALYSIS : OP_TYPES.ANALYSIS,
+          status: OP_STATUS.COMPLETED,
+          progress: 100,
+          reportId: report && report._id || ''
+        })
         this.loadReport(reportId)
       },
-      onFailed: () => {
+      onFailed: (report) => {
         wx.showToast({ title: '分析失败', icon: 'none' })
         this.setData({ analysisStatusText: '分析失败' })
+        appStatus.registerOperation({
+          studentId: report && report.studentId || '',
+          subject: report && report.subject || '',
+          opType: report && report.type === 'verification' ? OP_TYPES.VERIFICATION_ANALYSIS : OP_TYPES.ANALYSIS,
+          status: OP_STATUS.FAILED,
+          reportId: report && report._id || ''
+        })
       },
       onTimeoutStatus: () => {
         this.setData({
@@ -501,6 +526,18 @@ Page({
           hasAnalysisProgress: state.hasProgress,
           analysisTaskMissing: state.taskMissing
         })
+        // 同步进度到全局状态感知体系
+        const report = this.data.report
+        if (report) {
+          appStatus.registerOperation({
+            studentId: report.studentId || '',
+            subject: report.subject || '',
+            opType: report.type === 'verification' ? OP_TYPES.VERIFICATION_ANALYSIS : OP_TYPES.ANALYSIS,
+            status: OP_STATUS.ANALYZING,
+            progress: state.progressPercent,
+            reportId: report._id || ''
+          })
+        }
       },
       onError: err => console.error('轮询报告状态失败', err),
       onTimeout: () => {
