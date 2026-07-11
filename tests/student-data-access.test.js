@@ -94,8 +94,8 @@ test('viewer can read subject dashboard, report detail, paper detail and timelin
   assert.equal(report.report.summary, '发现审题理解卡点')
   assert.equal(report.profile.subject, 'math')
   assert.equal(report.pendingCount, 1)
-  assert.equal(report.feedback.length, 1)
-  assert.equal(report.feedback[0].targetId, 'LP-008')
+  // 反馈改为按需加载，不再内联到报告详情中
+  assert.equal(report.feedback, undefined)
 
   const verificationReport = await handler.main({ action: 'getReportDetail', reportId: 'report-2' })
   assert.equal(verificationReport.success, true)
@@ -109,10 +109,13 @@ test('viewer can read subject dashboard, report detail, paper detail and timelin
 
   const timeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1' })
   assert.equal(timeline.success, true)
-  assert.deepEqual(JSON.parse(JSON.stringify(timeline.items.map(item => item.id))), ['report-report-2', 'paper-paper-1', 'report-report-1'])
+  // items 字段已移除（死代码），时间线数据通过 reports/papers/englishSessions 分组返回
+  assert.equal(timeline.items, undefined)
+  assert.deepEqual(timeline.reports.map(item => item._id), ['report-2', 'report-1'])
+  assert.deepEqual(timeline.papers.map(item => item._id), ['paper-1'])
   assert.equal(timeline.reports.find(item => item._id === 'report-1').imageFileCount, 1)
-  assert.equal(timeline.items.find(item => item.type === 'paper').bottleneckSummary, '审题理解')
-  assert.equal(timeline.items.find(item => item.type === 'paper').paperDisplayCode, '数学-20260613-01')
+  assert.equal(timeline.papers.find(item => item._id === 'paper-1').bottleneckSummaries.join('、'), '审题理解')
+  assert.equal(timeline.papers.find(item => item._id === 'paper-1').paperDisplayCode, '数学-20260613-01')
 })
 
 test('timeline sorts papers by generated time while preserving paper date', async () => {
@@ -147,8 +150,9 @@ test('timeline sorts papers by generated time while preserving paper date', asyn
   const timeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1', subject: 'math' })
 
   assert.equal(timeline.success, true)
-  assert.deepEqual(JSON.parse(JSON.stringify(timeline.items.map(item => item.id))), ['paper-paper-1', 'report-report-1'])
-  assert.equal(timeline.items[0].paperDate, '2026-06-13')
+  assert.deepEqual(timeline.reports.map(item => item._id), ['report-1'])
+  assert.deepEqual(timeline.papers.map(item => item._id), ['paper-1'])
+  assert.equal(timeline.papers[0].paperDate, '2026-06-13')
 })
 
 test('learning timeline respects the requested lightweight limit', async () => {
@@ -251,10 +255,9 @@ test('timeline includes English vocabulary sessions as learning records', async 
   const timeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1' })
 
   assert.equal(timeline.success, true)
-  assert.deepEqual(JSON.parse(JSON.stringify(timeline.englishSessions.map(item => item._id))), ['dictation-1', 'familiarity-1'])
-  assert.deepEqual(JSON.parse(JSON.stringify(timeline.items.map(item => item.id))), ['english-session-dictation-1', 'english-session-familiarity-1'])
-  assert.equal(timeline.items[0].type, 'english-dictation-session')
-  assert.equal(timeline.items[0].photoFileIds.length, 1)
+  assert.deepEqual(timeline.englishSessions.map(item => item._id), ['dictation-1', 'familiarity-1'])
+  assert.equal(timeline.englishSessions[0].functionType, 'spelling')
+  assert.equal(timeline.englishSessions[0].photoFileIds.length, 1)
 
   const mathTimeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1', subject: 'math' })
   assert.deepEqual(JSON.parse(JSON.stringify(mathTimeline.englishSessions)), [])
@@ -285,9 +288,9 @@ test('learning timeline includes learning resource packs', async () => {
   const timeline = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1', limit: 20 })
 
   assert.equal(timeline.success, true)
-  assert.equal(timeline.items[0].type, 'learning_resource')
-  assert.equal(timeline.items[0].title, '学习任务包：小数乘法中积的小数位数判断错误')
-  assert.equal(timeline.items[0].summary, '已完成学习')
+  assert.equal(timeline.learningResourcePacks.length, 1)
+  assert.equal(timeline.learningResourcePacks[0].title, '小数乘法中积的小数位数判断错误')
+  assert.equal(timeline.learningResourcePacks[0].status, 'completed')
 })
 
 test('owner can archive stale interrupted analysis records from the timeline', async () => {
@@ -376,4 +379,200 @@ test('non-member cannot read child data through studentData', async () => {
   const paper = await handler.main({ action: 'getPaperDetail', paperId: 'paper-1' })
   assert.equal(paper.success, false)
   assert.equal(paper.error, '无权访问该学生')
+})
+
+// ── Task 4: getHomeDashboard 聚合端点 ──
+
+function seedHomeDashboardDatabase() {
+  return createDatabase({
+    students: [
+      { _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6, createdAt: '2026-06-01T10:00:00Z' },
+      { _id: 'student-2', _openid: 'owner-1', name: '钟筱雨', grade: 4, createdAt: '2026-06-02T10:00:00Z' },
+      // joined student（非 owned）
+      { _id: 'student-3', _openid: 'owner-2', name: '其他孩子', grade: 3, createdAt: '2026-06-03T10:00:00Z' }
+    ],
+    studentMembers: [
+      { _id: 'member-3', studentId: 'student-3', ownerOpenId: 'owner-2', memberOpenId: 'owner-1', role: 'viewer', status: 'active' }
+    ],
+    subjectProfiles: [
+      { _id: 'profile-1', studentId: 'student-1', subject: 'math', subjectName: '数学', totalReports: 2, pendingBottlenecks: [{ lpCode: 'LP-001', lpName: '计算基础' }], updatedAt: '2026-06-12T11:00:00Z' },
+      { _id: 'profile-2', studentId: 'student-2', subject: 'math', subjectName: '数学', totalReports: 1, pendingBottlenecks: [], updatedAt: '2026-06-11T11:00:00Z' },
+      { _id: 'profile-3', studentId: 'student-3', subject: 'english', subjectName: '英语', totalReports: 0, pendingBottlenecks: [], updatedAt: '2026-06-10T11:00:00Z' }
+    ],
+    reports: [
+      { _id: 'report-1', studentId: 'student-1', subject: 'math', type: 'diagnosis', status: 'completed', summary: '计算基础卡点', totalErrors: 3, bottlenecks: [{ lpCode: 'LP-001', lpName: '计算基础', errorCount: 2 }], createdAt: '2026-06-12T09:30:00Z' },
+      { _id: 'report-2', studentId: 'student-2', subject: 'math', type: 'diagnosis', status: 'completed', summary: '分数基础', totalErrors: 1, createdAt: '2026-06-11T09:30:00Z' },
+      { _id: 'report-3', studentId: 'student-3', subject: 'english', type: 'diagnosis', status: 'completed', summary: '词汇练习', totalErrors: 0, createdAt: '2026-06-10T09:30:00Z' }
+    ],
+    papers: [
+      { _id: 'paper-1', studentId: 'student-1', subject: 'math', type: 'verification', paperCode: 'MATH-01', paperDisplayCode: '数学-01', questionCount: 6, generationStatus: 'ready', pdfFileId: 'cloud://paper-1.pdf', createdAt: '2026-06-12T10:00:00Z' }
+    ]
+  })
+}
+
+test('getHomeDashboard returns all accessible students with summaries in one call', async () => {
+  const db = seedHomeDashboardDatabase()
+  const handler = loadStudentData(db, 'owner-1')
+
+  const result = await handler.main({ action: 'getHomeDashboard' })
+
+  assert.equal(result.success, true)
+  // 2 owned + 1 joined = 3 个学生
+  assert.equal(result.students.length, 3)
+  // joined 学生也包含在内
+  assert.ok(result.students.find(s => s._id === 'student-3'))
+  assert.ok(result.students.find(s => s._id === 'student-3').role === 'viewer')
+  // perStudent 包含每个学生的摘要
+  assert.ok(result.perStudent['student-1'])
+  assert.ok(result.perStudent['student-2'])
+  assert.ok(result.perStudent['student-3'])
+  // 验证 subjectProfiles 被正确分组
+  assert.equal(result.perStudent['student-1'].subjectProfiles.length, 1)
+  assert.equal(result.perStudent['student-1'].subjectProfiles[0].subject, 'math')
+  // 验证 latestReportSummary
+  assert.ok(result.perStudent['student-1'].latestReportSummary)
+  assert.equal(result.perStudent['student-1'].latestReportSummary._id, 'report-1')
+  // 验证 latestPaperSummary
+  assert.ok(result.perStudent['student-1'].latestPaperSummary)
+  assert.equal(result.perStudent['student-1'].latestPaperSummary._id, 'paper-1')
+  // student-2 无 paper
+  assert.equal(result.perStudent['student-2'].latestPaperSummary, null)
+})
+
+test('getHomeDashboard response excludes heavy fields (questions, errorDetails, imageFiles)', async () => {
+  const db = createDatabase({
+    students: [
+      { _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6, createdAt: '2026-06-01T10:00:00Z' }
+    ],
+    studentMembers: [],
+    subjectProfiles: [],
+    reports: [
+      {
+        _id: 'report-heavy', studentId: 'student-1', subject: 'math', type: 'diagnosis', status: 'completed',
+        summary: '大报告', totalErrors: 10,
+        bottlenecks: [{ lpCode: 'LP-001', lpName: '计算基础', errorCount: 5 }],
+        // 这些大字段不应出现在 DTO 中
+        errorDetails: Array.from({ length: 20 }, (_, i) => ({ _id: `err-${i}`, detail: 'x'.repeat(500) })),
+        pageResults: Array.from({ length: 10 }, (_, i) => ({ pageIndex: i })),
+        imageFiles: Array.from({ length: 15 }, (_, i) => ({ fileID: `cloud://img-${i}` })),
+        createdAt: '2026-06-12T09:30:00Z'
+      }
+    ],
+    papers: [
+      {
+        _id: 'paper-heavy', studentId: 'student-1', subject: 'math', type: 'verification',
+        paperCode: 'MATH-01', paperDisplayCode: '数学-01', questionCount: 20,
+        generationStatus: 'ready', pdfFileId: 'cloud://paper.pdf',
+        // questions 不应出现在 DTO 中
+        questions: Array.from({ length: 20 }, (_, i) => ({ questionId: `q-${i}`, stem: 'x'.repeat(500) })),
+        createdAt: '2026-06-12T10:00:00Z'
+      }
+    ]
+  })
+  const handler = loadStudentData(db, 'owner-1')
+
+  const result = await handler.main({ action: 'getHomeDashboard' })
+
+  assert.equal(result.success, true)
+  const detail = result.perStudent['student-1']
+  // 确认大字段被剥离
+  assert.equal(detail.latestReportSummary.errorDetails, undefined)
+  assert.equal(detail.latestReportSummary.pageResults, undefined)
+  assert.equal(detail.latestReportSummary.imageFiles, undefined)
+  assert.equal(detail.latestPaperSummary.questions, undefined)
+  // 确认轻量字段保留
+  assert.equal(detail.latestReportSummary.summary, '大报告')
+  assert.equal(detail.latestPaperSummary.questionCount, 20)
+})
+
+test('getHomeDashboard returns empty gracefully when user has no students', async () => {
+  const db = createDatabase({
+    students: [],
+    studentMembers: []
+  })
+  const handler = loadStudentData(db, 'lonely-user')
+
+  const result = await handler.main({ action: 'getHomeDashboard' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.students.length, 0)
+  assert.equal(Object.keys(result.perStudent).length, 0)
+})
+
+test('getHomeDashboard batches joined students without serial member loop', async () => {
+  // 5 个 joined 学生 — 旧代码会串行 5 次 doc().get()，新代码用 1 次 where(in) 批量
+  const joinedStudents = Array.from({ length: 5 }, (_, i) => ({
+    _id: `joined-${i + 1}`,
+    _openid: `other-owner-${i}`,
+    name: `加入孩子${i + 1}`,
+    grade: 3,
+    createdAt: `2026-06-0${i + 1}T10:00:00Z`
+  }))
+  const db = createDatabase({
+    students: joinedStudents,
+    studentMembers: joinedStudents.map((s, i) => ({
+      _id: `member-${i}`,
+      studentId: s._id,
+      ownerOpenId: s._openid,
+      memberOpenId: 'owner-1',
+      role: 'viewer',
+      status: 'active'
+    })),
+    subjectProfiles: [],
+    reports: [],
+    papers: []
+  })
+  const handler = loadStudentData(db, 'owner-1')
+
+  const result = await handler.main({ action: 'getHomeDashboard' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.students.length, 5)
+  // 所有 joined 学生都有 role
+  assert.ok(result.students.every(s => s.role === 'viewer'))
+})
+
+// ── Task 6: 报告详情 DTO ──
+
+test('getReportDetail strips debug/raw AI fields but keeps rendering fields', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentMembers: [],
+    reports: [{
+      _id: 'report-heavy',
+      _openid: 'owner-1',
+      studentId: 'student-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      summary: '计算基础卡点',
+      totalErrors: 5,
+      bottlenecks: [{ lpCode: 'LP-001', lpName: '计算基础', errorCount: 3 }],
+      imageFiles: [{ fileID: 'cloud://img-1.jpg', fileName: 'paper.jpg' }],
+      errorDetails: [{ _id: 'err-1', errorType: 'calc', question: '1/4 + 1/4' }],
+      // 这些大字段应被剥离
+      pageResults: Array.from({ length: 10 }, (_, i) => ({ pageIndex: i, ocrText: 'x'.repeat(500) })),
+      rawPages: [{ rawText: 'x'.repeat(1000) }],
+      aiRaw: { model: 'hy3-preview', response: 'x'.repeat(2000) },
+      createdAt: '2026-06-12T09:30:00Z'
+    }],
+    papers: []
+  })
+  const handler = loadStudentData(db, 'owner-1')
+
+  const detail = await handler.main({ action: 'getReportDetail', reportId: 'report-heavy' })
+
+  assert.equal(detail.success, true)
+  // 渲染必需字段保留
+  assert.equal(detail.report.summary, '计算基础卡点')
+  assert.equal(detail.report.totalErrors, 5)
+  assert.ok(Array.isArray(detail.report.bottlenecks))
+  assert.ok(Array.isArray(detail.report.imageFiles))
+  assert.ok(Array.isArray(detail.report.errorDetails))
+  // 调试/原始 AI 字段被剥离
+  assert.equal(detail.report.pageResults, undefined)
+  assert.equal(detail.report.rawPages, undefined)
+  assert.equal(detail.report.aiRaw, undefined)
+  // 反馈不在详情中内联（按需加载）
+  assert.equal(detail.feedback, undefined)
 })

@@ -16,7 +16,7 @@
 | 后端服务 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI 模型（图像分析） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI 模型（题目生成） | CloudBase AI `deepseek-v4-flash` | 用于 generatePaper 生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 12 个核心集合：students / studentMembers / studentInvites / subjectProfiles / reports / papers / analysisTasks / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / learningResourcePacks |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 15 个集合：students / studentMembers / studentInvites / subjectProfiles / reports / papers / analysisTasks / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / learningResourcePacks / aiUsageEvents / dataDeletionRequests / userConsents |
 | 文件存储 | 云开发云存储 | 试卷照片、生成的 PDF 文件 |
 | PDF 生成 | pdfkit（Node.js） | 云函数内生成 A4 试卷/报告 PDF |
 | 中文字体 | 内置 Noto CJK 字体 | `generatePaper` / `generateReportPDF` 随函数部署字体文件，不依赖环境变量 |
@@ -63,7 +63,7 @@
 │  ┌──────────────────┐                                               │
 │  │generateReportPDF │    ┌──────────────┐  ┌────────────────────┐   │
 │  │报告PDF生成        │    │ 云数据库      │  │ 云存储              │   │
-│  └──────────────────┘    │ 12 个核心集合  │  │ photos/ papers/    │   │
+│  └──────────────────┘    │ 15 个集合      │  │ photos/ papers/    │   │
 │                           │              │  │ reports/           │   │
 │                           └──────────────┘  └────────────────────┘   │
 │  ┌──────────────────┐    ┌──────────────────┐                       │
@@ -124,7 +124,7 @@ cloud.callUploadAndAnalyze({ fileIDs, studentId, subject, mode:'diagnosis' })
               ├── 1. 读取 reports.imageFileIds
               ├── 2. 检查陈旧 processing 任务（>10min → 标记 failed）
               ├── 3. 创建 analysisTasks 记录（status='processing'）
-              ├── 4. 按 1 张/批拆分，每次函数只处理 1 批，完成后异步续跑下一批
+              ├── 4. 按 5 张/批拆分，每次函数处理多批，完成后异步续跑下一批
               │       │
               │       ▼
               │  [analyzeBatch 云函数]
@@ -338,7 +338,7 @@ bottleneck-detail（学习卡点详情）
 
 ai-usage（AI 用量账本）
   ├── callFunction aiUsage.getSummary / listEvents
-  └── callFunction aiUsage.getBetaAuth / setBetaAuth / requestDataDeletion
+  └── callFunction aiUsage.getBetaAuth / setBetaAuth / createDeletionRequest
 ```
 
 ### 全局交互原则：信息即入口
@@ -429,7 +429,7 @@ ai-usage（AI 用量账本）
 | 客户端 index/subject-home/report/upload-history/paper-preview | studentData | wx.cloud.callFunction | 访问感知的学习数据聚合，支持 owner/viewer |
 | 客户端 parent-management/join-student | studentAccess | wx.cloud.callFunction | 家长成员管理、邀请创建、扫码加入 |
 | uploadAndAnalyze | analyzePhotos | cloud.callFunction (fire-and-forget) | 服务端触发后台分析，立即返回 reportId |
-| analyzePhotos | analyzeBatch | cloud.callFunction (同步 await, 单图续跑) | 每批 1 张；每次 analyzePhotos 调用只处理 1 批，完成后异步触发下一次 |
+| analyzePhotos | analyzeBatch | cloud.callFunction (同步 await, 多批续跑) | 每批 5 张；每次 analyzePhotos 调用处理至多 MAX_BATCHES_PER_INVOCATION 批，完成后异步触发下一次 |
 | analyzePhotos | sendNotification | Promise.catch (fire-and-forget) | 预留钩子；订阅消息模板和授权链路接入前，前端只提示“完成后可在学习记录查看” |
 | 客户端 report 页面 | getAnalysisProgress | wx.cloud.callFunction | 轮询调用 |
 | 客户端 report 页面 | callAnalyzePhotos | wx.cloud.callFunction (20s 超时) | 重试入口（分析报告页发现未完成时） |
@@ -572,14 +572,14 @@ poller.start()
 
 ### 为什么用串行而非并行批处理？
 
-**决策**：analyzePhotos 中 1 张/批串行调用 analyzeBatch；每次云函数调用只处理 1 批，随后 fire-and-forget 续跑下一批，不用 Promise.all 并行。
+**决策**：analyzePhotos 中 5 张/批串行调用 analyzeBatch；每次云函数调用处理多批（MAX_BATCHES_PER_INVOCATION），随后 fire-and-forget 续跑下一批，不用 Promise.all 并行。
 
 **原因**：
 1. **CloudBase AI 并发限制**：hy3-preview 模型有 QPS 限制，并行调用容易触发限流导致整批失败
 2. **云函数内存约束**：每个 analyzeBatch 需要加载图片临时 URL 并传递给 AI，并行会导致内存峰值过高
 3. **进度追踪精度**：串行可以精确更新 `analysisTasks.completedBatches`，客户端能看到真实进度；并行时进度更新变得复杂且不准确
 4. **故障隔离**：某一批失败只影响该批，不会因并行 reject 导致所有批次结果丢失
-5. **稳定性优先**：20 张照片会拆成 20 次后台续跑，耗时线性增加，但上传入口已异步返回，用户可以离开页面后在学习记录中等待报告完成
+5. **稳定性优先**：20 张照片会拆成 4 批后台续跑，耗时随批数增长，但上传入口已异步返回，用户可以离开页面后在学习记录中等待报告完成
 
 ### 为什么 uploadAndAnalyze 使用 fire-and-forget 启动 analyzePhotos？
 

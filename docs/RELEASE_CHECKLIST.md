@@ -34,12 +34,21 @@ git diff --check
 npm run check:deployment && npm run verify && npm run test:coverage
 ```
 
+补充检查（手动执行）：
+
+```bash
+npm run check:size        # 主包体积预算（<800KB）
+npm run perf:baseline     # 事件驱动性能基线（需先跑 test:e2e:core）
+node scripts/sync-cloudfunction-shared.js --check  # 共享文件一致性
+```
+
 通过标准：
 
 - 自动化测试全部通过。
 - JS 静态检查通过。
 - 覆盖率门禁通过。
-- 云函数部署清单检查通过。
+- 云函数部署清单检查通过（含依赖版本一致性、共享文件一致性）。
+- 主包体积在预算内（<800KB）。
 - `git diff --check` 无空白错误。
 - 微信开发者工具 CLI `preview` 成功。
 

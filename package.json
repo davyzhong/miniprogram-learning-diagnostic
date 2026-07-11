@@ -31,6 +31,8 @@
     "check": "node scripts/check-js.js",
     "check:deployment": "node --test tests/deployment-readiness.test.js",
     "release:check": "npm run check:deployment && npm run verify && npm run test:coverage",
-    "verify": "npm run test:unit && npm run check"
+    "verify": "npm run test:unit && npm run check",
+    "perf:baseline": "node scripts/performance-report.js",
+    "check:size": "node scripts/check-main-package-size.js"
   }
 }

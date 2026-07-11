@@ -13,6 +13,7 @@ function matches(document, filter) {
     if (value && value.__queryOp === 'lte') return document[key] <= value.value
     if (value && value.__queryOp === 'gt') return document[key] > value.value
     if (value && value.__queryOp === 'gte') return document[key] >= value.value
+    if (value && value.__queryOp === 'in') return Array.isArray(value.values) && value.values.includes(document[key])
     return document[key] === value
   })
 }
@@ -44,6 +45,9 @@ function createDatabase(initial = {}, options = {}) {
     for (const [key, value] of Object.entries(data)) {
       if (value && value.__operation === 'inc') {
         document[key] = (Number(document[key]) || 0) + value.value
+      } else if (value && value.__operation === 'push') {
+        if (!Array.isArray(document[key])) document[key] = []
+        document[key] = [...document[key], ...value.items]
       } else {
         document[key] = clone(value)
       }
@@ -78,6 +82,17 @@ function createDatabase(initial = {}, options = {}) {
         assertCollectionExists(name)
         const items = getItems(name)
         let selected = items.filter(item => matches(item, filter))
+        let skipCount = 0
+        let projection = null
+        const applyProjection = () => {
+          if (!projection) return
+          const fields = Object.keys(projection).filter(k => projection[k])
+          selected = selected.map(doc => {
+            const out = {}
+            for (const f of fields) { if (f in doc) out[f] = doc[f] }
+            return out
+          })
+        }
         const query = {
           orderBy(field, direction) {
             selected = selected.slice().sort((a, b) => {
@@ -87,11 +102,23 @@ function createDatabase(initial = {}, options = {}) {
             })
             return query
           },
-          limit(count) {
-            selected = selected.slice(0, count)
+          field(spec) {
+            projection = spec
             return query
           },
-          get: async () => ({ data: clone(selected) })
+          skip(count) {
+            skipCount = count
+            return query
+          },
+          limit(count) {
+            selected = selected.slice(skipCount, skipCount + count)
+            applyProjection()
+            return query
+          },
+          get: async () => {
+            applyProjection()
+            return { data: clone(selected) }
+          }
         }
         return query
       }
@@ -107,10 +134,12 @@ function createDatabase(initial = {}, options = {}) {
     },
     command: {
       inc: value => ({ __operation: 'inc', value }),
+      push: items => ({ __operation: 'push', items: Array.isArray(items) ? items : [items] }),
       lt: value => ({ __queryOp: 'lt', value }),
       lte: value => ({ __queryOp: 'lte', value }),
       gt: value => ({ __queryOp: 'gt', value }),
       gte: value => ({ __queryOp: 'gte', value }),
+      in: values => ({ __queryOp: 'in', values }),
       and: conditions => ({ __queryOp: 'and', conditions })
     },
     serverDate: () => new Date('2026-06-11T12:00:00+08:00'),

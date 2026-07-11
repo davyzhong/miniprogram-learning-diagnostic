@@ -10,6 +10,7 @@ cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 
 const ACTIONS = new Set([
+  'getHomeDashboard',
   'getStudentDashboard',
   'getSubjectDashboard',
   'getLearningTimeline',
@@ -101,6 +102,39 @@ function publicFeedback(item = {}) {
   };
 }
 
+// ── 投影字段集：只保留时间线 summary 函数和前端消费的轻量字段，剥离大字段 ──
+const REPORT_TIMELINE_FIELDS = {
+  _id: true, studentId: true, subject: true, type: true, status: true,
+  summary: true, comparisonSummary: true, paperId: true, totalErrors: true,
+  bottlenecks: true, bottleneckSummaries: true,
+  imageFiles: true, imageFileIds: true,
+  isArchived: true, archivedAt: true,
+  evidenceTime: true, createdAt: true, updatedAt: true,
+};
+
+const PAPER_TIMELINE_FIELDS = {
+  _id: true, studentId: true, subject: true, type: true,
+  paperCode: true, paperDisplayCode: true,
+  bottleneckTargets: true, bottleneckSummaries: true,
+  questionCount: true, pdfFileId: true, paperDate: true, grade: true,
+  verificationPack: true, generatedAt: true,
+  createdAt: true, updatedAt: true,
+};
+
+const ENGLISH_SESSION_FIELDS = {
+  _id: true, studentId: true, functionType: true, type: true, status: true,
+  analysisStatus: true, wordCount: true, wordItems: true, attempts: true,
+  dictationResults: true, photoFileIds: true,
+  createdAt: true, completedAt: true, submittedAt: true, analyzedAt: true, updatedAt: true,
+};
+
+const RESOURCE_PACK_FIELDS = {
+  _id: true, studentId: true, subject: true, title: true, status: true,
+  target: true, estimatedMinutes: true,
+  completedAt: true, scheduledVerificationAt: true,
+  createdAt: true, updatedAt: true,
+};
+
 async function getSubjectProfiles(studentId) {
   const res = await db.collection('subjectProfiles').where({ studentId }).get();
   return (res.data || []).sort((a, b) => toTime(b.updatedAt) - toTime(a.updatedAt));
@@ -114,6 +148,7 @@ async function getReports(studentId, subject, limit = 20, cursor = '') {
     .where(filter)
     .orderBy('createdAt', 'desc')
     .limit(limit)
+    .field(REPORT_TIMELINE_FIELDS)
     .get();
   return visibleReports(res.data || []);
 }
@@ -126,6 +161,7 @@ async function getPapers(studentId, subject, limit = 20, cursor = '') {
     .where(filter)
     .orderBy('createdAt', 'desc')
     .limit(limit)
+    .field(PAPER_TIMELINE_FIELDS)
     .get();
   return res.data || [];
 }
@@ -137,6 +173,7 @@ async function getEnglishSessions(studentId, subject, limit = 50, cursor = '') {
     .where(filter)
     .orderBy('createdAt', 'desc')
     .limit(limit)
+    .field(ENGLISH_SESSION_FIELDS)
     .get();
   return (res.data || []).map(session => ({
     subject: 'english',
@@ -157,6 +194,7 @@ async function getLearningResourcePacks(studentId, subject, limit = 50, cursor =
       .where(filter)
       .orderBy('updatedAt', 'desc')
       .limit(limit)
+      .field(RESOURCE_PACK_FIELDS)
       .get();
     return res.data || [];
   } catch (error) {
@@ -215,9 +253,6 @@ function summarizeReportForTimeline(report = {}) {
     totalErrors: Number(report.totalErrors) || 0,
     bottleneckSummaries: reportBottleneckSummaries(report),
     imageFileCount: imageFiles.length || imageFileIds.length || 0,
-    verificationEvidence: Array.isArray(report.verificationEvidence) ? report.verificationEvidence : [],
-    verificationPageCodes: Array.isArray(report.verificationPageCodes) ? report.verificationPageCodes : [],
-    verificationPageEvidence: Array.isArray(report.verificationPageEvidence) ? report.verificationPageEvidence : [],
     evidenceTime: report.evidenceTime || '',
     createdAt: report.createdAt,
     updatedAt: report.updatedAt,
@@ -317,97 +352,140 @@ function sessionVerdictCounts(session = {}) {
   }, { correctCount: 0, incorrectCount: 0, unclearCount: 0 });
 }
 
-function buildTimeline({ reports = [], papers = [], englishSessions = [], learningResourcePacks = [] }) {
-  const items = [];
+async function getHomeDashboard(openId) {
+  if (!openId) return failure('未登录');
 
-  reports.forEach(report => {
-    items.push({
-      id: `report-${report._id}`,
-      type: 'report',
-      subject: report.subject,
-      reportId: report._id,
-      status: report.status,
-      summary: report.summary || report.comparisonSummary || '',
-      bottleneckSummary: reportBottleneckSummary(report),
-      createdAt: report.createdAt,
-      occurredAt: report.evidenceTime || report.createdAt,
-    });
+  const _ = db.command;
 
-    (report.imageFiles || []).forEach(file => {
-      items.push({
-        id: `upload-${file.fileID || file.fileName || `${report._id}-${items.length}`}`,
-        type: 'upload',
-        subject: report.subject,
-        reportId: report._id,
-        fileID: file.fileID || '',
-        fileName: file.fileName || '',
-        ocrSummary: file.ocrSummary || '',
-        isDuplicate: Boolean(file.isDuplicate),
-        createdAt: file.uploadedAt || report.evidenceTime || report.createdAt,
-        occurredAt: file.uploadedAt || report.evidenceTime || report.createdAt,
-      });
-    });
-  });
+  // ── 1. 一次性获取所有可访问学生（owned + joined） ──
+  const ownedRes = await db.collection('students').where({ _openid: openId }).get();
+  const joinedMembers = await safeGetCollection('studentMembers', { memberOpenId: openId, status: 'active' });
 
-  papers.forEach(paper => {
-    const eventTime = paper.generatedAt || paper.createdAt || paper.paperDate;
-    items.push({
-      id: `paper-${paper._id}`,
-      type: 'paper',
-      subject: paper.subject,
-      paperId: paper._id,
-      paperType: paper.type,
-      paperCode: paper.paperCode || '',
-      paperDisplayCode: paperDisplayCodeOf(paper),
-      questionCount: paper.questionCount || (paper.questions || []).length,
-      pdfFileId: paper.pdfFileId || '',
-      bottleneckSummary: paperBottleneckSummary(paper),
-      paperDate: paper.paperDate || '',
-      createdAt: eventTime,
-      occurredAt: eventTime,
-    });
-  });
+  const byId = new Map();
+  for (const student of ownedRes.data || []) {
+    byId.set(student._id, { ...student, role: 'owner', permissions: permissionsForRole('owner') });
+  }
 
-  englishSessions.forEach(session => {
-    const eventTime = sessionTimeOf(session);
-    const isSpelling = session.functionType === 'spelling' || session.type === 'word-dictation-paper';
-    items.push({
-      id: `english-session-${session._id}`,
-      type: isSpelling ? 'english-dictation-session' : 'english-familiarity-session',
-      subject: 'english',
-      sessionId: session._id,
-      functionType: isSpelling ? 'spelling' : 'familiarity',
-      status: session.status || '',
-      analysisStatus: session.analysisStatus || '',
-      wordCount: session.wordCount || (session.wordItems || []).length,
-      photoFileIds: session.photoFileIds || [],
-      ...sessionVerdictCounts(session),
-      createdAt: eventTime,
-      occurredAt: eventTime,
-    });
-  });
+  // 批量读取 joined 学生（替代串行 N+1）
+  const missingStudentIds = joinedMembers
+    .filter(m => !byId.has(m.studentId))
+    .map(m => m.studentId);
+  if (missingStudentIds.length > 0) {
+    const joinedRes = await db.collection('students').where({ _id: _.in(missingStudentIds) }).get();
+    const joinedById = new Map((joinedRes.data || []).map(s => [s._id, s]));
+    for (const member of joinedMembers) {
+      const student = joinedById.get(member.studentId);
+      if (student) {
+        byId.set(student._id, { ...student, role: member.role || 'viewer', permissions: permissionsForRole(member.role || 'viewer') });
+      }
+    }
+  }
 
-  learningResourcePacks.forEach(pack => {
-    const eventTime = resourcePackTimeOf(pack);
-    const completed = pack.status === 'completed';
-    const title = pack.title || (pack.target && pack.target.title) || '未命名卡点';
-    items.push({
-      id: `learning-resource-${pack._id}`,
-      type: 'learning_resource',
-      subject: pack.subject,
-      packId: pack._id,
-      status: pack.status || '',
-      title: `学习任务包：${title}`,
-      summary: completed ? '已完成学习' : '待完成学习',
-      estimatedMinutes: pack.estimatedMinutes || 0,
-      target: pack.target || null,
-      url: `/pages/learning-resource/learning-resource?packId=${encodeURIComponent(pack._id || '')}`,
-      createdAt: eventTime,
-      occurredAt: eventTime,
-    });
-  });
+  const students = Array.from(byId.values()).sort((a, b) => toTime(b.createdAt) - toTime(a.createdAt));
+  if (students.length === 0) return success({ students: [], perStudent: {} });
 
-  return items.sort((a, b) => toTime(b.occurredAt || b.createdAt) - toTime(a.occurredAt || a.createdAt));
+  const allStudentIds = students.map(s => s._id);
+
+  // ── 2. 批量查询所有学生的 subjectProfiles / reports / papers ──
+  const [allProfiles, allReports, allPapers] = await Promise.all([
+    safeGetCollection('subjectProfiles', { studentId: _.in(allStudentIds) }),
+    safeQueryLimited('reports', { studentId: _.in(allStudentIds) }, 'createdAt', 'desc', 10 * allStudentIds.length),
+    safeQueryLimited('papers', { studentId: _.in(allStudentIds) }, 'createdAt', 'desc', 10 * allStudentIds.length),
+  ]);
+
+  // ── 3. 按学生分组，构建轻量 DTO ──
+  const perStudent = {};
+  for (const student of students) {
+    const profiles = allProfiles
+      .filter(p => p.studentId === student._id)
+      .sort((a, b) => toTime(b.updatedAt) - toTime(a.updatedAt));
+    const reports = visibleReports(allReports.filter(r => r.studentId === student._id));
+    const papers = allPapers.filter(p => p.studentId === student._id);
+
+    perStudent[student._id] = {
+      subjectProfiles: profiles.map(profileSummary),
+      latestReportSummary: reports.length > 0 ? reportSummary(reports[0]) : null,
+      latestPaperSummary: papers.length > 0 ? paperSummary(papers[0]) : null,
+    };
+  }
+
+  return success({ students, perStudent });
+}
+
+// 轻量 DTO：剥离首页不需要的大字段
+function profileSummary(profile) {
+  if (!profile) return null;
+  return {
+    _id: profile._id,
+    studentId: profile.studentId,
+    subject: profile.subject,
+    subjectName: profile.subjectName,
+    totalReports: profile.totalReports || 0,
+    updatedAt: profile.updatedAt,
+    currentBottlenecks: profile.currentBottlenecks || [],
+    pendingBottlenecks: profile.pendingBottlenecks || [],
+    improvedBottlenecks: profile.improvedBottlenecks || [],
+  };
+}
+
+function reportSummary(report) {
+  if (!report) return null;
+  return {
+    _id: report._id,
+    studentId: report.studentId,
+    subject: report.subject,
+    type: report.type,
+    status: report.status,
+    createdAt: report.createdAt,
+    evidenceTime: report.evidenceTime,
+    summary: report.summary || '',
+    totalErrors: report.totalErrors || 0,
+    bottlenecks: (report.bottlenecks || []).map(b => ({
+      lpCode: b.lpCode,
+      lpName: b.lpName,
+      errorCount: b.errorCount,
+    })),
+  };
+}
+
+function paperSummary(paper) {
+  if (!paper) return null;
+  return {
+    _id: paper._id,
+    studentId: paper.studentId,
+    subject: paper.subject,
+    type: paper.type,
+    createdAt: paper.createdAt,
+    paperCode: paper.paperCode || '',
+    paperDisplayCode: paper.paperDisplayCode || '',
+    questionCount: paper.questionCount || 0,
+    generationStatus: paper.generationStatus || '',
+    pdfFileId: paper.pdfFileId || '',
+  };
+}
+
+async function safeGetCollection(name, filter) {
+  try {
+    const res = await db.collection(name).where(filter).get();
+    return res.data || [];
+  } catch (error) {
+    if (isMissingCollectionError(error)) return [];
+    throw error;
+  }
+}
+
+async function safeQueryLimited(name, filter, orderByField, orderByDir, limit) {
+  try {
+    const res = await db.collection(name)
+      .where(filter)
+      .orderBy(orderByField, orderByDir)
+      .limit(limit)
+      .get();
+    return res.data || [];
+  } catch (error) {
+    if (isMissingCollectionError(error)) return [];
+    throw error;
+  }
 }
 
 async function getStudentDashboard(openId, studentId, options = {}) {
@@ -524,12 +602,6 @@ async function getLearningTimeline(openId, studentId, subjectValue, options = {}
     papers: pagePapers,
     englishSessions: pageEnglishSessions,
     learningResourcePacks: pageLearningResourcePacks,
-    items: buildTimeline({
-      reports: pageReports,
-      papers: pagePapers,
-      englishSessions: pageEnglishSessions,
-      learningResourcePacks: pageLearningResourcePacks,
-    }),
   });
 }
 
@@ -642,6 +714,20 @@ async function getReportFeedbackItems(report) {
   }
 }
 
+// 报告详情 DTO：剥离 report 页不消费的调试/原始 AI 字段
+const REPORT_DETAIL_STRIP_FIELDS = new Set([
+  'pageResults', 'rawPages', 'aiRaw', 'rawResponse',
+]);
+
+function stripReportDebugFields(report) {
+  if (!report || typeof report !== 'object') return report;
+  const out = {};
+  for (const key of Object.keys(report)) {
+    if (!REPORT_DETAIL_STRIP_FIELDS.has(key)) out[key] = report[key];
+  }
+  return out;
+}
+
 async function getReportDetail(openId, reportId) {
   if (!reportId) return failure('缺少 reportId');
   const reportRes = await db.collection('reports').doc(reportId).get();
@@ -649,17 +735,22 @@ async function getReportDetail(openId, reportId) {
   if (!report) return failure('报告不存在');
   const access = await getAccess(report.studentId, openId);
   if (!access.allowed) return failure('无权访问该学生');
-  const [profile, linkedPaper, feedback] = await Promise.all([
+  // 反馈改为按需加载（前端 loadFeedbackItems 已有 fallback 到 cloud.getReportFeedback）
+  const [profile, linkedPaper] = await Promise.all([
     getReportSubjectProfile(report),
     getLinkedPaper(report),
-    getReportFeedbackItems(report),
   ]);
   const pendingCount = profile
     ? (Array.isArray(profile.currentBottlenecks)
       ? profile.currentBottlenecks.filter(item => item.status !== 'improved').length
       : (profile.pendingBottlenecks || []).length)
     : 0;
-  return withAccess(access, { student: access.student, report, linkedPaper, profile, pendingCount, feedback });
+  return withAccess(access, {
+    report: stripReportDebugFields(report),
+    linkedPaper,
+    profile,
+    pendingCount,
+  });
 }
 
 async function getPaperDetail(openId, paperId) {
@@ -745,6 +836,9 @@ exports.main = async (event = {}) => {
   }
 
   try {
+    if (action === 'getHomeDashboard') {
+      return getHomeDashboard(openId);
+    }
     if (action === 'getStudentDashboard') {
       return getStudentDashboard(openId, event.studentId, {
         includeRecent: event.includeRecent,

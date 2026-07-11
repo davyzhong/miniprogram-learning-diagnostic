@@ -117,21 +117,41 @@ Page({
     wx.showLoading({ title: '加载中...' })
 
     try {
-      let students = []
-      let usedSharedAccess = false
-      try {
-        if (typeof cloud.getAccessibleStudents === 'function') {
-          usedSharedAccess = true
-          students = await cloud.getAccessibleStudents()
-        } else {
-          students = await cloud.getStudents()
+      // 优先使用聚合首页端点（单一云调用，无 1+N）
+      if (typeof cloud.getHomeDashboard === 'function') {
+        try {
+          const homeDashboard = await cloud.getHomeDashboard()
+          const students = homeDashboard.students || []
+          const perStudent = homeDashboard.perStudent || {}
+          if (students.length === 0) {
+            this.setData({
+              students: [],
+              activeStudentId: '',
+              activeStudent: null,
+              permissions: {},
+              hasStudents: false,
+              homeMode: 'empty',
+              home: null,
+              childCards: [],
+              familyHero: null,
+              errorText: '',
+              loading: false
+            })
+            this._lastHomeLoadedAt = Date.now()
+            return
+          }
+          this._buildHomeFromDashboard(students, perStudent)
+          return
+        } catch (error) {
+          console.warn('聚合首页端点不可用，回退到 1+N 路径', error && error.message ? error.message : error)
         }
-      } catch (error) {
-        console.warn('共享档案入口不可用，回退到旧档案读取', error && error.message ? error.message : error)
-        students = typeof cloud.getStudents === 'function' ? await cloud.getStudents() : []
       }
-      if (usedSharedAccess && !students.length && typeof cloud.getStudents === 'function') {
-        students = await cloud.getStudents()
+
+      let students = []
+      try {
+        students = await cloud.getAccessibleStudents()
+      } catch (error) {
+        console.warn('共享档案入口不可用', error && error.message ? error.message : error)
       }
       if (!students.length) {
         this.setData({
@@ -184,30 +204,23 @@ Page({
         }))
       }
 
-      await Promise.all(viewModels.map(async student => {
-        if (!profileLists[student._id] && typeof cloud.getSubjectProfiles === 'function') {
-          try {
-            profileLists[student._id] = await cloud.getSubjectProfiles(student._id)
-            applyProfileStats(student, profileLists[student._id])
-          } catch (e) {
-            profileLists[student._id] = []
-            applyProfileStats(student, [])
-          }
-        } else if (!profileLists[student._id]) {
+      // 直接 DB fallback 已移除：如果 getStudentDashboard 失败，profile/reports/papers 为空，
+      // 页面展示降级视图（无学科摘要、无最近报告），不再绕过权限校验直接读 collection。
+      viewModels.forEach(student => {
+        if (!profileLists[student._id]) {
           profileLists[student._id] = []
           applyProfileStats(student, [])
         }
-
-        if (!reportsByStudentId[student._id] && typeof cloud.getReports === 'function') {
-          reportsByStudentId[student._id] = await cloud.getReports(student._id)
+        if (!reportsByStudentId[student._id]) {
+          reportsByStudentId[student._id] = []
         }
-        if (!papersByStudentId[student._id] && typeof cloud.getPapers === 'function') {
-          papersByStudentId[student._id] = await cloud.getPapers({ studentId: student._id })
+        if (!papersByStudentId[student._id]) {
+          papersByStudentId[student._id] = []
         }
         if (!permissionsByStudentId[student._id]) {
           permissionsByStudentId[student._id] = student.permissions || OWNER_PERMISSIONS
         }
-      }))
+      })
 
       const hasMultipleChildren = viewModels.length > 1
       const childCards = hasMultipleChildren
@@ -267,6 +280,79 @@ Page({
       }
       wx.hideLoading()
     }
+  },
+
+  // 从 getHomeDashboard 聚合结果构建首页视图（单一云调用路径）
+  _buildHomeFromDashboard(students, perStudent) {
+    const profileLists = {}
+    const reportsByStudentId = {}
+    const papersByStudentId = {}
+    const permissionsByStudentId = {}
+
+    const viewModels = students.map(s => {
+      const viewModel = {
+        ...s,
+        gradeText: s.grade ? `${s.grade}年级` : ''
+      }
+      if (!viewModel.avatarColor) {
+        const colors = ['#4299e1', '#48bb78', '#ed8936', '#9f7aea', '#ed64a6', '#38b2ac']
+        viewModel.avatarColor = colors[Math.abs(this.hashCode(s.name)) % colors.length]
+      }
+      viewModel.avatarText = s.name ? s.name.charAt(0) : ''
+
+      const detail = perStudent[s._id] || {}
+      profileLists[s._id] = detail.subjectProfiles || []
+      applyProfileStats(viewModel, profileLists[s._id])
+      // 首页只需要最近报告/试卷摘要，用 latest*Summary 作为单元素数组
+      reportsByStudentId[s._id] = detail.latestReportSummary ? [detail.latestReportSummary] : []
+      papersByStudentId[s._id] = detail.latestPaperSummary ? [detail.latestPaperSummary] : []
+      permissionsByStudentId[s._id] = s.permissions || OWNER_PERMISSIONS
+
+      return viewModel
+    })
+
+    const hasMultipleChildren = viewModels.length > 1
+    const childCards = hasMultipleChildren
+      ? buildChildWorkbenchCards({
+          students: viewModels,
+          profilesByStudentId: profileLists,
+          reportsByStudentId,
+          papersByStudentId
+        }, formatRelativeTime)
+      : []
+    const familyHero = hasMultipleChildren ? buildFamilyWorkbenchHero(childCards) : null
+
+    const activeStudent = hasMultipleChildren ? null : viewModels[0]
+    const activeProfiles = activeStudent ? (profileLists[activeStudent._id] || []) : []
+    const reports = activeStudent ? (reportsByStudentId[activeStudent._id] || []) : []
+    const papers = activeStudent ? (papersByStudentId[activeStudent._id] || []) : []
+    const permissions = activeStudent
+      ? (permissionsByStudentId[activeStudent._id] || activeStudent.permissions || OWNER_PERMISSIONS)
+      : {}
+    const home = activeStudent
+      ? buildLearningProfileHomeView({
+          student: activeStudent,
+          profiles: activeProfiles,
+          reports,
+          papers,
+          permissions
+        }, formatRelativeTime)
+      : null
+
+    this.setData({
+      students: viewModels,
+      activeStudentId: activeStudent ? activeStudent._id : '',
+      activeStudent: activeStudent ? { ...activeStudent, permissions } : null,
+      permissions,
+      hasStudents: true,
+      homeMode: hasMultipleChildren ? 'family-workbench' : 'single-profile',
+      home,
+      childCards,
+      familyHero,
+      errorText: '',
+      loading: false
+    })
+    this._lastHomeLoadedAt = Date.now()
   },
 
   onRetryLoadStudents() {

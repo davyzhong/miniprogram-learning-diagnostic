@@ -35,7 +35,7 @@ The test framework is **V2 (two categories)** — see `docs/TEST_STRATEGY_V2.md`
 | Pre-deployment readiness | `npm run check:deployment` |
 | Full pre-release gate | `npm run release:check` (deployment + verify + coverage) |
 
-`npm test` is now an **alias** of `npm run test:unit`; it no longer enumerates files inline. The `tests/` directory holds 70 `.test.js` files; `test:unit` currently enumerates 62 files and passes 638 unit tests in the local baseline. To add a new test file you still must list it in **both** `test:unit` and `test:coverage` in `package.json` (no glob).
+`npm test` is now an **alias** of `npm run test:unit`; it no longer enumerates files inline. The `tests/` directory holds 70 `.test.js` files; `test:unit` currently enumerates 62 files and passes 662 unit tests in the local baseline. To add a new test file you still must list it in **both** `test:unit` and `test:coverage` in `package.json` (no glob).
 
 **CLI E2E** (WeChat DevTools CLI + `miniprogram-automator`, organized **by subject**, output → `tmp/e2e/<suite>/report.json`). Not in `npm test`; require a running DevTools instance. Run `npm run test:e2e:doctor` first to verify the environment.
 

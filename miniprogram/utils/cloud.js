@@ -323,6 +323,10 @@ async function getStudentDashboard(studentId, options = {}) {
   return callFunction('studentData', { action: 'getStudentDashboard', studentId, ...options })
 }
 
+async function getHomeDashboard() {
+  return callFunction('studentData', { action: 'getHomeDashboard' })
+}
+
 async function getSubjectDashboard(studentId, subject, options = {}) {
   return callFunction('studentData', { action: 'getSubjectDashboard', studentId, subject, ...options })
 }
@@ -486,6 +490,7 @@ module.exports = {
   updateStudentMemberProfile,
   revokeStudentMember,
   getStudentDashboard,
+  getHomeDashboard,
   getSubjectDashboard,
   getLearningTimeline,
   cleanupStaleLearningRecords,
