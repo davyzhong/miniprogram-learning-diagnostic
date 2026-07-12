@@ -11,15 +11,20 @@ test('builds expected verification counts from the generated paper', () => {
   const plan = buildVerificationPlan({
     bottleneckTargets: ['LP-001', 'LP-002'],
     questions: [
-      { lpCode: 'LP-001' },
-      { lpCode: 'LP-001' },
-      { lpCode: 'LP-002' }
+      { lpCode: 'LP-001', content: '1+1=?', answer: '2' },
+      { lpCode: 'LP-001', content: '2+2=?', answer: '4' },
+      { lpCode: 'LP-002', content: '3-1=?', answer: '2' }
     ]
   })
 
   assert.deepEqual(plan, [
-    { lpCode: 'LP-001', expectedQuestionCount: 2 },
-    { lpCode: 'LP-002', expectedQuestionCount: 1 }
+    { lpCode: 'LP-001', expectedQuestionCount: 2, questions: [
+      { content: '1+1=?', answer: '2' },
+      { content: '2+2=?', answer: '4' }
+    ]},
+    { lpCode: 'LP-002', expectedQuestionCount: 1, questions: [
+      { content: '3-1=?', answer: '2' }
+    ]}
   ])
 })
 
@@ -56,7 +61,8 @@ test('builds page-aware verification plan from verificationPack pages', () => {
     legacyLpCode: 'LP-001',
     pageCode: 'MATH-V-20260616-01-P01',
     expectedQuestionCount: 2,
-    questionIds: ['Q1', 'Q2']
+    questionIds: ['Q1', 'Q2'],
+    questions: []
   }, {
     lpCode: 'BN-FINE-2',
     targetId: 'BN-FINE-2',
@@ -65,7 +71,8 @@ test('builds page-aware verification plan from verificationPack pages', () => {
     legacyLpCode: 'LP-002',
     pageCode: 'MATH-V-20260616-01-P01',
     expectedQuestionCount: 1,
-    questionIds: ['Q3']
+    questionIds: ['Q3'],
+    questions: []
   }])
 })
 
@@ -159,6 +166,7 @@ test('builds and aggregates chinese review item evidence separately from coarse 
   assert.deepEqual(plan, [{
     lpCode: 'LP-101',
     expectedQuestionCount: 2,
+    questions: [],
     chineseReviewTargets: [{
       itemId: 'CHI-WORD-BIANLUN',
       itemType: 'word',

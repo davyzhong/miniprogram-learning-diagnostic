@@ -7,11 +7,17 @@ const { getSubjectName } = require('./constants');
 const { BOTTLENECK_CODE_NAMES } = require('./bottleneck-name');
 const { TAXONOMY_BN_LIST } = require('./taxonomy-bn-list');
 const { recordUsageStart, recordUsageSuccess, recordUsageFailure } = require('./usage-ledger');
+const { isFallbackConfigured, callFallbackVision } = require('./vision-fallback');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const VERIFICATION_PLAN_LIMIT = 60;
+
+// 视觉模型 ID。hy3-preview 是纯文本模型，不支持图片输入——图片会被忽略。
+// glm-5v-turbo：CloudBase 视觉模型，响应过慢（单图 >60s 超时）。
+// qwen3.5-plus：CloudBase 多模态视觉模型，支持图片理解 + 深度思考。
+const VISION_MODEL_ID = 'qwen3.5-plus';
 
 // 初始化 CloudBase AI SDK
 const app = tcb.init({
@@ -59,10 +65,13 @@ function buildPrompt(subject, verificationPlan = []) {
     const label = item.displayName || item.lpName || item.lpCode;
     const pageCode = item.pageCode ? `pageCode=${item.pageCode}，` : '';
     const targetId = item.targetId ? `targetId=${item.targetId}，` : '';
-    return `- ${pageCode}${targetId}${item.lpCode}：${label}，预期 ${item.expectedQuestionCount} 道`;
+    const questionLines = Array.isArray(item.questions) && item.questions.length > 0
+      ? '\n' + item.questions.map((q, qi) => `    题目${qi + 1}：${q.content}  标准答案：${q.answer}`).join('\n')
+      : '';
+    return `- ${pageCode}${targetId}${item.lpCode}：${label}，预期 ${item.expectedQuestionCount} 道${questionLines}`;
   });
-  const verificationInstruction = verificationPlan.length > 0
-    ? `\n## 验证试卷判定\n这是验证试卷。请先识别纸面印出的“页面编号”，并在 pageResults.pageCode 中返回；如果本页没有清楚看到页面编号，pageCode 返回空字符串。请按 pageCode + targetId/lpCode 统计证据质量，不要把不确定情况当成已改善：\n${verificationPlanLines.join('\n')}${chineseReviewPlanItems.length > 0 ? `\n\n语文错项还需要按 reviewItemId 单独统计 chineseReviewEvidence：\n${chineseReviewPlanItems.map(item => `- ${item.itemId}：targetText=${item.targetText}，预期 ${item.expectedQuestionCount} 道`).join('\n')}` : ''}\n- attemptedQuestionCount：清晰可见、已经作答、能够判断对错的题目数量\n- incorrectQuestionCount：attemptedQuestionCount 中明确答错的题目数量\n- blankQuestionCount：清晰可见但没有作答或明显空白的题目数量\n- unclearQuestionCount：被遮挡、模糊、拍摄不完整、无法判断答案是否正确的题目数量\n- missingQuestionCount：预期题目中未在图片中找到或无法归入以上类别的数量\n未作答、被遮挡、模糊或无法确认的题目不得计入 attemptedQuestionCount。`
+    const verificationInstruction = verificationPlan.length > 0
+      ? `\n## 验证试卷判定\n这是验证试卷。上面列出的题目和标准答案是验证卷的真实内容。请先识别纸面印出的”页面编号”，并在 pageResults.pageCode 中返回；如果本页没有清楚看到页面编号，pageCode 返回空字符串。请按 pageCode + targetId/lpCode 统计证据质量，不要把不确定情况当成已改善：\n${verificationPlanLines.join('\n')}${chineseReviewPlanItems.length > 0 ? `\n\n语文错项还需要按 reviewItemId 单独统计 chineseReviewEvidence：\n${chineseReviewPlanItems.map(item => `- ${item.itemId}：targetText=${item.targetText}，预期 ${item.expectedQuestionCount} 道`).join('\n')}` : ''}\n- attemptedQuestionCount：清晰可见、已经作答、能够判断对错的题目数量\n- incorrectQuestionCount：attemptedQuestionCount 中明确答错的题目数量\n- blankQuestionCount：清晰可见但没有作答或明显空白的题目数量\n- unclearQuestionCount：被遮挡、模糊、拍摄不完整、无法判断答案是否正确的题目数量\n- missingQuestionCount：预期题目中未在图片中找到或无法归入以上类别的数量\n未作答、被遮挡、模糊或无法确认的题目不得计入 attemptedQuestionCount。\n\n**关键约束（必须严格遵守）：**\n- errorDetails 只能报告上面列出的题目中学生答错的题，不得推测或编造未列出的题目。\n- errorDetails 的 correctAnswer 必须使用上面给出的标准答案原值，不要自己计算或修改。\n- errorDetails 的 questionContent 必须对应上面列出的某道题，不要凭空创造题目。\n- 如果图片中的某道题学生答对了，不要在 errorDetails 中报告它。\n- 如果上面列出的某道题在图片中完全看不到（空白/遮挡/缺失），不要在 errorDetails 中报告它，而应在 verificationEvidence 中计入 blankQuestionCount 或 missingQuestionCount。\n\n**对错判定规则（非常重要，必须严格按此判断）：**\n对错判定的唯一依据是：学生黑色字迹的原始作答与标准答案的数值是否一致。忽略以下干扰因素：\n- 红色字迹/红叉/红勾：这些是老师或家长的批改标记，不作为判定依据——老师可能误批，红叉不代表学生一定答错。\n- 蓝色字迹：这是学生订正后的答案，说明学生已经知道正确答案，不作为错题报告。\n- 如果黑色原始作答与标准答案在数学上等价（如 0.5 和 1/2、8.5 和 8.50），算答对。\n- 只有当黑色原始作答的数值与标准答案的数值明确不同时，才报告为错题。\n- 当黑色作答模糊或无法辨认时，不要报告为错题，应计入 unclearQuestionCount。\n- errorDetails 的 studentAnswer 只填黑色原始作答的值，不要填蓝色订正值。\n\n**输出前自检（每报一道错题前必须做）：**\n在将一道题加入 errorDetails 之前，你必须在心里完成以下检查：\n1. 读取学生黑色原始作答的值（忽略红色标记和蓝色订正）。\n2. 与上面给出的该题标准答案做数值比较。\n3. 如果两者数值相同或数学等价，这道题不是错题——不要加入 errorDetails。\n4. 只有两者数值明确不同，才加入 errorDetails。\n例：如果标准答案是 0.12，学生黑色作答也是 0.12，即使纸面有红叉，也不是错题——不要报告。`
     : '';
   const mathBnCatalogLines = TAXONOMY_BN_LIST.map(bn => `- ${bn.id}：${bn.title}（症状：${bn.symptom}）`).join('\n');
   const mathBnCatalog = subject === 'math'
@@ -150,6 +159,7 @@ ${chineseErrorInstruction}
         "suggestion": "练习连续进位"${mathBottleneckJsonFields}
       }],
       "errorDetails": [{
+        "imageIndex": 1,
         "questionContent": "题目内容（简要）",
         "studentAnswer": "学生答案",
         "correctAnswer": "正确答案",
@@ -243,7 +253,7 @@ async function callAI(imageUrls, subject, verificationPlan, ledgerContext = {}) 
         sourceId: ledgerContext.reportId || '',
         sourceType: 'report',
         cloudFunction: 'analyzeBatch',
-        model: 'hy3-preview',
+        model: VISION_MODEL_ID,
         imageCount: imageUrls.length
       })
     } catch (e) { console.error('[usage] recordUsageStart failed', e && e.message) }
@@ -251,16 +261,19 @@ async function callAI(imageUrls, subject, verificationPlan, ledgerContext = {}) 
 
   try {
     const result = await model.generateText({
-      model: 'hy3-preview',
+      model: VISION_MODEL_ID,
       messages: [{ role: 'user', content }],
       temperature: 0.3,
+      // qwen3.5-plus 默认开启深度思考模式，处理图片时极慢（>60s 超时）。
+      // 关闭思考模式可将单张图片处理时间降到 ~15s 以内。
+      enable_thinking: false,
     });
 
     // 记账成功（优先真实 usage，无则估算）
     if (eventId) {
       await recordUsageSuccess({
         db, eventId, usage: result && result.usage, outputText: result && result.text,
-        model: 'hy3-preview', imageCount: imageUrls.length
+        model: VISION_MODEL_ID, imageCount: imageUrls.length
       }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
     }
 
@@ -268,9 +281,23 @@ async function callAI(imageUrls, subject, verificationPlan, ledgerContext = {}) 
   } catch (err) {
     if (eventId) {
       await recordUsageFailure({
-        db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length
+        db, eventId, errorMessage: err && err.message, model: VISION_MODEL_ID, imageCount: imageUrls.length
       }).catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
     }
+
+    // 方案 C 降级：CloudBase AI 失败时，尝试外部视觉 API
+    if (isFallbackConfigured()) {
+      console.warn(`[callAI] 主路径 ${VISION_MODEL_ID} 失败（${(err && err.message || '').slice(0, 120)}），降级到外部视觉 API`);
+      try {
+        const fallbackText = await callFallbackVision(imageUrls, prompt);
+        if (fallbackText) {
+          return fallbackText;
+        }
+      } catch (fallbackErr) {
+        console.error('[callAI] 降级也失败:', (fallbackErr && fallbackErr.message || '').slice(0, 200));
+      }
+    }
+
     throw err;
   }
 }
@@ -306,6 +333,24 @@ function parseResult(aiText, expectedPageCount) {
 }
 
 // ========== 主函数 ==========
+// 分析错误分类 — 让 analyzePhotos 能区分可重试错误和不可重试错误
+function classifyAnalysisError(err) {
+  const msg = String((err && err.message) || err || '');
+  // 超时/网络类错误（可重试）
+  if (/ESOCKETTIMEDOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|socket hang up|EAI_AGAIN/i.test(msg)) {
+    return 'AI 分析网络超时，请稍后重试';
+  }
+  if (/timeout|timed out|超时/i.test(msg)) {
+    return 'AI 分析超时，请稍后重试';
+  }
+  // AI 返回格式错误（可重试 — 可能是模型偶发输出不稳定）
+  if (/parseResult|parse.*fail|JSON.*parse|未返回.*结果/i.test(msg)) {
+    return 'AI 返回结果解析失败，请稍后重试';
+  }
+  // 其他错误 — 保留原始消息（截断），让 analyzePhotos 判断是否可重试
+  return msg.slice(0, 240) || '图片分析失败，请稍后重试';
+}
+
 exports.main = async (event) => {
   const { fileIDs, subject = 'math', batchIndex = 0, reportId = '', taskId = '', verificationPlan = [] } = event;
 
@@ -378,6 +423,6 @@ exports.main = async (event) => {
     return { success: true, data: result };
   } catch (err) {
     console.error('analyzeBatch 失败：', err);
-    return { success: false, error: '图片分析失败，请稍后重试' };
+    return { success: false, error: classifyAnalysisError(err) };
   }
 };

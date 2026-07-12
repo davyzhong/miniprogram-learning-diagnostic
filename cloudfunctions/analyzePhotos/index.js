@@ -23,18 +23,82 @@ const SUBJECTS = new Set(['math', 'chinese', 'english']);
 const STALE_TASK_MS = 10 * 60 * 1000;
 // 批量大小：analyzeBatch 支持单批最多 5 张图片（多模态 AI），每批 5 张可将
 // 串行调用次数从 N 降到 N/5。3 批/调用让续跑机制每轮做更多有效工作。
-const ANALYSIS_BATCH_SIZE = 5;
+// qwen3.5-plus 单张图处理 ~15s，5 张/批会超过 60 秒云函数超时。
+// 所有模式统一用 1 张/批，靠续跑机制完成剩余批次。
+const ANALYSIS_BATCH_SIZE = 1;
 const MAX_CONCURRENT_BATCHES = 1;
 const MAX_BATCHES_PER_INVOCATION = 3;
-const MAX_BATCH_ATTEMPTS = 2;
-const BATCH_RETRY_DELAY_MS = (process.env.BATCH_RETRY_DELAY_MS != null && process.env.BATCH_RETRY_DELAY_MS !== '')
-  ? Number(process.env.BATCH_RETRY_DELAY_MS)
-  : 600;
+// 增加重试次数：超时是最常见失败原因，3 次尝试（含指数退避）覆盖大部分瞬时抖动
+const MAX_BATCH_ATTEMPTS = 3;
+// 指数退避：600ms → 3000ms → 8000ms（第 1 次重试等 600ms，第 2 次等 3s，第 3 次等 8s）
+const BATCH_RETRY_DELAYS_MS = [600, 3000, 8000];
+// analyzeBatch 调用超时：留 5s 缓冲到 60s 函数超时，避免云函数自身被杀
+const ANALYZE_BATCH_TIMEOUT_MS = 55000;
 const REANALYSIS_TOKEN = process.env.MATH_REANALYSIS_TOKEN || '';
+
+// 验证模式假阳性过滤器：把学生答案和标准答案归一化为可比字符串。
+// 0.12 → "0.12"，1/2 → "0.5"，8.50 → "8.5"，去掉等号/单位等噪音。
+function normalizeForCompare(raw) {
+  if (!raw || typeof raw !== 'string') return '';
+  let s = raw.trim();
+  // 去掉 = 号前缀、单位（cm²/m²/平方米/平方厘米等）、空格
+  s = s.replace(/^.*?=\s*/, '')
+    .replace(/(平方)?(厘米|米|分米|千米|毫米|厘米|公顷|亩|立方米|立方分米|立方厘米|m²|m³|cm²|cm|m|dm|km|mm|㎡|平方)+$/gi, '')
+    .replace(/[a-zA-Z²³]+$/g, '')
+    .trim();
+  // 尝试分数 → 小数
+  const fracMatch = s.match(/^(-?\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+  if (fracMatch) {
+    const num = parseFloat(fracMatch[1]);
+    const den = parseFloat(fracMatch[2]);
+    if (den !== 0) {
+      const dec = num / den;
+      // 用 toString 避免浮点尾差：1/3 → "0.3333333333333333"，但 1/2 → "0.5"
+      return String(Math.round(dec * 1e10) / 1e10);
+    }
+  }
+  // 纯小数/整数：去掉末尾多余的零
+  const numMatch = s.match(/^(-?\d+(?:\.\d+)?)$/);
+  if (numMatch) {
+    return String(parseFloat(numMatch[1]));
+  }
+  // 其他：原样返回（带算式的如 "0.8×50=40" 不做归一化，保留给 AI 判断）
+  return s;
+}
+
+// 题目文本归一化：用于把 AI 返回的 questionContent 与 paper.questions 的 content 匹配。
+// 去掉题号前缀（"14." "计算："）、空格、标点，只保留核心文字和数字。
+function normalizeForLookup(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/^[\d]+[.、）)\s]*/, '')   // 去掉题号 "14." "23、"
+    .replace(/^(计算|求|问)[：:，,]?\s*/g, '') // 去掉"计算："前缀
+    .replace(/\s+/g, '')                  // 去掉所有空格
+    .replace(/[？?！!。，,.；;：:（）()]/g, '') // 去掉标点
+    .toLowerCase();
+}
 
 function analysisErrorMessage(err) {
   const message = err && err.message ? err.message : String(err || '');
   return (message || '图片分析失败，请稍后重试').slice(0, 240);
+}
+
+// 可重试错误：超时、网络抖动、AI 结果解析失败 —— 这些重试有意义
+function isRetryableError(err) {
+  const msg = String((err && err.message) || err || '');
+  if (/ESOCKETTIMEDOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|socket hang up|EAI_AGAIN|网络超时/i.test(msg)) return true;
+  if (/timeout|timed out|超时/i.test(msg)) return true;
+  if (/parseResult|parse.*fail|JSON.*parse|未返回.*结果|解析失败/i.test(msg)) return true;
+  if (/图片分析失败，请稍后重试/i.test(msg)) return true; // 兼容旧版 analyzeBatch 的笼统错误
+  return false;
+}
+
+// 不可重试错误：验证卷不存在、归属不一致、权限问题 —— 重试也不会变好
+function isNonRetryableError(err) {
+  const msg = String((err && err.message) || err || '');
+  if (/验证试卷|验证卷|归属不一致|没有.*卡点|试卷.*不存在|试卷.*删除/i.test(msg)) return true;
+  if (/无权|未授权|权限/i.test(msg)) return true;
+  return false;
 }
 
 // 判断错误是否对用户有意义（这类错误应直接展示给用户，而非笼统吞掉）
@@ -44,6 +108,8 @@ function isUserFacingAnalysisError(err) {
   if (/验证试卷|验证卷|归属不一致|没有.*卡点|试卷.*不存在|试卷.*删除/i.test(msg)) return true;
   // 权限相关
   if (/无权|未授权|权限/i.test(msg)) return true;
+  // 超时/网络类错误（用户应该知道是网络问题而非操作错误）
+  if (/ESOCKETTIMEDOUT|ETIMEDOUT|网络超时|AI 分析超时|超时/i.test(msg)) return true;
   return false;
 }
 
@@ -332,19 +398,15 @@ async function recoverStaleAnalysisTask(reportId) {
 
   if (!processingTask) return null;
 
-  const age = Date.now() - new Date(processingTask.createdAt).getTime();
+  const age = Date.now() - new Date(processingTask.updatedAt || processingTask.createdAt).getTime();
   if (age < STALE_TASK_MS) {
     return { success: true, reportId, message: '分析任务已经启动' };
   }
 
-  await db.collection('analysisTasks').doc(processingTask._id).update({
-    data: {
-      status: 'failed',
-      error: '分析任务超时，允许重新启动',
-      completedAt: new Date(),
-    },
-  });
-  return null;
+  // Stale task：续跑机制断了，但已有进度（completedBatches/batchResults）仍有价值。
+  // 返回 staleTaskId 让调用方通过 loadAnalysisTask 恢复进度，而不是丢弃重建。
+  console.log(`[recoverStale] 检测到 stale task ${processingTask._id}，已完成 ${processingTask.completedBatches || 0}/${processingTask.totalBatches || '?'} 批，将恢复进度`);
+  return { staleTaskId: processingTask._id };
 }
 
 async function createAnalysisTask({ reportId, totalBatches, fileIDs, mode, subject, studentId, openid }) {
@@ -408,7 +470,8 @@ async function persistBatchProgress({ taskId, batchResults, nextBatchIndex }) {
   });
 }
 
-function scheduleAnalysisContinuation({ reportId, taskId }) {
+function scheduleAnalysisContinuation({ reportId, taskId }, retryCount = 0) {
+  const MAX_CONTINUATION_RETRIES = 5;
   cloud.callFunction({
     name: 'analyzePhotos',
     data: {
@@ -416,8 +479,24 @@ function scheduleAnalysisContinuation({ reportId, taskId }) {
       taskId,
       continuation: true,
     },
+    timeout: 55000,
+  }).then(res => {
+    if (res && res.result && res.result.success) return;
+    // 续跑返回非成功，重试
+    if (retryCount < MAX_CONTINUATION_RETRIES) {
+      console.warn(`续跑返回非成功，${2000}ms 后重试（第 ${retryCount + 1}/${MAX_CONTINUATION_RETRIES} 次）`);
+      setTimeout(() => scheduleAnalysisContinuation({ reportId, taskId }, retryCount + 1), 2000);
+    } else {
+      console.error('续跑 analyzePhotos 多次失败，放弃');
+    }
   }).catch(err => {
-    console.error('续跑 analyzePhotos 失败：', err);
+    console.error(`续跑 analyzePhotos 失败（第 ${retryCount} 次）：`, err);
+    // 续跑网络失败，重试
+    if (retryCount < MAX_CONTINUATION_RETRIES) {
+      setTimeout(() => scheduleAnalysisContinuation({ reportId, taskId }, retryCount + 1), 2000);
+    } else {
+      console.error('续跑 analyzePhotos 多次网络失败，放弃');
+    }
   });
 }
 
@@ -441,35 +520,45 @@ async function runAnalyzeBatches({ batches, batchOffset = 0, totalBatches, subje
             taskId,
             verificationPlan: verificationPaper ? verificationPaper.plan : [],
           },
+          timeout: ANALYZE_BATCH_TIMEOUT_MS,
         });
         const result = res.result || { success: false, error: '图片分析失败，请稍后重试' };
-        if (result.success || attempt === MAX_BATCH_ATTEMPTS) {
-          batchResults[i] = attempt > 1 && result.success
+        if (result.success) {
+          batchResults[i] = attempt > 1
             ? { ...result, retryAttempt: attempt }
             : result;
           break;
         }
+        // 业务返回失败
         lastError = analysisErrorMessage(result.error);
+        // 不可重试错误（验证卷不存在等）直接放弃，不再浪费时间
+        if (isNonRetryableError(result.error) || attempt === MAX_BATCH_ATTEMPTS) {
+          batchResults[i] = { success: false, error: lastError };
+          break;
+        }
         console.warn(`第 ${globalIndex + 1} 批第 ${attempt} 次返回失败，准备重试：${lastError}`);
       } catch (err) {
         lastError = analysisErrorMessage(err);
         console.error(`第 ${globalIndex + 1} 批第 ${attempt} 次处理失败：`, err);
-        if (attempt === MAX_BATCH_ATTEMPTS) {
+        // 不可重试错误直接放弃
+        if (isNonRetryableError(err) || attempt === MAX_BATCH_ATTEMPTS) {
           batchResults[i] = { success: false, error: lastError };
           break;
         }
       }
-      await wait(BATCH_RETRY_DELAY_MS);
+      // 指数退避：第 1 次重试等 600ms，第 2 次等 3s，第 3 次等 8s
+      const delayMs = BATCH_RETRY_DELAYS_MS[attempt - 1] || 8000;
+      console.log(`第 ${globalIndex + 1} 批等待 ${delayMs}ms 后重试（第 ${attempt}/${MAX_BATCH_ATTEMPTS} 次）`);
+      await wait(delayMs);
     }
 
     if (!batchResults[i]) {
       batchResults[i] = { success: false, error: lastError || '图片分析失败，请稍后重试' };
     }
     // 设计说明：每批完成即更新 completedBatches，供前端轮询展示实时进度。
-    // 每次分析通常 5-20 批，写入次数在 CloudBase 可承受范围内。
-    // 若未来扩展到大批量场景，可改为每 N 批节流写一次。
+    // 用当前批次的 globalIndex+1 作为绝对值（而非 inc），避免续跑恢复后重复计数。
     await db.collection('analysisTasks').doc(taskId).update({
-      data: { completedBatches: _.inc(1) },
+      data: { completedBatches: globalIndex + 1 },
     }).catch(err => {
       console.error('更新分析进度失败：', err);
     });
@@ -526,6 +615,63 @@ async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subj
     merged.summary = '本次照片均疑似重复，未更新学习卡点';
     comparisonSummary = '本次照片均疑似重复，未更新学习卡点。';
   } else if (mode === 'verification') {
+    // 验证模式后端硬过滤：
+    // 1. 用验证卷 paper.questions 的标准答案替换 AI 返回的 correctAnswer，
+    //    防止 AI 自己算错标准答案导致假阳性。
+    // 2. 丢弃 studentAnswer 与（权威）correctAnswer 数值相等的条目。
+    if (Array.isArray(merged.errorDetails) && merged.errorDetails.length > 0) {
+      const paperQuestions = (verificationPaper.paper && Array.isArray(verificationPaper.paper.questions))
+        ? verificationPaper.paper.questions : [];
+      // 构建 questionContent → answer 的查找表（按 content/stem/question 字段匹配）
+      const answerByContent = new Map();
+      for (const q of paperQuestions) {
+        const content = String(q.content || q.question || q.stem || '').trim();
+        const answer = String(q.answer || q.correctAnswer || '').trim();
+        if (content && answer) {
+          answerByContent.set(normalizeForLookup(content), answer);
+        }
+      }
+
+      if (answerByContent.size > 0) {
+        merged.errorDetails = merged.errorDetails.map(item => {
+          const key = normalizeForLookup(String(item.questionContent || ''));
+          const authoritativeAnswer = answerByContent.get(key);
+          if (authoritativeAnswer) {
+            return { ...item, correctAnswer: authoritativeAnswer };
+          }
+          return item;
+        });
+      }
+
+      const beforeCount = merged.errorDetails.length;
+      // 收集验证卷所有标准答案的归一化集合，用于交叉验证
+      const allCorrectAnswers = new Set();
+      for (const q of paperQuestions) {
+        const ans = normalizeForCompare(String(q.answer || q.correctAnswer || ''));
+        if (ans) allCorrectAnswers.add(ans);
+      }
+
+      merged.errorDetails = merged.errorDetails.filter(item => {
+        const sa = normalizeForCompare(item.studentAnswer);
+        const ca = normalizeForCompare(item.correctAnswer);
+        if (!sa || !ca) return true; // 无法比较的保留
+        // 防线 1：studentAnswer 与 correctAnswer 数值相等 → 假阳性，丢弃
+        if (sa === ca) return false;
+        // 防线 2：AI OCR 误读修正——如果 studentAnswer 恰好等于验证卷中某道题的标准答案，
+        // 说明学生写对了但 AI 读错了手写体（如把 7/12 读成 2/7），丢弃
+        if (allCorrectAnswers.has(sa)) {
+          console.log(`[verification] OCR 误读修正：studentAnswer="${item.studentAnswer}" 恰好匹配验证卷某题标准答案，判定为 AI 读错手写体，丢弃`);
+          return false;
+        }
+        return true;
+      });
+      const removed = beforeCount - merged.errorDetails.length;
+      if (removed > 0) {
+        console.log(`[verification] 硬过滤移除 ${removed} 个数值匹配的假阳性错题`);
+        // 重新计算 totalErrors
+        merged.totalErrors = Math.max(0, (merged.totalErrors || 0) - removed);
+      }
+    }
     previousReport = historicalContext.previousReport;
     verificationTargets = verificationPaper.targets;
     const verificationEvidence = aggregateVerificationEvidence(verificationPaper.plan, uniquePages);
@@ -660,7 +806,7 @@ async function writeCompletedAnalysis({ reportId, studentId, subject, merged, qu
       chineseReviewEvidence: merged.chineseReviewEvidence || [],
       verificationPageCodes: merged.verificationPageCodes || [],
       verificationPageEvidence: merged.verificationPageEvidence || [],
-      quality,
+      quality: _.set(quality),
       isEffective: profileSummary.isEffective,
       changeSummary: profileSummary.changeSummary,
       partialSuccess,
@@ -698,6 +844,7 @@ async function markAnalysisTaskCompleted(taskId, artifacts = {}) {
 exports.main = async (event) => {
   const { reportId, taskId: continuationTaskId } = event;
   let taskId = '';
+  let staleTaskId = '';
   let report = null;
 
   if (!reportId) {
@@ -721,7 +868,10 @@ exports.main = async (event) => {
       return { success: false, error: '报告中没有待分析图片' };
     }
 
-    const batches = splitFileBatches(fileIDs, ANALYSIS_BATCH_SIZE);
+    // qwen3.5-plus 单张图处理 ~15s，批次过大超过 60 秒云函数超时。
+    // ANALYSIS_BATCH_SIZE=1，靠续跑机制完成剩余批次。
+    const batchSizeMode = ANALYSIS_BATCH_SIZE;
+    const batches = splitFileBatches(fileIDs, batchSizeMode);
     const totalBatches = batches.length;
     console.log(`共 ${fileIDs.length} 张图片，拆分为 ${totalBatches} 批`);
 
@@ -731,8 +881,20 @@ exports.main = async (event) => {
       taskId = task._id;
     } else {
       const activeTaskResult = await recoverStaleAnalysisTask(reportId);
-      if (activeTaskResult) return activeTaskResult;
+      if (activeTaskResult && activeTaskResult.success) return activeTaskResult;
+      if (activeTaskResult && activeTaskResult.staleTaskId) {
+        staleTaskId = activeTaskResult.staleTaskId;
+      }
+    }
 
+    if (task) {
+      // 已通过 continuation 或 stale 恢复
+    } else if (staleTaskId) {
+      // 恢复 stale task 的已有进度，不丢弃 batchResults
+      task = await loadAnalysisTask(staleTaskId, reportId);
+      taskId = task._id;
+      console.log(`[recoverStale] 从第 ${task.nextBatchIndex || 0} 批恢复`);
+    } else {
       taskId = await createAnalysisTask({
         reportId,
         totalBatches,
@@ -746,7 +908,9 @@ exports.main = async (event) => {
     }
 
     const startBatchIndex = Math.max(0, Number(task.nextBatchIndex) || 0);
-    const runBatches = batches.slice(startBatchIndex, startBatchIndex + MAX_BATCHES_PER_INVOCATION);
+    // ANALYSIS_BATCH_SIZE=1，每次调用只跑 1 批，靠续跑机制完成剩余批次
+    const batchesPerRun = ANALYSIS_BATCH_SIZE;
+    const runBatches = batches.slice(startBatchIndex, startBatchIndex + batchesPerRun);
     if (runBatches.length === 0 && startBatchIndex < totalBatches) {
       throw new Error('分析任务批次进度异常');
     }

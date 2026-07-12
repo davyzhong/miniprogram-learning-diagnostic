@@ -4,6 +4,28 @@ function cleanText(value, maxLength) {
   return String(value || '').slice(0, maxLength);
 }
 
+// 清理答案字段：AI 有时把推理注释塞进 correctAnswer/studentAnswer，
+// 如 "0.12 (注：学生写的是0.12但被判定错...)"。去掉括号注释和分号后的说明。
+function cleanAnswer(value, maxLength) {
+  let s = String(value || '').trim();
+  // 去掉中文/英文括号注释（包括嵌套）
+  s = s.replace(/[（(][^）)]*[）)]/g, '').trim();
+  // 去掉 " / " 或 "/。" 后的推理说明（如 "11/15 /。这是典型的..."）
+  s = s.replace(/\s*\/[。.；;].*$/, '').trim();
+  // 去掉中文句号后的说明（如 "0.03。学生..."）——只匹配中文句号，不匹配小数点
+  s = s.replace(/[。][a-zA-Z\u4e00-\u9fa5)].*$/, '').trim();
+  // 去掉英文句号后的说明（如 "answer. Student..."）——但不匹配数字中的小数点
+  s = s.replace(/\.[\s][a-zA-Z\u4e00-\u9fa5)].*$/, '').trim();
+  // 去掉分号/冒号后的说明
+  s = s.replace(/[;；:].*$/, '').trim();
+  // 去掉 "注：" 开头的尾巴
+  s = s.replace(/注[：:].*$/, '').trim();
+  // "A 或 B" / "A 或 B" 格式：AI 给了多个可能答案，取第一个
+  s = s.replace(/\s+或\s+.*$/, '').trim();
+  s = s.replace(/\s+or\s+.*$/i, '').trim();
+  return s.slice(0, maxLength);
+}
+
 function cleanStringArray(values, maxItems = 8, maxLength = 100) {
   if (!Array.isArray(values)) return [];
   return values
@@ -184,9 +206,10 @@ function normalizeBottlenecks(items) {
 
 function normalizeErrorDetails(items) {
   return items.slice(0, 100).map(item => ({
+    imageIndex: Number(item.imageIndex) || 0,
     questionContent: cleanText(item.questionContent, 500),
-    studentAnswer: cleanText(item.studentAnswer, 300),
-    correctAnswer: cleanText(item.correctAnswer, 300),
+    studentAnswer: cleanAnswer(item.studentAnswer, 300),
+    correctAnswer: cleanAnswer(item.correctAnswer, 300),
     lpCode: cleanText(item.lpCode, 30),
     rootCause: cleanText(item.rootCause, 300),
     suggestion: cleanText(item.suggestion, 300),
@@ -268,6 +291,7 @@ function normalizePageResults(result, expectedPageCount) {
 
 module.exports = {
   normalizePageResults,
+  normalizeErrorDetails,
   // 导出以下函数供测试
   normalizeCandidateBottlenecks,
   canonicalizeBottleneckId,

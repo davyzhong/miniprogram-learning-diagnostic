@@ -894,15 +894,25 @@ test('analyzePhotos splits batches, excludes duplicate pages and updates the pro
   })
 
   const first = await handler.main({ reportId: 'report-1' })
-  const taskAfterFirstRun = db.dump('analysisTasks')[0]
-
-  // ANALYSIS_BATCH_SIZE=5: 2 张图片一批完成，无需续跑
   assert.equal(first.success, true)
+
+  // ANALYSIS_BATCH_SIZE=1：2 张图片拆成 2 批，每次调用只跑 1 批，靠续跑机制完成。
+  let task = db.dump('analysisTasks')[0]
+  while (task.status === 'processing') {
+    const continuation = await handler.main({
+      reportId: 'report-1',
+      taskId: task._id,
+      continuation: true
+    })
+    assert.equal(continuation.success, true)
+    task = db.dump('analysisTasks')[0]
+  }
 
   const report = db.dump('reports').find(item => item._id === 'report-1')
   const profile = db.dump('subjectProfiles')[0]
 
-  assert.deepEqual(batchCalls.map(batch => batch.length), [2])
+  // 每次调用 analyzeBatch 只传 1 张 fileID，共 2 次调用
+  assert.deepEqual(batchCalls.map(batch => batch.length), [1, 1])
   assert.equal(report.imageFiles[0].isDuplicate, true)
   assert.equal(new Date(report.imageFiles[0].uploadedAt).getTime(), new Date('2026-06-11T09:50:00Z').getTime())
   assert.equal(report.totalErrors, 1)
@@ -996,7 +1006,7 @@ test('analyzePhotos stores chinese concrete error items on report and profile', 
   assert.equal(profile.chineseReviewItems[0].status, 'needs_review')
 })
 
-test('analyzePhotos batches images at ANALYSIS_BATCH_SIZE=5 and processes within timeout', async () => {
+test('analyzePhotos batches images at ANALYSIS_BATCH_SIZE=1 and processes within timeout', async () => {
   const fileIDs = Array.from({ length: 2 }, (_, index) => `cloud://photo-${index + 1}`)
   const db = createDatabase({
     reports: [{
@@ -1056,12 +1066,11 @@ test('analyzePhotos batches images at ANALYSIS_BATCH_SIZE=5 and processes within
   })
 
   const result = await handler.main({ reportId: 'report-1' })
-  const task = db.dump('analysisTasks')[0]
   const calls = cloud.calls.filter(call => call.name === 'callFunction')
 
-  // ANALYSIS_BATCH_SIZE=5: 2 张图片一批完成（无需续跑）
+  // ANALYSIS_BATCH_SIZE=1：2 张图片拆成 2 批，每次调用 analyzeBatch 只传 1 张 fileID
   assert.equal(result.success, true)
-  assert.deepEqual(calls.filter(call => call.payload.name === 'analyzeBatch').map(call => call.payload.data.fileIDs.length), [2])
+  assert.deepEqual(calls.filter(call => call.payload.name === 'analyzeBatch').map(call => call.payload.data.fileIDs.length), [1])
   assert.equal(maxActive, 1)
 })
 
@@ -1184,8 +1193,7 @@ test('analyzePhotos retries a transient single-image batch failure before comple
 })
 
 test('analyzePhotos continues large uploads across multiple cloud invocations', async () => {
-  // 7 张图片：ANALYSIS_BATCH_SIZE=5 → 2 批（5+2），MAX_BATCHES_PER_INVOCATION=3
-  // 第一轮处理全部 2 批，但第 2 批需续跑到第 2 次调用。
+  // 7 张图片：ANALYSIS_BATCH_SIZE=1 → 7 批，每次调用只跑 1 批，靠续跑机制完成。
   const fileIDs = Array.from({ length: 7 }, (_, index) => `cloud://photo-${index + 1}`)
   const db = createDatabase({
     reports: [{
@@ -1239,34 +1247,31 @@ test('analyzePhotos continues large uploads across multiple cloud invocations', 
   })
 
   const first = await handler.main({ reportId: 'report-1' })
-  const taskAfterFirstRun = db.dump('analysisTasks')[0]
-
-  // ANALYSIS_BATCH_SIZE=5: 7 张分 2 批。第一轮 MAX_BATCHES_PER_INVOCATION=3 但只有 2 批，
-  // 所以全部处理完（或续跑一次处理剩余）。
   assert.equal(first.success, true)
 
-  // 如果第一轮没处理完，续跑
-  if (scheduledContinuations.length > 0) {
-    const second = await handler.main({
+  // ANALYSIS_BATCH_SIZE=1：7 张分 7 批，每次调用只跑 1 批，靠续跑机制完成剩余批次。
+  let task = db.dump('analysisTasks')[0]
+  while (task.status === 'processing') {
+    const continuation = await handler.main({
       reportId: 'report-1',
-      taskId: taskAfterFirstRun._id,
+      taskId: task._id,
       continuation: true
     })
-    assert.equal(second.success, true)
+    assert.equal(continuation.success, true)
+    task = db.dump('analysisTasks')[0]
   }
 
   const report = db.dump('reports').find(item => item._id === 'report-1')
-  const task = db.dump('analysisTasks')[0]
 
   assert.equal(report.status, 'completed')
   assert.equal(report.totalErrors, 7)
-  assert.equal(task.completedBatches, 2)
+  assert.equal(task.completedBatches, 7)
   assert.equal(task.status, 'completed')
 })
 
 test('analyzePhotos completes with a partial warning when some image batches fail', async () => {
-  // 7 张图片：ANALYSIS_BATCH_SIZE=5 → 2 批（photo-1~5, photo-6~7）。
-  // 第 2 批（photo-6,7）失败 → 5/7 张完成。
+  // 7 张图片：ANALYSIS_BATCH_SIZE=1 → 7 批（每张 1 批）。
+  // photo-6 所在的批失败 → 6/7 张完成。
   const fileIDs = Array.from({ length: 7 }, (_, i) => `cloud://photo-${i + 1}`)
   const db = createDatabase({
     reports: [{
@@ -1298,7 +1303,7 @@ test('analyzePhotos completes with a partial warning when some image batches fai
         scheduledContinuations.push(payload.data)
         return { result: { success: true } }
       }
-      // 第 2 批（6,7）失败
+      // photo-6 单独成批，该批失败（重试耗尽后计入失败批次）
       const batchFiles = payload.data.fileIDs
       if (batchFiles.includes('cloud://photo-6')) {
         return { result: { success: false, error: 'AI 服务繁忙' } }
@@ -1324,26 +1329,27 @@ test('analyzePhotos completes with a partial warning when some image batches fai
     'wx-server-sdk': cloud
   })
 
-  // 可能需要续跑完成第 2 批
+  // ANALYSIS_BATCH_SIZE=1：7 张分 7 批，每次调用只跑 1 批，靠续跑机制完成剩余批次。
   const first = await handler.main({ reportId: 'report-1' })
+  assert.equal(first.success, true)
   let result = first
-  if (scheduledContinuations.length > 0) {
-    const taskAfterFirstRun = db.dump('analysisTasks')[0]
+  let task = db.dump('analysisTasks')[0]
+  while (task.status === 'processing') {
     result = await handler.main({
       reportId: 'report-1',
-      taskId: taskAfterFirstRun._id,
+      taskId: task._id,
       continuation: true
     })
+    assert.equal(result.success, true)
+    task = db.dump('analysisTasks')[0]
   }
   const report = db.dump('reports').find(item => item._id === 'report-1')
-  const task = db.dump('analysisTasks')[0]
 
-  assert.equal(result.success, true)
   assert.equal(result.partialSuccess, true)
   assert.equal(report.status, 'completed')
   assert.equal(report.partialSuccess, true)
   assert.equal(report.failedBatchCount, 1)
-  assert.match(report.analysisWarning, /5\/7 张照片完成分析/)
+  assert.match(report.analysisWarning, /6\/7 张照片完成分析/)
   assert.equal(task.status, 'completed')
   assert.equal(task.partialSuccess, true)
   assert.equal(task.failedBatchCount, 1)
@@ -1502,7 +1508,8 @@ test('analyzePhotos only marks a verification target improved from complete corr
   assert.equal(result.success, true)
   assert.deepEqual(analyzeBatchCall.payload.data.verificationPlan, [{
     lpCode: 'LP-001',
-    expectedQuestionCount: 3
+    expectedQuestionCount: 3,
+    questions: []
   }])
   assert.equal(report.verificationEvidence[0].allCorrect, true)
   assert.equal(report.bottlenecks[0].status, 'improved')

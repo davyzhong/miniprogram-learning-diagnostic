@@ -39,7 +39,9 @@ function classifyAnalysisState({
     return { status: 'failed', shouldContinue: false }
   }
 
-  const progressTime = timeOf(progress && progress.createdAt)
+  // 用 updatedAt 而非 createdAt：持续工作的任务 updatedAt 会不断刷新，
+  // 不会因为总耗时超过 staleMs 而被误判超时
+  const progressTime = timeOf(progress && (progress.updatedAt || progress.createdAt))
   const taskAge = progressTime ? now - progressTime : 0
   if (progress && (progress.status === 'failed' || taskAge > staleMs)) {
     return { status: 'timeout', shouldContinue: false }

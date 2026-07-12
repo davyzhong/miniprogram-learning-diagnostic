@@ -5,17 +5,21 @@
 //
 // 价格口径：平台估算成本（非用户应付）。单位元。
 
-const PRICING_VERSION = '2026-06-27'
+const PRICING_VERSION = '2026-07-11'
 
 // 每千 token 单价（元）。CloudBase AI 平台估算，仅供内测成本观察。
 const PRICE_PER_1K_TOKENS = {
-  'hy3-preview': { input: 0.018, output: 0.018 }, // 多模态视觉模型
+  'hy3-preview': { input: 0.018, output: 0.018 }, // 纯文本模型（已弃用于图片分析）
+  'qwen3.5-plus': { input: 0.0008, output: 0.0048 }, // 多模态视觉模型（当前用于图片分析）
+  'glm-5v-turbo': { input: 0.001, output: 0.002 }, // 备选视觉模型（响应过慢，未启用）
   'deepseek-v4-flash': { input: 0.001, output: 0.002 } // 文本生成模型
 }
 
 // 每张图片的附加估算成本（元）。视觉模型按图片计费的兜底估算。
 const PRICE_PER_IMAGE = {
   'hy3-preview': 0.01,
+  'qwen3.5-plus': 0.01,
+  'glm-5v-turbo': 0.01,
   'deepseek-v4-flash': 0
 }
 
