@@ -447,3 +447,44 @@ test('removed pages and style overrides stay removed', () => {
     assert.doesNotMatch(fs.readFileSync(file, 'utf8'), /!important/, `${file} should not use !important`)
   }
 })
+
+// ── 分析可靠性 ──
+
+test('analyzePhotos has robust retry configuration for timeout resilience', () => {
+  const source = read('cloudfunctions/analyzePhotos/index.js')
+  // 至少 3 次重试
+  assert.match(source, /MAX_BATCH_ATTEMPTS\s*=\s*3/, 'MAX_BATCH_ATTEMPTS must be at least 3')
+  // 指数退避
+  assert.match(source, /BATCH_RETRY_DELAYS_MS/, 'must use exponential backoff delays')
+  // 调用 analyzeBatch 时传了显式 timeout
+  assert.match(source, /timeout:\s*ANALYZE_BATCH_TIMEOUT_MS/, 'must pass explicit timeout to analyzeBatch callFunction')
+  // 可重试错误判断
+  assert.match(source, /isRetryableError/, 'must classify retryable errors')
+  // 不可重试错误判断（验证卷不存在等直接放弃）
+  assert.match(source, /isNonRetryableError/, 'must classify non-retryable errors')
+})
+
+test('analyzeBatch preserves original error messages instead of swallowing them', () => {
+  const source = read('cloudfunctions/analyzeBatch/index.js')
+  // 必须有错误分类函数
+  assert.match(source, /classifyAnalysisError/, 'must classify analysis errors')
+  // 不再统一返回笼统错误
+  assert.doesNotMatch(
+    source,
+    /return\s*\{\s*success:\s*false,\s*error:\s*'图片分析失败，请稍后重试'\s*\}/,
+    'must not swallow all errors with a generic message'
+  )
+  // 必须识别 ESOCKETTIMEDOUT
+  assert.match(source, /ESOCKETTIMEDOUT/, 'must recognize ESOCKETTIMEDOUT')
+})
+
+test('frontend timeout detection covers network socket errors', () => {
+  const source = read('miniprogram/utils/cloud.js')
+  assert.match(source, /ESOCKETTIMEDOUT/, 'isTimeoutError must match ESOCKETTIMEDOUT')
+  assert.match(source, /ETIMEDOUT/, 'isTimeoutError must match ETIMEDOUT')
+})
+
+test('analysis poller uses updatedAt instead of createdAt for stale detection', () => {
+  const source = read('miniprogram/utils/analysis-poller.js')
+  assert.match(source, /updatedAt.*createdAt/, 'stale detection must prefer updatedAt over createdAt')
+})

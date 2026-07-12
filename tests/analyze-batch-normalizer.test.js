@@ -149,3 +149,55 @@ test('prompt 包含 taxonomy BN 清单（integration check）', () => {
   assert.ok(TAXONOMY_BN_LIST.some(bn => bn.id === 'BN-INT-MUL-PARTIAL-OMIT'));
   assert.ok(TAXONOMY_BN_LIST.some(bn => bn.id === 'BN-UNIT-AREA-VOLUME-DIMENSION'));
 });
+
+test('cleanAnswer 去掉 AI 塞入 correctAnswer 的括号注释', () => {
+  const { normalizeErrorDetails } = require('../cloudfunctions/analyzeBatch/result-normalizer');
+  const items = normalizeErrorDetails([{
+    imageIndex: 1,
+    questionContent: '0.4 × 0.3 = ?',
+    studentAnswer: '0.12',
+    correctAnswer: '0.12 (注：学生写的是0.12但被判定错，实际应为0.12，此处可能是学生书写不清或老师误判)',
+    lpCode: 'LP-001',
+  }]);
+  assert.equal(items[0].correctAnswer, '0.12');
+  assert.equal(items[0].studentAnswer, '0.12');
+});
+
+test('cleanAnswer 去掉分号后的说明', () => {
+  const { normalizeErrorDetails } = require('../cloudfunctions/analyzeBatch/result-normalizer');
+  const items = normalizeErrorDetails([{
+    imageIndex: 2,
+    questionContent: '面积',
+    studentAnswer: '14/15 (过程显示直接相除未转乘倒数)',
+    correctAnswer: '14/15',
+    lpCode: 'LP-002',
+  }]);
+  assert.equal(items[0].studentAnswer, '14/15');
+  assert.equal(items[0].correctAnswer, '14/15');
+});
+
+test('cleanAnswer 处理 "A 或 B" 多答案格式', () => {
+  const { normalizeErrorDetails } = require('../cloudfunctions/analyzeBatch/result-normalizer');
+  const items = normalizeErrorDetails([{
+    imageIndex: 1,
+    questionContent: '0.6×0.05',
+    studentAnswer: '0.03',
+    correctAnswer: '0.030 或 0.03',
+    lpCode: 'LP-003',
+  }]);
+  assert.equal(items[0].correctAnswer, '0.030');
+  assert.equal(items[0].studentAnswer, '0.03');
+});
+
+test('cleanAnswer 去掉 /。 后的推理说明', () => {
+  const { normalizeErrorDetails } = require('../cloudfunctions/analyzeBatch/result-normalizer');
+  const items = normalizeErrorDetails([{
+    imageIndex: 2,
+    questionContent: '2/5+1/3',
+    studentAnswer: '11/15 /。这是典型的分子加分子分母加分母错误。)',
+    correctAnswer: '11/15',
+    lpCode: 'LP-002',
+  }]);
+  assert.equal(items[0].studentAnswer, '11/15');
+  assert.equal(items[0].correctAnswer, '11/15');
+});

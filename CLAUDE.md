@@ -63,7 +63,7 @@ CloudBase (serverless, 14 cloud functions)
     ├─ uploadAndAnalyze   → creates report record, fire-and-forget starts analyzePhotos
     ├─ analyzePhotos      → splits into batches of 5, calls analyzeBatch serially, dedups, merges, writes report/profile
     │                        (also triggers auto-verification-paper record creation on report completion)
-    ├─ analyzeBatch       → downloads images, calls CloudBase AI vision model (hy3-preview)
+    ├─ analyzeBatch       → downloads images, calls CloudBase AI vision model (qwen3.5-plus + enable_thinking:false)
     ├─ getAnalysisProgress→ lightweight read on analysisTasks
     ├─ generatePaper      → AI (deepseek-v4-flash) generates questions → pdfkit renders A4 PDF
     ├─ generateReportPDF  → renders diagnosis report PDF, writes back reports.pdfFileId
@@ -109,6 +109,28 @@ Collections: `englishImportBatches`, `studentEnglishWords` (personal word librar
 - **Data access layer**: `miniprogram/utils/cloud.js` wraps `wx.cloud.callFunction` (expecting a `{success, data, error}` envelope — `success === false` throws) and also exposes direct DB reads. Pages and other utils call through it rather than hitting `wx.cloud` directly.
 - **PDF generation**: `pdfkit` runs inside cloud functions using a bundled `NotoSansCJKsc-Regular.otf`. A missing font must fail loudly, not produce garbled Chinese.
 - **Traceable navigation**: Card/button destinations go through `buildTraceableUrl` (`utils/traceable-actions.js`) + a shared `onTraceableUrlTap` handler so every entry point records where it came from. New home/dashboard cards should use this rather than raw `wx.navigateTo`.
+
+### AI 视觉模型架构（关键约束）
+
+**模型选型铁律：必须使用真正的多模态视觉模型，绝不能用纯文本模型做图片分析。**
+
+历史教训：项目最初用 `hy3-preview` 做图片分析，但该模型是纯文本模型（CloudBase [官方多模态文档](https://docs.cloudbase.net/ai/model/multimodal) 明确列为不支持图片），传入图片会被忽略。导致 AI 只从 prompt 文字脑补题目和答案，所有分析结果不可信。
+
+当前配置：
+- **视觉模型**：`qwen3.5-plus`（CloudBase 多模态视觉模型，`analyzeBatch/index.js` 的 `VISION_MODEL_ID`）
+- **关键参数**：`enable_thinking: false`（qwen3.5-plus 默认开启深度思考模式，处理图片时单张 >60s 超时；关闭后单张 ~15s）
+- **文本模型**：`deepseek-v4-flash`（generatePaper、learningResource 用，不处理图片）
+- **降级路径**：`analyzeBatch/vision-fallback.js`，主路径失败时通过外部视觉 API（智谱 GLM-4V）降级，需配 `FALLBACK_VISION_API_KEY` 环境变量
+
+**验证分析三层防线（verification 模式专用，在 `analyzePhotos/index.js` 中）：**
+
+1. **权威标准答案替换**：用 `paper.questions` 的标准答案替换 AI 返回的 `correctAnswer`，防止 AI 自己算错标准答案
+2. **数值归一化比较**：`normalizeForCompare` 把 studentAnswer 和 correctAnswer 归一化为可比数值（处理分数↔小数、单位去除、等号/算式去除），数值相等则丢弃该假阳性错题
+3. **OCR 误读交叉验证**：如果 AI 读到的 studentAnswer 恰好等于验证卷中某道题的标准答案，说明 AI 读错了手写体（如把 7/12 读成 2/7），丢弃该假阳性错题
+
+**答案字段清理**（`analyzeBatch/result-normalizer.js` 的 `cleanAnswer`）：AI 有时把推理注释塞进 `correctAnswer`/`studentAnswer`（如 "0.12 (注：学生写的...)"、"0.030 或 0.03"、"11/15 /。这是典型的..."），`cleanAnswer` 负责去掉这些污染。
+
+**诊断模式（非验证）不使用三层防线**——诊断模式没有 paper.questions 可做权威来源，依赖 AI 视觉判断。
 
 ### Database collections
 

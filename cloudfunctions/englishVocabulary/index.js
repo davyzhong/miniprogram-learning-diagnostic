@@ -28,6 +28,10 @@ const app = tcb.init({
 })
 const seedVocabulary = require('./zhong-qingyu-pep-vocabulary.json')
 
+// 视觉模型 ID。hy3-preview 是纯文本模型不支持图片。
+// qwen3.5-plus + enable_thinking:false 是当前最优视觉配置（单图 ~15s）。
+const VISION_MODEL_ID = 'qwen3.5-plus';
+
 const ACTIONS = new Set([
   'createImportBatch',
   'confirmImportBatch',
@@ -295,7 +299,7 @@ async function extractCandidatesFromImages(pageFileIDs = [], context = {}) {
         subject: 'english',
         sourceType: 'english_session',
         cloudFunction: 'englishVocabulary',
-        model: 'hy3-preview',
+        model: VISION_MODEL_ID,
         imageCount: imageUrls.length
       })
     } catch (e) { console.error('[usage] recordUsageStart failed', e && e.message) }
@@ -304,7 +308,7 @@ async function extractCandidatesFromImages(pageFileIDs = [], context = {}) {
   let result
   try {
     result = await model.generateText({
-      model: 'hy3-preview',
+      model: VISION_MODEL_ID,
       messages: [{
         role: 'user',
         content: [
@@ -312,18 +316,19 @@ async function extractCandidatesFromImages(pageFileIDs = [], context = {}) {
           ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } }))
         ]
       }],
-      temperature: 0.1
+      temperature: 0.1,
+      enable_thinking: false
     })
     if (eventId) {
       await recordUsageSuccess({
         db, eventId, usage: result && result.usage, outputText: result && result.text,
-        model: 'hy3-preview', imageCount: imageUrls.length
+        model: VISION_MODEL_ID, imageCount: imageUrls.length
       }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
     }
   } catch (err) {
     if (eventId) {
-      await recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length })
-        .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
+      await recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: VISION_MODEL_ID, imageCount: imageUrls.length })
+      .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
     }
     throw err
   }
@@ -714,7 +719,7 @@ ${JSON.stringify(candidates)}
         sourceId: event.sessionId || '',
         sourceType: 'english_session',
         cloudFunction: 'englishVocabulary',
-        model: 'hy3-preview',
+        model: VISION_MODEL_ID,
         imageCount: imageUrls.length
       })
     }
@@ -723,7 +728,7 @@ ${JSON.stringify(candidates)}
   let result
   try {
     result = await model.generateText({
-      model: 'hy3-preview',
+      model: VISION_MODEL_ID,
       messages: [{
         role: 'user',
         content: [
@@ -731,18 +736,19 @@ ${JSON.stringify(candidates)}
           ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } }))
         ]
       }],
-      temperature: 0.1
+      temperature: 0.1,
+      enable_thinking: false
     })
     if (eventId) {
       await recordUsageSuccess({
         db, eventId, usage: result && result.usage, outputText: result && result.text,
-        model: 'hy3-preview', imageCount: imageUrls.length
+        model: VISION_MODEL_ID, imageCount: imageUrls.length
       }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
     }
   } catch (err) {
     if (eventId) {
-      await recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'hy3-preview', imageCount: imageUrls.length })
-        .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
+      await recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: VISION_MODEL_ID, imageCount: imageUrls.length })
+      .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
     }
     throw err
   }

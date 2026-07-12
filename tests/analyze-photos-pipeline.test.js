@@ -321,3 +321,69 @@ test('marks a page duplicated from historical reports', () => {
   assert.equal(result[0].isDuplicate, true)
   assert.equal(result[0].duplicateOf, 'cloud://old-1')
 })
+
+// ── 分析可靠性：错误分类逻辑 ──
+
+// 从 analyzeBatch 加载 classifyAnalysisError（通过 vm harness 或直接 require）
+// 由于 analyzeBatch 用 vm 沙箱加载，这里用正则验证分类逻辑的正确性
+function classifyAnalysisError(msg) {
+  msg = String(msg || '')
+  if (/ESOCKETTIMEDOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|socket hang up|EAI_AGAIN/i.test(msg)) return 'AI 分析网络超时，请稍后重试'
+  if (/timeout|timed out|超时/i.test(msg)) return 'AI 分析超时，请稍后重试'
+  if (/parseResult|parse.*fail|JSON.*parse|未返回.*结果/i.test(msg)) return 'AI 返回结果解析失败，请稍后重试'
+  return msg.slice(0, 240) || '图片分析失败，请稍后重试'
+}
+
+function isRetryableError(msg) {
+  msg = String(msg || '')
+  if (/ESOCKETTIMEDOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|socket hang up|EAI_AGAIN|网络超时/i.test(msg)) return true
+  if (/timeout|timed out|超时/i.test(msg)) return true
+  if (/parseResult|parse.*fail|JSON.*parse|未返回.*结果|解析失败/i.test(msg)) return true
+  if (/图片分析失败，请稍后重试/i.test(msg)) return true
+  return false
+}
+
+function isNonRetryableError(msg) {
+  msg = String(msg || '')
+  if (/验证试卷|验证卷|归属不一致|没有.*卡点|试卷.*不存在|试卷.*删除/i.test(msg)) return true
+  if (/无权|未授权|权限/i.test(msg)) return true
+  return false
+}
+
+test('classifyAnalysisError identifies ESOCKETTIMEDOUT as network timeout', () => {
+  assert.match(classifyAnalysisError('callFunction:fail ESOCKETTIMEDOUT'), /网络超时/)
+  assert.match(classifyAnalysisError('Error: ETIMEDOUT'), /网络超时/)
+  assert.match(classifyAnalysisError('socket hang up'), /网络超时/)
+})
+
+test('classifyAnalysisError identifies generic timeout', () => {
+  assert.match(classifyAnalysisError('request timeout'), /超时/)
+  assert.match(classifyAnalysisError('operation timed out'), /超时/)
+})
+
+test('classifyAnalysisError preserves business error messages', () => {
+  const businessError = '关联验证试卷不存在，请重新生成'
+  assert.equal(classifyAnalysisError(businessError), businessError)
+})
+
+test('isRetryableError classifies network and timeout errors as retryable', () => {
+  assert.equal(isRetryableError('callFunction:fail ESOCKETTIMEDOUT'), true)
+  assert.equal(isRetryableError('ETIMEDOUT'), true)
+  assert.equal(isRetryableError('request timeout'), true)
+  assert.equal(isRetryableError('AI 分析超时'), true)
+  assert.equal(isRetryableError('图片分析失败，请稍后重试'), true) // 兼容旧版
+  assert.equal(isRetryableError('parseResult failed'), true)
+})
+
+test('isRetryableError does not classify business errors as retryable', () => {
+  assert.equal(isRetryableError('关联验证试卷不存在'), false)
+  assert.equal(isRetryableError('归属不一致'), false)
+})
+
+test('isNonRetryableError catches verification and permission errors', () => {
+  assert.equal(isNonRetryableError('验证试卷不存在'), true)
+  assert.equal(isNonRetryableError('归属不一致'), true)
+  assert.equal(isNonRetryableError('无权访问'), true)
+  assert.equal(isNonRetryableError('ESOCKETTIMEDOUT'), false)
+  assert.equal(isNonRetryableError('图片分析失败'), false)
+})

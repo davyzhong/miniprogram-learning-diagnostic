@@ -57,7 +57,9 @@ async function callFunction(name, data, options = {}) {
 }
 
 function isTimeoutError(error) {
-  return /timeout|timed out|超时/i.test(String(error && error.message ? error.message : error))
+  const msg = String(error && error.message ? error.message : error)
+  // ESOCKETTIMEDOUT / ETIMEDOUT / ECONNRESET 等网络超时也需识别
+  return /timeout|timed out|超时|ESOCKETTIMEDOUT|ETIMEDOUT|ECONNRESET|ECONNREFUSED|socket hang up|网络超时/i.test(msg)
 }
 
 /**

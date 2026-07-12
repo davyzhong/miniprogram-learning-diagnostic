@@ -14,9 +14,14 @@ function buildVerificationPlan(paper = {}) {
   }
 
   return (paper.bottleneckTargets || []).map(lpCode => {
+    const allQuestions = (paper.questions || []).filter(q => q && q.lpCode === lpCode)
     const item = {
       lpCode,
-      expectedQuestionCount: counts.get(lpCode) || 0
+      expectedQuestionCount: counts.get(lpCode) || 0,
+      questions: allQuestions.map(q => ({
+        content: q.content || q.question || q.stem || '',
+        answer: q.answer || q.correctAnswer || ''
+      })).filter(q => q.content)
     }
     const chineseReviewTargets = (paper.chineseReviewTargets || [])
       .filter(target => target && (target.relatedLpCode || target.lpCode) === lpCode)
@@ -67,7 +72,11 @@ function buildPageAwareVerificationPlan(paper = {}) {
         legacyLpCode: target.legacyLpCode || target.lpCode || '',
         pageCode: page.pageCode || '',
         expectedQuestionCount: questions.length,
-        questionIds: questions.map(question => question.questionId).filter(Boolean)
+        questionIds: questions.map(question => question.questionId).filter(Boolean),
+        questions: questions.map(q => ({
+          content: q.content || q.question || q.stem || '',
+          answer: q.answer || q.correctAnswer || ''
+        })).filter(q => q.content)
       })
     }
   }

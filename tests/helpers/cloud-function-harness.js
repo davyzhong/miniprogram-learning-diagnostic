@@ -45,6 +45,8 @@ function createDatabase(initial = {}, options = {}) {
     for (const [key, value] of Object.entries(data)) {
       if (value && value.__operation === 'inc') {
         document[key] = (Number(document[key]) || 0) + value.value
+      } else if (value && value.__operation === 'set') {
+        document[key] = clone(value.value)
       } else if (value && value.__operation === 'push') {
         if (!Array.isArray(document[key])) document[key] = []
         document[key] = [...document[key], ...value.items]
@@ -134,6 +136,7 @@ function createDatabase(initial = {}, options = {}) {
     },
     command: {
       inc: value => ({ __operation: 'inc', value }),
+      set: value => ({ __operation: 'set', value }),
       push: items => ({ __operation: 'push', items: Array.isArray(items) ? items : [items] }),
       lt: value => ({ __queryOp: 'lt', value }),
       lte: value => ({ __queryOp: 'lte', value }),
