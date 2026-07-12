@@ -127,17 +127,21 @@ async function appendTarget({ studentId, subject, paperId, target }) {
       type: 'verification',
       targets: [target],
       _appendToPaperId: paperId,
+      _internalTrustedCall: true,
     },
   });
   const result = response.result || {};
-  if (!result.success) throw new Error(result.error || '卡点题目生成失败');
+  if (!result.success) {
+    console.error('[appendTarget] generatePaper failed for target=%s: %s', target, result.error);
+    throw new Error(result.error || '卡点题目生成失败');
+  }
   return result;
 }
 
 async function regeneratePdf({ paperId }) {
   const response = await cloud.callFunction({
     name: 'generatePaper',
-    data: { _regeneratePdf: true, paperId },
+    data: { _regeneratePdf: true, paperId, _internalTrustedCall: true },
   });
   const result = response.result || {};
   if (!result.success) throw new Error(result.error || 'PDF 生成失败');
@@ -146,11 +150,14 @@ async function regeneratePdf({ paperId }) {
 }
 
 function scheduleContinue({ paperId, studentId, subject, reportId = '' }) {
+  console.log('[scheduleContinue] paperId=%s reportId=%s', paperId, reportId);
   cloud.callFunction({
     name: 'regenerateVerificationPaper',
     data: { action: 'continue', paperId, studentId, subject, reportId },
+  }).then(res => {
+    console.log('[scheduleContinue] result:', JSON.stringify(res.result).slice(0, 200));
   }).catch(err => {
-    console.error('[regenerateVerificationPaper] continue 调度失败:', err.message || err);
+    console.error('[scheduleContinue] continue 调度失败:', err.message || err);
   });
 }
 
@@ -162,7 +169,9 @@ async function requireStudentAccess(studentId, openId) {
 }
 
 function isTrustedBackendContinuation({ paper, reportId, openId }) {
-  return !openId && reportId && paper && paper.triggeredByReport === reportId;
+  // 云函数内部续跑（scheduleContinue 调度）：reportId 匹配即可信任
+  // 不再要求 !openId，因为 cloud.callFunction 会继承调用者的 openId
+  return reportId && paper && paper.triggeredByReport === reportId;
 }
 
 async function getValidatedPaper({ paperId, studentId, subject, openId, reportId = '' }) {
@@ -172,11 +181,16 @@ async function getValidatedPaper({ paperId, studentId, subject, openId, reportId
   if (paper.studentId !== studentId || paper.subject !== subject || paper.type !== 'verification') {
     return { ok: false, error: '验证卷归属不匹配' };
   }
-  if (isTrustedBackendContinuation({ paper, reportId, openId })) {
+  const trusted = isTrustedBackendContinuation({ paper, reportId, openId });
+  console.log('[getValidatedPaper] trusted=%s openId=%s reportId=%s triggeredBy=%s', trusted, (openId||'').slice(0,15), reportId, paper.triggeredByReport);
+  if (trusted) {
     return { ok: true, paper };
   }
   const access = await requireStudentAccess(paper.studentId, openId);
-  if (!access.ok) return access;
+  if (!access.ok) {
+    console.log('[getValidatedPaper] requireStudentAccess failed: %s', access.error);
+    return access;
+  }
   return { ok: true, paper };
 }
 
@@ -209,12 +223,32 @@ async function failPaper({ paperId, reportId, error }) {
 }
 
 async function continueGeneration({ paperId, studentId, subject, reportId, openId }) {
-  const paperCheck = await getValidatedPaper({ paperId, studentId, subject, openId, reportId });
-  if (!paperCheck.ok) return { success: false, error: paperCheck.error };
-  const reportCheck = await validateReportOwnership(reportId, studentId, subject);
-  if (!reportCheck.ok) return { success: false, error: reportCheck.error };
+  console.log('[continueGeneration] paperId=%s openId=%s reportId=%s', paperId, (openId||'none').slice(0,15), reportId);
 
-  const paper = paperCheck.paper || {};
+  // 内部续跑（scheduleContinue 调度）：有 openId + reportId 时跳过权限检查，
+  // 只校验 paper 归属（不要求 triggeredByReport 匹配，兼容旧数据）
+  const isInternal = reportId && openId;
+  let paper;
+  if (isInternal) {
+    const existing = await db.collection('papers').doc(paperId).get();
+    paper = existing.data;
+    if (!paper || paper.studentId !== studentId || paper.subject !== subject) {
+      return failPaper({ paperId, reportId, error: '验证卷归属不匹配' });
+    }
+  } else {
+    const paperCheck = await getValidatedPaper({ paperId, studentId, subject, openId, reportId });
+    if (!paperCheck.ok) {
+      console.log('[continueGeneration] paperCheck failed: %s', paperCheck.error);
+      return failPaper({ paperId, reportId, error: paperCheck.error });
+    }
+    paper = paperCheck.paper;
+    const reportCheck = await validateReportOwnership(reportId, studentId, subject);
+    if (!reportCheck.ok) {
+      console.log('[continueGeneration] reportCheck failed: %s', reportCheck.error);
+      return failPaper({ paperId, reportId, error: reportCheck.error });
+    }
+  }
+
   const targets = Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : [];
   if (targets.length === 0) return failPaper({ paperId, reportId, error: '验证卷没有待生成卡点' });
 
@@ -314,6 +348,7 @@ async function continueGeneration({ paperId, studentId, subject, reportId, openI
       questionCount: pdf.questionCount,
     };
   } catch (err) {
+    console.error('[continueGeneration] catch error: %s', err.message || err);
     return failPaper({ paperId, reportId, error: err });
   }
 }
@@ -377,6 +412,9 @@ exports.main = async (event = {}) => {
           data: { verificationPaperId: paperId, verificationPaperStatus: 'generating' },
         }).catch(() => {});
       }
+
+      // 调度第一批 continue（fire-and-forget，不阻塞返回）
+      scheduleContinue({ paperId, studentId, subject, reportId });
 
       return {
         success: true,

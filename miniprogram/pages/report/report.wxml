@@ -62,6 +62,29 @@
       <view class="feedback-line" bindtap="onOpenFeedback" data-target-type="report" data-target-id="" data-type="unclear_result">这份报告不准确？点这里反馈</view>
     </view>
 
+    <view class="card verification-feedback-card" wx:if="{{hasVerificationFeedback}}">
+      <view class="section-heading"><view class="heading-icon">↻</view><text>验证反馈</text></view>
+      <text class="verification-feedback-summary">{{verificationFeedbackSummary}}</text>
+      <view class="verification-feedback-changes" wx:if="{{verificationStatusChanges.length > 0}}">
+        <view class="verification-change-item" wx:for="{{verificationStatusChanges}}" wx:key="lpCode">
+          <text class="verification-change-name">{{item.lpName}}</text>
+          <view class="verification-change-flow">
+            <text class="verification-change-before">{{item.beforeText}}</text>
+            <text class="verification-change-arrow">→</text>
+            <text class="verification-change-after verification-change-{{item.afterClass}}">{{item.afterText}}</text>
+          </view>
+        </view>
+      </view>
+      <view class="verification-feedback-action" wx:if="{{verificationNextActionText}}">
+        <text class="verification-action-icon">→</text>
+        <text class="verification-action-text">{{verificationNextActionText}}</text>
+      </view>
+      <view class="verification-feedback-links">
+        <text class="verification-feedback-link" bindtap="onViewVerificationReport" wx:if="{{verificationReportId}}">查看验证报告详情</text>
+        <text class="verification-feedback-link" bindtap="onViewLearningProgress">查看完整学习进展</text>
+      </view>
+    </view>
+
     <view class="card chinese-error-card" wx:if="{{hasChineseErrorItems}}">
       <view class="section-heading"><view class="heading-icon">字</view><text>语文具体错项</text></view>
       <view class="chinese-error-item" wx:for="{{chineseErrorItems}}" wx:key="viewId">

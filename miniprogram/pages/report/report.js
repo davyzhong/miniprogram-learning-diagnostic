@@ -181,7 +181,8 @@ Page({
 
       const reportWithContext = {
         ...report,
-        linkedPaper: detail.linkedPaper || detail.paper || report.linkedPaper
+        linkedPaper: detail.linkedPaper || detail.paper || report.linkedPaper,
+        linkedVerificationReport: detail.linkedVerificationReport || null
       }
       this._fullReport = reportWithContext
       const feedbackItems = await this.loadFeedbackItems(id, detail)
@@ -351,6 +352,19 @@ Page({
       wx.showToast({ title: '暂无下一步操作', icon: 'none' })
       return
     }
+    wx.navigateTo({ url })
+  },
+
+  onViewVerificationReport() {
+    const reportId = this.data.verificationReportId
+    if (!reportId) return
+    wx.navigateTo({ url: `/pages/report/report?id=${reportId}` })
+  },
+
+  onViewLearningProgress() {
+    const report = this._fullReport
+    if (!report) return
+    const url = `/pages/learning-progress/learning-progress?studentId=${report.studentId}&subject=${report.subject}`
     wx.navigateTo({ url })
   },
 

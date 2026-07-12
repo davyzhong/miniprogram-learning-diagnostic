@@ -543,7 +543,93 @@ function buildReportView(report, options = {}) {
     worsenedCount: isVerification
       ? rawBottlenecks.filter(item => item.status === 'worsened').length
       : 0,
-    showNextStep: !isVerification && (bottlenecks.length > 0 || chineseErrorItems.length > 0)
+    showNextStep: !isVerification && (bottlenecks.length > 0 || chineseErrorItems.length > 0),
+    ...buildVerificationFeedback(report, { profile, isVerification })
+  }
+}
+
+// 构建验证反馈区块：诊断报告关联了验证卷且有验证结果时展示
+function buildVerificationFeedback(report, options = {}) {
+  const { isVerification, profile } = options
+  // 只有诊断报告才展示验证反馈（验证报告本身已有验证证据卡片）
+  if (isVerification) return { hasVerificationFeedback: false }
+
+  const verReport = report.linkedVerificationReport
+  if (!verReport) return { hasVerificationFeedback: false }
+
+  const evidence = verReport.verificationEvidence || []
+  const verBottlenecks = verReport.bottlenecks || []
+
+  // 统计验证结果
+  const passed = evidence.filter(e => e.evidenceStatus === 'passed').length
+  const failed = evidence.filter(e => e.evidenceStatus === 'failed').length
+  const uncertain = evidence.filter(e =>
+    e.evidenceStatus === 'unclear' || e.evidenceStatus === 'incomplete' || e.evidenceStatus === 'missing'
+  ).length
+  const total = evidence.length
+
+  // 构建卡点状态变化列表
+  // 诊断时的状态从 report.bottlenecks 取，验证后的状态从 verReport.bottlenecks 取
+  const diagnosisBottlenecks = report.bottlenecks || []
+  const statusChanges = verBottlenecks.map(vb => {
+    const diagBn = diagnosisBottlenecks.find(db => db.lpCode === vb.lpCode)
+    const beforeStatus = diagBn ? 'found' : 'new'
+    const beforeText = beforeStatus === 'found' ? '发现卡点' : '新发现'
+    const afterText = vb.status === 'improved' ? '已改善' : (vb.status === 'persisting' || vb.status === 'worsened' ? '仍需练习' : '需要验证')
+    return {
+      lpCode: vb.lpCode,
+      lpName: vb.lpName || vb.lpCode,
+      beforeText,
+      afterText,
+      afterClass: vb.status === 'improved' ? 'improved' : 'persisting',
+      errorCount: vb.errorCount || 0,
+    }
+  })
+
+  // 生成下一步行动建议
+  let nextActionText = ''
+  let nextActionType = ''
+  if (failed > 0) {
+    nextActionText = `${failed} 个卡点仍需练习，建议重学相关资源后再做一次微验证`
+    nextActionType = 'retry-verification'
+  } else if (uncertain > 0) {
+    nextActionText = `${uncertain} 个卡点证据不足，建议重新上传清晰的验证卷答题照片`
+    nextActionType = 'retry-upload'
+  } else if (passed > 0 && failed === 0 && uncertain === 0) {
+    nextActionText = '本轮卡点已全部改善，建议继续拍照诊断发现新的学习情况'
+    nextActionType = 'continue-diagnosis'
+  } else {
+    nextActionText = '验证已完成，查看详细验证报告了解改善情况'
+    nextActionType = 'view-verification-report'
+  }
+
+  // 摘要文案
+  const summaryParts = []
+  if (passed > 0) summaryParts.push(`${passed} 个已改善`)
+  if (failed > 0) summaryParts.push(`${failed} 个仍需练习`)
+  if (uncertain > 0) summaryParts.push(`${uncertain} 个证据不足`)
+  const summaryText = `已验证 ${total} 个卡点：${summaryParts.join('，')}`
+
+  // 改善的卡点名列表
+  const improvedNames = statusChanges
+    .filter(s => s.afterClass === 'improved')
+    .map(s => s.lpName)
+
+  return {
+    hasVerificationFeedback: true,
+    verificationFeedbackSummary: summaryText,
+    verificationFeedbackPassed: passed,
+    verificationFeedbackFailed: failed,
+    verificationFeedbackUncertain: uncertain,
+    verificationFeedbackTotal: total,
+    verificationStatusChanges: statusChanges,
+    verificationNextActionText: nextActionText,
+    verificationNextActionType: nextActionType,
+    verificationReportId: verReport.reportId,
+    verificationReportDate: verReport.createdAt,
+    verificationComparisonSummary: verReport.comparisonSummary || verReport.changeSummary || '',
+    hasImprovedBottlenecks: improvedNames.length > 0,
+    improvedBottleneckNames: improvedNames,
   }
 }
 

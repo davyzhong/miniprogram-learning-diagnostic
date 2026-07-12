@@ -357,6 +357,10 @@ async function getActiveVerificationPaper(studentId, subject, reportId) {
   return callFunction('studentData', { action: 'getActiveVerificationPaper', studentId, subject, reportId })
 }
 
+async function getLearningProgress(studentId, subject) {
+  return callFunction('studentData', { action: 'getLearningProgress', studentId, subject })
+}
+
 async function createReportFeedback(payload) {
   return callFunction('reportFeedback', { action: 'createFeedback', ...payload })
 }
@@ -499,6 +503,7 @@ module.exports = {
   getReportDetail,
   getPaperDetail,
   getActiveVerificationPaper,
+  getLearningProgress,
   createReportFeedback,
   getReportFeedback,
   generateLearningResourcePack,

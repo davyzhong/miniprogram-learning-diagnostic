@@ -17,6 +17,7 @@ const ACTIONS = new Set([
   'getReportDetail',
   'getPaperDetail',
   'getActiveVerificationPaper',
+  'getLearningProgress',
   'cleanupStaleLearningRecords',
 ]);
 
@@ -745,11 +746,56 @@ async function getReportDetail(openId, reportId) {
       ? profile.currentBottlenecks.filter(item => item.status !== 'improved').length
       : (profile.pendingBottlenecks || []).length)
     : 0;
+
+  // 查找关联的验证报告（诊断报告 → 验证卷 → 验证报告）
+  let linkedVerificationReport = null;
+  if (report.type === 'diagnosis') {
+    // 先查该诊断报告触发的验证卷
+    const paperRes = await db.collection('papers')
+      .where({ triggeredByReport: reportId, type: 'verification' })
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
+    const paper = (paperRes.data || [])[0];
+    if (paper) {
+      // 再查该验证卷对应的验证报告
+      const verReportRes = await db.collection('reports')
+        .where({ paperId: paper._id, type: 'verification', status: 'completed' })
+        .orderBy('createdAt', 'desc')
+        .limit(1)
+        .get();
+      const verReport = (verReportRes.data || [])[0];
+      if (verReport) {
+        linkedVerificationReport = {
+          reportId: verReport._id,
+          createdAt: verReport.createdAt,
+          totalErrors: verReport.totalErrors || 0,
+          comparisonSummary: verReport.comparisonSummary || '',
+          changeSummary: verReport.changeSummary || '',
+          verificationEvidence: (verReport.verificationEvidence || []).map(e => ({
+            lpCode: e.lpCode,
+            lpName: e.lpName || e.displayName || '',
+            evidenceStatus: e.evidenceStatus || '',
+            attemptedQuestionCount: e.attemptedQuestionCount || 0,
+            incorrectQuestionCount: e.incorrectQuestionCount || 0,
+          })),
+          bottlenecks: (verReport.bottlenecks || []).map(b => ({
+            lpCode: b.lpCode,
+            lpName: b.lpName || '',
+            status: b.status || '',
+            errorCount: b.errorCount || 0,
+          })),
+        };
+      }
+    }
+  }
+
   return withAccess(access, {
     report: stripReportDebugFields(report),
     linkedPaper,
     profile,
     pendingCount,
+    linkedVerificationReport,
   });
 }
 
@@ -826,6 +872,109 @@ async function getActiveVerificationPaper(openId, studentId, subject, reportId) 
   return withAccess(access, { paper: null, status: 'none' });
 }
 
+async function getLearningProgress(openId, studentId, subject) {
+  if (!studentId) return failure('缺少 studentId');
+  const access = await getAccess(studentId, openId);
+  if (!access.allowed) return failure('无权访问该学生');
+  const normalizedSubject = normalizeSubject(subject);
+
+  // 查所有已完成的诊断+验证报告（按时间正序）
+  const reportRes = await db.collection('reports')
+    .where({ studentId, subject: normalizedSubject, status: 'completed' })
+    .orderBy('createdAt', 'asc')
+    .limit(50)
+    .get();
+  const allReports = (reportRes.data || []).filter(r => !isArchivedReport(r));
+
+  // 构建迭代时间线节点
+  const timeline = allReports.map(r => {
+    const isVerification = r.type === 'verification';
+    const node = {
+      reportId: r._id,
+      type: r.type || 'diagnosis',
+      createdAt: r.createdAt,
+      totalErrors: r.totalErrors || 0,
+      bottleneckCount: (r.bottlenecks || []).length,
+      summary: (r.changeSummary || r.comparisonSummary || r.summary || '').slice(0, 100),
+      isVerification,
+    };
+    if (isVerification) {
+      const evidence = r.verificationEvidence || [];
+      node.verificationPassed = evidence.filter(e => e.evidenceStatus === 'passed').length;
+      node.verificationFailed = evidence.filter(e => e.evidenceStatus === 'failed').length;
+      node.verificationUncertain = evidence.filter(e =>
+        e.evidenceStatus === 'unclear' || e.evidenceStatus === 'incomplete' || e.evidenceStatus === 'missing'
+      ).length;
+      node.improvedBottlenecks = (r.bottlenecks || [])
+        .filter(b => b.status === 'improved')
+        .map(b => b.lpName || b.lpCode);
+      node.previousReportId = r.previousReportId || '';
+    }
+    return node;
+  });
+
+  // 查 profile 的当前卡点状态
+  const profileRes = await db.collection('subjectProfiles')
+    .where({ studentId })
+    .limit(1)
+    .get();
+  const profile = (profileRes.data || []).find(p => p.subject === normalizedSubject) || null;
+
+  // 构建卡点状态矩阵：每行一个卡点，每列一个轮次
+  const bottleneckMap = new Map(); // lpCode → { lpName, statuses: [{reportId, status}] }
+  for (const r of allReports) {
+    for (const b of (r.bottlenecks || [])) {
+      if (!b.lpCode) continue;
+      if (!bottleneckMap.has(b.lpCode)) {
+        bottleneckMap.set(b.lpCode, { lpCode: b.lpCode, lpName: b.lpName || b.lpCode, statuses: [] });
+      }
+      const entry = bottleneckMap.get(b.lpCode);
+      entry.statuses.push({ reportId: r._id, status: b.status || 'found', errorCount: b.errorCount || 0 });
+    }
+  }
+
+  // 当前卡点状态（从 profile 取最新合并状态）
+  const currentBottlenecks = profile && Array.isArray(profile.currentBottlenecks)
+    ? profile.currentBottlenecks
+    : [];
+
+  // 综合建议
+  const improvedCount = currentBottlenecks.filter(b => b.status === 'improved').length;
+  const persistingCount = currentBottlenecks.filter(b => b.status === 'persisting' || b.status === 'worsened').length;
+  const pendingCount = currentBottlenecks.filter(b => b.status === 'needs_verification' || b.status === 'found').length;
+
+  let overallAdvice = '';
+  if (persistingCount > 0) {
+    overallAdvice = `${persistingCount} 个卡点仍需重点练习，建议优先攻克这些薄弱环节后再做验证。`;
+  } else if (pendingCount > 0) {
+    overallAdvice = `${pendingCount} 个卡点等待验证，建议完成验证卷确认改善情况。`;
+  } else if (improvedCount > 0) {
+    overallAdvice = `${improvedCount} 个卡点已改善，建议继续拍照诊断发现新的学习情况。`;
+  } else {
+    overallAdvice = '暂无学习卡点数据，建议先完成一次诊断。';
+  }
+
+  return withAccess(access, {
+    timeline,
+    bottleneckMatrix: Array.from(bottleneckMap.values()),
+    currentBottlenecks: currentBottlenecks.map(b => ({
+      lpCode: b.lpCode,
+      lpName: b.lpName || b.lpCode,
+      status: b.status || 'found',
+      errorCount: b.errorCount || 0,
+    })),
+    summary: {
+      totalRounds: timeline.length,
+      diagnosisCount: timeline.filter(t => t.type === 'diagnosis').length,
+      verificationCount: timeline.filter(t => t.type === 'verification').length,
+      improvedCount,
+      persistingCount,
+      pendingCount,
+    },
+    overallAdvice,
+  });
+}
+
 exports.main = async (event = {}) => {
   const wxContext = cloud.getWXContext();
   const openId = wxContext.OPENID;
@@ -865,6 +1014,9 @@ exports.main = async (event = {}) => {
     }
     if (action === 'getActiveVerificationPaper') {
       return getActiveVerificationPaper(openId, event.studentId, event.subject, event.reportId);
+    }
+    if (action === 'getLearningProgress') {
+      return getLearningProgress(openId, event.studentId, event.subject);
     }
     if (action === 'cleanupStaleLearningRecords') {
       return cleanupStaleLearningRecords(openId, event.studentId, event.subject, event.dryRun === true);

@@ -6,7 +6,8 @@
     "pages/subject-home/subject-home",
     "pages/upload/upload",
     "pages/upload-history/upload-history",
-    "pages/report/report"
+    "pages/report/report",
+    "pages/learning-progress/learning-progress"
   ],
   "subPackages": [
     {
