@@ -607,3 +607,75 @@ test('验证报告（verification）不用 profile 卡点，只用单次报告�
   const view = buildReportView(report, { profile })
   assert.equal(view.bottleneckCount, 1, '验证报告只用单次报告的 1 个卡点，不用 profile 全量')
 })
+
+test('诊断报告有验证反馈时展示改善摘要和下一步建议', () => {
+  const report = {
+    type: 'diagnosis',
+    bottlenecks: [
+      { lpCode: 'LP-001', lpName: '计算基础', errorCount: 5 },
+      { lpCode: 'LP-002', lpName: '分数运算', errorCount: 3 },
+    ],
+    linkedVerificationReport: {
+      reportId: 'ver-1',
+      createdAt: '2026-07-12T01:00:00Z',
+      comparisonSummary: '1 个已改善，1 个仍需验证',
+      verificationEvidence: [
+        { lpCode: 'LP-001', lpName: '计算基础', evidenceStatus: 'passed' },
+        { lpCode: 'LP-002', lpName: '分数运算', evidenceStatus: 'failed' },
+      ],
+      bottlenecks: [
+        { lpCode: 'LP-001', lpName: '计算基础', status: 'improved', errorCount: 0 },
+        { lpCode: 'LP-002', lpName: '分数运算', status: 'persisting', errorCount: 2 },
+      ],
+    },
+  }
+  const view = buildReportView(report, { profile: null })
+  assert.equal(view.hasVerificationFeedback, true)
+  assert.equal(view.verificationFeedbackPassed, 1)
+  assert.equal(view.verificationFeedbackFailed, 1)
+  assert.equal(view.verificationFeedbackTotal, 2)
+  assert.equal(view.verificationStatusChanges.length, 2)
+  assert.equal(view.verificationStatusChanges[0].afterClass, 'improved')
+  assert.equal(view.verificationStatusChanges[1].afterClass, 'persisting')
+  assert.ok(view.verificationNextActionText.includes('仍需练习'), '有失败时应建议重学')
+  assert.equal(view.verificationReportId, 'ver-1')
+})
+
+test('诊断报告无验证反馈时不展示', () => {
+  const report = {
+    type: 'diagnosis',
+    bottlenecks: [{ lpCode: 'LP-001', lpName: '计算基础', errorCount: 5 }],
+  }
+  const view = buildReportView(report, { profile: null })
+  assert.equal(view.hasVerificationFeedback, false)
+})
+
+test('验证报告不展示验证反馈区块', () => {
+  const report = {
+    type: 'verification',
+    bottlenecks: [],
+    linkedVerificationReport: { reportId: 'ver-1' },
+  }
+  const view = buildReportView(report, { profile: null })
+  assert.equal(view.hasVerificationFeedback, false)
+})
+
+test('全部验证通过时建议继续诊断', () => {
+  const report = {
+    type: 'diagnosis',
+    bottlenecks: [{ lpCode: 'LP-001', lpName: '计算基础', errorCount: 5 }],
+    linkedVerificationReport: {
+      reportId: 'ver-1',
+      verificationEvidence: [
+        { lpCode: 'LP-001', lpName: '计算基础', evidenceStatus: 'passed' },
+      ],
+      bottlenecks: [
+        { lpCode: 'LP-001', lpName: '计算基础', status: 'improved', errorCount: 0 },
+      ],
+    },
+  }
+  const view = buildReportView(report, { profile: null })
+  assert.ok(view.verificationNextActionText.includes('全部改善'), '全通过应建议继续诊断')
+  assert.equal(view.verificationFeedbackFailed, 0)
+  assert.equal(view.verificationFeedbackUncertain, 0)
+})

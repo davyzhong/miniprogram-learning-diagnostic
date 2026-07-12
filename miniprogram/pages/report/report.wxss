@@ -45,3 +45,21 @@
 .snapshot-name { display: block; font-size: 26rpx; color: #2d3748; }
 .snapshot-meta { display: block; font-size: 22rpx; color: #718096; margin-top: 4rpx; }
 .snapshot-arrow { font-size: 22rpx; color: #2b6cb0; white-space: nowrap; margin-left: 16rpx; }
+
+.verification-feedback-card { border-left: 6rpx solid #6366f1; }
+.verification-feedback-summary { display: block; font-size: 28rpx; color: #2d3748; margin: 16rpx 0; line-height: 1.6; }
+.verification-feedback-changes { margin: 20rpx 0; }
+.verification-change-item { display: flex; align-items: center; justify-content: space-between; padding: 14rpx 0; border-bottom: 1rpx solid #f0f0f0; }
+.verification-change-item:last-child { border-bottom: none; }
+.verification-change-name { font-size: 26rpx; color: #2d3748; flex-shrink: 0; max-width: 240rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.verification-change-flow { display: flex; align-items: center; gap: 8rpx; }
+.verification-change-before { font-size: 24rpx; color: #718096; }
+.verification-change-arrow { font-size: 24rpx; color: #a0aec0; margin: 0 4rpx; }
+.verification-change-after { font-size: 24rpx; padding: 4rpx 12rpx; border-radius: 6rpx; }
+.verification-change-improved { color: #22c55e; background: #dcfce7; }
+.verification-change-persisting { color: #ef4444; background: #fee2e2; }
+.verification-feedback-action { display: flex; align-items: flex-start; gap: 8rpx; margin: 20rpx 0; padding: 20rpx; background: #f0f4ff; border-radius: 12rpx; }
+.verification-action-icon { font-size: 28rpx; color: #6366f1; flex-shrink: 0; }
+.verification-action-text { font-size: 26rpx; color: #4a5568; line-height: 1.6; }
+.verification-feedback-links { display: flex; gap: 24rpx; margin-top: 16rpx; }
+.verification-feedback-link { font-size: 24rpx; color: #6366f1; text-decoration: underline; }

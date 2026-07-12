@@ -534,9 +534,16 @@ exports.main = async (event) => {
   if (event._regeneratePdf && event.paperId) {
     try {
       const currentOpenId = cloud.getWXContext().OPENID;
-      const paperAccess = await getPaperAccessForWrite(event.paperId, currentOpenId);
-      if (!paperAccess.ok) return { success: false, error: paperAccess.error };
-      const paper = paperAccess.paper;
+      let paper;
+      if (event._internalTrustedCall) {
+        const pRes = await db.collection('papers').doc(event.paperId).get().catch(() => ({ data: null }));
+        paper = pRes.data;
+        if (!paper) return { success: false, error: '试卷不存在' };
+      } else {
+        const paperAccess = await getPaperAccessForWrite(event.paperId, currentOpenId);
+        if (!paperAccess.ok) return { success: false, error: paperAccess.error };
+        paper = paperAccess.paper;
+      }
       const allQuestions = paper.questions || [];
       if (allQuestions.length === 0) return { success: false, error: '试卷无题目' };
 
@@ -746,31 +753,48 @@ exports.main = async (event) => {
 
   try {
     const currentOpenId = cloud.getWXContext().OPENID;
-    const access = await getStudentAccess(db, studentId, currentOpenId);
-    const student = access.student;
-    if (!student) {
-      return { success: false, error: '学生不存在' };
-    }
-    if (!canOperateLearning(access)) {
-      return { success: false, error: '无权执行该操作' };
+    let student = null;
+    // 内部续跑调用（从 regenerateVerificationPaper 调度）跳过权限检查
+    if (event._internalTrustedCall) {
+      console.log('[generatePaper] internal trusted call, skipping access check');
+      const studentRes = await db.collection('students').doc(studentId).get().catch(() => ({ data: null }));
+      student = studentRes.data;
+    } else {
+      const access = await getStudentAccess(db, studentId, currentOpenId);
+      student = access.student;
+      if (!student) {
+        return { success: false, error: '学生不存在' };
+      }
+      if (!canOperateLearning(access)) {
+        console.log('[generatePaper] access denied: openId=%s studentOpenId=%s', currentOpenId, student._openid);
+        return { success: false, error: '无权执行该操作' };
+      }
     }
     let appendPaper = null;
     if (_appendToPaperId) {
-      const appendAccess = await getPaperAccessForWrite(_appendToPaperId, currentOpenId, {
-        studentId,
-        subject,
-        type,
-      });
-      if (!appendAccess.ok) return { success: false, error: appendAccess.error };
-      appendPaper = appendAccess.paper;
+      if (event._internalTrustedCall) {
+        const pRes = await db.collection('papers').doc(_appendToPaperId).get().catch(() => ({ data: null }));
+        appendPaper = pRes.data;
+        if (!appendPaper) return { success: false, error: '试卷不存在' };
+      } else {
+        const appendAccess = await getPaperAccessForWrite(_appendToPaperId, currentOpenId, {
+          studentId,
+          subject,
+          type,
+        });
+        if (!appendAccess.ok) return { success: false, error: appendAccess.error };
+        appendPaper = appendAccess.paper;
+      }
     }
     if (_autoPaperId) {
-      const autoAccess = await getPaperAccessForWrite(_autoPaperId, currentOpenId, {
-        studentId,
-        subject,
-        type,
-      });
-      if (!autoAccess.ok) return { success: false, error: autoAccess.error };
+      if (!event._internalTrustedCall) {
+        const autoAccess = await getPaperAccessForWrite(_autoPaperId, currentOpenId, {
+          studentId,
+          subject,
+          type,
+        });
+        if (!autoAccess.ok) return { success: false, error: autoAccess.error };
+      }
     }
 
     const profileRes = await db.collection('subjectProfiles')

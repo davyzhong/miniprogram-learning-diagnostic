@@ -1,0 +1,62 @@
+<view class="page">
+  <view class="progress-header">
+    <text class="progress-title">学习进展</text>
+    <text class="progress-subtitle" wx:if="{{summary.totalRounds > 0}}">{{summary.diagnosisCount}} 次诊断 · {{summary.verificationCount}} 次验证 · {{summary.improvedCount}} 个已改善</text>
+    <text class="progress-subtitle" wx:else>暂无学习记录</text>
+  </view>
+
+  <view class="card advice-card" wx:if="{{overallAdvice}}">
+    <view class="section-heading"><view class="heading-icon">→</view><text>综合建议</text></view>
+    <text class="advice-text">{{overallAdvice}}</text>
+    <view class="advice-stats">
+      <view class="advice-stat"><text class="advice-stat-num advice-stat-improved">{{summary.improvedCount}}</text><text class="advice-stat-label">已改善</text></view>
+      <view class="advice-stat"><text class="advice-stat-num advice-stat-pending">{{summary.pendingCount}}</text><text class="advice-stat-label">待验证</text></view>
+      <view class="advice-stat"><text class="advice-stat-num advice-stat-persisting">{{summary.persistingCount}}</text><text class="advice-stat-label">仍需练习</text></view>
+    </view>
+  </view>
+
+  <view class="card timeline-card" wx:if="{{timeline.length > 0}}">
+    <view class="section-heading"><view class="heading-icon">↻</view><text>迭代时间线</text></view>
+    <view class="timeline">
+      <view class="timeline-node {{item.isVerification ? 'node-verify' : 'node-diagnosis'}}" wx:for="{{timeline}}" wx:key="reportId">
+        <view class="timeline-dot {{item.isVerification ? 'dot-verify' : 'dot-diagnosis'}}"></view>
+        <view class="timeline-content">
+          <view class="timeline-header">
+            <text class="timeline-type">{{item.isVerification ? '验证' : '诊断'}}</text>
+            <text class="timeline-date">{{item.dateText}}</text>
+          </view>
+          <text class="timeline-summary" wx:if="{{item.summary}}">{{item.summary}}</text>
+          <view class="timeline-meta">
+            <text class="timeline-meta-item" wx:if="{{!item.isVerification}}">{{item.totalErrors}} 道错题 · {{item.bottleneckCount}} 个卡点</text>
+            <text class="timeline-meta-item" wx:if="{{item.isVerification}}">{{item.verificationPassed}} 通过 · {{item.verificationFailed}} 未通过</text>
+          </view>
+          <view class="timeline-improved" wx:if="{{item.improvedBottlenecks.length > 0}}">
+            <text class="improved-label">改善：</text>
+            <text class="improved-names">{{item.improvedBottlenecksText}}</text>
+          </view>
+          <text class="timeline-link" bindtap="onViewReport" data-report-id="{{item.reportId}}">查看报告</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card matrix-card" wx:if="{{bottleneckMatrix.length > 0}}">
+    <view class="section-heading"><view class="heading-icon">▦</view><text>卡点变化</text></view>
+    <view class="matrix-row matrix-header-row">
+      <text class="matrix-cell matrix-cell-name">卡点</text>
+      <text class="matrix-cell matrix-cell-round" wx:for="{{timeline}}" wx:key="reportId">{{item.shortLabel}}</text>
+    </view>
+    <view class="matrix-row" wx:for="{{bottleneckMatrix}}" wx:key="lpCode">
+      <text class="matrix-cell matrix-cell-name">{{item.lpName}}</text>
+      <text class="matrix-cell matrix-cell-round matrix-status-{{item.statusByRound[index]}}" wx:for="{{timeline}}" wx:for-item="round" wx:for-index="index" wx:key="reportId">
+        {{item.statusIcons[index]}}
+      </text>
+    </view>
+    <view class="matrix-legend">
+      <text class="legend-item"><text class="legend-dot legend-found">●</text> 发现</text>
+      <text class="legend-item"><text class="legend-dot legend-persisting">●</text> 持续</text>
+      <text class="legend-item"><text class="legend-dot legend-improved">●</text> 改善</text>
+      <text class="legend-item"><text class="legend-dot legend-pending">●</text> 待验证</text>
+    </view>
+  </view>
+</view>
