@@ -342,7 +342,7 @@ async function cleanupStaleLearningRecords({ studentId, subject, dryRun = false 
 }
 
 async function getReportDetail(reportId) {
-  return callFunction('studentData', { action: 'getReportDetail', reportId })
+  return callFunction('studentData', { action: 'getReportDetail', reportId }, { timeout: 60000 })
 }
 
 async function getPaperDetail(paperId) {
