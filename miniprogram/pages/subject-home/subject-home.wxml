@@ -1,6 +1,6 @@
 <!--pages/subject-home/subject-home.wxml-->
-<view class="page page-{{subject}}">
-  <view class="workbench-card {{subject === 'english' ? 'english-hero-card' : ''}}">
+<view class="page page-{{subject}} bplus-page">
+  <view class="workbench-card bplus-section {{subject === 'english' ? 'english-hero-card' : ''}}">
     <view class="workbench-hero-layout">
       <view class="workbench-main">
         <view class="workbench-header">
