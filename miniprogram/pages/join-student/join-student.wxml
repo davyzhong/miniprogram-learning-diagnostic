@@ -1,5 +1,5 @@
-<view class="page">
-  <view class="card code-card" wx:if="{{status === 'code'}}">
+<view class="page bplus-page">
+  <view class="card code-card bplus-section" wx:if="{{status === 'code'}}">
     <view class="state-icon">码</view>
     <view class="title">输入家庭邀请码</view>
     <view class="hint">由档案创建者在家长管理中生成。</view>

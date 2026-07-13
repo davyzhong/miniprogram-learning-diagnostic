@@ -1,5 +1,5 @@
-<view class="page">
-  <view class="progress-header">
+<view class="page bplus-page">
+  <view class="progress-header bplus-section">
     <text class="progress-title">学习进展</text>
     <text class="progress-subtitle" wx:if="{{summary.totalRounds > 0}}">{{summary.diagnosisCount}} 次诊断 · {{summary.verificationCount}} 次验证 · {{summary.improvedCount}} 个已改善</text>
     <text class="progress-subtitle" wx:else>暂无学习记录</text>

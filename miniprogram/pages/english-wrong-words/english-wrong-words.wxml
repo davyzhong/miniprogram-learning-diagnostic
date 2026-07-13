@@ -1,5 +1,5 @@
-<view class="page">
-  <view class="hero">
+<view class="page bplus-page">
+  <view class="hero bplus-section">
     <view class="hero-copy">
       <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
       <text class="title">错词本</text>

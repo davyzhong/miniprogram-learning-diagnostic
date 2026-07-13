@@ -1,6 +1,6 @@
 <!-- 学习记录 -->
-<view class="page">
-  <view class="header compact-header">
+<view class="page bplus-page">
+  <view class="header compact-header bplus-section">
     <view class="header-copy">
       <text class="title">{{titleText}}</text>
       <text class="subtitle">诊断、验证卷和反馈按学习闭环整理。</text>

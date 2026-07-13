@@ -1,7 +1,7 @@
 <!--pages/upload/upload.wxml-->
-<view class="page">
+<view class="page bplus-page">
   <!-- 顶部说明 -->
-  <view class="tip-bar">
+  <view class="tip-bar bplus-section">
     <view class="tip-content">
       <text class="tip-title">{{pageTitle}}</text>
       <text class="tip-desc">{{pageDesc}}</text>

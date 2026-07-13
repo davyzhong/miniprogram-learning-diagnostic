@@ -1,9 +1,9 @@
-<view class="page">
+<view class="page bplus-page">
   <!-- 月份切换 -->
-  <view class="month-bar">
-    <view class="month-btn" catchtap="onPrevMonth">‹</view>
+  <view class="month-bar bplus-section">
+    <view class="month-btn" catchtap="onPrevMonth"><text class="bplus-sr-only">上个月</text><text>‹</text></view>
     <view class="month-label">{{monthLabel}}</view>
-    <view class="month-btn" catchtap="onNextMonth">›</view>
+    <view class="month-btn" catchtap="onNextMonth"><text class="bplus-sr-only">下个月</text><text>›</text></view>
   </view>
 
   <!-- 内测估算提示（设计文档强制） -->

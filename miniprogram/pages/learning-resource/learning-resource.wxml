@@ -1,5 +1,5 @@
-<view class="page">
-  <view wx:if="{{loading}}" class="loading">正在整理学习任务...</view>
+<view class="page bplus-page">
+  <view wx:if="{{loading}}" class="loading bplus-state">正在整理学习任务...</view>
 
   <view wx:elif="{{errorText}}" class="empty">
     <text>{{errorText}}</text>
