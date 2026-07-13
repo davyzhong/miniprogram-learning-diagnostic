@@ -446,6 +446,20 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
     const priorityAction = buildPriorityAction(student, profiles, papers)
     const secondaryActions = buildSecondaryActions(student, profiles, priorityAction)
     const quickLinks = buildQuickLinks(student, reports, papers)
+    const formalDiagnoses = reports
+      .filter(report => report.status === 'completed' && report.type !== 'verification' && report.isEffective !== false)
+      .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    const diagnosisSubjects = new Set(formalDiagnoses.map(report => report.subject).filter(Boolean))
+    const latestDiagnosisReport = formalDiagnoses[0] || null
+    const latestDiagnosisSubject = latestDiagnosisReport
+      ? (SUBJECT_NAMES[latestDiagnosisReport.subject] || latestDiagnosisReport.subjectName || '学习')
+      : ''
+    const latestDiagnosis = latestDiagnosisReport ? {
+      icon: '🩺',
+      title: `${latestDiagnosisSubject}诊断报告`,
+      summary: latestDiagnosisReport.summary || '查看本学科最新正式诊断',
+      url: buildTraceableUrl({ type: 'report-detail', id: latestDiagnosisReport._id })
+    } : null
 
     return {
       id: student._id || '',
@@ -468,7 +482,10 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
       nextAction,
       priorityAction,
       secondaryActions,
-      quickLinks
+      quickLinks,
+      diagnosisCoverageText: `已有 ${diagnosisSubjects.size}/3 科诊断`,
+      diagnosisCoverageCount: diagnosisSubjects.size,
+      latestDiagnosis
     }
   })
 }

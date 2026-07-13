@@ -315,6 +315,23 @@ Page({
     wx.navigateTo({ url })
   },
 
+  onReportSectionTap(e) {
+    const section = e.currentTarget.dataset.section || ''
+    if (!section || typeof wx.createSelectorQuery !== 'function') return
+    wx.createSelectorQuery()
+      .select(`#report-section-${section}`)
+      .boundingClientRect()
+      .selectViewport()
+      .scrollOffset()
+      .exec(([rect, viewport]) => {
+        if (!rect) return
+        wx.pageScrollTo({
+          scrollTop: Math.max(0, ((viewport && viewport.scrollTop) || 0) + rect.top - 12),
+          duration: 200
+        })
+      })
+  },
+
   onLearningResourceTap(e) {
     const dataset = e.currentTarget.dataset || {}
     const url = dataset.url || ''

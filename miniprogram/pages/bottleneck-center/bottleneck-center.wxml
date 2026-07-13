@@ -7,7 +7,7 @@
     <view class="header">
       <view class="header-copy">
         <text class="kicker">{{studentName || '学习档案'}}</text>
-        <text class="title">学习卡点中心</text>
+        <text class="title">🧩 学习卡点中心</text>
         <text class="summary">按学科和状态查看当前需要验证、持续观察和已经改善的卡点。</text>
       </view>
     </view>
@@ -15,19 +15,19 @@
     <view class="stats-grid">
       <view class="stat-card" bindtap="onStatTap" data-status="all">
         <text class="stat-value">{{stats.totalCount}}</text>
-        <text class="stat-label">全部卡点</text>
+        <text class="stat-label">🗂️ 全部卡点</text>
       </view>
       <view class="stat-card" bindtap="onStatTap" data-status="active">
         <text class="stat-value">{{stats.activeCount}}</text>
-        <text class="stat-label">待跟进</text>
+        <text class="stat-label">🎯 待跟进</text>
       </view>
       <view class="stat-card" bindtap="onStatTap" data-status="persisting">
         <text class="stat-value">{{stats.persistingCount}}</text>
-        <text class="stat-label">持续出现</text>
+        <text class="stat-label">🔁 持续出现</text>
       </view>
       <view class="stat-card" bindtap="onStatTap" data-status="improved">
         <text class="stat-value">{{stats.improvedCount}}</text>
-        <text class="stat-label">已改善</text>
+        <text class="stat-label">✅ 已改善</text>
       </view>
     </view>
 
@@ -87,14 +87,14 @@
             data-lp-code="{{item.lpCode}}"
             data-bottleneck-id="{{item.bottleneckId}}"
             data-view-id="{{item.viewId}}"
-          >学一下</view>
+          >📚 学一下</view>
           <view
             class="card-action verify"
             catchtap="onGenerateForBottleneck"
             data-subject="{{item.subject}}"
             data-lp-code="{{item.lpCode}}"
             data-bottleneck-id="{{item.bottleneckId}}"
-          >验证</view>
+          >🧪 验证</view>
         </view>
       </view>
     </view>
@@ -102,7 +102,7 @@
     <view class="empty-state" wx:else>
       <text class="empty-title">{{emptyText}}</text>
       <text class="empty-desc">上传试卷或完成验证卷后，这里会自动更新。</text>
-      <view class="refresh-btn" bindtap="onRefresh">刷新</view>
+      <view class="refresh-btn" bindtap="onRefresh">🔄 刷新</view>
     </view>
   </view>
 </view>

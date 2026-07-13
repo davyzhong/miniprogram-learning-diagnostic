@@ -63,3 +63,11 @@
 .verification-action-text { font-size: 26rpx; color: #4a5568; line-height: 1.6; }
 .verification-feedback-links { display: flex; gap: 24rpx; margin-top: 16rpx; }
 .verification-feedback-link { font-size: 24rpx; color: #6366f1; text-decoration: underline; }
+.report-layer-nav { display: grid; gap: 8rpx; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 18rpx; padding: 10rpx; position: sticky; top: 0; z-index: 8; }
+.report-layer-item { align-items: center; border-radius: 8rpx; color: #31475d; display: flex; gap: 5rpx; justify-content: center; min-height: 58rpx; padding: 0 5rpx; }
+.report-layer-item:active { background: #eaf2fb; }
+.report-layer-item.is-muted { color: #8b98a7; }
+.report-layer-icon { font-size: 25rpx; }
+.report-layer-label { font-size: 22rpx; font-weight: 720; }
+.report-layer-count { background: #eaf2fb; border-radius: 999rpx; color: #2865a8; font-size: 18rpx; line-height: 29rpx; min-width: 29rpx; padding: 0 4rpx; text-align: center; }
+.report-section-anchor { height: 1rpx; scroll-margin-top: 88rpx; }

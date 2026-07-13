@@ -282,7 +282,7 @@ view, text, image {
   white-space: nowrap;
 }
 
-.bplus-state-item strong {
+.bplus-state-value {
   color: #294f62;
   font-size: 24rpx;
 }

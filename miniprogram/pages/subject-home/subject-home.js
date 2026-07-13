@@ -28,6 +28,7 @@ Page({
     hasChineseReviewQueue: false,
     tools: [],
     latestReportId: '',
+    latestDiagnosis: null,
     totalReports: 0,
     persistingCount: 0,
     pendingCount: 0,

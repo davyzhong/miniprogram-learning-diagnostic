@@ -37,6 +37,11 @@ test('diagnosis report zeroes improvement counters and shows next step when bott
   assert.equal(view.showNextStep, true)
   assert.equal(view.hasBottlenecks, true)
   assert.equal(view.hasErrorDetails, false)
+  assert.deepEqual(view.reportLayers.map(item => item.key), ['summary', 'evidence', 'change', 'action'])
+  assert.equal(view.reportLayers[0].icon, '🩺')
+  assert.equal(view.reportLayers[1].count, 0)
+  assert.equal(view.reportLayers[2].count, 1)
+  assert.equal(view.reportLayers[3].available, true)
 })
 
 test('chinese diagnosis report exposes concrete error items as review targets', () => {

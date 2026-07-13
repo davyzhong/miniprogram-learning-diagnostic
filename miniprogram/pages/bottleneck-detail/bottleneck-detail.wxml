@@ -24,7 +24,7 @@
 
     <view class="confidence-card" wx:if="{{confidence}}">
       <view class="confidence-header">
-        <text class="confidence-title">置信度</text>
+        <text class="confidence-title">🎯 置信度</text>
         <text class="confidence-level {{confidence.level}}">{{confidence.dots}} {{confidence.label}}（{{confidence.score}}分）</text>
       </view>
       <text class="confidence-detail">{{confidence.detail}}</text>
@@ -34,19 +34,19 @@
     <view class="metrics">
       <view class="metric" bindtap="onMetricTap" data-target="reports">
         <text class="metric-value">{{bottleneck.evidenceCount}}</text>
-        <text class="metric-label">证据</text>
+        <text class="metric-label">🔎 证据</text>
       </view>
       <view class="metric" bindtap="onMetricTap" data-target="reports">
         <text class="metric-value">{{bottleneck.recentErrorCount}}</text>
-        <text class="metric-label">相关错题</text>
+        <text class="metric-label">📝 相关错题</text>
       </view>
       <view class="metric" bindtap="onMetricTap" data-target="papers">
         <text class="metric-value">{{bottleneck.verificationPassCount}}</text>
-        <text class="metric-label">通过</text>
+        <text class="metric-label">✅ 通过</text>
       </view>
       <view class="metric" bindtap="onMetricTap" data-target="papers">
         <text class="metric-value">{{bottleneck.verificationFailCount}}</text>
-        <text class="metric-label">未通过</text>
+        <text class="metric-label">🔁 未通过</text>
       </view>
     </view>
 

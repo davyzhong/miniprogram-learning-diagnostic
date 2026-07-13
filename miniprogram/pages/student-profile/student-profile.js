@@ -5,6 +5,24 @@ const { buildLearningProfileHomeView } = require('../index/index-presenter')
 const { sharedNavigation, OWNER_PERMISSIONS } = require('../../utils/shared-navigation')
 
 const PROFILE_CACHE_TTL_MS = 30 * 1000
+const DIAGNOSIS_SUBJECTS = ['math', 'chinese', 'english']
+
+function isFormalDiagnosis(report = {}) {
+  return report.status === 'completed'
+    && report.type !== 'verification'
+    && report.isEffective !== false
+    && !report.isArchived
+    && !report.archivedAt
+}
+
+async function loadSubjectScopedDiagnoses(cloudModule, studentId) {
+  if (typeof cloudModule.getReports !== 'function') return null
+  const results = await Promise.all(DIAGNOSIS_SUBJECTS.map(async subject => {
+    const reports = await cloudModule.getReports(studentId, subject, 100).catch(() => [])
+    return (reports || []).find(isFormalDiagnosis) || null
+  }))
+  return results.filter(Boolean)
+}
 
 Page({
   data: {
@@ -63,6 +81,7 @@ Page({
       let student = { _id: studentId }
       let profiles = []
       let reports = []
+      let latestDiagnosisReports = null
       let papers = []
       let permissions = OWNER_PERMISSIONS
 
@@ -72,6 +91,9 @@ Page({
           student = dashboard.student || student
           profiles = dashboard.subjectProfiles || []
           reports = dashboard.recentReports || []
+          latestDiagnosisReports = Array.isArray(dashboard.latestDiagnosisReports)
+            ? dashboard.latestDiagnosisReports
+            : null
           papers = dashboard.recentPapers || []
           permissions = dashboard.permissions || student.permissions || OWNER_PERMISSIONS
         } catch (error) {
@@ -106,13 +128,24 @@ Page({
       if (fallbackReports) reports = fallbackReports
       if (fallbackPapers) papers = fallbackPapers
 
+      let diagnosisDataUnavailable = false
+      if (latestDiagnosisReports === null) {
+        latestDiagnosisReports = await loadSubjectScopedDiagnoses(cloud, studentId)
+        if (latestDiagnosisReports === null) {
+          latestDiagnosisReports = []
+          diagnosisDataUnavailable = true
+        }
+      }
+
       permissions = permissions || student.permissions || OWNER_PERMISSIONS
       const home = buildLearningProfileHomeView({
         student,
         profiles,
         reports,
+        latestDiagnosisReports,
         papers,
-        permissions
+        permissions,
+        diagnosisDataUnavailable
       }, formatRelativeTime)
 
       this.setData({

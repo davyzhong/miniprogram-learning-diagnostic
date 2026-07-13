@@ -2,19 +2,19 @@
 <view class="page bplus-page">
   <view class="config-hero bplus-section">
     <view class="config-hero-copy">
-      <text class="config-kicker">验证卷状态</text>
+      <text class="config-kicker">🧪 验证卷状态</text>
       <text class="config-title">{{subjectName}}纸面验证卷</text>
       <text class="config-desc">系统会根据最新诊断报告自动准备 A4 PDF。准备好后，只需要下载打印；完成纸面作答后再拍照上传。</text>
     </view>
   </view>
 
   <view class="config-card" wx:if="{{selectedCount > 0}}">
-    <view class="section-title">覆盖范围</view>
+    <view class="section-title">🎯 覆盖范围</view>
     <text class="scope-text">{{paperConfig.scopeText}}</text>
     <text class="strategy-text">{{paperConfig.strategyText}}</text>
     <view class="task-pack" wx:if="{{paperConfig.taskPages.length > 0}}">
       <view class="task-pack-head">
-        <text class="task-pack-title">任务包范围</text>
+        <text class="task-pack-title">📦 任务包范围</text>
         <text class="task-pack-meta">{{paperConfig.taskPageCount}} 个任务页，可批量打印，做完任意页后按页面编号拍照回传。</text>
       </view>
       <view class="task-page" wx:for="{{paperConfig.taskPages}}" wx:key="pageIndex">
@@ -45,7 +45,7 @@
     </view>
   </view>
 
-  <view class="section-title range-title">验证范围（{{selectedCount}} 个卡点）</view>
+  <view class="section-title range-title">🧩 验证范围（{{selectedCount}} 个卡点）</view>
   <view class="bottleneck-list">
     <view
       class="bottleneck-item {{item.selected ? 'selected' : ''}}"

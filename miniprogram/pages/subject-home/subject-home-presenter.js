@@ -115,6 +115,34 @@ function getEffectiveReports(reports = []) {
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
 }
 
+function getFormalDiagnosisReports(reports = []) {
+  return getEffectiveReports(reports).filter(report => (
+    (report.type || 'diagnosis') === 'diagnosis'
+    && report.archived !== true
+  ))
+}
+
+function buildLatestDiagnosis(report, subject, subjectName, formatRelativeTime) {
+  if (!report) return null
+  const bottlenecks = Array.isArray(report.bottlenecks) ? report.bottlenecks : []
+  const iconMap = { math: '📐', chinese: '📖', english: '🔤' }
+  return {
+    reportId: report._id,
+    icon: iconMap[subject] || '🩺',
+    reportIcon: '📋',
+    insightIcon: '💡',
+    evidenceIcon: '🔎',
+    changeIcon: '📈',
+    actionIcon: '🎯',
+    title: `最新${subjectName}诊断`,
+    dateText: formatRelativeTime(report.createdAt),
+    summary: report.changeSummary || report.comparisonSummary || report.summary || '查看本次正式诊断结论',
+    evidenceCount: Number(report.totalErrors) || 0,
+    persistingCount: bottlenecks.filter(item => ['persisting', 'worsened'].includes(item.status)).length,
+    improvedCount: bottlenecks.filter(item => item.status === 'improved').length
+  }
+}
+
 function buildRecentChanges(reports, formatRelativeTime) {
   return getEffectiveReports(reports)
     .slice(0, 3)
@@ -398,7 +426,8 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
   const chineseReviewQueue = options.subject === 'chinese' ? buildChineseReviewQueue(profile) : []
   const bottleneckStats = buildBottleneckStats(currentBottlenecks)
   const recentChanges = buildRecentChanges(reports, formatRelativeTime)
-  const latestReport = getEffectiveReports(reports)[0] || null
+  const latestReport = getFormalDiagnosisReports(reports)[0] || null
+  const latestDiagnosis = buildLatestDiagnosis(latestReport, subject, subjectName, formatRelativeTime)
   const hasDiagnosis = currentBottlenecks.length > 0 || chineseReviewQueue.length > 0 || recentChanges.length > 0
   const englishVocabularyStats = buildEnglishVocabularyStats(options.englishVocabulary)
   const englishQuickStats = buildEnglishQuickStats(englishVocabularyStats)
@@ -429,6 +458,7 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     permissions,
     canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
     latestReportId: latestReport ? latestReport._id : '',
+    latestDiagnosis,
     currentBottlenecks: options.subject === 'english' ? [] : currentBottlenecks,
     bottleneckStats,
     recentChanges,
