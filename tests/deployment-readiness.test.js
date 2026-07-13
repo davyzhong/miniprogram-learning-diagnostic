@@ -13,14 +13,6 @@ function exists(relativePath) {
   return fs.existsSync(path.join(root, relativePath))
 }
 
-function read(relativePath) {
-  return fs.readFileSync(path.join(root, relativePath), 'utf8')
-}
-
-function exists(relativePath) {
-  return fs.existsSync(path.join(root, relativePath))
-}
-
 const REQUIRED_CLOUD_FUNCTIONS = [
   'uploadAndAnalyze',
   'analyzePhotos',
@@ -35,6 +27,19 @@ const REQUIRED_CLOUD_FUNCTIONS = [
   'learningResource',
   'aiUsage'
 ]
+
+test('core cloud function entry files stay within the 800-line maintainability limit', () => {
+  const entryFiles = [
+    'cloudfunctions/studentData/index.js',
+    'cloudfunctions/englishVocabulary/index.js',
+    'cloudfunctions/analyzePhotos/index.js'
+  ]
+
+  for (const relativePath of entryFiles) {
+    const lineCount = read(relativePath).split('\n').length
+    assert.ok(lineCount <= 800, `${relativePath} has ${lineCount} lines; split responsibilities before adding more`)
+  }
+})
 
 test('deployable cloud functions have required manifests and timeout configs', () => {
   for (const name of REQUIRED_CLOUD_FUNCTIONS) {

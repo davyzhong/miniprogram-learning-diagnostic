@@ -1,18 +1,11 @@
 // analyzePhotos/index.js
 // 主控函数：拆分单图批次、严格串行续跑 analyzeBatch、合并结果、更新数据库、推送通知
 const cloud = require('wx-server-sdk');
-const { compareBottlenecks, buildComparisonSummary } = require('./comparison');
-const { markDuplicatePages } = require('./photo-dedup');
 const { buildProfileSummary } = require('./profile-summary');
-const { buildReportQuality } = require('./report-quality');
-const { aggregateVerificationEvidence, aggregateChineseReviewEvidence, buildVerificationPlan } = require('./verification-evidence');
+const { buildVerificationPlan } = require('./verification-evidence');
+const { createAnalysisArtifactService } = require('./analysis-artifacts');
 const {
   splitFileBatches,
-  assertUsableBatchResults,
-  batchFailureSummary,
-  collectPageResults,
-  mergeBatchResults,
-  buildImageFiles,
 } = require('./pipeline');
 const { triggerAutoVerificationPaper } = require('./auto-verification');
 
@@ -578,257 +571,18 @@ async function runAnalyzeBatches({ batches, batchOffset = 0, totalBatches, subje
   return batchResults;
 }
 
-async function buildAnalysisArtifacts({ reportId, report, fileIDs, batches, subject, studentId, mode, verificationPaper, batchResults }) {
-  assertUsableBatchResults(batchResults);
-
-  const pageResults = collectPageResults(batchResults);
-  const failedBatches = batchFailureSummary(batchResults, batches);
-  const failedImageFiles = failedBatches.flatMap(item => item.fileIDs.map(fileID => ({
-    fileID,
-    batchIndex: item.batchIndex,
-    error: item.error,
-  })));
-  const historicalContext = await getHistoricalContext(studentId, subject, {
-    excludeReportIds: [reportId, ...reanalysisSourceReportIds(report)],
-  });
-  const historicalPhotos = historicalContext.historicalPhotos;
-  const markedPages = markDuplicatePages(pageResults, historicalPhotos);
-  const uniquePages = markedPages.filter(page => !page.isDuplicate);
-  const merged = mergeBatchResults(
-    uniquePages.map(page => ({ success: true, data: page })),
-    subject
-  );
-  const imageFiles = buildImageFiles({
-    fileIDs,
-    initialImageFiles: Array.isArray(report.imageFiles) ? report.imageFiles : [],
-    markedPages,
-    report: { ...report, failedImageFiles },
-  });
-  let previousReport = null;
-  let verificationTargets = [];
-  let comparisonSummary = '';
-  const partialSuccess = failedBatches.length > 0;
-  const analysisWarning = partialSuccess
-    ? `${fileIDs.length - failedImageFiles.length}/${fileIDs.length} 张照片完成分析，${failedImageFiles.length} 张照片因超时或服务异常未纳入。`
-    : '';
-
-  if (uniquePages.length === 0) {
-    merged.summary = '本次照片均疑似重复，未更新学习卡点';
-    comparisonSummary = '本次照片均疑似重复，未更新学习卡点。';
-  } else if (mode === 'verification') {
-    // 验证模式后端硬过滤：
-    // 1. 用验证卷 paper.questions 的标准答案替换 AI 返回的 correctAnswer，
-    //    防止 AI 自己算错标准答案导致假阳性。
-    // 2. 丢弃 studentAnswer 与（权威）correctAnswer 数值相等的条目。
-    if (Array.isArray(merged.errorDetails) && merged.errorDetails.length > 0) {
-      const paperQuestions = (verificationPaper.paper && Array.isArray(verificationPaper.paper.questions))
-        ? verificationPaper.paper.questions : [];
-      // 构建 questionContent → answer 的查找表（按 content/stem/question 字段匹配）
-      const answerByContent = new Map();
-      for (const q of paperQuestions) {
-        const content = String(q.content || q.question || q.stem || '').trim();
-        const answer = String(q.answer || q.correctAnswer || '').trim();
-        if (content && answer) {
-          answerByContent.set(normalizeForLookup(content), answer);
-        }
-      }
-
-      if (answerByContent.size > 0) {
-        merged.errorDetails = merged.errorDetails.map(item => {
-          const key = normalizeForLookup(String(item.questionContent || ''));
-          const authoritativeAnswer = answerByContent.get(key);
-          if (authoritativeAnswer) {
-            return { ...item, correctAnswer: authoritativeAnswer };
-          }
-          return item;
-        });
-      }
-
-      const beforeCount = merged.errorDetails.length;
-      // 收集验证卷所有标准答案的归一化集合，用于交叉验证
-      const allCorrectAnswers = new Set();
-      for (const q of paperQuestions) {
-        const ans = normalizeForCompare(String(q.answer || q.correctAnswer || ''));
-        if (ans) allCorrectAnswers.add(ans);
-      }
-
-      merged.errorDetails = merged.errorDetails.filter(item => {
-        const sa = normalizeForCompare(item.studentAnswer);
-        const ca = normalizeForCompare(item.correctAnswer);
-        if (!sa || !ca) return true; // 无法比较的保留
-        // 防线 1：studentAnswer 与 correctAnswer 数值相等 → 假阳性，丢弃
-        if (sa === ca) return false;
-        // 防线 2：AI OCR 误读修正——如果 studentAnswer 恰好等于验证卷中某道题的标准答案，
-        // 说明学生写对了但 AI 读错了手写体（如把 7/12 读成 2/7），丢弃
-        if (allCorrectAnswers.has(sa)) {
-          console.log(`[verification] OCR 误读修正：studentAnswer="${item.studentAnswer}" 恰好匹配验证卷某题标准答案，判定为 AI 读错手写体，丢弃`);
-          return false;
-        }
-        return true;
-      });
-      const removed = beforeCount - merged.errorDetails.length;
-      if (removed > 0) {
-        console.log(`[verification] 硬过滤移除 ${removed} 个数值匹配的假阳性错题`);
-        // 重新计算 totalErrors
-        merged.totalErrors = Math.max(0, (merged.totalErrors || 0) - removed);
-      }
-    }
-    previousReport = historicalContext.previousReport;
-    verificationTargets = verificationPaper.targets;
-    const verificationEvidence = aggregateVerificationEvidence(verificationPaper.plan, uniquePages);
-    const passedCodes = verificationEvidence.filter(item => item.evidenceStatus === 'passed').map(item => item.lpCode);
-    merged.bottlenecks = compareBottlenecks(
-      previousReport ? previousReport.bottlenecks : [],
-      merged.bottlenecks,
-      passedCodes
-    );
-    comparisonSummary = buildComparisonSummary(merged.bottlenecks);
-    merged.verificationEvidence = verificationEvidence;
-    merged.chineseReviewEvidence = aggregateChineseReviewEvidence(verificationPaper.plan, uniquePages);
-    merged.verificationPageEvidence = buildVerificationPageEvidence(uniquePages);
-    merged.verificationPageCodes = merged.verificationPageEvidence.map(item => item.pageCode);
-  } else {
-    merged.bottlenecks = merged.bottlenecks.map(item => ({ ...item, status: 'found' }));
-  }
-
-  const quality = buildReportQuality({
-    report,
-    uniquePages,
-    merged,
-    failedBatches,
-    verificationEvidence: merged.verificationEvidence || [],
-    allPhotosDuplicate: uniquePages.length === 0,
-  });
-
-  const profile = await getSubjectProfile(studentId, subject);
-  const profileSummary = buildProfileSummary(profile || {}, {
-    _id: reportId,
-    type: mode,
-    totalErrors: merged.totalErrors,
-    bottlenecks: merged.bottlenecks,
-    chineseErrorItems: merged.chineseErrorItems || [],
-    verificationTargets,
-    verificationEvidence: merged.verificationEvidence || [],
-    chineseReviewEvidence: merged.chineseReviewEvidence || [],
-    allPhotosDuplicate: uniquePages.length === 0,
-  }, report.evidenceTime || report.createdAt || new Date());
-  if (quality.status === 'insufficient') {
-    profileSummary.isEffective = false;
-    profileSummary.changeSummary = quality.reasons[0] || '本次样本不足，未更新学习卡点';
-  }
-
-  return {
-    merged,
-    quality,
-    imageFiles,
-    previousReport,
-    comparisonSummary,
-    verificationTargets,
-    profile,
-    profileSummary,
-    partialSuccess,
-    analysisWarning,
-    failedBatches,
-    failedImageFiles,
-  };
-}
-
-function buildVerificationPageEvidence(pages = []) {
-  const byPageCode = new Map();
-  for (const page of pages || []) {
-    const evidenceItems = Array.isArray(page.verificationEvidence) ? page.verificationEvidence : [];
-    const pageCodeFromPage = page.pageCode || '';
-    if (pageCodeFromPage && !byPageCode.has(pageCodeFromPage)) {
-      byPageCode.set(pageCodeFromPage, {
-        pageCode: pageCodeFromPage,
-        fileIDs: new Set(),
-        targetIds: new Set(),
-        attemptedQuestionCount: 0,
-        incorrectQuestionCount: 0,
-        blankQuestionCount: 0,
-        unclearQuestionCount: 0,
-        missingQuestionCount: 0,
-      });
-    }
-
-    for (const evidence of evidenceItems) {
-      const pageCode = evidence.pageCode || pageCodeFromPage;
-      if (!pageCode) continue;
-      if (!byPageCode.has(pageCode)) {
-        byPageCode.set(pageCode, {
-          pageCode,
-          fileIDs: new Set(),
-          targetIds: new Set(),
-          attemptedQuestionCount: 0,
-          incorrectQuestionCount: 0,
-          blankQuestionCount: 0,
-          unclearQuestionCount: 0,
-          missingQuestionCount: 0,
-        });
-      }
-      const total = byPageCode.get(pageCode);
-      if (page.fileID) total.fileIDs.add(page.fileID);
-      const targetId = evidence.targetId || evidence.lpCode || '';
-      if (targetId) total.targetIds.add(targetId);
-      total.attemptedQuestionCount += Math.max(0, Number(evidence.attemptedQuestionCount) || 0);
-      total.incorrectQuestionCount += Math.max(0, Number(evidence.incorrectQuestionCount) || 0);
-      total.blankQuestionCount += Math.max(0, Number(evidence.blankQuestionCount) || 0);
-      total.unclearQuestionCount += Math.max(0, Number(evidence.unclearQuestionCount) || 0);
-      total.missingQuestionCount += Math.max(0, Number(evidence.missingQuestionCount) || 0);
-    }
-
-    if (pageCodeFromPage && page.fileID) {
-      byPageCode.get(pageCodeFromPage).fileIDs.add(page.fileID);
-    }
-  }
-
-  return Array.from(byPageCode.values()).map(item => ({
-    ...item,
-    fileIDs: Array.from(item.fileIDs),
-    targetIds: Array.from(item.targetIds),
-  }));
-}
-
-async function writeCompletedAnalysis({ reportId, studentId, subject, merged, quality, imageFiles, previousReport, comparisonSummary, verificationTargets, profile, profileSummary, partialSuccess, analysisWarning, failedBatches, failedImageFiles }) {
-  await db.collection('reports').doc(reportId).update({
-    data: {
-      status: 'completed',
-      error: '',
-      summary: merged.summary,
-      totalErrors: merged.totalErrors,
-      bottlenecks: merged.bottlenecks,
-      errorDetails: merged.errorDetails,
-      chineseErrorItems: merged.chineseErrorItems || [],
-      imageFiles,
-      previousReportId: previousReport ? previousReport._id : '',
-      comparisonSummary,
-      verificationTargets,
-      verificationEvidence: merged.verificationEvidence || [],
-      chineseReviewEvidence: merged.chineseReviewEvidence || [],
-      verificationPageCodes: merged.verificationPageCodes || [],
-      verificationPageEvidence: merged.verificationPageEvidence || [],
-      quality: _.set(quality),
-      isEffective: profileSummary.isEffective,
-      changeSummary: profileSummary.changeSummary,
-      partialSuccess,
-      analysisWarning,
-      failedBatchCount: failedBatches.length,
-      failedImageFiles,
-      debugError: partialSuccess ? failedBatchDebugMessage(failedBatches) : '',
-      completedAt: merged.completedAt,
-    },
-  });
-
-  if (profileSummary.isEffective) {
-    await updateSubjectProfile(profile, profileSummary, reportId);
-    await db.collection('reports').doc(reportId).update({
-      data: { profileAppliedAt: new Date() },
-    });
-  } else {
-    await clearSubjectProfileAnalysis(studentId, subject);
-  }
-}
-
+const { buildAnalysisArtifacts, writeCompletedAnalysis } = createAnalysisArtifactService({
+  db,
+  command: _,
+  normalizeForLookup,
+  normalizeForCompare,
+  getHistoricalContext,
+  reanalysisSourceReportIds,
+  getSubjectProfile,
+  updateSubjectProfile,
+  clearSubjectProfileAnalysis,
+  failedBatchDebugMessage,
+});
 async function markAnalysisTaskCompleted(taskId, artifacts = {}) {
   await db.collection('analysisTasks').doc(taskId).update({
     data: {

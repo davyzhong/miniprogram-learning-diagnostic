@@ -960,3 +960,38 @@ test('concurrent dictation attempts preserve both via atomic append', async () =
   const session = db.dump('englishPracticeSessions')[0]
   assert.equal(session.attempts.length, 2, 'both concurrent attempts must be preserved')
 })
+
+test('practice result rejects an unknown word before updating words or completing the session', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [{
+      _id: 'word-1',
+      studentId: 'student-1',
+      word: 'science',
+      masteryStatus: 'needs_practice',
+      correctCount: 0,
+      wrongCount: 0
+    }],
+    englishPracticeSessions: [{
+      _id: 'session-1',
+      studentId: 'student-1',
+      status: 'in_progress'
+    }]
+  })
+  const handler = loadEnglishVocabulary(db)
+
+  const result = await handler.main({
+    action: 'submitPracticeResult',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    wordResults: [
+      { wordId: 'word-1', correct: true },
+      { wordId: 'missing-word', correct: false }
+    ]
+  })
+
+  assert.equal(result.success, false)
+  assert.equal(result.error, '练习题目不存在')
+  assert.equal(db.dump('studentEnglishWords')[0].correctCount, 0)
+  assert.equal(db.dump('englishPracticeSessions')[0].status, 'in_progress')
+})

@@ -19,34 +19,21 @@ const {
   judgeRecognitionAnswer,
   dateOnly
 } = require('./english-vocabulary')
-const { recordUsageStart, recordUsageSuccess, recordUsageFailure } = require('./usage-ledger')
+const { createEnglishVisionActions } = require('./vision-analysis')
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
-const app = tcb.init({
-  env: tcb.SYMBOL_CURRENT_ENV,
-  timeout: 60000
-})
+const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV, timeout: 60000 })
 const seedVocabulary = require('./zhong-qingyu-pep-vocabulary.json')
 
-// 视觉模型 ID。hy3-preview 是纯文本模型不支持图片。
-// qwen3.5-plus + enable_thinking:false 是当前最优视觉配置（单图 ~15s）。
+// 视觉模型；hy3-preview 不支持图片。
 const VISION_MODEL_ID = 'qwen3.5-plus';
 
 const ACTIONS = new Set([
-  'createImportBatch',
-  'confirmImportBatch',
-  'seedPersonalVocabulary',
-  'getVocabularySummary',
-  'listWords',
-  'generateRecognitionSession',
-  'submitRecognitionAttempt',
-  'generatePaperDictationSession',
-  'submitDictationPhoto',
-  'analyzeDictationPhoto',
-  'generatePracticeSession',
-  'submitDictationAttempt',
-  'submitPracticeResult'
+  'createImportBatch', 'confirmImportBatch', 'seedPersonalVocabulary', 'getVocabularySummary', 'listWords',
+  'generateRecognitionSession', 'submitRecognitionAttempt', 'generatePaperDictationSession',
+  'submitDictationPhoto', 'analyzeDictationPhoto', 'generatePracticeSession',
+  'submitDictationAttempt', 'submitPracticeResult'
 ])
 
 function ok(data = {}) {
@@ -55,11 +42,6 @@ function ok(data = {}) {
 
 function fail(error) {
   return { success: false, error }
-}
-
-function parseJsonText(text) {
-  const cleaned = String(text || '').replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim()
-  return JSON.parse(cleaned || '{}')
 }
 
 function nowDate() {
@@ -305,89 +287,6 @@ async function createImportBatch(event, openId) {
     wordCandidateCount: candidateWords.length,
     patternCandidateCount: candidatePatterns.length
   })
-}
-
-async function extractCandidatesFromImages(pageFileIDs = [], context = {}) {
-  const fileIDs = pageFileIDs
-    .map(fileID => cleanText(fileID, 240))
-    .filter(fileID => /^cloud:\/\//.test(fileID))
-    .slice(0, 20)
-  if (fileIDs.length === 0) return { words: [], patterns: [] }
-
-  const tempRes = await cloud.getTempFileURL({ fileList: fileIDs })
-  const imageUrls = (tempRes.fileList || [])
-    .filter(item => item.tempFileURL)
-    .map(item => item.tempFileURL)
-  if (imageUrls.length === 0) return { words: [], patterns: [] }
-
-  const prompt = `请从这组 PEP 小学英语单词句型表图片中提取词库。返回严格 JSON，不要 markdown。
-来源文件：${cleanText(context.sourceFile, 200)}
-默认年级：${Number(context.defaultGrade) || ''}
-默认册别：${cleanText(context.defaultVolume, 20)}
-
-要求：
-1. 提取单词、中文释义、词性、单元。
-2. 当前阶段只提取单词，不提取句型、时态或例句。
-3. 不要编造图片中没有出现的内容。
-4. 无法确认的内容留空，不要猜。
-
-输出格式：
-{
-  "words": [{"word":"museum","meaning":"博物馆","partOfSpeech":"n.","unit":"Unit 1"}]
-}`
-
-  const ai = app.ai()
-  const model = ai.createModel('cloudbase')
-
-  // AI 用量记账（pending）——写入失败不阻断业务
-  let eventId = null
-  if (context.ledgerOpenId) {
-    try {
-      eventId = await recordUsageStart({
-        db, openId: context.ledgerOpenId,
-        eventType: 'photo_analysis',
-        studentId: context.ledgerStudentId || '',
-        subject: 'english',
-        sourceType: 'english_session',
-        cloudFunction: 'englishVocabulary',
-        model: VISION_MODEL_ID,
-        imageCount: imageUrls.length
-      })
-    } catch (e) { console.error('[usage] recordUsageStart failed', e && e.message) }
-  }
-
-  let result
-  try {
-    result = await model.generateText({
-      model: VISION_MODEL_ID,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text', text: prompt },
-          ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } }))
-        ]
-      }],
-      temperature: 0.1,
-      enable_thinking: false
-    })
-    if (eventId) {
-      await recordUsageSuccess({
-        db, eventId, usage: result && result.usage, outputText: result && result.text,
-        model: VISION_MODEL_ID, imageCount: imageUrls.length
-      }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
-    }
-  } catch (err) {
-    if (eventId) {
-      await recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: VISION_MODEL_ID, imageCount: imageUrls.length })
-      .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
-    }
-    throw err
-  }
-  const parsed = parseJsonText(result.text)
-  return {
-    words: Array.isArray(parsed.words) ? parsed.words : [],
-    patterns: []
-  }
 }
 
 async function upsertWords(studentId, openId, candidates) {
@@ -676,175 +575,23 @@ async function submitDictationPhoto(event) {
   })
 }
 
-function normalizeDictationVerdict(value) {
-  const verdict = cleanText(value, 20)
-  return ['correct', 'incorrect', 'unclear'].includes(verdict) ? verdict : 'unclear'
-}
-
-function normalizeDictationOcrResults(rawResults = [], wordItems = []) {
-  const byWordId = new Map()
-  const byWord = new Map()
-  for (const result of rawResults || []) {
-    const wordId = cleanText(result.wordId, 80)
-    const targetWord = cleanText(result.targetWord || result.word, 80).toLowerCase()
-    if (wordId) byWordId.set(wordId, result)
-    if (targetWord) byWord.set(targetWord, result)
-  }
-  return (wordItems || []).map(item => {
-    const source = byWordId.get(item.wordId) || byWord.get(cleanText(item.word, 80).toLowerCase()) || {}
-    const deterministic = judgeWrittenWord({
-      targetWord: item.word,
-      recognizedText: source.recognizedText || source.answer || ''
-    })
-    const verdict = normalizeDictationVerdict(deterministic.status)
-    return {
-      queueKey: cleanText(item.queueKey, 120),
-      wordId: cleanText(item.wordId, 80),
-      targetWord: cleanText(item.word, 80),
-      recognizedText: cleanText(source.recognizedText || source.answer || '', 120),
-      verdict,
-      reason: deterministic.reason || cleanText(source.reason, 200) || (verdict === 'unclear' ? 'AI 未返回可判断结果' : ''),
-      confidence: Math.max(0, Math.min(1, Number(deterministic.confidence) || 0)),
-      editDistance: Number(deterministic.editDistance) || 0
-    }
-  })
-}
-
-async function analyzeDictationPhoto(event) {
-  const session = await getDocument('englishPracticeSessions', event.sessionId)
-  if (!session) return fail('纸面听写记录不存在')
-  // IDOR 防御：用 session 自身的 studentId 反查权限
-  const ownerAuth = await authorizeResourceOwner(session.studentId, event.studentId, true)
-  if (!ownerAuth.allowed) return fail(ownerAuth.error)
-  if (session.functionType !== 'spelling') return fail('听写记录类型不匹配')
-  const photoFileIds = (session.photoFileIds || [])
-    .map(item => cleanText(item, 240))
-    .filter(item => /^cloud:\/\//.test(item))
-  if (photoFileIds.length === 0) return fail('缺少听写纸照片')
-
-  const tempRes = await cloud.getTempFileURL({ fileList: photoFileIds })
-  const imageUrls = (tempRes.fileList || [])
-    .filter(item => item.tempFileURL)
-    .map(item => item.tempFileURL)
-  if (imageUrls.length === 0) return fail('听写纸照片暂时无法读取')
-
-  const wordItems = session.wordItems || []
-  const candidates = wordItems.map((item, index) => ({
-    index: index + 1,
-    wordId: item.wordId,
-    targetWord: item.word,
-    meanings: item.meanings || []
-  }))
-  const prompt = `请批改这份小学生英语纸面听写照片。只允许在候选词范围内判断，不要新增候选词以外的单词。
-
-候选词 JSON：
-${JSON.stringify(candidates)}
-
-判定规则：
-1. 逐个候选词输出结果，保持候选词数量和 wordId。
-2. recognizedText 写照片中看到的学生拼写；空白或看不清则留空。
-3. verdict 只能是 correct、incorrect、unclear。
-4. 只有拼写完整且与 targetWord 一致才是 correct。
-5. 看不清、空白、无法对应到题号时使用 unclear。
-6. 返回严格 JSON，不要 markdown。
-
-输出格式：
-{
-  "results": [
-    {"wordId":"word-1","targetWord":"science","recognizedText":"science","verdict":"correct","confidence":0.98,"reason":"拼写正确"}
-  ]
-}`
-  const ai = app.ai()
-  const model = ai.createModel('cloudbase')
-
-  // AI 用量记账（pending）——写入失败不阻断业务
-  let eventId = null
-  try {
-    const ledgerOpenId = cloud.getWXContext().OPENID
-    if (ledgerOpenId) {
-      eventId = await recordUsageStart({
-        db, openId: ledgerOpenId,
-        eventType: 'dictation_grading',
-        studentId: event.studentId || '',
-        subject: 'english',
-        sourceId: event.sessionId || '',
-        sourceType: 'english_session',
-        cloudFunction: 'englishVocabulary',
-        model: VISION_MODEL_ID,
-        imageCount: imageUrls.length
-      })
-    }
-  } catch (e) { console.error('[usage] recordUsageStart failed', e && e.message) }
-
-  let result
-  try {
-    result = await model.generateText({
-      model: VISION_MODEL_ID,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'text', text: prompt },
-          ...imageUrls.map(url => ({ type: 'image_url', image_url: { url } }))
-        ]
-      }],
-      temperature: 0.1,
-      enable_thinking: false
-    })
-    if (eventId) {
-      await recordUsageSuccess({
-        db, eventId, usage: result && result.usage, outputText: result && result.text,
-        model: VISION_MODEL_ID, imageCount: imageUrls.length
-      }).catch(e => console.error('[usage] recordUsageSuccess failed', e && e.message))
-    }
-  } catch (err) {
-    if (eventId) {
-      await recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: VISION_MODEL_ID, imageCount: imageUrls.length })
-      .catch(e => console.error('[usage] recordUsageFailure failed', e && e.message))
-    }
-    throw err
-  }
-  const parsed = parseJsonText(result.text)
-  const results = normalizeDictationOcrResults(parsed.results || [], wordItems)
-  const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
-  const byId = new Map(words.map(item => [item._id, item]))
-  const reviewedAt = event.reviewedAt || new Date()
-
-  // 性能优化：并发写库（替代串行 for await），避免 40 词 × 数百毫秒逼近云函数超时
-  const updateJobs = []
-  for (const item of results) {
-    const word = byId.get(item.wordId)
-    if (!word || item.verdict === 'unclear') continue
-    const updated = applyWordDimensionAttempt(word, 'spelling', {
-      judgment: { status: item.verdict },
-      reviewedAt
-    })
-    updateJobs.push(updateDocument('studentEnglishWords', word._id, {
-      familiarity: updated.familiarity,
-      spelling: updated.spelling,
-      overallMastery: updated.overallMastery,
-      updatedAt: nowDate()
-    }))
-  }
-  const settled = await Promise.all(updateJobs)
-  const updatedWordCount = settled.filter(result => result).length
-  if (updatedWordCount > 0) {
-    await markVocabularySummaryDirty(event.studentId)
-  }
-
-  await updateDocument('englishPracticeSessions', event.sessionId, {
-    status: 'completed',
-    analysisStatus: 'completed',
-    dictationResults: results,
-    analyzedAt: nowDate(),
-    updatedAt: nowDate()
-  })
-
-  return ok({
-    sessionId: event.sessionId,
-    analysisStatus: 'completed',
-    results
-  })
-}
+const { extractCandidatesFromImages, analyzeDictationPhoto } = createEnglishVisionActions({
+  cloud,
+  app,
+  db,
+  modelId: VISION_MODEL_ID,
+  cleanText,
+  fail,
+  ok,
+  getDocument,
+  getCollectionData,
+  updateDocument,
+  authorizeResourceOwner,
+  applyWordDimensionAttempt,
+  judgeWrittenWord,
+  nowDate,
+  markVocabularySummaryDirty,
+})
 
 function findSessionItem(session, event) {
   const items = session.wordItems || []
@@ -982,11 +729,14 @@ async function submitPracticeResult(event) {
   if (!ownerAuth.allowed) return fail(ownerAuth.error)
   const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
   const byId = new Map(words.map(item => [item._id, item]))
+  const wordResults = Array.isArray(event.wordResults) ? event.wordResults : []
+  if (wordResults.some(result => !byId.has(cleanText(result && result.wordId, 80)))) {
+    return fail('练习题目不存在')
+  }
   // 性能优化：并发写库（替代串行 for await）
   const updateJobs = []
-  for (const result of event.wordResults || []) {
+  for (const result of wordResults) {
     const word = byId.get(result.wordId)
-    if (!word) continue
     const updated = applyWordReviewResult(word, {
       correct: result.correct === true,
       reviewedAt: event.reviewedAt || new Date()
@@ -1007,7 +757,7 @@ async function submitPracticeResult(event) {
   }
   await updateDocument('englishPracticeSessions', event.sessionId, {
     status: 'completed',
-    wordResults: event.wordResults || [],
+    wordResults,
     patternResults: event.patternResults || [],
     completedAt: nowDate(),
     updatedAt: nowDate()

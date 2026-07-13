@@ -1,4 +1,5 @@
 const cloud = require('wx-server-sdk');
+const { publicStudent } = require('./student-dto');
 const crypto = require('node:crypto');
 const { permissionsForRole, canManageFamily } = require('./access');
 
@@ -180,7 +181,7 @@ async function getAccess(studentId, openId) {
 
 function serializeStudent(student, role) {
   return {
-    ...student,
+    ...publicStudent(student),
     role,
     permissions: permissionsForRole(role),
   };
@@ -261,7 +262,7 @@ async function listMembers(openId, studentId) {
     }, ...members];
   }
   return success({
-    student: access.student,
+    student: publicStudent(access.student),
     role: access.role,
     permissions: permissionsForRole(access.role),
     members: members.map(withMemberDisplay),
@@ -343,7 +344,7 @@ async function getInvite(openId, inviteId, token) {
   const existing = await getMember(read.invite.studentId, openId);
   if (student._openid === openId || existing) {
     return success({
-      student,
+      student: publicStudent(student),
       role: student._openid === openId ? 'owner' : existing.role,
       presetRelation: read.invite.presetRelation || '',
       presetRelationText: read.invite.presetRelationText || '',
@@ -353,7 +354,7 @@ async function getInvite(openId, inviteId, token) {
   const unavailableReason = inviteUnavailableReason(read.invite);
   if (unavailableReason) return failure(unavailableReason);
   return success({
-    student,
+    student: publicStudent(student),
     role: read.invite.role || 'viewer',
     presetRelation: read.invite.presetRelation || '',
     presetRelationText: read.invite.presetRelationText || '',
@@ -369,7 +370,7 @@ async function getInviteByCode(openId, inviteCode) {
   const existing = await getMember(read.invite.studentId, openId);
   if (student._openid === openId || existing) {
     return success({
-      student,
+      student: publicStudent(student),
       role: student._openid === openId ? 'owner' : existing.role,
       presetRelation: read.invite.presetRelation || '',
       presetRelationText: read.invite.presetRelationText || '',
@@ -379,7 +380,7 @@ async function getInviteByCode(openId, inviteCode) {
   const unavailableReason = inviteUnavailableReason(read.invite);
   if (unavailableReason) return failure(unavailableReason);
   return success({
-    student,
+    student: publicStudent(student),
     role: read.invite.role || 'viewer',
     presetRelation: read.invite.presetRelation || '',
     presetRelationText: read.invite.presetRelationText || '',
@@ -392,12 +393,12 @@ async function acceptInviteRecord(openId, invite, options = {}) {
   if (!student) return failure('邀请不存在或已失效');
 
   if (student._openid === openId) {
-    return success({ student, role: 'owner', alreadyJoined: true });
+    return success({ student: publicStudent(student), role: 'owner', alreadyJoined: true });
   }
 
   const existing = await getMember(invite.studentId, openId);
   if (existing) {
-    return success({ student, role: existing.role || 'viewer', alreadyJoined: true });
+    return success({ student: publicStudent(student), role: existing.role || 'viewer', alreadyJoined: true });
   }
 
   const unavailableReason = inviteUnavailableReason(invite);
@@ -429,7 +430,7 @@ async function acceptInviteRecord(openId, invite, options = {}) {
     },
   });
   return success({
-    student,
+    student: publicStudent(student),
     role: memberData.role,
     relation,
     relationText: relationTextOf(relation),

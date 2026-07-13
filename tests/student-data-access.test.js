@@ -56,6 +56,7 @@ test('viewer can read dashboard for a joined child with role-aware permissions',
   assert.equal(result.permissions.canRetryAnalysis, true)
   assert.equal(result.permissions.canManageParents, false)
   assert.equal(result.student.name, '钟青羽')
+  assert.equal(result.student._openid, undefined)
   assert.deepEqual(result.subjectProfiles.map(item => item.subject), ['math', 'chinese'])
   assert.equal(result.latestReport._id, 'report-2')
   assert.equal(result.latestPaper._id, 'paper-1')
@@ -85,6 +86,7 @@ test('viewer can read subject dashboard, report detail, paper detail and timelin
 
   const subject = await handler.main({ action: 'getSubjectDashboard', studentId: 'student-1', subject: 'math' })
   assert.equal(subject.success, true)
+  assert.equal(subject.student._openid, undefined)
   assert.equal(subject.profile.subjectName, '数学')
   assert.deepEqual(subject.reports.map(item => item._id), ['report-2', 'report-1'])
   assert.deepEqual(subject.papers.map(item => item._id), ['paper-1'])
@@ -423,6 +425,7 @@ test('getHomeDashboard returns all accessible students with summaries in one cal
   // joined 学生也包含在内
   assert.ok(result.students.find(s => s._id === 'student-3'))
   assert.ok(result.students.find(s => s._id === 'student-3').role === 'viewer')
+  assert.ok(result.students.every(student => student._openid === undefined))
   // perStudent 包含每个学生的摘要
   assert.ok(result.perStudent['student-1'])
   assert.ok(result.perStudent['student-2'])
