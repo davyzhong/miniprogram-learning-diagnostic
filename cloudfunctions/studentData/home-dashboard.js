@@ -4,6 +4,12 @@ const {
   HOME_REPORT_FIELDS,
   HOME_PAPER_FIELDS,
 } = require('./timeline-dto');
+const {
+  FORMAL_DIAGNOSIS_SUBJECTS,
+  isFormalDiagnosis,
+  latestFormalDiagnoses,
+  summarizeFormalDiagnosis,
+} = require('./formal-diagnosis');
 
 const MAX_FALLBACK_SCAN_PAGES = 10;
 
@@ -90,6 +96,23 @@ function createHomeDashboard({ db, permissionsForRole, isMissingCollectionError,
     return null;
   }
 
+  async function findLatestFormalDiagnosis(studentId, subject) {
+    for (let page = 0; page < MAX_FALLBACK_SCAN_PAGES; page += 1) {
+      const rows = await safeQueryLimited(
+        'reports',
+        { studentId, subject },
+        'createdAt',
+        'desc',
+        100,
+        HOME_REPORT_FIELDS,
+        page * 100
+      );
+      const match = rows.find(isFormalDiagnosis);
+      if (match || rows.length < 100) return match ? summarizeFormalDiagnosis(match) : null;
+    }
+    return null;
+  }
+
   return async function getHomeDashboard(openId) {
     if (!openId) return { success: false, error: '未登录' };
     const _ = db.command;
@@ -116,10 +139,13 @@ function createHomeDashboard({ db, permissionsForRole, isMissingCollectionError,
     if (students.length === 0) return { success: true, students: [], perStudent: {} };
     const allStudentIds = students.map(student => student._id);
     const homeBatchLimit = Math.min(100, Math.max(10, 10 * allStudentIds.length));
-    const [profileRows, reportRows, paperRows] = await Promise.all([
+    const [profileRows, reportRows, paperRows, ...diagnosisRowsBySubject] = await Promise.all([
       safeQueryLimited('subjectProfiles', { studentId: _.in(allStudentIds) }, 'updatedAt', 'desc', 100, HOME_PROFILE_FIELDS),
       safeQueryLimited('reports', { studentId: _.in(allStudentIds) }, 'createdAt', 'desc', homeBatchLimit, HOME_REPORT_FIELDS),
       safeQueryLimited('papers', { studentId: _.in(allStudentIds) }, 'createdAt', 'desc', homeBatchLimit, HOME_PAPER_FIELDS),
+      ...FORMAL_DIAGNOSIS_SUBJECTS.map(subject => (
+        safeQueryLimited('reports', { studentId: _.in(allStudentIds), subject }, 'createdAt', 'desc', homeBatchLimit, HOME_REPORT_FIELDS)
+      )),
     ]);
     const allProfiles = [...profileRows];
     const allReports = [...reportRows];
@@ -138,6 +164,27 @@ function createHomeDashboard({ db, permissionsForRole, isMissingCollectionError,
     allReports.push(...reportFallbacks.filter(Boolean));
     allPapers.push(...paperFallbacks.filter(Boolean));
 
+    const diagnosisRows = diagnosisRowsBySubject.flat();
+    const diagnosisByStudent = new Map(students.map(student => [
+      student._id,
+      latestFormalDiagnoses(diagnosisRows.filter(report => report.studentId === student._id)),
+    ]));
+    const missingDiagnosisPairs = [];
+    FORMAL_DIAGNOSIS_SUBJECTS.forEach((subject, subjectIndex) => {
+      if ((diagnosisRowsBySubject[subjectIndex] || []).length < homeBatchLimit) return;
+      students.forEach(student => {
+        const hasSubject = (diagnosisByStudent.get(student._id) || []).some(report => report.subject === subject);
+        if (!hasSubject) missingDiagnosisPairs.push({ studentId: student._id, subject });
+      });
+    });
+    const diagnosisFallbacks = await Promise.all(missingDiagnosisPairs.map(pair => (
+      findLatestFormalDiagnosis(pair.studentId, pair.subject)
+    )));
+    diagnosisFallbacks.filter(Boolean).forEach(report => {
+      const current = diagnosisByStudent.get(report.studentId) || [];
+      diagnosisByStudent.set(report.studentId, latestFormalDiagnoses([...current, report]));
+    });
+
     const perStudent = {};
     for (const student of students) {
       const profiles = allProfiles.filter(row => row.studentId === student._id).sort((a, b) => toTime(b.updatedAt) - toTime(a.updatedAt));
@@ -146,6 +193,7 @@ function createHomeDashboard({ db, permissionsForRole, isMissingCollectionError,
       perStudent[student._id] = {
         subjectProfiles: profiles.map(profileSummary),
         latestReportSummary: reports.length > 0 ? reportSummary(reports[0]) : null,
+        latestDiagnosisReports: diagnosisByStudent.get(student._id) || [],
         latestPaperSummary: papers.length > 0 ? paperSummary(papers[0]) : null,
       };
     }

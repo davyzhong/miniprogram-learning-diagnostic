@@ -59,6 +59,7 @@ test('viewer can read dashboard for a joined child with role-aware permissions',
   assert.equal(result.student._openid, undefined)
   assert.deepEqual(result.subjectProfiles.map(item => item.subject), ['math', 'chinese'])
   assert.equal(result.latestReport._id, 'report-2')
+  assert.deepEqual(result.latestDiagnosisReports.map(item => item._id), ['report-1'])
   assert.equal(result.latestPaper._id, 'paper-1')
 })
 
@@ -78,6 +79,7 @@ test('student dashboard can skip recent reports and papers for lightweight pages
   assert.equal(result.latestPaper, null)
   assert.deepEqual(JSON.parse(JSON.stringify(result.recentReports)), [])
   assert.deepEqual(JSON.parse(JSON.stringify(result.recentPapers)), [])
+  assert.deepEqual(JSON.parse(JSON.stringify(result.latestDiagnosisReports)), [])
 })
 
 test('viewer can read subject dashboard, report detail, paper detail and timeline', async () => {
@@ -436,6 +438,7 @@ test('getHomeDashboard returns all accessible students with summaries in one cal
   // 验证 latestReportSummary
   assert.ok(result.perStudent['student-1'].latestReportSummary)
   assert.equal(result.perStudent['student-1'].latestReportSummary._id, 'report-1')
+  assert.deepEqual(result.perStudent['student-1'].latestDiagnosisReports.map(item => item._id), ['report-1'])
   // 验证 latestPaperSummary
   assert.ok(result.perStudent['student-1'].latestPaperSummary)
   assert.equal(result.perStudent['student-1'].latestPaperSummary._id, 'paper-1')
@@ -575,6 +578,83 @@ test('getHomeDashboard does not let one child consume the family-wide history li
 
   assert.equal(result.perStudent['student-b'].latestReportSummary._id, 'student-b-report')
   assert.equal(result.perStudent['student-b'].latestPaperSummary._id, 'student-b-paper')
+})
+
+test('student dashboard returns the latest completed formal diagnosis for each subject', async () => {
+  const newerMathReports = Array.from({ length: 12 }, (_, index) => ({
+    _id: `math-${index}`,
+    studentId: 'student-1',
+    subject: 'math',
+    type: index === 0 ? 'verification' : 'diagnosis',
+    status: index === 1 ? 'failed' : 'completed',
+    isEffective: index === 2 ? false : true,
+    summary: `数学记录 ${index}`,
+    createdAt: `2026-07-12T10:${String(index).padStart(2, '0')}:00Z`
+  }))
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentMembers: [],
+    subjectProfiles: [],
+    reports: [
+      ...newerMathReports,
+      {
+        _id: 'chinese-latest', studentId: 'student-1', subject: 'chinese', type: 'diagnosis',
+        status: 'completed', summary: '语文字词辨析', createdAt: '2026-06-01T00:00:00Z'
+      },
+      {
+        _id: 'english-verification', studentId: 'student-1', subject: 'english', type: 'verification',
+        status: 'completed', summary: '英语验证', createdAt: '2026-07-13T00:00:00Z'
+      }
+    ],
+    papers: []
+  })
+  const handler = loadStudentData(db, 'owner-1')
+
+  const result = await handler.main({ action: 'getStudentDashboard', studentId: 'student-1' })
+
+  assert.deepEqual(result.latestDiagnosisReports.map(item => item.subject), ['math', 'chinese'])
+  assert.equal(result.latestDiagnosisReports[0]._id, 'math-11')
+  assert.equal(result.latestDiagnosisReports[1]._id, 'chinese-latest')
+  assert.equal(result.latestDiagnosisReports.some(item => item.type === 'verification'), false)
+})
+
+test('home dashboard diagnosis coverage is not starved by the family-wide recent report limit', async () => {
+  const dominantMathReports = Array.from({ length: 25 }, (_, index) => ({
+    _id: `dominant-math-${index}`,
+    studentId: 'student-a',
+    subject: 'math',
+    type: index === 24 ? 'verification' : 'diagnosis',
+    status: 'completed',
+    summary: `数学记录 ${index}`,
+    createdAt: `2026-07-12T10:${String(index).padStart(2, '0')}:00Z`
+  }))
+  const db = createDatabase({
+    students: [
+      { _id: 'student-a', _openid: 'owner-1', name: 'A', createdAt: '2026-01-02T00:00:00Z' },
+      { _id: 'student-b', _openid: 'owner-1', name: 'B', createdAt: '2026-01-01T00:00:00Z' }
+    ],
+    studentMembers: [],
+    subjectProfiles: [],
+    reports: [
+      ...dominantMathReports,
+      {
+        _id: 'student-a-chinese', studentId: 'student-a', subject: 'chinese', type: 'diagnosis',
+        status: 'completed', summary: '语文诊断', createdAt: '2026-05-01T00:00:00Z'
+      },
+      {
+        _id: 'student-b-chinese', studentId: 'student-b', subject: 'chinese', type: 'diagnosis',
+        status: 'completed', summary: 'B 语文诊断', createdAt: '2026-04-01T00:00:00Z'
+      }
+    ],
+    papers: []
+  })
+  const handler = loadStudentData(db, 'owner-1')
+
+  const result = await handler.main({ action: 'getHomeDashboard' })
+
+  assert.deepEqual(result.perStudent['student-a'].latestDiagnosisReports.map(item => item.subject), ['math', 'chinese'])
+  assert.deepEqual(result.perStudent['student-b'].latestDiagnosisReports.map(item => item.subject), ['chinese'])
+  assert.equal(result.perStudent['student-a'].latestDiagnosisReports[0]._id, 'dominant-math-23')
 })
 
 test('representative timeline baseline reduces database reads without changing visible ordering', async () => {

@@ -12,6 +12,7 @@ const {
   PAPER_TIMELINE_FIELDS,
   ENGLISH_SESSION_FIELDS,
   RESOURCE_PACK_FIELDS,
+  HOME_REPORT_FIELDS,
   paperBottleneckSummary,
   paperDisplayCodeOf,
   summarizeReportForTimeline,
@@ -22,6 +23,7 @@ const {
   resourcePackTimeOf,
   sessionVerdictCounts,
 } = require('./timeline-dto');
+const { loadLatestFormalDiagnoses } = require('./formal-diagnosis');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -138,6 +140,24 @@ async function getReports(studentId, subject, limit = 20, cursor = '') {
   return visibleReports(res.data || []);
 }
 
+async function getLatestFormalDiagnoses(studentId) {
+  return loadLatestFormalDiagnoses(async (subject, offset, limit) => {
+    try {
+      const res = await db.collection('reports')
+        .where({ studentId, subject })
+        .orderBy('createdAt', 'desc')
+        .skip(offset)
+        .limit(limit)
+        .field(HOME_REPORT_FIELDS)
+        .get();
+      return res.data || [];
+    } catch (error) {
+      if (isMissingCollectionError(error)) return [];
+      throw error;
+    }
+  });
+}
+
 async function getPapers(studentId, subject, limit = 20, cursor = '') {
   const filter = subject
     ? { studentId, subject, ...cursorFilter(cursor) }
@@ -206,16 +226,18 @@ async function getStudentDashboard(openId, studentId, options = {}) {
   if (!access.allowed) return failure('无权访问该学生');
 
   const includeRecent = options.includeRecent !== false;
-  const [subjectProfiles, reports, papers] = await Promise.all([
+  const [subjectProfiles, reports, papers, latestDiagnosisReports] = await Promise.all([
     getSubjectProfiles(studentId),
     includeRecent ? getReports(studentId, '', 10) : Promise.resolve([]),
     includeRecent ? getPapers(studentId, '', 10) : Promise.resolve([]),
+    includeRecent ? getLatestFormalDiagnoses(studentId) : Promise.resolve([]),
   ]);
 
   return withAccess(access, {
     student: publicStudent(access.student),
     subjectProfiles,
     latestReport: includeRecent ? (reports[0] || null) : null,
+    latestDiagnosisReports,
     latestPaper: includeRecent ? (papers[0] || null) : null,
     recentReports: reports,
     recentPapers: papers,

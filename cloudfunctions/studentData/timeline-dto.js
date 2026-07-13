@@ -38,7 +38,9 @@ const HOME_PROFILE_FIELDS = {
 
 const HOME_REPORT_FIELDS = {
   _id: true, studentId: true, subject: true, type: true, status: true, createdAt: true,
-  evidenceTime: true, updatedAt: true, summary: true, totalErrors: true, bottlenecks: true,
+  evidenceTime: true, updatedAt: true, summary: true, comparisonSummary: true, changeSummary: true,
+  totalErrors: true, bottlenecks: true, isEffective: true,
+  'imageFiles.fileID': true, imageFileIds: true,
   isArchived: true, archivedAt: true,
 };
 
