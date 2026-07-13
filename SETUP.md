@@ -118,6 +118,7 @@
 | `subjectProfiles` | `studentId`, `_openid` | 升序、升序 |
 | `reports` | `studentId`, `subject`, `createdAt`, `_openid` | 升序、升序、降序、升序 |
 | `reports` | `studentId`, `subject`, `status`, `createdAt`, `_openid` | 升序、升序、升序、降序、升序 |
+| `analysisTasks` | `reportId`, `createdAt` | 升序、降序 |
 | `papers` | `studentId`, `subject`, `type`, `grade`, `paperKey`, `_openid` | 全部升序 |
 | `learningResourcePacks` | `studentId`, `subject`, `updatedAt`, `_openid` | 升序、升序、降序、升序 |
 | `aiUsageEvents` | `_openid`, `createdAt` | 升序、降序 |

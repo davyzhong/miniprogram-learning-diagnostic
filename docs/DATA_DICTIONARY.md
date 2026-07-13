@@ -559,6 +559,8 @@ MVP 数学卡点当前包含：
 
 **注意**：同一 reportId 可能存在多条 analysisTasks 记录（超时重建场景），查询时按 `createdAt` 倒序取第一条作为当前任务。
 
+**索引要求**：创建 `(reportId ASC, createdAt DESC)` 复合索引，进度轮询只读取最新 1 条；超时恢复最多读取最新 20 条。
+
 ---
 
 ## 3. 集合间关系图
@@ -659,7 +661,7 @@ MVP 数学卡点当前包含：
 1. **`_openid` 放在末尾**：安全规则限制为"仅创建者可读写"时，数据库引擎要求查询条件包含 `_openid`，将其放在复合索引末尾既满足权限要求又不影响前缀查询效率
 2. **subjectProfiles 不再需要三字段复合索引**：代码改为先按 `studentId` 查询（最多返回 3 条），再在内存中 `find(item => item.subject === subject)` 筛选，避免维护复杂索引
 3. **reports 有两个复合索引**：分别优化"列表查询"和"按状态过滤查询"两种不同访问模式
-4. **analysisTasks 无显式索引**：该集合数据量小（每份报告 1-2 条），且仅在 getAnalysisProgress 中按 reportId 查询，云数据库默认 _id 索引 + 全表扫描可接受
+4. **analysisTasks 热查询已建立复合索引**：`(reportId ASC, createdAt DESC)` 支持进度轮询和超时恢复的有界读取
 
 ---
 

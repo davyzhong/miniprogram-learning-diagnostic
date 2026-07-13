@@ -151,15 +151,15 @@ The current CLI timings contain fixed waits and are suitable for coarse regressi
 - Modify: `SETUP.md`
 - Modify: `docs/DATA_DICTIONARY.md`
 
-- [ ] Add tests that fail if timeline queries return fields not consumed by `buildTimeline`.
-- [ ] Add a test with 100 historical tasks and assert progress reads only the latest task.
-- [ ] Add `.field()` projections to reports, papers, English sessions, and resource packs.
-- [ ] Change progress and stale-task queries to `orderBy('createdAt', 'desc').limit(...)`.
-- [ ] Add the required `(reportId, createdAt)` analysisTasks index to setup/deployment documentation.
-- [ ] Measure first-page timeline payload before and after using the existing payload metrics.
-- [ ] If projected four-way merging still exceeds budget, create a follow-up `learningEvents` collection written at mutation boundaries; do not introduce it preemptively.
-- [ ] Run timeline tests, core E2E, and deployment checks.
-- [ ] Acceptance: first-page payload falls by at least 60%; visible ordering remains unchanged.
+- [x] Add tests that fail if timeline queries return fields not consumed by `buildTimeline`.
+- [x] Add a test with 100 historical tasks and assert progress reads only the latest task.
+- [x] Add `.field()` projections to reports, papers, English sessions, and resource packs.
+- [x] Change progress and stale-task queries to `orderBy('createdAt', 'desc').limit(...)`.
+- [x] Add the required `(reportId, createdAt)` analysisTasks index to setup/deployment documentation.
+- [x] Measure first-page database-read and cloud-response payloads separately with a representative fixture.
+- [x] If projected four-way merging still exceeds budget, create a follow-up `learningEvents` collection written at mutation boundaries; do not introduce it preemptively.
+- [x] Run timeline tests, core E2E, and deployment checks.
+- [x] Acceptance: first-page database-read payload falls by at least 60%; response budget and visible ordering remain unchanged.
 - [ ] Commit: `perf: project timeline data and index analysis progress`.
 
 ### Task 6: Introduce Explicit Report Detail DTOs

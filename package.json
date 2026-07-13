@@ -19,6 +19,7 @@
     "test:e2e:real-cloud": "RUN_REAL_CLOUD=1 node --test tests/e2e-real-cloud.test.js",
     "test:e2e:fullpage": "npm run test:e2e:core",
     "perf:baseline": "node scripts/performance-report.js",
+    "perf:timeline": "node scripts/timeline-payload-baseline.js",
     "test:e2e-real-image": "npm run test:e2e:real-image",
     "test:devtools-english": "npm run test:e2e:english",
     "test:devtools-parent-timeline": "node scripts/devtools-parent-timeline-e2e.js",
@@ -30,7 +31,9 @@
     "vocab:english:build": "node scripts/build-english-vocabulary-seed.js",
     "metrics:student": "node scripts/learning-metrics.js",
     "check": "node scripts/check-js.js",
-    "check:deployment": "node --test tests/deployment-readiness.test.js",
+    "check:indexes": "node scripts/check-database-indexes.js",
+    "check:deployment": "npm run check:indexes && node --test tests/deployment-readiness.test.js",
+    "predeploy:check": "node scripts/check-database-indexes.js --require-live-ack && npm run release:check",
     "release:check": "npm run check:deployment && npm run verify && npm run test:coverage",
     "verify": "npm run test:unit && npm run check"
   }

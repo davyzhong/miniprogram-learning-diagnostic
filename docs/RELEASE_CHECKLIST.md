@@ -28,6 +28,12 @@ git diff --check
 /Applications/wechatwebdevtools.app/Contents/MacOS/cli preview --project "/Users/qiming/Downloads/GoogleDrive/AI Learning/miniprogram-learning-diagnostic" --qr-output terminal --lang zh
 ```
 
+如果本次包含云函数或数据库查询变更，先在云控制台确认 `database/indexes.json` 中的索引已生效，再执行：
+
+```bash
+CLOUDBASE_INDEXES_VERIFIED=1 npm run predeploy:check
+```
+
 `release:check` 当前等价于：
 
 ```bash
