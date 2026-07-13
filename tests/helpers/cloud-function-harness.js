@@ -19,7 +19,7 @@ function matches(document, filter) {
 }
 
 function createDatabase(initial = {}, options = {}) {
-  const collections = Object.fromEntries(
+  let collections = Object.fromEntries(
     Object.entries(initial).map(([name, items]) => [name, clone(items)])
   )
   const missingCollections = new Set(options.missingCollections || [])
@@ -76,6 +76,7 @@ function createDatabase(initial = {}, options = {}) {
           const items = getItems(name)
           const document = items.find(item => item._id === id)
           if (!document) throw new Error(`${name}/${id} not found`)
+          if (options.beforeUpdate) options.beforeUpdate({ collection: name, id, data: clone(data) })
           applyUpdate(document, data)
           return { stats: { updated: 1 } }
         }
@@ -108,27 +109,56 @@ function createDatabase(initial = {}, options = {}) {
             projection = fields
             return query
           },
-          get: async () => ({
-            data: clone(selected
+          get: async () => {
+            const effectiveProjection = options.ignoreProjection ? null : projection
+            const data = clone(selected
               .slice(offset, count === null ? undefined : offset + count)
               .map(item => {
-                if (!projection) return item
+                if (!effectiveProjection) return item
                 const projected = {}
-                for (const [key, include] of Object.entries(projection)) {
-                  if (include && item[key] !== undefined) projected[key] = item[key]
+                for (const [key, include] of Object.entries(effectiveProjection)) {
+                  if (!include) continue
+                  if (key.includes('.')) {
+                    const [root, child] = key.split('.')
+                    if (Array.isArray(item[root])) {
+                      projected[root] = item[root].map(value => (
+                        value && value[child] !== undefined ? { [child]: value[child] } : {}
+                      ))
+                    }
+                  } else if (item[key] !== undefined) {
+                    projected[key] = item[key]
+                  }
                 }
-                if (projection._id !== false && item._id !== undefined) projected._id = item._id
+                if (effectiveProjection._id !== false && item._id !== undefined) projected._id = item._id
                 return projected
               }))
-          })
+            if (options.onQuery) {
+              options.onQuery({ collection: name, data: clone(data), projection: clone(effectiveProjection) })
+            }
+            return { data }
+          }
         }
         return query
       }
     }
   }
 
-  return {
+  let transactionQueue = Promise.resolve()
+  const database = {
     collection,
+    runTransaction: async callback => {
+      const run = transactionQueue.then(async () => {
+        const snapshot = clone(collections)
+        try {
+          return await callback({ collection })
+        } catch (error) {
+          collections = snapshot
+          throw error
+        }
+      })
+      transactionQueue = run.catch(() => {})
+      return run
+    },
     createCollection: async name => {
       missingCollections.delete(name)
       getItems(name)
@@ -146,6 +176,7 @@ function createDatabase(initial = {}, options = {}) {
     serverDate: () => new Date('2026-06-11T12:00:00+08:00'),
     dump: name => clone(getItems(name))
   }
+  return database
 }
 
 function createCloudMock(options = {}) {

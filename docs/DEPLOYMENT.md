@@ -20,6 +20,15 @@ git diff --check
 - `config.json`
 - 合法 `timeout`
 - 前端 `miniprogram/utils/cloud.js` 是否暴露对应调用封装
+- `database/indexes.json` 是否声明代码依赖的数据库索引
+
+部署前还必须在云控制台确认清单内索引已进入“正常”状态，再执行：
+
+```bash
+CLOUDBASE_INDEXES_VERIFIED=1 npm run predeploy:check
+```
+
+不要在索引仍处于创建中或失败状态时设置 `CLOUDBASE_INDEXES_VERIFIED`。
 
 ## 2. 必须部署的云函数
 
@@ -51,7 +60,7 @@ git diff --check
   --project "/Users/qiming/Downloads/GoogleDrive/AI Learning/miniprogram-learning-diagnostic"
 ```
 
-然后在开发者工具中逐个上传并部署上述云函数。建议部署顺序：
+先按第 4 节创建数据库索引并等待生效，再在开发者工具中逐个上传并部署上述云函数。建议部署顺序：
 
 1. `studentAccess`
 2. `studentData`
@@ -81,6 +90,7 @@ AI 用量账本相关改动需要同步部署 `aiUsage`、`analyzeBatch`、`gene
 | 集合 | 索引字段 | 排序 |
 | --- | --- | --- |
 | `reports` | `studentId`, `subject`, `createdAt`, `_openid` | 升序、升序、降序、升序 |
+| `analysisTasks` | `reportId`, `createdAt` | 升序、降序 |
 | `papers` | `studentId`, `subject`, `type`, `grade`, `paperKey`, `_openid` | 全部升序 |
 | `learningResourcePacks` | `studentId`, `subject`, `updatedAt`, `_openid` | 升序、升序、降序、升序 |
 | `studentEnglishWords` | `studentId`, `masteryStatus`, `nextReviewAt` | 升序、升序、升序 |
@@ -90,7 +100,7 @@ AI 用量账本相关改动需要同步部署 `aiUsage`、`analyzeBatch`、`gene
 
 操作路径：`云开发控制台 → 数据库 → 对应集合 → 索引管理 → 新建索引`。开发者工具中 `cloud://createindex` 链接经常超时，直接到控制台手动建更可靠。创建后通常需等待几十秒到数分钟生效。
 
-> 注：`subjectProfiles` 仅按 `studentId` 查询后内存筛选 `subject`（每个学生最多 3 条），用 `studentId + _openid` 索引即可，不需要三字段复合索引。`analysisTasks` 数据量小（每份报告 1-2 条），靠默认 `_id` 索引即可，无需额外建索引。
+> 注：`subjectProfiles` 仅按 `studentId` 查询后内存筛选 `subject`（每个学生最多 3 条），用 `studentId + _openid` 索引即可，不需要三字段复合索引。`analysisTasks` 的进度轮询按 `reportId` 过滤并按 `createdAt` 倒序，因此必须先建立清单中的复合索引，再部署新版 `getAnalysisProgress` 和 `analyzePhotos`。
 
 ## 5. 预览构建
 

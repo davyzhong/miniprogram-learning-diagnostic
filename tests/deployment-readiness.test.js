@@ -165,7 +165,7 @@ test('deployment workflow is documented and exposed as a package script', () => 
   assert.ok(exists('docs/DEPLOYMENT.md'), 'deployment guide should exist')
   assert.match(read('docs/DEPLOYMENT.md'), /微信开发者工具 CLI/)
   assert.match(read('docs/DEPLOYMENT.md'), /uploadAndAnalyze/)
-  assert.equal(pkg.scripts['check:deployment'], 'node --test tests/deployment-readiness.test.js')
+  assert.equal(pkg.scripts['check:deployment'], 'npm run check:indexes && node --test tests/deployment-readiness.test.js')
   assert.ok(
     /tests\/deployment-readiness\.test\.js/.test(pkg.scripts.test) ||
       (pkg.scripts.test === 'npm run test:unit' &&
@@ -187,6 +187,24 @@ test('release and rollback workflow is documented and exposed as a package scrip
   assert.match(checklist, /回滚/)
   assert.equal(pkg.scripts['release:check'], 'npm run check:deployment && npm run verify && npm run test:coverage')
   assert.match(read('README.md'), /docs\/RELEASE_CHECKLIST\.md/)
+})
+
+test('analysis task hot query has a machine-checked index and a deploy acknowledgement gate', () => {
+  assert.ok(exists('database/indexes.json'), 'database index manifest should exist')
+  assert.ok(exists('scripts/check-database-indexes.js'), 'database index preflight should exist')
+  const manifest = JSON.parse(read('database/indexes.json'))
+  const analysisIndex = manifest.indexes.find(index => index.collection === 'analysisTasks')
+  assert.deepEqual(analysisIndex.fields, [
+    { field: 'reportId', order: 'asc' },
+    { field: 'createdAt', order: 'desc' }
+  ])
+
+  const pkg = JSON.parse(read('package.json'))
+  assert.match(pkg.scripts['check:deployment'], /check:indexes/)
+  assert.match(pkg.scripts['check:indexes'], /check-database-indexes/)
+  assert.match(pkg.scripts['predeploy:check'], /--require-live-ack/)
+  assert.match(read('docs/DEPLOYMENT.md'), /CLOUDBASE_INDEXES_VERIFIED/)
+  assert.match(read('docs/DEPLOYMENT.md'), /索引.*云函数/s)
 })
 
 // ── Project structural integrity (merged from project-integrity.test.js) ──

@@ -407,7 +407,14 @@ test('getAnalysisProgress returns the newest task and rejects other owners', asy
   const db = createDatabase({
     reports: [{ _id: 'report-1', _openid: 'owner-1' }],
     analysisTasks: [
-      { _id: 'old', reportId: 'report-1', completedBatches: 1, totalBatches: 3, createdAt: '2026-06-11T10:00:00Z' },
+      ...Array.from({ length: 100 }, (_, index) => ({
+        _id: `old-${index}`,
+        reportId: 'report-1',
+        status: 'failed',
+        completedBatches: 1,
+        totalBatches: 3,
+        createdAt: `2026-06-10T${String(index % 24).padStart(2, '0')}:00:00Z`
+      })),
       { _id: 'new', reportId: 'report-1', status: 'processing', completedBatches: 2, totalBatches: 3, createdAt: '2026-06-11T11:00:00Z' }
     ]
   })

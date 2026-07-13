@@ -82,12 +82,15 @@ function currentMonth() {
   return `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`
 }
 
-function monthFilter(openId, month) {
+function monthFilter(openId, month, snapshotAt) {
   const filter = { _openid: openId }
   const range = beijingMonthRange(month)
   const _ = db.command
-  if (range && _ && typeof _.and === 'function') {
-    filter.createdAt = _.and([_.gte(range.start), _.lt(range.end)])
+  if (_ && typeof _.and === 'function') {
+    const conditions = []
+    if (range) conditions.push(_.gte(range.start), _.lt(range.end))
+    if (snapshotAt) conditions.push(_.lte(snapshotAt))
+    if (conditions.length > 0) filter.createdAt = _.and(conditions)
   }
   return filter
 }
@@ -127,11 +130,12 @@ async function getSummary(event, openId) {
   if (!openId) return { success: false, error: '未登录' }
   const month = event.month || currentMonth()
   const events = []
+  const snapshotAt = new Date()
   let offset = 0
   try {
     while (true) {
       const res = await db.collection('aiUsageEvents')
-        .where(monthFilter(openId, month))
+        .where(monthFilter(openId, month, snapshotAt))
         .orderBy('createdAt', 'desc')
         .skip(offset)
         .limit(SUMMARY_PAGE_SIZE)
@@ -145,7 +149,7 @@ async function getSummary(event, openId) {
     if (isMissingCollectionError(error)) return emptySummary(month)
     throw error
   }
-  return aggregateSummary(events, month)
+  return aggregateSummary(events, month, snapshotAt)
 }
 
 function emptySummary(month) {
@@ -164,7 +168,7 @@ function emptySummary(month) {
   }
 }
 
-function aggregateSummary(events, month) {
+function aggregateSummary(events, month, aggregatedAt = new Date()) {
   let totalTokens = 0
   let totalCostCny = 0
   const students = new Set()
@@ -202,7 +206,7 @@ function aggregateSummary(events, month) {
     byEventType: Object.values(byEventTypeMap).sort((a, b) => b.totalCostCny - a.totalCostCny),
     byModel: Object.values(byModelMap).sort((a, b) => b.totalCostCny - a.totalCostCny),
     isComplete: true,
-    aggregatedAt: new Date()
+    aggregatedAt
   }
 }
 

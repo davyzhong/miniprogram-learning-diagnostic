@@ -24,6 +24,44 @@ const STATUS_REPORT_STATES = new Set(['pending', 'uploading', 'analyzing', 'fail
 const STALE_STATUS_MS = 30 * 60 * 1000;
 const HOME_SUBJECTS = ['math', 'chinese', 'english'];
 const HOME_BATCH_LIMIT = 100;
+const HOME_PROFILE_FIELDS = {
+  studentId: true, subject: true, subjectName: true, totalReports: true,
+  currentSummary: true, currentBottlenecks: true, pendingBottlenecks: true,
+  improvedBottlenecks: true, hidden: true, visible: true, updatedAt: true,
+};
+const HOME_REPORT_FIELDS = {
+  studentId: true, subject: true, subjectName: true, type: true, status: true,
+  isEffective: true, summary: true, comparisonSummary: true, changeSummary: true,
+  bottlenecks: true, totalErrors: true, evidenceTime: true, createdAt: true,
+  isArchived: true, archivedAt: true,
+};
+const HOME_PAPER_FIELDS = {
+  studentId: true, subject: true, subjectName: true, type: true, generationStatus: true,
+  paperCode: true, paperDisplayCode: true, questionCount: true, totalPages: true,
+  bottleneckSummaries: true, pdfFileId: true, generatedAt: true, createdAt: true,
+};
+const TIMELINE_REPORT_FIELDS = {
+  studentId: true, subject: true, type: true, status: true, summary: true, comparisonSummary: true,
+  paperId: true, totalErrors: true, bottleneckSummaries: true, bottlenecks: true,
+  imageFileIds: true, 'imageFiles.fileID': true,
+  verificationEvidence: true, verificationPageCodes: true, verificationPageEvidence: true,
+  evidenceTime: true, createdAt: true, updatedAt: true, isArchived: true, archivedAt: true,
+};
+const TIMELINE_PAPER_FIELDS = {
+  studentId: true, subject: true, type: true, paperCode: true, paperDisplayCode: true,
+  bottleneckTargets: true, bottleneckSummaries: true, questionCount: true, pdfFileId: true,
+  paperDate: true, grade: true, verificationPack: true, generatedAt: true, createdAt: true, updatedAt: true,
+};
+const TIMELINE_ENGLISH_FIELDS = {
+  studentId: true, functionType: true, type: true, status: true, analysisStatus: true,
+  wordCount: true, wordItems: true, attempts: true, attemptCount: true, correctAttemptCount: true,
+  incorrectAttemptCount: true, unclearAttemptCount: true, dictationResults: true, photoFileIds: true,
+  createdAt: true, completedAt: true, submittedAt: true, analyzedAt: true, updatedAt: true,
+};
+const TIMELINE_RESOURCE_FIELDS = {
+  studentId: true, subject: true, title: true, status: true, target: true, estimatedMinutes: true,
+  completedAt: true, scheduledVerificationAt: true, createdAt: true, updatedAt: true,
+};
 
 function success(data = {}) {
   return { success: true, ...data };
@@ -158,44 +196,85 @@ async function getAccessibleHomeStudents(openId) {
   return Array.from(byId.values()).sort((a, b) => toTime(b.student.createdAt) - toTime(a.student.createdAt));
 }
 
+function isHomeReportCandidate(report) {
+  return report.status === 'completed'
+    && !isArchivedReport(report)
+    && (report.isEffective === undefined || report.isEffective === true);
+}
+
+function isHomePaperCandidate(paper) {
+  return paper.type === 'verification' || paper.paperDisplayCode || paper.paperCode;
+}
+
+async function findLatestHomeRow(collectionName, studentId, fields, predicate, extraFilter = {}) {
+  let offset = 0;
+  while (true) {
+    const res = await db.collection(collectionName)
+      .where({ studentId, ...extraFilter })
+      .field(fields)
+      .orderBy('createdAt', 'desc')
+      .skip(offset)
+      .limit(HOME_BATCH_LIMIT)
+      .get();
+    const page = res.data || [];
+    const match = page.find(predicate);
+    if (match || page.length < HOME_BATCH_LIMIT) return match || null;
+    offset += HOME_BATCH_LIMIT;
+  }
+}
+
 async function getHomeDashboard(openId) {
   const accessible = await getAccessibleHomeStudents(openId);
   if (accessible.length === 0) return success({ children: [] });
   const studentIds = accessible.map(item => item.student._id);
   const studentFilter = { studentId: db.command.in(studentIds) };
   const [profilesRes, reportsRes, papersRes] = await Promise.all([
-    db.collection('subjectProfiles').where(studentFilter).field({
-      studentId: true, subject: true, subjectName: true, totalReports: true,
-      currentSummary: true, currentBottlenecks: true, pendingBottlenecks: true,
-      improvedBottlenecks: true, hidden: true, visible: true, updatedAt: true,
-    }).limit(HOME_BATCH_LIMIT).get(),
-    db.collection('reports').where(studentFilter).field({
-      studentId: true, subject: true, subjectName: true, type: true, status: true,
-      isEffective: true, summary: true, comparisonSummary: true, changeSummary: true,
-      bottlenecks: true, totalErrors: true, evidenceTime: true, createdAt: true,
-      isArchived: true, archivedAt: true,
-    }).orderBy('createdAt', 'desc').limit(HOME_BATCH_LIMIT).get(),
-    db.collection('papers').where(studentFilter).field({
-      studentId: true, subject: true, subjectName: true, type: true, generationStatus: true,
-      paperCode: true, paperDisplayCode: true, questionCount: true, totalPages: true,
-      bottleneckSummaries: true, pdfFileId: true, generatedAt: true, createdAt: true,
-    }).orderBy('createdAt', 'desc').limit(HOME_BATCH_LIMIT).get(),
+    db.collection('subjectProfiles').where(studentFilter).field(HOME_PROFILE_FIELDS).limit(HOME_BATCH_LIMIT).get(),
+    db.collection('reports').where(studentFilter).field(HOME_REPORT_FIELDS)
+      .orderBy('createdAt', 'desc').limit(HOME_BATCH_LIMIT).get(),
+    db.collection('papers').where(studentFilter).field(HOME_PAPER_FIELDS)
+      .orderBy('createdAt', 'desc').limit(HOME_BATCH_LIMIT).get(),
   ]);
-  const profiles = profilesRes.data || [];
-  const reports = visibleReports(reportsRes.data || []).map(homeReport);
-  const papers = (papersRes.data || []).map(homePaper);
+  const profileRows = profilesRes.data || [];
+  const reportRows = reportsRes.data || [];
+  const paperRows = papersRes.data || [];
+  const profiles = [...profileRows];
+  const reports = visibleReports(reportRows).map(homeReport);
+  const papers = paperRows.map(homePaper);
+  const missingProfileIds = profileRows.length < HOME_BATCH_LIMIT ? [] : studentIds.filter(studentId => (
+    !profiles.some(profile => profile.studentId === studentId)
+  ));
+  const missingReportIds = reportRows.length < HOME_BATCH_LIMIT ? [] : studentIds.filter(studentId => !reports.some(report => (
+    report.studentId === studentId && isHomeReportCandidate(report)
+  )));
+  const missingPaperIds = paperRows.length < HOME_BATCH_LIMIT ? [] : studentIds.filter(studentId => !papers.some(paper => (
+    paper.studentId === studentId && isHomePaperCandidate(paper)
+  )));
+  const [profileFallbacks, reportFallbacks, paperFallbacks] = await Promise.all([
+    Promise.all(missingProfileIds.map(studentId => (
+      db.collection('subjectProfiles').where({ studentId }).field(HOME_PROFILE_FIELDS).limit(HOME_SUBJECTS.length).get()
+    ))),
+    Promise.all(missingReportIds.map(studentId => (
+      findLatestHomeRow('reports', studentId, HOME_REPORT_FIELDS, isHomeReportCandidate, { status: 'completed' })
+    ))),
+    Promise.all(missingPaperIds.map(studentId => (
+      findLatestHomeRow('papers', studentId, HOME_PAPER_FIELDS, isHomePaperCandidate)
+    ))),
+  ]);
+  profiles.push(...profileFallbacks.flatMap(result => result.data || []));
+  reports.push(...reportFallbacks.filter(Boolean).map(homeReport));
+  papers.push(...paperFallbacks.filter(Boolean).map(homePaper));
 
   return success({
     children: accessible.map(({ student, role }) => {
       const studentProfiles = profiles.filter(profile => profile.studentId === student._id);
       const latestReport = reports.find(report => (
         report.studentId === student._id
-        && report.status === 'completed'
-        && (report.isEffective === undefined || report.isEffective === true)
+        && isHomeReportCandidate(report)
       ));
       const latestPaper = papers.find(paper => (
         paper.studentId === student._id
-        && (paper.type === 'verification' || paper.paperDisplayCode || paper.paperCode)
+        && isHomePaperCandidate(paper)
       ));
       return {
         student: homeStudent(student, role),
@@ -239,35 +318,38 @@ async function getSubjectProfiles(studentId) {
   return (res.data || []).sort((a, b) => toTime(b.updatedAt) - toTime(a.updatedAt));
 }
 
-async function getReports(studentId, subject, limit = 20, cursor = '') {
+async function getReports(studentId, subject, limit = 20, cursor = '', projection = null) {
   const filter = subject
     ? { studentId, subject, ...cursorFilter(cursor) }
     : { studentId, ...cursorFilter(cursor) };
-  const res = await db.collection('reports')
-    .where(filter)
+  let query = db.collection('reports').where(filter);
+  if (projection) query = query.field(projection);
+  const res = await query
     .orderBy('createdAt', 'desc')
     .limit(limit)
     .get();
   return visibleReports(res.data || []);
 }
 
-async function getPapers(studentId, subject, limit = 20, cursor = '') {
+async function getPapers(studentId, subject, limit = 20, cursor = '', projection = null) {
   const filter = subject
     ? { studentId, subject, ...cursorFilter(cursor) }
     : { studentId, ...cursorFilter(cursor) };
-  const res = await db.collection('papers')
-    .where(filter)
+  let query = db.collection('papers').where(filter);
+  if (projection) query = query.field(projection);
+  const res = await query
     .orderBy('createdAt', 'desc')
     .limit(limit)
     .get();
   return res.data || [];
 }
 
-async function getEnglishSessions(studentId, subject, limit = 50, cursor = '') {
+async function getEnglishSessions(studentId, subject, limit = 50, cursor = '', projection = null) {
   if (subject && subject !== 'english') return [];
   const filter = { studentId, ...cursorFilter(cursor) };
-  const res = await db.collection('englishPracticeSessions')
-    .where(filter)
+  let query = db.collection('englishPracticeSessions').where(filter);
+  if (projection) query = query.field(projection);
+  const res = await query
     .orderBy('createdAt', 'desc')
     .limit(limit)
     .get();
@@ -281,13 +363,14 @@ function resourceCursorFilter(cursor) {
   return cursor ? { updatedAt: db.command.lt(cursor) } : {};
 }
 
-async function getLearningResourcePacks(studentId, subject, limit = 50, cursor = '') {
+async function getLearningResourcePacks(studentId, subject, limit = 50, cursor = '', projection = null) {
   const filter = subject
     ? { studentId, subject, ...resourceCursorFilter(cursor) }
     : { studentId, ...resourceCursorFilter(cursor) };
   try {
-    const res = await db.collection('learningResourcePacks')
-      .where(filter)
+    let query = db.collection('learningResourcePacks').where(filter);
+    if (projection) query = query.field(projection);
+    const res = await query
       .orderBy('updatedAt', 'desc')
       .limit(limit)
       .get();
@@ -399,6 +482,10 @@ function summarizeEnglishSessionForTimeline(session = {}) {
       judgment: item.judgment || null,
       status: item.status || '',
     })),
+    attemptCount: Number(session.attemptCount) || 0,
+    correctAttemptCount: Number(session.correctAttemptCount) || 0,
+    incorrectAttemptCount: Number(session.incorrectAttemptCount) || 0,
+    unclearAttemptCount: Number(session.unclearAttemptCount) || 0,
     dictationResults: (session.dictationResults || []).map(item => ({
       wordId: item.wordId || '',
       targetWord: item.targetWord || '',
@@ -599,10 +686,10 @@ async function getLearningTimeline(openId, studentId, subjectValue, options = {}
   const cursor = normalizeCursor(options.cursor);
   const fetchLimit = normalizeLimit(limit + 1, limit + 1, 101);
   const [reports, papers, englishSessions, learningResourcePacks] = await Promise.all([
-    getReports(studentId, subject, fetchLimit, cursor),
-    getPapers(studentId, subject, fetchLimit, cursor),
-    getEnglishSessions(studentId, subject, fetchLimit, cursor),
-    getLearningResourcePacks(studentId, subject, fetchLimit, cursor),
+    getReports(studentId, subject, fetchLimit, cursor, TIMELINE_REPORT_FIELDS),
+    getPapers(studentId, subject, fetchLimit, cursor, TIMELINE_PAPER_FIELDS),
+    getEnglishSessions(studentId, subject, fetchLimit, cursor, TIMELINE_ENGLISH_FIELDS),
+    getLearningResourcePacks(studentId, subject, fetchLimit, cursor, TIMELINE_RESOURCE_FIELDS),
   ]);
   const candidates = [
     ...reports.map(report => ({

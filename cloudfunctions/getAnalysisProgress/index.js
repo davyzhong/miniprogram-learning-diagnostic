@@ -27,14 +27,15 @@ exports.main = async (event) => {
 
     const taskRes = await db.collection('analysisTasks')
       .where({ reportId })
+      .orderBy('createdAt', 'desc')
+      .limit(1)
       .get();
 
     if (taskRes.data.length === 0) {
       return { success: false, error: '未找到分析任务' };
     }
 
-    const task = taskRes.data
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+    const task = taskRes.data[0];
     return {
       success: true,
       reportId,

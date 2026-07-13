@@ -301,9 +301,10 @@ async function finishAlreadyCompletedReport(reportId, report, subject) {
 async function recoverStaleAnalysisTask(reportId) {
   const existingTasksRes = await db.collection('analysisTasks')
     .where({ reportId })
+    .orderBy('createdAt', 'desc')
+    .limit(20)
     .get();
-  const existingTasks = existingTasksRes.data
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  const existingTasks = existingTasksRes.data || [];
   const processingTask = existingTasks.find(task => task.status === 'processing');
 
   if (!processingTask) return null;
