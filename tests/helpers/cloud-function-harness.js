@@ -19,7 +19,7 @@ function matches(document, filter) {
 }
 
 function createDatabase(initial = {}, options = {}) {
-  const collections = Object.fromEntries(
+  let collections = Object.fromEntries(
     Object.entries(initial).map(([name, items]) => [name, clone(items)])
   )
   const missingCollections = new Set(options.missingCollections || [])
@@ -62,6 +62,11 @@ function createDatabase(initial = {}, options = {}) {
         assertCollectionExists(name)
         const items = getItems(name)
         const _id = data._id || `${name}-${nextId++}`
+        if (items.some(item => item._id === _id)) {
+          const error = new Error(`${name}/${_id} already exists`)
+          error.errCode = -502001
+          throw error
+        }
         items.push({ _id, ...clone(data) })
         return { _id }
       },
@@ -76,6 +81,7 @@ function createDatabase(initial = {}, options = {}) {
           const items = getItems(name)
           const document = items.find(item => item._id === id)
           if (!document) throw new Error(`${name}/${id} not found`)
+          if (options.beforeUpdate) options.beforeUpdate({ collection: name, id, data: clone(data) })
           applyUpdate(document, data)
           return { stats: { updated: 1 } }
         }
@@ -86,12 +92,24 @@ function createDatabase(initial = {}, options = {}) {
         let selected = items.filter(item => matches(item, filter))
         let skipCount = 0
         let projection = null
-        const applyProjection = () => {
-          if (!projection) return
+        const projectedItems = items => {
+          if (!projection || options.ignoreProjection) return items
           const fields = Object.keys(projection).filter(k => projection[k])
-          selected = selected.map(doc => {
+          return items.map(doc => {
             const out = {}
-            for (const f of fields) { if (f in doc) out[f] = doc[f] }
+            for (const field of fields) {
+              if (field.includes('.')) {
+                const [root, child] = field.split('.')
+                if (Array.isArray(doc[root])) {
+                  out[root] = doc[root].map(value => (
+                    value && value[child] !== undefined ? { [child]: value[child] } : {}
+                  ))
+                }
+              } else if (field in doc) {
+                out[field] = doc[field]
+              }
+            }
+            if (projection._id !== false && doc._id !== undefined) out._id = doc._id
             return out
           })
         }
@@ -114,12 +132,14 @@ function createDatabase(initial = {}, options = {}) {
           },
           limit(count) {
             selected = selected.slice(skipCount, skipCount + count)
-            applyProjection()
             return query
           },
           get: async () => {
-            applyProjection()
-            return { data: clone(selected) }
+            const data = clone(projectedItems(selected))
+            if (options.onQuery) {
+              options.onQuery({ collection: name, data: clone(data), projection: clone(projection) })
+            }
+            return { data }
           }
         }
         return query
@@ -127,8 +147,22 @@ function createDatabase(initial = {}, options = {}) {
     }
   }
 
-  return {
+  let transactionQueue = Promise.resolve()
+  const database = {
     collection,
+    runTransaction: async callback => {
+      const run = transactionQueue.then(async () => {
+        const snapshot = clone(collections)
+        try {
+          return await callback({ collection })
+        } catch (error) {
+          collections = snapshot
+          throw error
+        }
+      })
+      transactionQueue = run.catch(() => {})
+      return run
+    },
     createCollection: async name => {
       missingCollections.delete(name)
       getItems(name)
@@ -142,12 +176,13 @@ function createDatabase(initial = {}, options = {}) {
       lte: value => ({ __queryOp: 'lte', value }),
       gt: value => ({ __queryOp: 'gt', value }),
       gte: value => ({ __queryOp: 'gte', value }),
-      in: values => ({ __queryOp: 'in', values }),
+      in: values => ({ __queryOp: 'in', values: clone(values || []) }),
       and: conditions => ({ __queryOp: 'and', conditions })
     },
     serverDate: () => new Date('2026-06-11T12:00:00+08:00'),
     dump: name => clone(getItems(name))
   }
+  return database
 }
 
 function createCloudMock(options = {}) {

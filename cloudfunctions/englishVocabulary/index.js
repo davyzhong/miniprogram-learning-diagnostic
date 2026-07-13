@@ -1,5 +1,6 @@
 const cloud = require('wx-server-sdk')
 const tcb = require('@cloudbase/node-sdk')
+const crypto = require('node:crypto')
 const { getStudentAccess, canReadLearning, canOperateLearning } = require('./access')
 const {
   cleanText,
@@ -127,6 +128,56 @@ async function getDocument(name, id) {
 
 async function updateDocument(name, id, data) {
   return db.collection(name).doc(id).update({ data })
+}
+
+function attemptDocumentId(event, kind) {
+  const queueIdentity = cleanText(event.queueKey, 120) || `${event.wordId}:${Number(event.retryCount) || 0}`
+  const identity = cleanText(event.attemptId, 120) || [event.sessionId, queueIdentity, kind].join('|')
+  return `attempt_${crypto.createHash('sha256').update(identity).digest('hex').slice(0, 32)}`
+}
+
+function attemptDocument(event, kind, attempt) {
+  const _id = attemptDocumentId(event, kind)
+  return {
+    _id,
+    attemptId: cleanText(event.attemptId, 120) || _id,
+    sessionId: event.sessionId,
+    studentId: event.studentId,
+    kind,
+    ...attempt
+  }
+}
+
+async function persistAttempt(event, kind, attempt, buildWordUpdate) {
+  const document = attemptDocument(event, kind, attempt)
+  await getDocument('englishPracticeAttempts', document._id)
+  return db.runTransaction(async transaction => {
+    const attemptRef = transaction.collection('englishPracticeAttempts').doc(document._id)
+    const existingRes = await attemptRef.get()
+    if (existingRes.data) return { claimed: false, attempt: existingRes.data }
+
+    const wordRef = transaction.collection('studentEnglishWords').doc(event.wordId)
+    const sessionRef = transaction.collection('englishPracticeSessions').doc(event.sessionId)
+    const wordRes = await wordRef.get()
+    const sessionRes = await sessionRef.get()
+    const currentWord = wordRes.data
+    const currentSession = sessionRes.data
+    if (!currentWord) throw new Error('单词不存在')
+    if (!currentSession) throw new Error('练习记录不存在')
+    if (currentWord.studentId !== currentSession.studentId) throw new Error('单词归属与练习记录不匹配')
+
+    await transaction.collection('englishPracticeAttempts').add({ data: document })
+    const wordUpdate = buildWordUpdate(currentWord)
+    if (wordUpdate) await wordRef.update({ data: wordUpdate })
+    await sessionRef.update({
+      data: {
+        status: 'in_progress',
+        attempts: db.command.push(attempt),
+        updatedAt: nowDate()
+      }
+    })
+    return { claimed: true, attempt: document }
+  })
 }
 
 async function getVocabularySummaryCache(studentId, today) {
@@ -824,9 +875,7 @@ async function submitRecognitionAttempt(event) {
     recognizedText: event.recognizedText
   })
   const reviewedAt = event.reviewedAt || new Date()
-  const attemptId = `att-${event.sessionId}-${event.wordId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const attempt = {
-    attemptId,
     queueKey: cleanText(event.queueKey || sessionItem.queueKey, 120),
     wordId: word._id,
     targetWord: word.word,
@@ -841,13 +890,14 @@ async function submitRecognitionAttempt(event) {
     createdAt: nowDate()
   }
 
-  if (judgment.status !== 'unclear') {
-    const updated = applyWordDimensionAttempt(word, 'familiarity', {
+  const claim = await persistAttempt(event, 'recognition', attempt, currentWord => {
+    if (judgment.status === 'unclear') return null
+    const updated = applyWordDimensionAttempt(currentWord, 'familiarity', {
       judgment,
       reviewedAt,
       direction
     })
-    await updateDocument('studentEnglishWords', word._id, {
+    return {
       familiarity: updated.familiarity,
       spelling: updated.spelling,
       overallMastery: updated.overallMastery,
@@ -857,24 +907,16 @@ async function submitRecognitionAttempt(event) {
       lastReviewedAt: updated.familiarity.lastTestedAt,
       nextReviewAt: updated.familiarity.nextReviewAt,
       updatedAt: nowDate()
-    })
-    await markVocabularySummaryDirty(event.studentId)
-  }
-
-  // 原子追加：用 db.command.push 避免全量替换导致的并发覆盖
-  const _ = db.command
-  await db.collection('englishPracticeSessions').doc(event.sessionId).update({
-    data: {
-      status: 'in_progress',
-      attempts: _.push(attempt),
-      updatedAt: nowDate()
     }
   })
+  if (judgment.status !== 'unclear') await markVocabularySummaryDirty(event.studentId)
+  const effectiveJudgment = claim.attempt.judgment || judgment
 
   return ok({
-    judgment,
-    shouldRepeat: judgment.status !== 'correct',
-    attempt
+    judgment: effectiveJudgment,
+    shouldRepeat: effectiveJudgment.status !== 'correct',
+    attempt: claim.attempt,
+    duplicate: !claim.claimed
   })
 }
 
@@ -893,9 +935,7 @@ async function submitDictationAttempt(event) {
     recognizedText: event.recognizedText
   })
   const reviewedAt = event.reviewedAt || new Date()
-  const attemptId = `att-${event.sessionId}-${event.wordId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const attempt = {
-    attemptId,
     queueKey: cleanText(event.queueKey, 120),
     wordId: word._id,
     targetWord: word.word,
@@ -908,36 +948,29 @@ async function submitDictationAttempt(event) {
     createdAt: nowDate()
   }
 
-  if (judgment.status !== 'unclear') {
-    const updated = applyWordDictationAttempt(word, {
+  const claim = await persistAttempt(event, 'dictation', attempt, currentWord => {
+    if (judgment.status === 'unclear') return null
+    const updated = applyWordDictationAttempt(currentWord, {
       judgment,
       reviewedAt
     })
-    await updateDocument('studentEnglishWords', word._id, {
+    return {
       masteryStatus: updated.masteryStatus,
       correctCount: updated.correctCount,
       wrongCount: updated.wrongCount,
       lastReviewedAt: updated.lastReviewedAt,
       nextReviewAt: updated.nextReviewAt,
       updatedAt: nowDate()
-    })
-    await markVocabularySummaryDirty(event.studentId)
-  }
-
-  // 原子追加：用 db.command.push 避免全量替换导致的并发覆盖
-  const _ = db.command
-  await db.collection('englishPracticeSessions').doc(event.sessionId).update({
-    data: {
-      status: 'in_progress',
-      attempts: _.push(attempt),
-      updatedAt: nowDate()
     }
   })
+  if (judgment.status !== 'unclear') await markVocabularySummaryDirty(event.studentId)
+  const effectiveJudgment = claim.attempt.judgment || judgment
 
   return ok({
-    judgment,
-    shouldRepeat: judgment.status !== 'correct',
-    attempt
+    judgment: effectiveJudgment,
+    shouldRepeat: effectiveJudgment.status !== 'correct',
+    attempt: claim.attempt,
+    duplicate: !claim.claimed
   })
 }
 

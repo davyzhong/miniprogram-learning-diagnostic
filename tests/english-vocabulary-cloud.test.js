@@ -439,6 +439,85 @@ test('submitting English recognition attempts updates only familiarity progress'
   assert.equal(db.dump('studentEnglishVocabularyStats')[0].dirty, true)
 })
 
+test('retrying the same English attempt is idempotent', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [{
+      _id: 'word-1', studentId: 'student-1', word: 'science',
+      masteryStatus: 'untested', correctCount: 0, wrongCount: 0
+    }],
+    englishPracticeSessions: [{
+      _id: 'session-1', studentId: 'student-1', status: 'in_progress', attempts: []
+    }],
+    englishPracticeAttempts: [],
+    studentEnglishVocabularyStats: []
+  })
+  const handler = loadEnglishVocabulary(db)
+  const event = {
+    action: 'submitDictationAttempt',
+    attemptId: 'attempt-idempotent',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    queueKey: 'word-1:0:0',
+    wordId: 'word-1',
+    recognizedText: 'science'
+  }
+
+  const first = await handler.main(event)
+  const retry = await handler.main(event)
+
+  assert.equal(first.success, true)
+  assert.equal(retry.success, true)
+  assert.equal(retry.duplicate, true)
+  assert.equal(db.dump('englishPracticeAttempts').length, 1)
+  assert.equal(db.dump('englishPracticeSessions')[0].attempts.length, 1)
+  assert.equal(db.dump('studentEnglishWords')[0].correctCount, 1)
+})
+
+test('English attempt transaction rolls back fully and a retry can complete it', async () => {
+  let failSessionUpdate = true
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentEnglishWords: [{
+      _id: 'word-1', studentId: 'student-1', word: 'science',
+      masteryStatus: 'untested', correctCount: 0, wrongCount: 0
+    }],
+    englishPracticeSessions: [{
+      _id: 'session-1', studentId: 'student-1', status: 'in_progress', attempts: []
+    }],
+    englishPracticeAttempts: [],
+    studentEnglishVocabularyStats: []
+  }, {
+    beforeUpdate: ({ collection }) => {
+      if (collection === 'englishPracticeSessions' && failSessionUpdate) {
+        failSessionUpdate = false
+        throw new Error('simulated session update failure')
+      }
+    }
+  })
+  const handler = loadEnglishVocabulary(db)
+  const event = {
+    action: 'submitDictationAttempt',
+    attemptId: 'attempt-recoverable',
+    studentId: 'student-1',
+    sessionId: 'session-1',
+    queueKey: 'word-1:0:0',
+    wordId: 'word-1',
+    recognizedText: 'science'
+  }
+
+  await assert.rejects(handler.main(event), /simulated session update failure/)
+  assert.equal(db.dump('englishPracticeAttempts').length, 0)
+  assert.equal(db.dump('studentEnglishWords')[0].correctCount, 0)
+  assert.equal(db.dump('englishPracticeSessions')[0].attempts.length, 0)
+
+  const retry = await handler.main(event)
+  assert.equal(retry.success, true)
+  assert.equal(db.dump('englishPracticeAttempts').length, 1)
+  assert.equal(db.dump('studentEnglishWords')[0].correctCount, 1)
+  assert.equal(db.dump('englishPracticeSessions')[0].attempts.length, 1)
+})
+
 test('English paper dictation sessions generate spelling words without updating progress', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],

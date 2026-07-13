@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "indexes": [
+    {
+      "collection": "analysisTasks",
+      "name": "report_created_desc",
+      "fields": [
+        { "field": "reportId", "order": "asc" },
+        { "field": "createdAt", "order": "desc" }
+      ],
+      "requiredBy": [
+        "cloudfunctions/getAnalysisProgress/index.js",
+        "cloudfunctions/analyzePhotos/index.js"
+      ]
+    }
+  ]
+}

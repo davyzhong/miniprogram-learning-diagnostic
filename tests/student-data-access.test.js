@@ -5,6 +5,7 @@ const {
   createDatabase,
   loadModule
 } = require('./helpers/cloud-function-harness')
+const { measureTimelinePayload } = require('../scripts/timeline-payload-baseline')
 
 function loadStudentData(db, openId = 'viewer-1') {
   return loadModule('cloudfunctions/studentData/index.js', {
@@ -530,6 +531,56 @@ test('getHomeDashboard batches joined students without serial member loop', asyn
   assert.equal(result.students.length, 5)
   // 所有 joined 学生都有 role
   assert.ok(result.students.every(s => s.role === 'viewer'))
+})
+
+test('getHomeDashboard does not let one child consume the family-wide history limit', async () => {
+  const dominantReports = Array.from({ length: 21 }, (_, index) => ({
+    _id: `dominant-report-${index}`,
+    studentId: 'student-a',
+    subject: 'math',
+    status: 'completed',
+    summary: `A-${index}`,
+    createdAt: `2026-07-12T10:${String(index).padStart(2, '0')}:00Z`
+  }))
+  const dominantPapers = Array.from({ length: 21 }, (_, index) => ({
+    _id: `dominant-paper-${index}`,
+    studentId: 'student-a',
+    subject: 'math',
+    type: 'verification',
+    paperDisplayCode: `A-${index}`,
+    createdAt: `2026-07-12T10:${String(index).padStart(2, '0')}:30Z`
+  }))
+  const db = createDatabase({
+    students: [
+      { _id: 'student-a', _openid: 'owner-1', name: 'A', createdAt: '2026-01-02T00:00:00Z' },
+      { _id: 'student-b', _openid: 'owner-1', name: 'B', createdAt: '2026-01-01T00:00:00Z' }
+    ],
+    studentMembers: [],
+    subjectProfiles: [],
+    reports: [...dominantReports, {
+      _id: 'student-b-report', studentId: 'student-b', subject: 'math', status: 'completed',
+      summary: 'B latest', createdAt: '2026-06-01T00:00:00Z'
+    }],
+    papers: [...dominantPapers, {
+      _id: 'student-b-paper', studentId: 'student-b', subject: 'math', type: 'verification',
+      paperDisplayCode: 'B-LATEST', createdAt: '2026-06-01T00:00:00Z'
+    }]
+  })
+  const handler = loadStudentData(db, 'owner-1')
+
+  const result = await handler.main({ action: 'getHomeDashboard' })
+
+  assert.equal(result.perStudent['student-b'].latestReportSummary._id, 'student-b-report')
+  assert.equal(result.perStudent['student-b'].latestPaperSummary._id, 'student-b-paper')
+})
+
+test('representative timeline baseline reduces database reads without changing visible ordering', async () => {
+  const metrics = await measureTimelinePayload()
+
+  assert.equal(metrics.visibleOrderingUnchanged, true)
+  assert.equal(metrics.databaseReadReduction >= 0.6, true)
+  assert.equal(metrics.projected.databaseReadBytes < metrics.thresholds.databaseReadBytes, true)
+  assert.equal(metrics.projected.responseBytes < metrics.thresholds.responseBytes, true)
 })
 
 // ── Task 6: 报告详情 DTO ──
