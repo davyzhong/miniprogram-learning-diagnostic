@@ -108,7 +108,7 @@ const REPORT_TIMELINE_FIELDS = {
   _id: true, studentId: true, subject: true, type: true, status: true,
   summary: true, comparisonSummary: true, paperId: true, totalErrors: true,
   bottlenecks: true, bottleneckSummaries: true,
-  imageFiles: true, imageFileIds: true,
+  'imageFiles.fileID': true, imageFileIds: true,
   isArchived: true, archivedAt: true,
   evidenceTime: true, createdAt: true, updatedAt: true,
 };
@@ -125,6 +125,7 @@ const PAPER_TIMELINE_FIELDS = {
 const ENGLISH_SESSION_FIELDS = {
   _id: true, studentId: true, functionType: true, type: true, status: true,
   analysisStatus: true, wordCount: true, wordItems: true, attempts: true,
+  attemptCount: true, correctAttemptCount: true, incorrectAttemptCount: true, unclearAttemptCount: true,
   dictationResults: true, photoFileIds: true,
   createdAt: true, completedAt: true, submittedAt: true, analyzedAt: true, updatedAt: true,
 };
@@ -134,6 +135,21 @@ const RESOURCE_PACK_FIELDS = {
   target: true, estimatedMinutes: true,
   completedAt: true, scheduledVerificationAt: true,
   createdAt: true, updatedAt: true,
+};
+
+const HOME_PROFILE_FIELDS = {
+  _id: true, studentId: true, subject: true, subjectName: true, totalReports: true,
+  updatedAt: true, currentBottlenecks: true, pendingBottlenecks: true, improvedBottlenecks: true,
+};
+const HOME_REPORT_FIELDS = {
+  _id: true, studentId: true, subject: true, type: true, status: true, createdAt: true,
+  evidenceTime: true, updatedAt: true, summary: true, totalErrors: true, bottlenecks: true,
+  isArchived: true, archivedAt: true,
+};
+const HOME_PAPER_FIELDS = {
+  _id: true, studentId: true, subject: true, type: true, createdAt: true,
+  paperCode: true, paperDisplayCode: true, questionCount: true,
+  generationStatus: true, pdfFileId: true,
 };
 
 async function getSubjectProfiles(studentId) {
@@ -386,13 +402,40 @@ async function getHomeDashboard(openId) {
   if (students.length === 0) return success({ students: [], perStudent: {} });
 
   const allStudentIds = students.map(s => s._id);
+  const homeBatchLimit = Math.min(100, Math.max(10, 10 * allStudentIds.length));
 
   // ── 2. 批量查询所有学生的 subjectProfiles / reports / papers ──
-  const [allProfiles, allReports, allPapers] = await Promise.all([
-    safeGetCollection('subjectProfiles', { studentId: _.in(allStudentIds) }),
-    safeQueryLimited('reports', { studentId: _.in(allStudentIds) }, 'createdAt', 'desc', 10 * allStudentIds.length),
-    safeQueryLimited('papers', { studentId: _.in(allStudentIds) }, 'createdAt', 'desc', 10 * allStudentIds.length),
+  const [profileRows, reportRows, paperRows] = await Promise.all([
+    safeQueryLimited('subjectProfiles', { studentId: _.in(allStudentIds) }, 'updatedAt', 'desc', 100, HOME_PROFILE_FIELDS),
+    safeQueryLimited('reports', { studentId: _.in(allStudentIds) }, 'createdAt', 'desc', homeBatchLimit, HOME_REPORT_FIELDS),
+    safeQueryLimited('papers', { studentId: _.in(allStudentIds) }, 'createdAt', 'desc', homeBatchLimit, HOME_PAPER_FIELDS),
   ]);
+  const allProfiles = [...profileRows];
+  const allReports = [...reportRows];
+  const allPapers = [...paperRows];
+  const missingProfileIds = profileRows.length < 100 ? [] : allStudentIds.filter(studentId => (
+    !profileRows.some(profile => profile.studentId === studentId)
+  ));
+  const missingReportIds = reportRows.length < homeBatchLimit ? [] : allStudentIds.filter(studentId => (
+    visibleReports(reportRows.filter(report => report.studentId === studentId)).length === 0
+  ));
+  const missingPaperIds = paperRows.length < homeBatchLimit ? [] : allStudentIds.filter(studentId => (
+    !paperRows.some(paper => paper.studentId === studentId)
+  ));
+  const [profileFallbacks, reportFallbacks, paperFallbacks] = await Promise.all([
+    Promise.all(missingProfileIds.map(studentId => (
+      safeQueryLimited('subjectProfiles', { studentId }, 'updatedAt', 'desc', 3, HOME_PROFILE_FIELDS)
+    ))),
+    Promise.all(missingReportIds.map(studentId => (
+      findLatestHomeRecord('reports', studentId, HOME_REPORT_FIELDS, record => visibleReports([record]).length > 0)
+    ))),
+    Promise.all(missingPaperIds.map(studentId => (
+      findLatestHomeRecord('papers', studentId, HOME_PAPER_FIELDS, () => true)
+    ))),
+  ]);
+  allProfiles.push(...profileFallbacks.flat());
+  allReports.push(...reportFallbacks.filter(Boolean));
+  allPapers.push(...paperFallbacks.filter(Boolean));
 
   // ── 3. 按学生分组，构建轻量 DTO ──
   const perStudent = {};
@@ -475,17 +518,29 @@ async function safeGetCollection(name, filter) {
   }
 }
 
-async function safeQueryLimited(name, filter, orderByField, orderByDir, limit) {
+async function safeQueryLimited(name, filter, orderByField, orderByDir, limit, projection = null, offset = 0) {
   try {
-    const res = await db.collection(name)
-      .where(filter)
+    let query = db.collection(name).where(filter);
+    if (projection) query = query.field(projection);
+    const res = await query
       .orderBy(orderByField, orderByDir)
+      .skip(offset)
       .limit(limit)
       .get();
     return res.data || [];
   } catch (error) {
     if (isMissingCollectionError(error)) return [];
     throw error;
+  }
+}
+
+async function findLatestHomeRecord(name, studentId, projection, predicate) {
+  let offset = 0;
+  while (true) {
+    const rows = await safeQueryLimited(name, { studentId }, 'createdAt', 'desc', 100, projection, offset);
+    const match = rows.find(predicate);
+    if (match || rows.length < 100) return match || null;
+    offset += 100;
   }
 }
 

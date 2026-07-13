@@ -373,6 +373,49 @@ test('getSummary excludes events outside the Beijing month across pages', async 
   assert.equal(result.totalTokens, 6000)
 })
 
+test('getSummary keeps a stable snapshot when a new event arrives between pages', async () => {
+  const events = generateEvents(600, { month: '2026-07', totalTokens: 10 })
+    .map(event => ({ ...event, createdAt: new Date('2026-07-10T10:00:00Z') }))
+  const db = createDatabase({ aiUsageEvents: events })
+  const originalCollection = db.collection
+  let usagePageReads = 0
+  db.collection = name => {
+    const collection = originalCollection(name)
+    if (name !== 'aiUsageEvents') return collection
+    const originalWhere = collection.where
+    collection.where = filter => {
+      const query = originalWhere(filter)
+      const originalGet = query.get
+      query.get = async () => {
+        const result = await originalGet()
+        usagePageReads += 1
+        if (usagePageReads === 1) {
+          await originalCollection('aiUsageEvents').add({ data: {
+            _id: 'arrived-during-summary',
+            _openid: 'owner-1',
+            eventType: 'paper_generation',
+            model: 'qwen3.5-plus',
+            totalTokens: 999,
+            estimatedCostCny: 1,
+            status: 'succeeded',
+            createdAt: new Date('2026-07-14T00:00:00Z')
+          } })
+        }
+        return result
+      }
+      return query
+    }
+    return collection
+  }
+  const { handler } = loadAiUsage(db)
+
+  const result = await handler.main({ action: 'getSummary', month: '2026-07' })
+
+  assert.equal(result.eventCount, 600)
+  assert.equal(result.totalTokens, 6000)
+  assert.equal(new Date(result.aggregatedAt).getTime() < new Date('2026-07-14T00:00:00Z').getTime(), true)
+})
+
 function round4(value) {
   return Math.round((Number(value) || 0) * 10000) / 10000
 }
