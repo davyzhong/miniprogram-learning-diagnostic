@@ -355,7 +355,10 @@ test('analyzeBatch prompt uses shared bottleneck names instead of drifted inline
 
 test('photo analysis stores per-image OCR summaries and duplicate state', () => {
   const batch = read('cloudfunctions/analyzeBatch/index.js')
-  const analyzer = read('cloudfunctions/analyzePhotos/index.js')
+  const analyzer = [
+    read('cloudfunctions/analyzePhotos/index.js'),
+    read('cloudfunctions/analyzePhotos/analysis-artifacts.js')
+  ].join('\n')
   const upload = read('cloudfunctions/uploadAndAnalyze/index.js')
 
   assert.match(batch, /pageResults/)
@@ -368,7 +371,10 @@ test('photo analysis stores per-image OCR summaries and duplicate state', () => 
 })
 
 test('duplicate photos are retained but excluded from diagnostic aggregation', () => {
-  const analyzer = read('cloudfunctions/analyzePhotos/index.js')
+  const analyzer = [
+    read('cloudfunctions/analyzePhotos/index.js'),
+    read('cloudfunctions/analyzePhotos/analysis-artifacts.js')
+  ].join('\n')
   assert.match(analyzer, /filter\(page => !page\.isDuplicate\)/)
   assert.match(analyzer, /if \(profileSummary\.isEffective\)/)
   assert.match(analyzer, /本次照片均疑似重复，未更新学习卡点/)
