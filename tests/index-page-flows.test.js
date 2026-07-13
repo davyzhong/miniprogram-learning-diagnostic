@@ -246,11 +246,16 @@ test('index and student profile render the redesigned personal action workbench'
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
 
   for (const wxml of [indexWxml, profileWxml]) {
-    assert.match(wxml, /personal-hero-card/)
-    assert.match(wxml, /personal-primary-action/)
-    assert.match(wxml, /personal-report-card/)
+    assert.match(wxml, /diagnosis-workbench-section/)
+    assert.match(wxml, /diagnosis-workbench/)
+    assert.match(wxml, /diagnosis-signal-line/)
+    assert.match(wxml, /diagnosis-next/)
+    assert.match(wxml, /bplus-mini-bars/)
     assert.match(wxml, /personal-action-queue/)
     assert.match(wxml, /personal-subject-list/)
+    assert.doesNotMatch(wxml, /personal-hero-card/)
+    assert.doesNotMatch(wxml, /personal-primary-action/)
+    assert.doesNotMatch(wxml, /personal-report-card/)
     assert.doesNotMatch(wxml, /\/assets\/images\//)
   }
 
@@ -261,9 +266,9 @@ test('index and student profile render the redesigned personal action workbench'
   assert.doesNotMatch(profileWxml, /next-card/)
   assert.doesNotMatch(profileWxml, /subject-grid/)
 
-  assert.match(wxss, /\.personal-hero-card/)
-  assert.match(wxss, /\.personal-primary-action/)
-  assert.match(wxss, /\.personal-report-card/)
+  assert.match(wxss, /\.diagnosis-workbench-section/)
+  assert.match(wxss, /\.diagnosis-signal-line/)
+  assert.match(wxss, /\.diagnosis-next/)
   assert.match(wxss, /\.personal-action-card/)
   assert.match(wxss, /\.personal-subject-row/)
   assert.doesNotMatch(indexWxml, /class="family-hero-image"/)

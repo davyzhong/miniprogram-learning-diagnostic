@@ -94,7 +94,7 @@ const pages = [
     name: 'student-profile 学生档案',
     route: `/pages/student-profile/student-profile?${studentQ}`,
     expect: {
-      text: ['钟青羽', '个人学习工作台', '今日行动', '接下来可以做什么'],
+      text: ['钟青羽', '最新学科诊断', '学习工具', '切换孩子'],
     },
   },
   {
@@ -237,7 +237,7 @@ const scenarios = [
   {
     name: 'scenario: 学生档案 → 学习卡点行动 → 卡点中心',
     steps: [
-      { route: `/pages/student-profile/student-profile?${studentQ}`, wait: 1800, expect: { text: ['钟青羽', '个人学习工作台', '学习卡点修复'] } },
+      { route: `/pages/student-profile/student-profile?${studentQ}`, wait: 1800, expect: { text: ['钟青羽', '最新学科诊断', '学习卡点修复'] } },
       { action: 'tapByText', selector: '.personal-action-card', text: '学习卡点修复', wait: 1200, expect: { path: 'pages/bottleneck-center/bottleneck-center' } },
     ],
   },

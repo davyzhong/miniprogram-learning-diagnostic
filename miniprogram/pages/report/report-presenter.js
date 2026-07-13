@@ -467,11 +467,36 @@ function buildReportView(report, options = {}) {
     verificationEvidenceItems,
     qualityView
   })
+  const reportLayers = [
+    { key: 'summary', icon: '🩺', label: '结论', count: 1, available: true },
+    {
+      key: 'evidence',
+      icon: '🔎',
+      label: '证据',
+      count: sourcePhotos.length + allErrorDetailList.length + verificationEvidenceItems.length,
+      available: sourcePhotos.length + allErrorDetailList.length + verificationEvidenceItems.length > 0
+    },
+    {
+      key: 'change',
+      icon: '📈',
+      label: '变化',
+      count: bottlenecks.length,
+      available: bottlenecks.length > 0 || Boolean(report.linkedVerificationReport)
+    },
+    {
+      key: 'action',
+      icon: '🎯',
+      label: '行动',
+      count: bottlenecks.length + chineseErrorItems.length,
+      available: bottlenecks.length > 0 || chineseErrorItems.length > 0 || Boolean(explanation.explanationActionText)
+    }
+  ]
 
   return {
     headline,
     heroIllustration: reportIllustrationOf(isVerification),
     reportSummaryText,
+    reportLayers,
     ...explanation,
     paperCodeText,
     paperCodeUrl: paperCodeText ? buildTraceableUrl({

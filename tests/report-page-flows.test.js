@@ -588,3 +588,17 @@ test('report generates, downloads and opens its printable PDF', async () => {
   assert.equal(page.data.generatingPdf, false)
   assert.equal(wx.calls.find(call => call.name === 'openDocument').payload.filePath, '/tmp/report.pdf')
 })
+
+test('report page exposes compact layered navigation without hiding report sections', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxss'), 'utf8')
+
+  assert.match(wxml, /report-layer-nav/)
+  assert.match(wxml, /data-section="{{item.key}}"/)
+  assert.match(wxml, /id="report-section-summary"/)
+  assert.match(wxml, /id="report-section-evidence"/)
+  assert.match(wxml, /id="report-section-change"/)
+  assert.match(wxml, /id="report-section-action"/)
+  assert.match(wxss, /\.report-layer-nav/)
+  assert.match(wxss, /\.report-layer-item/)
+})

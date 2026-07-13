@@ -17,63 +17,50 @@
       </view>
     </view>
 
-    <view class="personal-hero-card" catchtap="onPrimaryAction">
-      <view class="personal-hero-copy">
-        <view class="student-line">
-          <view class="mini-avatar">{{home.avatarText}}</view>
-          <view class="student-copy">
-            <text class="student-name">{{home.studentName}}</text>
-            <text class="student-meta">{{home.gradeText}}<text wx:if="{{home.gradeText}}"> · </text>最近更新：{{home.recentUpdateText}}</text>
+    <view class="diagnosis-workbench-section bplus-section" wx:if="{{home.diagnosisWorkbenches.length > 0}}">
+      <view class="diagnosis-section-head bplus-row">
+        <text class="diagnosis-section-title">🩺 最新学科诊断</text>
+        <text class="diagnosis-section-meta">{{home.diagnosisWorkbenches.length}} 份正式报告</text>
+      </view>
+      <view class="diagnosis-workbench diagnosis-{{item.subject}}" wx:for="{{home.diagnosisWorkbenches}}" wx:key="key">
+        <view class="diagnosis-head bplus-row">
+          <view class="diagnosis-subject-icon">{{item.subjectIcon}}</view>
+          <view class="diagnosis-title-copy">
+            <text class="diagnosis-title">{{item.title}}</text>
+            <text class="diagnosis-date">📅 {{item.generatedAtText}} · 正式诊断</text>
           </view>
+          <text class="diagnosis-report-link" catchtap="onTraceableUrlTap" data-url="{{item.reportUrl}}">{{item.reportIcon}} 完整报告 ›</text>
         </view>
-        <text class="section-kicker">个人学习工作台</text>
-        <text class="personal-hero-title">{{home.personalHero.title}}</text>
-        <text class="personal-hero-summary">{{home.personalHero.summary}}</text>
-        <text class="personal-hero-action">{{home.personalHero.actionText}} ›</text>
+        <view class="diagnosis-insight"><text>{{item.insightIcon}}</text><text>{{item.judgment}}</text></view>
+        <view class="diagnosis-signal-line">
+          <view class="bplus-state-strip">
+            <text class="bplus-state-item"><text>{{item.evidenceIcon}}</text><text class="bplus-state-value">{{item.evidenceCount}}</text>证据</text>
+            <text class="bplus-state-item"><text>{{item.improvedIcon}}</text><text class="bplus-state-value">{{item.improvedCount}}</text>改善</text>
+            <text class="bplus-state-item" wx:if="{{item.persistingCount > 0}}"><text>{{item.persistingIcon}}</text><text class="bplus-state-value">{{item.persistingCount}}</text>持续</text>
+            <text class="bplus-state-item" wx:if="{{item.waitingCount > 0}}"><text>{{item.waitingIcon}}</text><text class="bplus-state-value">{{item.waitingCount}}</text>待验证</text>
+          </view>
+          <view class="diagnosis-trend"><view class="bplus-mini-bars"><view></view><view></view><view></view></view><text>{{item.trendIcon}} {{item.trendText}}</text></view>
+        </view>
+        <view class="diagnosis-next bplus-action">
+          <text class="diagnosis-next-icon">{{item.primaryAction.icon}}</text>
+          <view class="bplus-action-main">
+            <text class="diagnosis-next-title">下一步：{{item.primaryAction.text}}</text>
+            <text class="diagnosis-next-summary">{{item.primaryAction.summary}}</text>
+          </view>
+          <view class="bplus-action-button" catchtap="onTraceableUrlTap" data-url="{{item.primaryAction.url}}">{{item.primaryAction.icon}} {{item.primaryAction.text}}</view>
+          <text class="diagnosis-upload-link" catchtap="onTraceableUrlTap" data-url="{{item.uploadUrl}}">{{item.uploadIcon}} 上传</text>
+        </view>
       </view>
     </view>
 
-    <view class="personal-primary-action" catchtap="onPrimaryAction">
-      <view class="personal-action-badge">今日行动</view>
-      <view class="personal-primary-copy">
-        <text class="personal-primary-title">{{home.primaryActionCard.title}}</text>
-        <text class="personal-primary-summary">{{home.primaryActionCard.summary}}</text>
-      </view>
-      <text class="personal-primary-link">{{home.primaryActionCard.actionText}} ›</text>
-    </view>
-
-    <view class="personal-report-card report-{{home.reportPanel.kind}}" wx:if="{{home.reportPanel.visible}}" catchtap="onTraceableUrlTap" data-url="{{home.reportPanel.url}}">
-      <view class="report-mark report-{{home.reportPanel.kind}}">{{home.reportPanel.icon}}</view>
-      <view class="primary-report-copy">
-        <view class="report-title-line">
-          <view class="report-title-copy">
-            <text class="primary-report-title">{{home.reportPanel.title}}</text>
-            <text class="primary-report-time" wx:if="{{home.reportPanel.generatedAtText}}">生成于 {{home.reportPanel.generatedAtText}}</text>
-          </view>
-          <text class="report-action">{{home.reportPanel.actionText}} ›</text>
-        </view>
-        <text class="primary-report-finding" wx:if="{{home.reportPanel.findingText}}">{{home.reportPanel.findingText}}</text>
-        <text class="primary-report-summary">{{home.reportPanel.summary}}</text>
-        <view class="report-info-grid" wx:if="{{home.reportPanel.generatedAtText || home.reportPanel.evidenceTimeText}}">
-          <view class="report-info-cell" wx:if="{{home.reportPanel.generatedAtText}}">
-            <text class="report-info-label">报告生成</text>
-            <text class="report-info-value">{{home.reportPanel.generatedAtText}}</text>
-          </view>
-          <view class="report-info-cell" wx:if="{{home.reportPanel.evidenceTimeText}}">
-            <text class="report-info-label">证据时间</text>
-            <text class="report-info-value">{{home.reportPanel.evidenceTimeText}}</text>
-          </view>
-        </view>
-        <view class="report-chip-row">
-          <text class="report-chip report-chip-main" wx:if="{{home.reportPanel.bottleneckText}}">{{home.reportPanel.bottleneckText}}</text>
-          <text class="report-chip" wx:if="{{home.reportPanel.evidenceText}}">{{home.reportPanel.evidenceText}}</text>
-        </view>
-      </view>
+    <view class="diagnosis-load-state bplus-state" wx:elif="{{home.diagnosisDataUnavailable}}">
+      <text>⚠️ 学科诊断暂时没有加载出来</text>
+      <text>请稍后重试，页面不会用不完整的最近记录代替。</text>
     </view>
 
     <view class="section-block personal-action-section">
       <view class="section-heading between">
-        <text>接下来可以做什么</text>
+        <text>🧰 学习工具</text>
         <text class="section-subtitle-inline">每块都可点击</text>
       </view>
       <view class="personal-action-queue">

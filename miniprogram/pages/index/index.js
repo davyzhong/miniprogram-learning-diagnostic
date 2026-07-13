@@ -30,6 +30,15 @@ function applyProfileStats(viewModel, profiles) {
     : ''
 }
 
+function mergeReports(...lists) {
+  const byId = new Map()
+  lists.flat().forEach(report => {
+    if (!report || !report._id || byId.has(report._id)) return
+    byId.set(report._id, report)
+  })
+  return Array.from(byId.values())
+}
+
 Page({
   data: {
     loading: true,
@@ -186,6 +195,7 @@ Page({
       })
 
       const reportsByStudentId = {}
+      const diagnosesByStudentId = {}
       const papersByStudentId = {}
       const permissionsByStudentId = {}
 
@@ -195,7 +205,13 @@ Page({
             const dashboard = await cloud.getStudentDashboard(student._id)
             profileLists[student._id] = dashboard.subjectProfiles || profileLists[student._id] || []
             applyProfileStats(student, profileLists[student._id])
-            reportsByStudentId[student._id] = dashboard.recentReports || []
+            diagnosesByStudentId[student._id] = Array.isArray(dashboard.latestDiagnosisReports)
+              ? dashboard.latestDiagnosisReports
+              : []
+            reportsByStudentId[student._id] = mergeReports(
+              dashboard.recentReports || [],
+              diagnosesByStudentId[student._id]
+            )
             papersByStudentId[student._id] = dashboard.recentPapers || []
             permissionsByStudentId[student._id] = dashboard.permissions || student.permissions || OWNER_PERMISSIONS
           } catch (error) {
@@ -213,6 +229,9 @@ Page({
         }
         if (!reportsByStudentId[student._id]) {
           reportsByStudentId[student._id] = []
+        }
+        if (!diagnosesByStudentId[student._id]) {
+          diagnosesByStudentId[student._id] = []
         }
         if (!papersByStudentId[student._id]) {
           papersByStudentId[student._id] = []
@@ -236,6 +255,7 @@ Page({
       const activeStudent = hasMultipleChildren ? null : viewModels[0]
       const activeProfiles = activeStudent ? (profileLists[activeStudent._id] || []) : []
       const reports = activeStudent ? (reportsByStudentId[activeStudent._id] || []) : []
+      const latestDiagnosisReports = activeStudent ? (diagnosesByStudentId[activeStudent._id] || []) : []
       const papers = activeStudent ? (papersByStudentId[activeStudent._id] || []) : []
       const permissions = activeStudent
         ? (permissionsByStudentId[activeStudent._id] || activeStudent.permissions || OWNER_PERMISSIONS)
@@ -245,6 +265,7 @@ Page({
             student: activeStudent,
             profiles: activeProfiles,
             reports,
+            latestDiagnosisReports,
             papers,
             permissions
           }, formatRelativeTime)
@@ -286,6 +307,7 @@ Page({
   _buildHomeFromDashboard(students, perStudent) {
     const profileLists = {}
     const reportsByStudentId = {}
+    const diagnosesByStudentId = {}
     const papersByStudentId = {}
     const permissionsByStudentId = {}
 
@@ -303,8 +325,14 @@ Page({
       const detail = perStudent[s._id] || {}
       profileLists[s._id] = detail.subjectProfiles || []
       applyProfileStats(viewModel, profileLists[s._id])
-      // 首页只需要最近报告/试卷摘要，用 latest*Summary 作为单元素数组
-      reportsByStudentId[s._id] = detail.latestReportSummary ? [detail.latestReportSummary] : []
+      diagnosesByStudentId[s._id] = Array.isArray(detail.latestDiagnosisReports)
+        ? detail.latestDiagnosisReports
+        : []
+      // 首页只需要最近状态与各科正式诊断摘要。
+      reportsByStudentId[s._id] = mergeReports(
+        detail.latestReportSummary ? [detail.latestReportSummary] : [],
+        diagnosesByStudentId[s._id]
+      )
       papersByStudentId[s._id] = detail.latestPaperSummary ? [detail.latestPaperSummary] : []
       permissionsByStudentId[s._id] = s.permissions || OWNER_PERMISSIONS
 
@@ -325,6 +353,7 @@ Page({
     const activeStudent = hasMultipleChildren ? null : viewModels[0]
     const activeProfiles = activeStudent ? (profileLists[activeStudent._id] || []) : []
     const reports = activeStudent ? (reportsByStudentId[activeStudent._id] || []) : []
+    const latestDiagnosisReports = activeStudent ? (diagnosesByStudentId[activeStudent._id] || []) : []
     const papers = activeStudent ? (papersByStudentId[activeStudent._id] || []) : []
     const permissions = activeStudent
       ? (permissionsByStudentId[activeStudent._id] || activeStudent.permissions || OWNER_PERMISSIONS)
@@ -334,8 +363,10 @@ Page({
           student: activeStudent,
           profiles: activeProfiles,
           reports,
+          latestDiagnosisReports,
           papers,
-          permissions
+          permissions,
+          diagnosisDataUnavailable: !Array.isArray((perStudent[activeStudent._id] || {}).latestDiagnosisReports)
         }, formatRelativeTime)
       : null
 

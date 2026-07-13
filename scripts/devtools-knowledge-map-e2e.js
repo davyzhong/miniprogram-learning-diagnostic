@@ -82,10 +82,10 @@ const studentQ = 'studentId=student-km&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD'
 
 const checks = [
   {
-    name: 'A1: student-profile 页能看到个人工作台 + 切换孩子入口',
+    name: 'A1: student-profile 页能看到诊断工作台 + 切换孩子入口',
     route: `/pages/student-profile/student-profile?${studentQ}`,
     wait: 2000,
-    expect: { text: ['个人学习工作台', '今日行动', '切换孩子'] }
+    expect: { text: ['最新学科诊断', '学习工具', '切换孩子'] }
   },
   {
     name: 'A2: knowledge-map 页可达且默认平铺卡点',

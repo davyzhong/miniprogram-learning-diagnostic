@@ -19,6 +19,7 @@ const {
   SUBJECT_SHORT_NAMES
 } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
+const { UI_ICONS, subjectIcon } = require('../../utils/ui-icons')
 
 const SUBJECTS = SUBJECT_KEYS.map(key => ({
   key,
@@ -229,6 +230,117 @@ function buildPrimaryReport(reports, subjectByKey, formatRelativeTime) {
     actionText: '阅读完整报告',
     createdAt: report.createdAt
   }
+}
+
+function uniqueReports(reports = []) {
+  const byId = new Map()
+  reports.forEach(report => {
+    if (!report || !report._id || byId.has(report._id)) return
+    byId.set(report._id, report)
+  })
+  return Array.from(byId.values())
+}
+
+function formalDiagnosisReports(input = {}) {
+  const source = Array.isArray(input.latestDiagnosisReports)
+    ? input.latestDiagnosisReports
+    : (input.reports || [])
+  return source.filter(report => (
+    report && report.status === 'completed' && report.type !== 'verification' && report.isEffective !== false
+  ))
+}
+
+function workbenchEvidenceCount(report = {}) {
+  if (Number(report.totalErrors) > 0) return Number(report.totalErrors)
+  if (Number(report.imageFileCount) > 0) return Number(report.imageFileCount)
+  if (Array.isArray(report.imageFiles) && report.imageFiles.length > 0) return report.imageFiles.length
+  return (report.bottlenecks || []).reduce((sum, item) => sum + (Number(item.errorCount) || 0), 0)
+}
+
+function buildDiagnosisPrimaryAction(student, subject, report, profile, papers) {
+  const readyPaper = (papers || []).find(paper => (
+    paper.subject === subject.key
+    && paper.type === 'verification'
+    && (paper.generationStatus === 'ready' || Boolean(paper.pdfFileId))
+    && (!paper.triggeredByReport || paper.triggeredByReport === report._id)
+  ))
+  if (readyPaper) {
+    return {
+      icon: UI_ICONS.PAPER,
+      text: '查看验证卷',
+      summary: '用针对性验证确认报告中的学习卡点。',
+      url: buildTraceableUrl({ type: 'paper-workbench', id: readyPaper._id })
+    }
+  }
+
+  const pending = activeBottlenecks(profile)
+  if (pending.length > 0) {
+    return {
+      icon: UI_ICONS.NEXT_ACTION,
+      text: `进入${subject.name}跟进`,
+      summary: `继续跟进${formatBottleneckDisplayList(pending)}。`,
+      url: subjectHomeUrl(student, subject.key)
+    }
+  }
+
+  return {
+    icon: UI_ICONS.CAMERA,
+    text: '补充新样本',
+    summary: '上传新的作业或试卷，观察巩固情况。',
+    url: uploadUrl(student, subject.key)
+  }
+}
+
+function buildDiagnosisWorkbenches(input, profileBySubject, subjectByKey, formatRelativeTime) {
+  const student = input.student || {}
+  return formalDiagnosisReports(input)
+    .sort((a, b) => toDate(b.createdAt) - toDate(a.createdAt))
+    .map(report => {
+      const subject = subjectByKey[report.subject] || { key: report.subject, name: report.subjectName || '学习' }
+      const profile = profileBySubject.get(report.subject) || {}
+      const items = profileBottlenecks(profile)
+      const improvedCount = items.filter(item => item.status === 'improved').length
+      const persistingCount = items.filter(item => item.status === 'persisting').length
+      const waitingCount = items.filter(item => item.status !== 'improved' && item.status !== 'persisting').length
+      const bottleneckText = bottleneckListText(report.bottlenecks || [])
+      const judgment = report.comparisonSummary || report.changeSummary || report.summary || (
+        bottleneckText ? `当前重点关注：${bottleneckText}` : '本学科已形成正式诊断。'
+      )
+      const trendText = improvedCount > 0 && improvedCount >= persistingCount
+        ? '稳步改善'
+        : persistingCount > 0
+          ? '仍需跟进'
+          : waitingCount > 0
+            ? '等待验证'
+            : '已有诊断'
+      return {
+        key: report.subject,
+        subject: report.subject,
+        subjectName: subject.name,
+        subjectIcon: subjectIcon(report.subject),
+        reportIcon: UI_ICONS.REPORT,
+        insightIcon: UI_ICONS.INSIGHT,
+        evidenceIcon: UI_ICONS.EVIDENCE,
+        improvedIcon: UI_ICONS.IMPROVED,
+        persistingIcon: UI_ICONS.PERSISTING,
+        waitingIcon: UI_ICONS.WAITING,
+        uploadIcon: UI_ICONS.UPLOAD,
+        title: `${subject.name}诊断报告`,
+        judgment: compactSummary(judgment, 44),
+        generatedAtText: formatChineseDateTime(report.createdAt),
+        relativeTimeText: formatRelativeTime(report.createdAt),
+        evidenceCount: workbenchEvidenceCount(report),
+        improvedCount,
+        persistingCount,
+        waitingCount,
+        trendText,
+        trendIcon: improvedCount > 0 ? '📉' : (persistingCount > 0 ? '📍' : '📊'),
+        reportId: report._id,
+        reportUrl: buildTraceableUrl({ type: 'report-detail', id: report._id }),
+        primaryAction: buildDiagnosisPrimaryAction(student, subject, report, profile, input.papers || []),
+        uploadUrl: uploadUrl(student, report.subject)
+      }
+    })
 }
 
 function compactSummary(text = '', maxLength = 58) {
@@ -455,7 +567,7 @@ function buildPriorityHighlights(profileBySubject) {
 
 function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '') {
   const student = input.student || {}
-  const reports = input.reports || []
+  const reports = uniqueReports([...(input.reports || []), ...formalDiagnosisReports(input)])
   const papers = input.papers || []
   const permissions = input.permissions || student.permissions || {}
   const canWriteActions = permissions.canUpload !== false || permissions.canGeneratePaper !== false
@@ -561,6 +673,7 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
       }
 
   const primaryReport = buildPrimaryReport(reports, subjectByKey, formatRelativeTime)
+  const diagnosisWorkbenches = buildDiagnosisWorkbenches(input, profileBySubject, subjectByKey, formatRelativeTime)
   const recentRecords = buildRecentRecords(reports, papers, subjectByKey, formatRelativeTime)
   const knowledgeMapCard = buildKnowledgeMapCard(subjects, bottleneckStats)
   const primaryActionCard = buildPrimaryActionCard(nextAction, student, canWriteActions)
@@ -589,6 +702,8 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
     hasBottleneckBoard: bottleneckViews.length > 0,
     observations: priorityHighlights,
     primaryReport,
+    diagnosisWorkbenches,
+    diagnosisDataUnavailable: Boolean(input.diagnosisDataUnavailable),
     reportPanel,
     recentRecords,
     knowledgeMapCard,

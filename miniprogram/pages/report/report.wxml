@@ -28,6 +28,15 @@
   </view>
 
   <view class="content" wx:if="{{report.status !== 'analyzing'}}">
+    <view class="report-layer-nav bplus-section">
+      <view class="report-layer-item {{item.available ? '' : 'is-muted'}}" wx:for="{{reportLayers}}" wx:key="key" bindtap="onReportSectionTap" data-section="{{item.key}}">
+        <text class="report-layer-icon">{{item.icon}}</text>
+        <text class="report-layer-label">{{item.label}}</text>
+        <text class="report-layer-count" wx:if="{{item.count > 0}}">{{item.count}}</text>
+      </view>
+    </view>
+
+    <view id="report-section-summary" class="report-section-anchor"></view>
     <view class="card conclusion-card">
       <view class="section-heading"><view class="heading-icon">◎</view><text>本次诊断结论</text></view>
       <text class="conclusion-text">{{headline}}</text>
@@ -62,6 +71,7 @@
       <view class="feedback-line" bindtap="onOpenFeedback" data-target-type="report" data-target-id="" data-type="unclear_result">这份报告不准确？点这里反馈</view>
     </view>
 
+    <view id="report-section-change" class="report-section-anchor"></view>
     <view class="card verification-feedback-card" wx:if="{{hasVerificationFeedback}}">
       <view class="section-heading"><view class="heading-icon">↻</view><text>验证反馈</text></view>
       <text class="verification-feedback-summary">{{verificationFeedbackSummary}}</text>
@@ -191,6 +201,7 @@
       </view>
     </view>
 
+    <view id="report-section-evidence" class="report-section-anchor"></view>
     <view class="card source-card" bindtap="onViewSources">
       <view class="section-heading"><view class="heading-icon">▧</view><text>本次使用的试卷</text></view>
       <view class="source-row">
@@ -233,6 +244,7 @@
       </view>
     </view>
 
+    <view id="report-section-action" class="report-section-anchor"></view>
     <view class="knowledge-map-snapshot" wx:if="{{hasKnowledgeMapSnapshot && !isVerification}}">
       <view class="map-snapshot-header">🗺️ 知识地图更新</view>
       <view class="map-snapshot-list">

@@ -7,7 +7,7 @@
   </view>
 
   <!-- 内测估算提示（设计文档强制） -->
-  <view class="notice-bar">{{estimateNotice}}</view>
+  <view class="notice-bar">ℹ️ {{estimateNotice}}</view>
 
   <!-- 汇总卡片 -->
   <view class="summary-grid">
@@ -21,7 +21,7 @@
 
   <!-- 功能拆分 -->
   <view class="section" wx:if="{{breakdownVisible}}">
-    <view class="section-title">按功能拆分</view>
+    <view class="section-title">📊 按功能拆分</view>
     <view class="breakdown-row" wx:for="{{breakdown}}" wx:key="key">
       <view class="breakdown-name">{{item.name}}</view>
       <view class="breakdown-meta">{{item.callCount}} 次 · {{item.tokens}} token</view>
@@ -75,7 +75,7 @@
       class="deletion-btn {{deletionSubmitting ? 'submitting' : ''}} {{deletionSubmitted ? 'submitted' : ''}}"
       catchtap="onDeletionRequest"
     >
-      {{deletionSubmitted ? '已提交删除申请' : (deletionSubmitting ? '提交中…' : '申请删除我的数据')}}
+      {{deletionSubmitted ? '✅ 已提交删除申请' : (deletionSubmitting ? '⏳ 提交中…' : '🗑️ 申请删除我的数据')}}
     </view>
   </view>
 </view>

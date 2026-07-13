@@ -28,6 +28,16 @@ test('student profile page loads one child and keeps profile actions clickable',
           createdAt: '2026-06-12T10:00:00Z',
           bottlenecks: [{ lpCode: 'LP-001' }]
         }],
+        latestDiagnosisReports: [{
+          _id: 'report-1',
+          subject: 'math',
+          type: 'diagnosis',
+          status: 'completed',
+          createdAt: '2026-06-12T10:00:00Z',
+          summary: '计算基础需要继续验证',
+          totalErrors: 2,
+          bottlenecks: [{ lpCode: 'LP-001', lpName: '计算基础' }]
+        }],
         recentPapers: []
       }
     }
@@ -44,6 +54,7 @@ test('student profile page loads one child and keeps profile actions clickable',
   await page.loadProfile()
 
   assert.equal(page.data.home.studentName, '钟青羽')
+  assert.deepEqual(page.data.home.diagnosisWorkbenches.map(item => item.subject), ['math'])
   assert.equal(page.data.home.nextAction.primaryText, '下载验证卷')
   page.onPrimaryReportTap()
   page.onViewAllRecords()

@@ -73,6 +73,9 @@ test('child workbench cards combine pending actions and subject rows for multipl
   assert.match(cards[0].nextAction.url, /paperId=paper-1/)
   assert.match(cards[0].profileUrl, /pages\/student-profile\/student-profile/)
   assert.match(cards[0].profileUrl, /studentId=student-1/)
+  assert.equal(cards[0].diagnosisCoverageText, '已有 1/3 科诊断')
+  assert.equal(cards[0].latestDiagnosis.title, '数学诊断报告')
+  assert.match(cards[0].latestDiagnosis.url, /pages\/report\/report\?id=report-1/)
 
   assert.equal(cards[1].name, '弟弟')
   assert.equal(cards[1].roleText, '共同家长')
@@ -478,6 +481,64 @@ test('learning profile primary report prefers the latest diagnosis over a newer 
   assert.equal(view.primaryReport.reportId, 'diagnosis-report')
   assert.equal(view.primaryReport.title, '最新数学诊断报告')
   assert.equal(view.recentRecords[0].kind, 'verification-report')
+})
+
+test('learning profile builds dense diagnosis workbenches only for subjects with formal reports', () => {
+  const view = buildLearningProfileHomeView({
+    student: { _id: 'student-1', name: '钟青羽', grade: 6 },
+    profiles: [{
+      subject: 'math',
+      currentBottlenecks: [
+        { lpCode: 'LP-001', lpName: '计算基础', status: 'improved' },
+        { lpCode: 'LP-008', lpName: '审题理解', status: 'persisting' }
+      ]
+    }, {
+      subject: 'chinese',
+      currentBottlenecks: [
+        { lpCode: 'CN-001', lpName: '字词辨析', status: 'needs_verification' }
+      ]
+    }],
+    latestDiagnosisReports: [{
+      _id: 'math-diagnosis',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      createdAt: '2026-07-13T09:30:00+08:00',
+      summary: '计算基础正在改善，应用题审题仍是当前重点。',
+      totalErrors: 6,
+      bottlenecks: [{ lpCode: 'LP-008', lpName: '审题理解', errorCount: 2 }]
+    }, {
+      _id: 'chinese-diagnosis',
+      subject: 'chinese',
+      type: 'diagnosis',
+      status: 'completed',
+      createdAt: '2026-07-10T09:30:00+08:00',
+      summary: '阅读概括较稳定，字词辨析需要继续巩固。',
+      totalErrors: 4,
+      bottlenecks: [{ lpCode: 'CN-001', lpName: '字词辨析', errorCount: 2 }]
+    }],
+    reports: [],
+    papers: [{
+      _id: 'math-paper',
+      subject: 'math',
+      type: 'verification',
+      generationStatus: 'ready',
+      createdAt: '2026-07-13T10:00:00+08:00'
+    }]
+  }, relative)
+
+  assert.deepEqual(view.diagnosisWorkbenches.map(item => item.subject), ['math', 'chinese'])
+  assert.equal(view.diagnosisWorkbenches.some(item => item.subject === 'english'), false)
+  assert.equal(view.diagnosisWorkbenches[0].subjectIcon, '📐')
+  assert.equal(view.diagnosisWorkbenches[0].evidenceCount, 6)
+  assert.equal(view.diagnosisWorkbenches[0].improvedCount, 1)
+  assert.equal(view.diagnosisWorkbenches[0].persistingCount, 1)
+  assert.equal(view.diagnosisWorkbenches[0].primaryAction.text, '查看验证卷')
+  assert.match(view.diagnosisWorkbenches[0].primaryAction.url, /paper-preview\/paper-preview/)
+  assert.equal(view.diagnosisWorkbenches[1].waitingCount, 1)
+  assert.equal(view.diagnosisWorkbenches[1].primaryAction.text, '进入语文跟进')
+  assert.match(view.diagnosisWorkbenches[1].reportUrl, /report\?id=chinese-diagnosis/)
+  assert.match(view.diagnosisWorkbenches[1].uploadUrl, /pages\/upload\/upload/)
 })
 
 test('learning profile home surfaces priority bottlenecks below the primary report', () => {

@@ -47,6 +47,37 @@ test('builds a compatible workbench from legacy profile fields', () => {
   assert.equal(view.taskQueue[0].evidenceText, '最近 1 道相关错题')
 })
 
+test('subject workbench keeps the latest formal diagnosis ahead of newer verification feedback', () => {
+  const view = buildSubjectHomeView({}, [
+    {
+      _id: 'verification-newer',
+      type: 'verification',
+      status: 'completed',
+      createdAt: '2026-07-13T10:00:00Z',
+      summary: '验证反馈'
+    },
+    {
+      _id: 'diagnosis-latest',
+      type: 'diagnosis',
+      status: 'completed',
+      isEffective: true,
+      createdAt: '2026-07-12T10:00:00Z',
+      summary: '分数运算是当前优先卡点',
+      totalErrors: 6,
+      bottlenecks: [{ status: 'persisting' }, { status: 'improved' }]
+    }
+  ], relative, { subject: 'math', subjectName: '数学' })
+
+  assert.equal(view.latestReportId, 'diagnosis-latest')
+  assert.equal(view.latestDiagnosis.reportId, 'diagnosis-latest')
+  assert.equal(view.latestDiagnosis.title, '最新数学诊断')
+  assert.equal(view.latestDiagnosis.evidenceCount, 6)
+  assert.equal(view.latestDiagnosis.persistingCount, 1)
+  assert.equal(view.latestDiagnosis.improvedCount, 1)
+  assert.match(view.latestDiagnosis.summary, /分数运算/)
+  assert.equal(view.latestDiagnosis.icon, '📐')
+})
+
 test('math workbench expands coarse bottlenecks into fine-grained candidate bottlenecks', () => {
   const view = buildSubjectHomeView({
     subject: 'math',
