@@ -20,6 +20,7 @@ const {
 } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { UI_ICONS, subjectIcon } = require('../../utils/ui-icons')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
 
 const SUBJECTS = SUBJECT_KEYS.map(key => ({
   key,
@@ -216,9 +217,9 @@ function buildPrimaryReport(reports, subjectByKey, formatRelativeTime) {
     icon: isVerification ? '验' : '报',
     subject: report.subject,
     title: `最新${subject.name}${isVerification ? '验证反馈' : '诊断报告'}`,
-    summary: report.comparisonSummary || report.changeSummary || report.summary || (
+    summary: sanitizeUserText(report.comparisonSummary || report.changeSummary || report.summary || (
       bottleneckText ? `重点关注：${bottleneckText}` : '点击阅读本次报告'
-    ),
+    ), { treatAsId: true, count: (report.bottlenecks || []).length }),
     generatedAtText,
     evidenceTimeText,
     findingText,

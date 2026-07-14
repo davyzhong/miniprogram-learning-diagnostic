@@ -15,6 +15,25 @@ const fs = require('node:fs')
 const path = require('node:path')
 
 const { buildKnowledgeMapPageView } = require('../miniprogram/pages/knowledge-map/knowledge-map-presenter')
+const { bottleneckTitleOf } = require('../miniprogram/utils/math-learning-map')
+
+test('math learning map does not turn an unknown bottleneck ID into a title', () => {
+  assert.equal(bottleneckTitleOf('BN-LEGACY-UNKNOWN-01'), '待确认细卡点')
+})
+
+test('knowledge map uses readable labels for ID-only legacy bottlenecks', () => {
+  const view = buildKnowledgeMapPageView({
+    currentBottlenecks: [{
+      lpCode: 'LP-UNKNOWN-01',
+      bottleneckId: 'BN-LEGACY-UNKNOWN-01',
+      nodeId: 'MATH-UNKNOWN-NODE',
+      status: 'needs_verification'
+    }]
+  }, 'math')
+
+  assert.equal(view.domains[0].bottlenecks[0].displayName, '待确认学习卡点')
+  assert.equal(view.domains[0].bottlenecks[0].bottleneckId, 'BN-LEGACY-UNKNOWN-01')
+})
 const { expandFineBottleneckItems } = require('../miniprogram/utils/bottleneck-view')
 
 const {

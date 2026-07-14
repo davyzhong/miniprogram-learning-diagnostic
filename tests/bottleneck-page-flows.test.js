@@ -63,6 +63,65 @@ test('bottleneck pages expose learning task pack actions before verification', (
   assert.match(centerWxml, /onOpenLearningResource/)
 })
 
+test('bottleneck detail sanitizes ID-only evidence summaries while retaining route IDs', async () => {
+  const cloud = {
+    getSubjectDashboard: async () => ({
+      profile: {
+        subject: 'math',
+        currentBottlenecks: [{ lpCode: 'LP-UNKNOWN-01', status: 'needs_verification' }]
+      },
+      reports: [{
+        _id: '665f8c1a2b3c4d5e6f708192',
+        subject: 'math',
+        status: 'completed',
+        lpCode: 'LP-UNKNOWN-01',
+        bottlenecks: [{ lpCode: 'LP-UNKNOWN-01' }],
+        summary: '复测 BN-LEGACY-UNKNOWN-01 和 MATH-UNKNOWN-NODE'
+      }],
+      papers: []
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await loadPageAndWait(page, {
+    studentId: 'student-1',
+    subject: 'math',
+    lpCode: 'LP-UNKNOWN-01'
+  })
+
+  assert.equal(page.data.visibleEvidenceChain[0].id, '665f8c1a2b3c4d5e6f708192')
+  assert.doesNotMatch(page.data.visibleEvidenceChain[0].summary, /BN-|MATH-/)
+  assert.doesNotMatch(page.data.bottleneck.displayName, /LP-/)
+})
+
+test('learning progress compacts ID-only improved bottlenecks into readable text', async () => {
+  const cloud = {
+    getLearningProgress: async () => ({
+      success: true,
+      data: {
+        timeline: [{
+          reportId: 'report-route-id',
+          isVerification: true,
+          improvedBottlenecks: ['LP-001', 'BN-LEGACY-UNKNOWN-01']
+        }],
+        bottleneckMatrix: []
+      }
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/learning-progress/learning-progress.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.studentId = 'student-1'
+  page.subject = 'math'
+  await page.loadData()
+
+  assert.equal(page.data.timeline[0].reportId, 'report-route-id')
+  assert.equal(page.data.timeline[0].improvedBottlenecksText, '计算基础等 2 个学习卡点')
+})
+
 
 test('bottleneck center opens learning resources for the tapped fine bottleneck', async () => {
   let requestedTarget = null

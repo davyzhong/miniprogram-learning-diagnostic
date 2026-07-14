@@ -1,3 +1,5 @@
+const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
+
 // 资源平台优先级（数字越小越靠前）
 const PLATFORM_PRIORITY = {
   'B站': 1,
@@ -43,7 +45,7 @@ function buildExternalResourceCards(externalResources = []) {
         resourceId: resource.resourceId || '',
         platform,
         icon: meta.icon,
-        title: resource.title || resource.resourceId || '学习资源',
+        title: readableNameOf(resource) || '学习资源',
         role: resource.role || '家长参考',
         url: resource.url || '',
         hasUrl: !!resource.url,
@@ -87,7 +89,7 @@ function buildLearningResourceView(pack = {}) {
 
   return {
     id: pack._id || pack.packId || '',
-    title: pack.title || '学习任务包',
+    title: sanitizeUserText(pack.title || '学习任务包', { treatAsId: true }),
     status: pack.status || 'ready',
     timeText: estimatedMinutes ? `约 ${estimatedMinutes} 分钟` : '5-10 分钟',
     // 结构化板块（每个都是独立字段，wxml 用 wx:if 精准渲染）

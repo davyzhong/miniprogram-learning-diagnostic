@@ -5,6 +5,22 @@ const { buildSubjectHomeView } = require('../miniprogram/pages/subject-home/subj
 
 const relative = () => '今天'
 
+test('subject home sanitizes ID-only report summaries and bottleneck labels', () => {
+  const view = buildSubjectHomeView({
+    subject: 'math',
+    currentBottlenecks: [{ lpCode: 'LP-UNKNOWN-01', status: 'needs_verification' }]
+  }, [{
+    _id: 'report-route-id',
+    subject: 'math',
+    status: 'completed',
+    summary: '复测 BN-LEGACY-UNKNOWN-01'
+  }], relative, { subject: 'math', subjectName: '数学' })
+
+  assert.doesNotMatch(view.currentBottlenecks[0].displayName, /LP-/)
+  assert.doesNotMatch(view.latestDiagnosis.summary, /BN-/)
+  assert.equal(view.latestReportId, 'report-route-id')
+})
+
 test('builds a subject workbench from current bottlenecks and latest reports', () => {
   const view = buildSubjectHomeView({
     totalReports: 4,

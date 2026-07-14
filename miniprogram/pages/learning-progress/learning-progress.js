@@ -1,5 +1,6 @@
 const cloud = require('../../utils/cloud')
 const { beijingParts } = require('../../utils/util')
+const { compactReadableTargets, sanitizeUserText } = require('../../utils/user-facing-text')
 
 function formatDate(iso) {
   const p = beijingParts(iso)
@@ -53,7 +54,7 @@ Page({
       const timeline = (data.timeline || []).map(t => ({
         ...t,
         dateText: formatDate(t.createdAt),
-        improvedBottlenecksText: (t.improvedBottlenecks || []).join('、'),
+        improvedBottlenecksText: compactReadableTargets(t.improvedBottlenecks || []),
         shortLabel: t.isVerification ? '验证' : '诊断',
       }))
 
@@ -79,7 +80,7 @@ Page({
         timeline,
         bottleneckMatrix: matrix,
         summary: data.summary || {},
-        overallAdvice: data.overallAdvice || '',
+        overallAdvice: sanitizeUserText(data.overallAdvice || '', { treatAsId: true }),
         loading: false,
       })
     } catch (e) {
