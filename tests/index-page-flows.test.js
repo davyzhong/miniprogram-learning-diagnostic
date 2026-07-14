@@ -6,6 +6,7 @@ const ROOT = path.resolve(__dirname, '..')
 const { loadPageAndWait, flushAsync, waitForPageLoad, isThenable } = require('./helpers/page-flow-utils')
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 const util = require('../miniprogram/utils/util')
+const { buildChildWorkbenchCards } = require('../miniprogram/utils/child-workbench')
 
 test('add student trims input and creates all subject profiles', async () => {
   let saved = null
@@ -298,6 +299,7 @@ test('family workbench CSS fixes compact dimensions and four-column metrics', ()
 
   assert.match(rule('.family-metric-strip'), /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/)
   assert.match(rule('.child-metric-strip'), /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/)
+  assert.match(rule('.family-metric-cell'), /min-height:\s*(?:58|59|60|61|62|63|64|65|66)rpx/)
   assert.match(rule('.child-card'), /padding:\s*(?:14|15|16)rpx/)
   assert.match(rule('.child-card'), /border-radius:\s*(?:14|15|16)rpx/)
   assert.match(rule('.child-metric-cell'), /min-height:\s*(?:58|59|60|61|62|63|64|65|66)rpx/)
@@ -316,6 +318,55 @@ test('family workbench CSS fixes compact dimensions and four-column metrics', ()
     rule('.child-priority-row')
   ].join('\n')
   assert.doesNotMatch(familyRules, /linear-gradient|radial-gradient/)
+})
+
+test('child workbench sections use flat rows and bands instead of nested cards', () => {
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
+  const rule = selector => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const match = wxss.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))
+    assert.ok(match, `${selector} should have a CSS rule`)
+    return match[1]
+  }
+
+  for (const selector of [
+    '.child-metric-cell',
+    '.child-priority-row',
+    '.child-secondary-action',
+    '.child-subject-row',
+    '.child-diagnosis-row'
+  ]) {
+    const declarations = rule(selector)
+    assert.doesNotMatch(declarations, /border-radius\s*:/, `${selector} should not look like a nested card`)
+    assert.doesNotMatch(declarations, /border\s*:\s*1rpx/, `${selector} should not have a framed border`)
+  }
+
+  for (const selector of ['.child-metric-cell', '.child-secondary-action', '.child-subject-row']) {
+    assert.doesNotMatch(rule(selector), /background\s*:/, `${selector} should stay unfilled`)
+  }
+
+  for (const selector of ['.status-cell-warning', '.status-cell-primary', '.status-cell-danger', '.status-cell-success']) {
+    assert.doesNotMatch(rule(selector), /background\s*:/, `${selector} should use color without a metric tile fill`)
+  }
+
+  assert.doesNotMatch(rule('.child-quick-link'), /border\s*:\s*1rpx|box-shadow\s*:/)
+  assert.match(rule('.child-metric-strip'), /border-(?:top|bottom)\s*:/)
+  assert.match(rule('.child-secondary-action'), /border-top\s*:/)
+  assert.match(rule('.child-subject-row'), /border-top\s*:/)
+})
+
+test('family page renders all three subjects and four quick actions exactly once', () => {
+  const [card] = buildChildWorkbenchCards({
+    students: [{ _id: 'student-cardinality', name: '钟青羽', grade: 6 }]
+  })
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+  const occurrences = pattern => (wxml.match(pattern) || []).length
+
+  assert.equal(card.subjectRows.length, 3)
+  assert.equal(card.quickLinks.length, 4)
+  assert.equal(occurrences(/wx:for="{{child\.subjectRows}}"/g), 1)
+  assert.equal(occurrences(/wx:for="{{child\.quickLinks}}"/g), 1)
+  assert.doesNotMatch(wxml, /child\.(?:subjectRows|quickLinks)\.(?:slice|filter)/)
 })
 
 test('single-profile index markers remain intact beside family mode', () => {

@@ -249,13 +249,14 @@
 .child-metric-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8rpx;
+  border-top: 1rpx solid #e3ebef;
+  border-bottom: 1rpx solid #e3ebef;
 }
 
 .child-metric-cell {
   min-height: 64rpx;
-  border-radius: 12rpx;
   padding: 8rpx 6rpx;
+  border-right: 1rpx solid #e3ebef;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 24rpx minmax(0, 1fr);
@@ -264,23 +265,23 @@
   column-gap: 3rpx;
 }
 
+.child-metric-cell:last-child {
+  border-right: 0;
+}
+
 .status-cell-warning {
-  background: #fff7ed;
   color: #c2410c;
 }
 
 .status-cell-primary {
-  background: #eff6ff;
   color: #1d4ed8;
 }
 
 .status-cell-danger {
-  background: #fef2f2;
   color: #b91c1c;
 }
 
 .status-cell-success {
-  background: #ecfdf5;
   color: #15803d;
 }
 
@@ -314,15 +315,12 @@
 .child-subject-status {
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
 }
 
 .child-subject-row {
   min-height: 64rpx;
-  border-radius: 12rpx;
   padding: 8rpx 10rpx;
-  background: #f8fbff;
-  border: 1rpx solid #e0ecfa;
+  border-top: 1rpx solid #e3ebef;
   display: flex;
   align-items: center;
   gap: 8rpx;
@@ -330,8 +328,7 @@
 }
 
 .child-subject-row.is-hidden {
-  background: #f8fafc;
-  border-color: #e2e8f0;
+  color: #8291a5;
 }
 
 .subject-row-copy {
@@ -400,27 +397,26 @@
 .child-priority-row {
   min-height: 70rpx;
   padding: 10rpx 12rpx;
-  border-radius: 14rpx;
   display: flex;
   align-items: center;
   gap: 10rpx;
-  border: 1rpx solid #bfdbfe;
+  border-left: 6rpx solid #2468a8;
   background: #eaf3fb;
   box-sizing: border-box;
 }
 
 .priority-paper {
-  border-color: #93c5fd;
+  border-left-color: #2468a8;
   background: #e8f1fb;
 }
 
 .priority-verification {
-  border-color: #c4b5fd;
+  border-left-color: #7255a5;
   background: #f2eef9;
 }
 
 .priority-upload {
-  border-color: #fed7aa;
+  border-left-color: #c76b18;
   background: #fff5e8;
 }
 
@@ -475,15 +471,12 @@
 .child-secondary-actions {
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
 }
 
 .child-secondary-action {
   min-height: 58rpx;
-  border-radius: 12rpx;
   padding: 8rpx 10rpx;
-  background: #f8fafc;
-  border: 1rpx solid #e2e8f0;
+  border-top: 1rpx solid #e3ebef;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 28rpx auto minmax(0, 1fr) 14rpx;
@@ -526,10 +519,9 @@
 
 .child-quick-link {
   min-height: 78rpx;
-  border-radius: 12rpx;
+  border-radius: 8rpx;
   padding: 8rpx 6rpx;
-  background: #f8fbff;
-  border: 1rpx solid #dbeafe;
+  background: #eef5f7;
   box-sizing: border-box;
   text-align: center;
 }
@@ -634,7 +626,7 @@
 }
 
 .family-metric-cell {
-  min-height: 54rpx;
+  min-height: 60rpx;
   padding: 7rpx 5rpx;
   border-radius: 10rpx;
   background: #fff;
@@ -1995,9 +1987,9 @@
 .child-diagnosis-row {
   min-height: 68rpx;
   padding: 10rpx 12rpx;
-  border: 1rpx solid #c7dce1;
+  border-top: 1rpx solid #c7dce1;
+  border-bottom: 1rpx solid #c7dce1;
   border-left: 6rpx solid #2d7182;
-  border-radius: 12rpx;
   background: #f2f7f8;
   display: flex;
   align-items: center;
