@@ -8,12 +8,12 @@ function state(name, model) {
   return { state: name, model }
 }
 
-function presenterAdapter(modulePath, build) {
-  return { kind: 'presenter', modulePath, buildStates: build }
+function presenterAdapter(modulePath, build, supportsError = false) {
+  return { kind: 'presenter', modulePath, supportsError, buildStates: build }
 }
 
 function controllerAdapter(modulePath, build) {
-  return { kind: 'controller', modulePath, buildStates: build }
+  return { kind: 'controller', modulePath, supportsError: true, buildStates: build }
 }
 
 function visibleControllerModel(page, wx) {
@@ -31,7 +31,7 @@ async function runController(modulePath, cloud = {}, execute = async () => {}) {
   return visibleControllerModel(page, wx)
 }
 
-function homeStates() {
+function homePresenterStates() {
   const { buildLearningProfileHomeView } = require('../../miniprogram/pages/index/index-presenter')
   const build = input => buildLearningProfileHomeView(input, () => '今天')
   return [
@@ -46,7 +46,30 @@ function homeStates() {
   ]
 }
 
-function subjectHomeStates() {
+async function indexStates() {
+  return [
+    ...homePresenterStates(),
+    state('error', await runController('miniprogram/pages/index/index.js', {
+      getAccessibleStudents: async () => Object.defineProperty({}, 'length', {
+        get() { throw new Error(BACKEND_ERROR) }
+      })
+    }, async page => { await page.loadStudents({ force: true }) }))
+  ]
+}
+
+async function studentProfileStates() {
+  return [
+    ...homePresenterStates(),
+    state('error', await runController('miniprogram/pages/student-profile/student-profile.js', {
+      getStudents: async () => ({ find() { throw new Error(BACKEND_ERROR) } })
+    }, async page => {
+      page.setData({ studentId: 'student-route-id' })
+      await page.loadProfile({ force: true })
+    }))
+  ]
+}
+
+async function subjectHomeStates() {
   const { buildSubjectHomeView } = require('../../miniprogram/pages/subject-home/subject-home-presenter')
   const build = (profile, reports) => buildSubjectHomeView(profile, reports, () => '今天', { subject: 'math', subjectName: '数学' })
   return [
@@ -55,11 +78,17 @@ function subjectHomeStates() {
     state('legacy-id-only', build(
       { subject: 'math', currentBottlenecks: [{ lpCode: 'LP-AUDIT-LEAK-01' }] },
       [{ _id: OPAQUE_ID, subject: 'math', type: 'diagnosis', status: 'completed', summary: INTERNAL_SUMMARY }]
-    ))
+    )),
+    state('error', await runController('miniprogram/pages/subject-home/subject-home.js', {
+      seedEnglishPersonalVocabulary: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => {
+      page.setData({ studentId: 'student-route-id', subject: 'english', canWriteActions: true })
+      await page.importEnglishVocabulary()
+    }))
   ]
 }
 
-function reportStates() {
+async function reportStates() {
   const { buildReportView } = require('../../miniprogram/pages/report/report-presenter')
   return [
     state('normal', buildReportView({ subject: 'math', type: 'diagnosis', summary: '计算基础需要验证', bottlenecks: [{ lpCode: 'LP-001' }] })),
@@ -70,11 +99,17 @@ function reportStates() {
       type: 'diagnosis',
       summary: INTERNAL_SUMMARY,
       bottlenecks: [{ lpCode: 'LP-AUDIT-LEAK-01' }]
+    })),
+    state('error', await runController('miniprogram/pages/report/report.js', {
+      generateLearningResourcePack: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => {
+      page._fullReport = { _id: OPAQUE_ID, studentId: 'student-route-id', subject: 'math' }
+      await page.onBottleneckSnapshotTap({ currentTarget: { dataset: { lpCode: 'LP-001', lpName: '计算基础' } } })
     }))
   ]
 }
 
-function uploadHistoryStates() {
+async function uploadHistoryStates() {
   const presenter = require('../../miniprogram/pages/upload-history/upload-history-presenter')
   const build = report => {
     const { events, statusItems } = presenter.buildTimelineEvents(report ? [report] : [], [], new Map(), 'math', '数学')
@@ -83,20 +118,33 @@ function uploadHistoryStates() {
   return [
     state('normal', build({ _id: 'report-1', subject: 'math', status: 'completed', summary: '计算基础需要验证', createdAt: '2026-07-01' })),
     state('empty', build(null)),
-    state('legacy-id-only', build({ _id: OPAQUE_ID, subject: 'math', status: 'completed', summary: INTERNAL_SUMMARY, createdAt: '2026-07-01' }))
+    state('legacy-id-only', build({ _id: OPAQUE_ID, subject: 'math', status: 'completed', summary: INTERNAL_SUMMARY, createdAt: '2026-07-01' })),
+    state('error', await runController('miniprogram/pages/upload-history/upload-history.js', {
+      getLearningTimeline: async () => { throw new Error(BACKEND_ERROR) },
+      getReports: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => {
+      page.setData({ studentId: 'student-route-id', subject: 'math' })
+      await page.loadHistory()
+    }))
   ]
 }
 
-function knowledgeMapStates() {
+async function knowledgeMapStates() {
   const { buildKnowledgeMapPageView } = require('../../miniprogram/pages/knowledge-map/knowledge-map-presenter')
   return [
     state('normal', buildKnowledgeMapPageView({ currentBottlenecks: [{ lpCode: 'LP-001' }] }, 'math')),
     state('empty', buildKnowledgeMapPageView({}, 'math')),
-    state('legacy-id-only', buildKnowledgeMapPageView({ currentBottlenecks: [{ lpCode: 'LP-AUDIT-LEAK-01', bottleneckId: 'BN-AUDIT-LEAK-01' }] }, 'math'))
+    state('legacy-id-only', buildKnowledgeMapPageView({ currentBottlenecks: [{ lpCode: 'LP-AUDIT-LEAK-01', bottleneckId: 'BN-AUDIT-LEAK-01' }] }, 'math')),
+    state('error', await runController('miniprogram/pages/knowledge-map/knowledge-map.js', {
+      getSubjectProfile: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => {
+      page.setData({ studentId: 'student-route-id', subject: 'math' })
+      await page.loadData()
+    }))
   ]
 }
 
-function learningResourceStates() {
+async function learningResourceStates() {
   const { buildLearningResourceView } = require('../../miniprogram/pages/learning-resource/learning-resource-presenter')
   return [
     state('normal', buildLearningResourceView({ title: '小数除法学习任务' })),
@@ -105,11 +153,17 @@ function learningResourceStates() {
       _id: OPAQUE_ID,
       title: INTERNAL_SUMMARY,
       externalResources: [{ resourceId: 'RES-AUDIT-LEAK-01', platform: 'B站' }]
+    })),
+    state('error', await runController('miniprogram/pages/learning-resource/learning-resource.js', {
+      getLearningResourcePack: async () => ({ success: false, error: BACKEND_ERROR })
+    }, async page => {
+      page.setData({ packId: OPAQUE_ID })
+      await page.loadPack()
     }))
   ]
 }
 
-function paperPreviewStates() {
+async function paperPreviewStates() {
   const { buildPaperPreviewState } = require('../../miniprogram/pages/paper-preview/paper-preview-presenter')
   const build = paper => buildPaperPreviewState({ paper, subjectName: '数学' })
   return [
@@ -121,11 +175,17 @@ function paperPreviewStates() {
       type: 'verification',
       paperDisplayCode: 'MATH-20260613-01',
       bottleneckTargets: ['BN-AUDIT-LEAK-01']
+    })),
+    state('error', await runController('miniprogram/pages/paper-preview/paper-preview.js', {
+      getPaperDetail: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => {
+      page.setData({ paperId: OPAQUE_ID, mode: 'paper' })
+      await page.loadPaper(OPAQUE_ID)
     }))
   ]
 }
 
-function aiUsageStates() {
+async function aiUsageStates() {
   const { buildUsageState } = require('../../miniprogram/pages/ai-usage/ai-usage-presenter')
   return [
     state('normal', buildUsageState([], null, '2026-07', '')),
@@ -136,7 +196,14 @@ function aiUsageStates() {
       status: 'failed',
       errorMessage: INTERNAL_SUMMARY,
       createdAt: '2026-07-01T00:00:00Z'
-    }], null, '2026-07', ''))
+    }], null, '2026-07', '')),
+    state('error', await runController('miniprogram/pages/ai-usage/ai-usage.js', {
+      getAiUsageSummary: () => { throw new Error(BACKEND_ERROR) },
+      getAiUsageEvents: async () => ({ items: [] })
+    }, async page => {
+      page.setData({ activeMonth: '2026-07' })
+      await page.loadUsage()
+    }))
   ]
 }
 
@@ -318,27 +385,27 @@ async function joinStudentStates() {
 }
 
 const PAGE_AUDIT_REGISTRY = {
-  'pages/index/index': presenterAdapter('miniprogram/pages/index/index-presenter.js', homeStates),
-  'pages/student-profile/student-profile': presenterAdapter('miniprogram/pages/index/index-presenter.js', homeStates),
+  'pages/index/index': presenterAdapter('miniprogram/pages/index/index-presenter.js', indexStates, true),
+  'pages/student-profile/student-profile': presenterAdapter('miniprogram/pages/index/index-presenter.js', studentProfileStates, true),
   'pages/add-student/add-student': controllerAdapter('miniprogram/pages/add-student/add-student.js', addStudentStates),
-  'pages/subject-home/subject-home': presenterAdapter('miniprogram/pages/subject-home/subject-home-presenter.js', subjectHomeStates),
+  'pages/subject-home/subject-home': presenterAdapter('miniprogram/pages/subject-home/subject-home-presenter.js', subjectHomeStates, true),
   'pages/upload/upload': controllerAdapter('miniprogram/pages/upload/upload.js', uploadStates),
-  'pages/upload-history/upload-history': presenterAdapter('miniprogram/pages/upload-history/upload-history-presenter.js', uploadHistoryStates),
-  'pages/report/report': presenterAdapter('miniprogram/pages/report/report-presenter.js', reportStates),
+  'pages/upload-history/upload-history': presenterAdapter('miniprogram/pages/upload-history/upload-history-presenter.js', uploadHistoryStates, true),
+  'pages/report/report': presenterAdapter('miniprogram/pages/report/report-presenter.js', reportStates, true),
   'pages/learning-progress/learning-progress': controllerAdapter('miniprogram/pages/learning-progress/learning-progress.js', learningProgressStates),
   'pages/bottleneck-center/bottleneck-center': controllerAdapter('miniprogram/pages/bottleneck-center/bottleneck-center.js', bottleneckCenterStates),
   'pages/bottleneck-detail/bottleneck-detail': controllerAdapter('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', bottleneckDetailStates),
-  'pages/knowledge-map/knowledge-map': presenterAdapter('miniprogram/pages/knowledge-map/knowledge-map-presenter.js', knowledgeMapStates),
+  'pages/knowledge-map/knowledge-map': presenterAdapter('miniprogram/pages/knowledge-map/knowledge-map-presenter.js', knowledgeMapStates, true),
   'pages/english-practice/english-practice': controllerAdapter('miniprogram/pages/english-practice/english-practice.js', () => englishSessionStates('miniprogram/pages/english-practice/english-practice.js', 'generateSession', 'generateEnglishRecognitionSession')),
   'pages/english-dictation/english-dictation': controllerAdapter('miniprogram/pages/english-dictation/english-dictation.js', () => englishSessionStates('miniprogram/pages/english-dictation/english-dictation.js', 'generateSession', 'generateEnglishPaperDictationSession')),
   'pages/english-wrong-words/english-wrong-words': controllerAdapter('miniprogram/pages/english-wrong-words/english-wrong-words.js', wrongWordsStates),
-  'pages/learning-resource/learning-resource': presenterAdapter('miniprogram/pages/learning-resource/learning-resource-presenter.js', learningResourceStates),
+  'pages/learning-resource/learning-resource': presenterAdapter('miniprogram/pages/learning-resource/learning-resource-presenter.js', learningResourceStates, true),
   'pages/generate-verification/generate-verification': controllerAdapter('miniprogram/pages/generate-verification/generate-verification.js', generateVerificationStates),
   'pages/default-paper/default-paper': controllerAdapter('miniprogram/pages/default-paper/default-paper.js', defaultPaperStates),
-  'pages/paper-preview/paper-preview': presenterAdapter('miniprogram/pages/paper-preview/paper-preview-presenter.js', paperPreviewStates),
+  'pages/paper-preview/paper-preview': presenterAdapter('miniprogram/pages/paper-preview/paper-preview-presenter.js', paperPreviewStates, true),
   'pages/parent-management/parent-management': controllerAdapter('miniprogram/pages/parent-management/parent-management.js', parentManagementStates),
   'pages/join-student/join-student': controllerAdapter('miniprogram/pages/join-student/join-student.js', joinStudentStates),
-  'pages/ai-usage/ai-usage': presenterAdapter('miniprogram/pages/ai-usage/ai-usage-presenter.js', aiUsageStates)
+  'pages/ai-usage/ai-usage': presenterAdapter('miniprogram/pages/ai-usage/ai-usage-presenter.js', aiUsageStates, true)
 }
 
 module.exports = { PAGE_AUDIT_REGISTRY }
