@@ -109,6 +109,8 @@ test('all registered page adapters execute real modules and keep legacy IDs out 
     assert.ok(['presenter', 'controller'].includes(adapter.kind), `${page} missing real adapter kind`)
     assert.equal(typeof adapter.supportsError, 'boolean', `${page} missing supportsError declaration`)
     assert.ok(Array.isArray(adapter.visiblePaths) && adapter.visiblePaths.length > 0, `${page} missing WXML-derived visible paths`)
+    assert.ok(Array.isArray(adapter.visibleBindings) && adapter.visibleBindings.length > 0, `${page} missing WXML binding metadata`)
+    assert.ok(Array.isArray(adapter.trustedUserInputPaths), `${page} missing trusted-input declaration`)
     assert.equal(typeof adapter.projectVisible, 'function', `${page} missing visible projection`)
     assert.equal(typeof adapter.inspectVisibleBindings, 'function', `${page} missing binding resolution audit`)
     const states = await adapter.buildStates()
@@ -126,7 +128,16 @@ test('all registered page adapters execute real modules and keep legacy IDs out 
         [],
         `${page} / ${fixture.state} has unresolved applicable bindings:\n${invalidUnresolved.map(item => item.path).join('\n')}`
       )
-      failures.push(...visibleModelFailures(page, fixture.state, projection))
+      const trustedPaths = fixture.trustedUserInputPaths || []
+      assert.deepEqual(
+        trustedPaths.filter(item => !adapter.trustedUserInputPaths.includes(item)),
+        [],
+        `${page} / ${fixture.state} declares an unapproved trusted user-input path`
+      )
+      const backendProjection = Object.fromEntries(
+        Object.entries(projection).filter(([modelPath]) => !trustedPaths.includes(modelPath))
+      )
+      failures.push(...visibleModelFailures(page, fixture.state, backendProjection))
     }
   }
   assert.deepEqual(failures, [], `visible model leaks:\n${failures.join('\n')}`)
@@ -174,6 +185,48 @@ test('page projections include bound form values and resolve fixture-selected me
   assert.equal(projection['model.inviteCode'], 'BN-INPUT-LEAK')
   assert.equal(projection['model.displayName'], 'cloud://env/input-name')
   assert.equal(projection['model.relationOptions[1].name'], 'ERR-RELATION-LEAK')
+})
+
+test('binding applicability rejects unconditional gaps but permits inactive branches and empty loops', () => {
+  const addStudentAudit = PAGE_AUDIT_REGISTRY['pages/add-student/add-student'].inspectVisibleBindings({
+    toastMessages: []
+  })
+  assert.ok(addStudentAudit.unresolved.some(item => (
+    item.binding === 'name' && item.reason === 'applicable-unresolved'
+  )))
+
+  const joinAudit = PAGE_AUDIT_REGISTRY['pages/join-student/join-student'].inspectVisibleBindings({
+    status: 'code',
+    displayName: undefined,
+    inviteCode: '',
+    error: '',
+    toastMessages: []
+  })
+  assert.ok(joinAudit.unresolved.some(item => (
+    item.binding === 'displayName' && item.reason === 'conditional-absent'
+  )))
+
+  const activeJoinAudit = PAGE_AUDIT_REGISTRY['pages/join-student/join-student'].inspectVisibleBindings({
+    status: 'ready',
+    displayNmae: '拼写错误不会冒充显示名称',
+    student: { name: '小明' },
+    relationOptions: [{ name: '妈妈' }],
+    relationIndex: 0,
+    error: '',
+    toastMessages: []
+  })
+  assert.ok(activeJoinAudit.unresolved.some(item => (
+    item.binding === 'displayName' && item.reason === 'applicable-unresolved'
+  )))
+
+  const progressAudit = PAGE_AUDIT_REGISTRY['pages/learning-progress/learning-progress'].inspectVisibleBindings({
+    timeline: [],
+    bottleneckMatrix: [{}],
+    toastMessages: []
+  })
+  assert.ok(progressAudit.unresolved.some(item => (
+    item.binding.includes('timeline[]') && item.reason === 'loop-alias-absent'
+  )))
 })
 
 test('detects internal identifiers without treating readable labels as IDs', () => {

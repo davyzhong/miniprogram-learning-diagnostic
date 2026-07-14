@@ -6,7 +6,6 @@ const { buildReportView } = require('./report-presenter')
 const { getSubjectName } = require('../../utils/constants')
 const { navigateToVerificationPaper, startVerificationPoller, stopVerificationPoller } = require('../../utils/shared-navigation')
 const { appStatus, OP_TYPES, OP_STATUS } = require('../../utils/app-status')
-const { sanitizeUserText } = require('../../utils/user-facing-text')
 
 function downloadCloudFile(fileID) {
   return new Promise((resolve, reject) => {
@@ -456,22 +455,18 @@ Page({
   },
 
   onFeedbackReasonInput(e) {
-    this.setData({
-      'feedbackDialog.reason': sanitizeUserText(e.detail.value || '', { treatAsId: true })
-    })
+    this.setData({ 'feedbackDialog.reason': e.detail.value || '' })
   },
 
   onFeedbackNoteInput(e) {
-    this.setData({
-      'feedbackDialog.note': sanitizeUserText(e.detail.value || '', { treatAsId: true })
-    })
+    this.setData({ 'feedbackDialog.note': e.detail.value || '' })
   },
 
   async onSubmitFeedback() {
     if (this.data.submittingFeedback) return
     const dialog = this.data.feedbackDialog
-    const reason = (dialog.reason || '').trim()
-    if (!reason) {
+    const reason = String(dialog.reason || '')
+    if (!reason.trim()) {
       wx.showToast({ title: '请填写反馈原因', icon: 'none' })
       return
     }
@@ -482,7 +477,7 @@ Page({
       targetType: dialog.targetType,
       targetId: dialog.targetId,
       reason,
-      note: (dialog.note || '').trim()
+      note: String(dialog.note || '')
     }))
     this.setData({ submittingFeedback: true })
     try {
