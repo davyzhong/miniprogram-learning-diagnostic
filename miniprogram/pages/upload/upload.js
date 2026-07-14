@@ -405,12 +405,12 @@ Page({
       const failedIndex = this.data.images.findIndex(image => !image.uploaded)
       const errorImages = failedIndex >= 0
         ? this.data.images.map((image, index) => index === failedIndex
-          ? { ...image, uploadError: err.message || '上传失败' }
+          ? { ...image, uploadError: '上传失败，请稍后重试' }
           : image)
         : this.data.images
       this.setData({ uploading: false, images: errorImages, submitBtnText: '重试上传并分析' })
       console.error('上传或提交分析失败', err)
-      wx.showToast({ title: err.message || '上传失败，请重试', icon: 'none' })
+      wx.showToast({ title: '上传失败，请稍后重试', icon: 'none' })
     }
   },
 

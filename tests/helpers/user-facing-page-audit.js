@@ -1,6 +1,7 @@
 const { loadPage, createWxMock } = require('./page-harness')
 
 const INTERNAL_SUMMARY = '复测 BN-AUDIT-LEAK-01 与 cloud://env/file'
+const BACKEND_ERROR = '失败 BN-ERROR-01 cloud://env/file'
 const OPAQUE_ID = '665f8c1a2b3c4d5e6f708192'
 
 function state(name, model) {
@@ -141,14 +142,16 @@ function aiUsageStates() {
 
 async function addStudentStates() {
   const modulePath = 'miniprogram/pages/add-student/add-student.js'
+  const failedSave = async message => runController(modulePath, {
+    createStudentWithProfiles: async () => { throw new Error(message) }
+  }, async page => {
+    page.setData({ name: '小明', grade: 6 })
+    await page.onSave()
+  })
   return [
     state('normal', await runController(modulePath)),
-    state('legacy-id-only', await runController(modulePath, {
-      createStudentWithProfiles: async () => { throw new Error(INTERNAL_SUMMARY) }
-    }, async page => {
-      page.setData({ name: '小明', grade: 6 })
-      await page.onSave()
-    }))
+    state('error', await failedSave(BACKEND_ERROR)),
+    state('legacy-id-only', await failedSave(INTERNAL_SUMMARY))
   ]
 }
 
@@ -156,6 +159,13 @@ async function uploadStates() {
   const modulePath = 'miniprogram/pages/upload/upload.js'
   return [
     state('normal', await runController(modulePath)),
+    state('error', await runController(modulePath, {
+      callUploadAndAnalyze: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => {
+      page.uploadOne = async () => 'cloud://internal/uploaded-file'
+      page.setData({ studentId: 'student-route-id', subject: 'math', betaConsented: true, images: [{ tempPath: '/tmp/a.jpg', fileName: 'a.jpg' }] })
+      await page.onSubmit()
+    })),
     state('legacy-id-only', await runController(modulePath, {
       getPaperDetail: async () => ({ paper: { _id: OPAQUE_ID, subject: 'math', title: INTERNAL_SUMMARY, paperDisplayCode: 'MATH-001' } })
     }, async page => {
@@ -175,6 +185,11 @@ async function learningProgressStates() {
   }
   return [
     state('loading', await runController(modulePath)),
+    state('error', await runController(modulePath, {
+      getLearningProgress: async () => ({ success: false, error: BACKEND_ERROR })
+    }, async page => {
+      page.studentId = 'student-route-id'; page.subject = 'math'; await page.loadData()
+    })),
     state('legacy-id-only', await runController(modulePath, cloud, async page => {
       page.studentId = 'student-1'; page.subject = 'math'; await page.loadData()
     }))
@@ -185,6 +200,10 @@ async function bottleneckCenterStates() {
   const modulePath = 'miniprogram/pages/bottleneck-center/bottleneck-center.js'
   return [
     state('loading', await runController(modulePath)),
+    state('error', await runController(modulePath, {
+      getStudentDashboard: async () => { throw new Error(BACKEND_ERROR) },
+      getSubjectProfile: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => { await page.onLoad({ studentId: 'student-route-id' }) })),
     state('legacy-id-only', await runController(modulePath, {
       getStudentDashboard: async () => ({ student: { name: '小明' }, subjectProfiles: [{ subject: 'math', currentBottlenecks: [{ lpCode: 'LP-AUDIT-LEAK-01' }] }] })
     }, async page => { await page.onLoad({ studentId: 'student-1' }) }))
@@ -195,6 +214,9 @@ async function bottleneckDetailStates() {
   const modulePath = 'miniprogram/pages/bottleneck-detail/bottleneck-detail.js'
   return [
     state('loading', await runController(modulePath)),
+    state('error', await runController(modulePath, {
+      getSubjectDashboard: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => { await page.onLoad({ studentId: 'student-route-id', subject: 'math', lpCode: 'LP-001' }) })),
     state('legacy-id-only', await runController(modulePath, {
       getSubjectDashboard: async () => ({
         profile: { subject: 'math', currentBottlenecks: [{ lpCode: 'LP-AUDIT-LEAK-01' }] },
@@ -208,6 +230,12 @@ async function bottleneckDetailStates() {
 async function englishSessionStates(modulePath, method, cloudMethod) {
   return [
     state('loading', await runController(modulePath)),
+    state('error', await runController(modulePath, {
+      [cloudMethod]: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => {
+      page.setData({ studentId: 'student-route-id' })
+      await page[method]()
+    })),
     state('legacy-id-only', await runController(modulePath, {
       [cloudMethod]: async () => { throw new Error(INTERNAL_SUMMARY) }
     }, async page => {
@@ -221,6 +249,9 @@ async function wrongWordsStates() {
   const modulePath = 'miniprogram/pages/english-wrong-words/english-wrong-words.js'
   return [
     state('empty', await runController(modulePath)),
+    state('error', await runController(modulePath, {
+      getEnglishVocabularySummary: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => { page.setData({ studentId: 'student-route-id' }); await page.loadWrongWords() })),
     state('legacy-id-only', await runController(modulePath, {
       getEnglishVocabularySummary: async () => { throw new Error(INTERNAL_SUMMARY) }
     }, async page => { page.setData({ studentId: 'student-1' }); await page.loadWrongWords() }))
@@ -231,6 +262,9 @@ async function generateVerificationStates() {
   const modulePath = 'miniprogram/pages/generate-verification/generate-verification.js'
   return [
     state('loading', await runController(modulePath)),
+    state('error', await runController(modulePath, {
+      getSubjectProfile: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => { page.setData({ studentId: 'student-route-id', subject: 'math' }); await page.loadPendingBottlenecks() })),
     state('legacy-id-only', await runController(modulePath, {
       getSubjectProfile: async () => ({ pendingBottlenecks: [{ lpCode: 'LP-AUDIT-LEAK-01' }] })
     }, async page => { page.setData({ studentId: 'student-1', subject: 'math' }); await page.loadPendingBottlenecks() }))
@@ -241,6 +275,12 @@ async function defaultPaperStates() {
   const modulePath = 'miniprogram/pages/default-paper/default-paper.js'
   return [
     state('empty', await runController(modulePath)),
+    state('error', await runController(modulePath, {
+      callGeneratePaper: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => {
+      page.setData({ studentId: 'student-route-id', subject: 'math', grade: 6, papers: [{ key: 'grade6_a', questionCount: 20 }] })
+      await page.onPreview({ currentTarget: { dataset: { key: 'grade6_a' } } })
+    })),
     state('legacy-id-only', await runController(modulePath, {
       getPapers: async () => [{ _id: OPAQUE_ID }]
     }, async page => { page.setData({ grade: 6, studentId: 'student-1', subject: 'math' }); await page.loadPapers() }))
@@ -251,6 +291,9 @@ async function parentManagementStates() {
   const modulePath = 'miniprogram/pages/parent-management/parent-management.js'
   return [
     state('empty', await runController(modulePath)),
+    state('error', await runController(modulePath, {
+      listStudentMembers: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => { page.setData({ studentId: 'student-route-id' }); await page.loadMembers() })),
     state('legacy-id-only', await runController(modulePath, {
       listStudentMembers: async () => ({
         student: { _id: OPAQUE_ID, name: INTERNAL_SUMMARY },
@@ -265,6 +308,9 @@ async function joinStudentStates() {
   const modulePath = 'miniprogram/pages/join-student/join-student.js'
   return [
     state('empty', await runController(modulePath)),
+    state('error', await runController(modulePath, {
+      getStudentInvite: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => { page.setData({ inviteId: 'invite-route-id', token: 'route-token' }); await page.loadInvite() })),
     state('legacy-id-only', await runController(modulePath, {
       getStudentInvite: async () => ({ student: { _id: OPAQUE_ID, name: INTERNAL_SUMMARY }, presetRelationText: '妈妈' })
     }, async page => { page.setData({ inviteId: OPAQUE_ID, token: 'route-token' }); await page.loadInvite() }))

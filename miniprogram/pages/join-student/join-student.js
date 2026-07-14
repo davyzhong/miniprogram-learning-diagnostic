@@ -64,9 +64,10 @@ Page({
         ),
       })
     } catch (error) {
+      console.error('邀请信息加载失败', error)
       this.setData({
         status: 'error',
-        error: error && error.message ? error.message : '邀请已失效',
+        error: '加载失败，请稍后重试',
       })
     }
   },
@@ -91,10 +92,11 @@ Page({
       })
       wx.navigateTo({ url: '/pages/index/index' })
     } catch (error) {
+      console.error('加入孩子档案失败', error)
       this.setData({
         accepting: false,
         status: 'error',
-        error: error && error.message ? error.message : '加入失败，请稍后重试',
+        error: '加入失败，请稍后重试',
       })
     }
   },
@@ -125,11 +127,12 @@ Page({
         ),
       })
     } catch (error) {
+      console.error('邀请码查询失败', error)
       this.setData({
         mode: 'code',
         lookingUp: false,
         status: 'code',
-        error: error && error.message ? error.message : '邀请码无效'
+        error: '查询失败，请稍后重试'
       })
     }
   },

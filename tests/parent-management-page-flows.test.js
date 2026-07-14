@@ -106,6 +106,23 @@ test('viewer can see members but does not see invite action', async () => {
   assert.equal(page.data.members.length, 2)
 })
 
+test('parent management hides backend details when member loading fails', async () => {
+  const cloud = {
+    listStudentMembers: async () => {
+      throw new Error('失败 BN-ERROR-01 cloud://env/file')
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/parent-management/parent-management.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.setData({ studentId: 'student-route-id' })
+  await page.loadMembers()
+
+  assert.equal(page.data.error, '加载失败，请稍后重试')
+  assert.equal(page.data.studentId, 'student-route-id')
+})
+
 test('valid invite renders child summary and accepted invite navigates home', async () => {
   const wx = createWxMock()
   const cloud = {
@@ -134,6 +151,24 @@ test('valid invite renders child summary and accepted invite navigates home', as
   await page.onAccept()
   assert.equal(page.data.status, 'success')
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/index\/index/)
+})
+
+test('join student hides backend details when invite loading fails', async () => {
+  const cloud = {
+    getStudentInvite: async () => {
+      throw new Error('失败 BN-ERROR-01 cloud://env/file')
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/join-student/join-student.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.setData({ inviteId: 'invite-route-id', token: 'route-token' })
+  await page.loadInvite()
+
+  assert.equal(page.data.status, 'error')
+  assert.equal(page.data.error, '加载失败，请稍后重试')
+  assert.equal(page.data.inviteId, 'invite-route-id')
 })
 
 test('invite code lookup renders child summary and joins by code', async () => {
@@ -180,5 +215,5 @@ test('invalid invite shows error state', async () => {
   page.onLoad({ inviteId: 'bad', token: 'bad' })
   await waitForPageLoad(page)
   assert.equal(page.data.status, 'error')
-  assert.equal(page.data.error, '邀请不存在或已失效')
+  assert.equal(page.data.error, '加载失败，请稍后重试')
 })

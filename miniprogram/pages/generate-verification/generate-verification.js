@@ -298,7 +298,7 @@ Page({
     } catch (err) {
       console.error('验证卷准备失败', err)
       wx.hideLoading()
-      wx.showToast({ title: err.message || '准备失败', icon: 'none' })
+      wx.showToast({ title: '准备失败，请稍后重试', icon: 'none' })
     } finally {
       this.setData({ generating: false })
     }

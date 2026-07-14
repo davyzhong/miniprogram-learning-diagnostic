@@ -387,7 +387,7 @@ Page({
       wx.hideLoading()
       const packId = result.packId || (result.pack && (result.pack._id || result.pack.packId))
       if (!result.success || !packId) {
-        wx.showToast({ title: result.error || '任务生成失败', icon: 'none' })
+        wx.showToast({ title: '任务生成失败，请稍后重试', icon: 'none' })
         return
       }
       wx.navigateTo({
@@ -395,7 +395,8 @@ Page({
       })
     } catch (error) {
       wx.hideLoading()
-      wx.showToast({ title: error.message || '任务生成失败', icon: 'none' })
+      console.error('学习任务生成失败', error)
+      wx.showToast({ title: '任务生成失败，请稍后重试', icon: 'none' })
     }
   },
 

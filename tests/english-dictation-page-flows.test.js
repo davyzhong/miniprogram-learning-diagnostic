@@ -86,6 +86,29 @@ test('English dictation page creates a paper session and uploads answer photos',
   assert.equal(page.data.dictationPhase, 'reviewed')
 })
 
+test('English dictation hides backend details when photo upload fails', async () => {
+  const cloud = {
+    uploadPhoto: async () => {
+      throw new Error('失败 BN-ERROR-01 cloud://env/file')
+    }
+  }
+  const wx = createWxMock({
+    chooseMedia: options => options.success({
+      tempFiles: [{ tempFilePath: '/tmp/dictation.jpg', size: 100 }]
+    })
+  })
+  const { page } = loadPage('miniprogram/pages/english-dictation/english-dictation.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+  page.setData({ studentId: 'student-route-id', sessionId: 'session-route-id' })
+
+  await page.onChoosePhotoTap()
+
+  assert.equal(page.data.error, '上传失败，请稍后重试')
+  assert.equal(page.data.studentId, 'student-route-id')
+})
+
 test('English dictation page starts in ready phase with a 20-word preview list', async () => {
   const cloud = {
     generateEnglishPaperDictationSession: async () => ({

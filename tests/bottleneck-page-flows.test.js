@@ -175,6 +175,28 @@ test('learning progress maps ID-only matrix labels without changing status route
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.bottleneckMatrix[0].statusIcons)), ['!'])
 })
 
+test('learning progress replaces backend error details with a neutral toast', async () => {
+  const wx = createWxMock()
+  const cloud = {
+    getLearningProgress: async () => ({
+      success: false,
+      error: '失败 BN-ERROR-01 cloud://env/file'
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/learning-progress/learning-progress.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.studentId = 'student-route-id'
+  page.subject = 'math'
+  await page.loadData()
+
+  const toast = wx.calls.find(call => call.name === 'showToast')
+  assert.equal(toast.payload.title, '加载失败，请稍后重试')
+  assert.equal(page.studentId, 'student-route-id')
+})
+
 
 test('bottleneck center opens learning resources for the tapped fine bottleneck', async () => {
   let requestedTarget = null
@@ -224,6 +246,35 @@ test('bottleneck center opens learning resources for the tapped fine bottleneck'
   assert.equal(requestedTarget.lpCode, 'LP-001')
   assert.equal(requestedTarget.targetId, second.viewId)
   assert.match(wx.calls.filter(call => call.name === 'navigateTo').pop().payload.url, /packId=pack-2/)
+})
+
+test('bottleneck task actions hide backend failure details', async () => {
+  for (const pageName of ['bottleneck-center', 'bottleneck-detail']) {
+    const wx = createWxMock()
+    const cloud = {
+      generateLearningResourcePack: async () => {
+        throw new Error('失败 BN-ERROR-01 cloud://env/file')
+      }
+    }
+    const { page } = loadPage(`miniprogram/pages/${pageName}/${pageName}.js`, {
+      wx,
+      modules: { '../../utils/cloud': cloud }
+    })
+    const bottleneck = { lpCode: 'LP-001', displayName: '计算基础', subject: 'math' }
+    page.setData({
+      studentId: 'student-route-id',
+      subject: 'math',
+      allBottlenecks: [bottleneck],
+      bottleneck
+    })
+
+    await page.onOpenLearningResource({
+      currentTarget: { dataset: { lpCode: 'LP-001', subject: 'math' } }
+    })
+
+    assert.equal(wx.calls.filter(call => call.name === 'showToast').at(-1).payload.title, '任务生成失败，请稍后重试')
+    assert.equal(page.data.studentId, 'student-route-id')
+  }
 })
 
 
