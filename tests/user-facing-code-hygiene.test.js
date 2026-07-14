@@ -113,6 +113,9 @@ test('all registered page adapters execute real modules and keep legacy IDs out 
     assert.ok(['presenter', 'controller'].includes(adapter.kind), `${page} missing real adapter kind`)
     const states = await adapter.buildStates()
     assert.ok(states.some(item => ['normal', 'loading', 'empty'].includes(item.state)), `${page} missing supported base state`)
+    if (adapter.kind === 'controller') {
+      assert.ok(states.some(item => item.state === 'error'), `${page} controller missing supported error state`)
+    }
     assert.ok(states.some(item => item.state === 'legacy-id-only'), `${page} missing legacy ID-only state`)
     for (const fixture of states) {
       failures.push(...visibleModelFailures(page, fixture.state, fixture.model))

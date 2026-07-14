@@ -47,7 +47,7 @@ Page({
     try {
       const res = await cloud.getLearningProgress(this.studentId, this.subject)
       if (!res.success) {
-        wx.showToast({ title: res.error || '加载失败', icon: 'none' })
+        wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' })
         return
       }
       const data = res.data || res
@@ -90,7 +90,7 @@ Page({
         loading: false,
       })
     } catch (e) {
-      wx.showToast({ title: '加载失败', icon: 'none' })
+      wx.showToast({ title: '加载失败，请稍后重试', icon: 'none' })
     } finally {
       wx.hideLoading()
     }

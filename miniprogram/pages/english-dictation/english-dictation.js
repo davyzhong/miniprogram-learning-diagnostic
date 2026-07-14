@@ -1,5 +1,4 @@
 const cloud = require('../../utils/cloud')
-const { sanitizeUserText } = require('../../utils/user-facing-text')
 const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
 
 function withDisplayFields(item) {
@@ -133,12 +132,10 @@ Page({
       })
       this._sessionStartedAt = Date.now()
     } catch (error) {
+      console.error('纸面听写生成失败', error)
       this.setData({
         loading: false,
-        error: sanitizeUserText(
-          error && error.message ? error.message : '纸面听写生成失败',
-          { treatAsId: true }
-        )
+        error: '纸面听写生成失败，请稍后重试'
       })
     } finally {
       wx.hideLoading()
@@ -409,10 +406,11 @@ Page({
       this.setData({ uploading: false, uploadProgress: '' })
       wx.showToast({ title: '已上传听写纸', icon: 'success' })
     } catch (error) {
+      console.error('听写照片上传失败', error)
       this.setData({
         uploading: false,
         uploadProgress: '',
-        error: error && error.message ? error.message : '上传失败，请重试'
+        error: '上传失败，请稍后重试'
       })
     }
   },

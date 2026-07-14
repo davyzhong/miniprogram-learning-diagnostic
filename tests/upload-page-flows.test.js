@@ -105,6 +105,32 @@ test('upload submits file metadata and navigates to report page on success', asy
   assert.match(navCalls[0].payload.url, /pages\/report\/report\?id=report-1/)
 })
 
+test('upload hides backend details in image errors and failure toasts', async () => {
+  const wx = createWxMock()
+  const cloud = {
+    callUploadAndAnalyze: async () => {
+      throw new Error('失败 BN-ERROR-01 cloud://env/file')
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/upload/upload.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+  page.uploadOne = async () => 'cloud://internal/uploaded-file'
+  page.setData({
+    studentId: 'student-route-id',
+    subject: 'math',
+    images: [{ tempPath: '/tmp/paper.jpg', fileName: 'paper.jpg', fileSize: 100 }],
+    betaConsented: true
+  })
+
+  await page.onSubmit()
+
+  assert.equal(wx.calls.filter(call => call.name === 'showToast').at(-1).payload.title, '上传失败，请稍后重试')
+  assert.doesNotMatch(page.data.images[0].uploadError || '', /BN-|cloud:\/\//)
+  assert.equal(page.data.studentId, 'student-route-id')
+})
+
 test('verification upload page shows the paper code context', async () => {
   const cloud = {
     getPaperDetail: async paperId => ({

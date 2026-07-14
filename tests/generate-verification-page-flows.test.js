@@ -319,10 +319,10 @@ test('verification paper generation sends only selected bottlenecks and opens th
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /paperId=paper-1/)
 })
 
-test('verification paper generation surfaces the backend error message', async () => {
+test('verification paper generation hides backend error details', async () => {
   const cloud = {
     callGeneratePaper: async () => {
-      throw new Error('云函数执行超时，请稍后重试')
+      throw new Error('失败 BN-ERROR-01 cloud://env/file')
     }
   }
   const wx = createWxMock()
@@ -340,8 +340,9 @@ test('verification paper generation surfaces the backend error message', async (
 
   assert.equal(
     wx.calls.filter(call => call.name === 'showToast').at(-1).payload.title,
-    '云函数执行超时，请稍后重试'
+    '准备失败，请稍后重试'
   )
+  assert.equal(page.data.studentId, 'student-1')
 })
 
 

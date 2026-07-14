@@ -70,9 +70,10 @@ Page({
         loading: false,
       })
     } catch (error) {
+      console.error('家长信息加载失败', error)
       this.setData({
         loading: false,
-        error: error && error.message ? error.message : '家长信息加载失败',
+        error: '加载失败，请稍后重试',
       })
     }
   },
@@ -85,9 +86,10 @@ Page({
       const invite = await cloud.createStudentInvite(this.data.studentId, this.data.inviteRelation)
       this.setData({ invite, creating: false })
     } catch (error) {
+      console.error('家长邀请创建失败', error)
       this.setData({
         creating: false,
-        error: error && error.message ? error.message : '邀请创建失败',
+        error: '邀请创建失败，请稍后重试',
       })
     }
   },
@@ -156,9 +158,10 @@ Page({
       await this.loadMembers()
       wx.showToast({ title: '已保存', icon: 'success' })
     } catch (error) {
+      console.error('家长资料保存失败', error)
       this.setData({
         saving: false,
-        error: error && error.message ? error.message : '保存失败'
+        error: '保存失败，请稍后重试'
       })
     }
   },

@@ -1,5 +1,4 @@
 const cloud = require('../../utils/cloud')
-const { sanitizeUserText } = require('../../utils/user-facing-text')
 const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
 
 const RECOGNITION_WAIT_TIMEOUT_MS = 12000
@@ -170,13 +169,11 @@ Page({
       this._sessionStartedAt = Date.now()
       this._answerStartedAt = Date.now()
     } catch (error) {
+      console.error('单词练习生成失败', error)
       this.setData({
         loading: false,
         errorTitle: '生成失败',
-        error: sanitizeUserText(
-          error && error.message ? error.message : '单词熟悉度生成失败',
-          { treatAsId: true }
-        )
+        error: '单词练习生成失败，请稍后重试'
       })
     } finally {
       wx.hideLoading()

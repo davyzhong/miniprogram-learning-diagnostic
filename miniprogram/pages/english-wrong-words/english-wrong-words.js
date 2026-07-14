@@ -1,5 +1,4 @@
 const cloud = require('../../utils/cloud')
-const { sanitizeUserText } = require('../../utils/user-facing-text')
 
 function countOf(value) {
   const count = Number(value)
@@ -121,12 +120,10 @@ Page({
         weakWords: (result.weakWords || []).map(normalizeWeakWord)
       })
     } catch (error) {
+      console.error('错词本加载失败', error)
       this.setData({
         loading: false,
-        error: sanitizeUserText(
-          error && error.message ? error.message : '错词本加载失败',
-          { treatAsId: true }
-        )
+        error: '错词本加载失败，请稍后重试'
       })
     } finally {
       wx.hideLoading()
