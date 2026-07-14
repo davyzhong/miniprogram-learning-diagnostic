@@ -34,7 +34,8 @@ Page({
       const view = buildKnowledgeMapPageView(profile || {}, this.data.subject)
       this.setData({ loading: false, view, errorText: '' })
     } catch (err) {
-      this.setData({ loading: false, errorText: (err && err.message) || '加载失败' })
+      console.error('知识地图加载失败', err)
+      this.setData({ loading: false, errorText: '加载失败，请稍后重试' })
     }
   },
 
@@ -67,11 +68,12 @@ Page({
           url: `/pages/learning-resource/learning-resource?packId=${encodeURIComponent(packId)}`,
         })
       } else {
-        wx.showToast({ title: (result && result.error) || '讲解生成失败，请稍后重试', icon: 'none' })
+        wx.showToast({ title: '讲解生成失败，请稍后重试', icon: 'none' })
       }
     } catch (err) {
       wx.hideLoading()
-      wx.showToast({ title: (err && err.message) || '讲解生成失败', icon: 'none' })
+      console.error('知识点讲解生成失败', err)
+      wx.showToast({ title: '讲解生成失败，请稍后重试', icon: 'none' })
     } finally {
       this.setData({ generatingLpCode: '' })
     }

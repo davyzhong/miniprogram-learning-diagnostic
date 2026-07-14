@@ -160,10 +160,43 @@ test('knowledge-map.onBottleneckTap 失败时显示 toast 而不崩溃', async (
 
   const toastCall = wx.calls.find(c => c.name === 'showToast')
   assert.ok(toastCall, '失败时应弹 toast')
-  assert.match(String(toastCall.payload.title || ''), /云函数挂了|失败/, 'toast 文案应含错误信息')
+  assert.equal(toastCall.payload.title, '讲解生成失败，请稍后重试')
   // 不应跳转
   const navCall = wx.calls.find(c => c.name === 'navigateTo')
   assert.ok(!navCall, '失败时不应跳转')
+})
+
+test('knowledge-map load error hides backend details and preserves route state', async () => {
+  const { page } = loadKnowledgeMapPage({
+    getSubjectProfile: async () => {
+      throw new Error('失败 BN-ERROR-01 cloud://env/file')
+    }
+  })
+  page.setData({ studentId: 'student-route-id', subject: 'math' })
+
+  await page.loadData()
+
+  assert.equal(page.data.errorText, '加载失败，请稍后重试')
+  assert.equal(page.data.studentId, 'student-route-id')
+})
+
+test('learning-resource load error hides backend details and preserves pack route id', async () => {
+  const { page } = loadPage('miniprogram/pages/learning-resource/learning-resource.js', {
+    modules: {
+      '../../utils/cloud': {
+        getLearningResourcePack: async () => ({
+          success: false,
+          error: '失败 BN-ERROR-01 cloud://env/file'
+        })
+      }
+    }
+  })
+  page.setData({ packId: '665f8c1a2b3c4d5e6f708192' })
+
+  await page.loadPack()
+
+  assert.equal(page.data.errorText, '学习任务包加载失败，请稍后重试')
+  assert.equal(page.data.packId, '665f8c1a2b3c4d5e6f708192')
 })
 
 // ============================================================

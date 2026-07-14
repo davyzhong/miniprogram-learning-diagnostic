@@ -455,8 +455,7 @@ Page({
     } catch (error) {
       console.error('导入英语个人词库失败', error)
       wx.hideLoading()
-      const message = error && error.message ? error.message : '导入失败，请重试'
-      wx.showToast({ title: message.slice(0, 18), icon: 'none' })
+      wx.showToast({ title: '导入失败，请稍后重试', icon: 'none' })
     } finally {
       this._importingEnglishVocabulary = false
     }

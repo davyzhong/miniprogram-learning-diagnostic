@@ -405,11 +405,12 @@ Page({
       if (result.success && result.packId) {
         wx.navigateTo({ url: '/pages/learning-resource/learning-resource?packId=' + result.packId })
       } else {
-        wx.showToast({ title: result.error || '加载失败', icon: 'none' })
+        wx.showToast({ title: '讲解加载失败，请稍后重试', icon: 'none' })
       }
     } catch (err) {
       wx.hideLoading()
-      wx.showToast({ title: err.message || '加载失败', icon: 'none' })
+      console.error('报告学习讲解加载失败', err)
+      wx.showToast({ title: '讲解加载失败，请稍后重试', icon: 'none' })
     }
   },
 

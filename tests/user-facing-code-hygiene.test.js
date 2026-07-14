@@ -111,10 +111,11 @@ test('all registered page adapters execute real modules and keep legacy IDs out 
   for (const [page, adapter] of Object.entries(PAGE_AUDIT_REGISTRY)) {
     assert.match(adapter.modulePath, /miniprogram\/pages\//, `${page} missing real module path`)
     assert.ok(['presenter', 'controller'].includes(adapter.kind), `${page} missing real adapter kind`)
+    assert.equal(typeof adapter.supportsError, 'boolean', `${page} missing supportsError declaration`)
     const states = await adapter.buildStates()
     assert.ok(states.some(item => ['normal', 'loading', 'empty'].includes(item.state)), `${page} missing supported base state`)
-    if (adapter.kind === 'controller') {
-      assert.ok(states.some(item => item.state === 'error'), `${page} controller missing supported error state`)
+    if (adapter.supportsError) {
+      assert.ok(states.some(item => item.state === 'error'), `${page} missing supported error state`)
     }
     assert.ok(states.some(item => item.state === 'legacy-id-only'), `${page} missing legacy ID-only state`)
     for (const fixture of states) {

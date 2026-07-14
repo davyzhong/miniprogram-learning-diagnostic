@@ -149,8 +149,7 @@ Page({
 
     } catch (err) {
       console.error('加载试卷失败', err)
-      const msg = (err && err.message) || '加载试卷失败'
-      this.setData({ paperLoadError: msg })
+      this.setData({ paperLoadError: '试卷加载失败，请稍后重试' })
       wx.showToast({ title: '试卷加载失败，暂时无法上传答题', icon: 'none' })
     } finally {
       wx.hideLoading()

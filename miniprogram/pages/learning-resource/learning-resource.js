@@ -33,7 +33,7 @@ Page({
       if (!result.success || !result.pack) {
         this.setData({
           loading: false,
-          errorText: result.error || '学习任务包加载失败'
+          errorText: '学习任务包加载失败，请稍后重试'
         })
         return
       }
@@ -42,9 +42,10 @@ Page({
         view: buildLearningResourceView(result.pack)
       })
     } catch (error) {
+      console.error('学习任务包加载失败', error)
       this.setData({
         loading: false,
-        errorText: error.message || '学习任务包加载失败'
+        errorText: '学习任务包加载失败，请稍后重试'
       })
     }
   },
@@ -60,14 +61,15 @@ Page({
       })
       wx.hideLoading()
       if (!result.success) {
-        wx.showToast({ title: result.error || '保存失败', icon: 'none' })
+        wx.showToast({ title: '保存失败，请稍后重试', icon: 'none' })
         return
       }
       wx.showToast({ title: '已完成', icon: 'success' })
       this.loadPack()
     } catch (error) {
       wx.hideLoading()
-      wx.showToast({ title: error.message || '保存失败', icon: 'none' })
+      console.error('学习任务完成状态保存失败', error)
+      wx.showToast({ title: '保存失败，请稍后重试', icon: 'none' })
     }
   },
 
@@ -79,12 +81,13 @@ Page({
       const result = await cloud.scheduleResourcePackVerification(this.data.packId)
       wx.hideLoading()
       wx.showToast({
-        title: result.success ? '已加入验证' : (result.error || '操作失败'),
+        title: result.success ? '已加入验证' : '操作失败，请稍后重试',
         icon: result.success ? 'success' : 'none'
       })
     } catch (error) {
       wx.hideLoading()
-      wx.showToast({ title: error.message || '操作失败', icon: 'none' })
+      console.error('学习任务加入验证失败', error)
+      wx.showToast({ title: '操作失败，请稍后重试', icon: 'none' })
     }
   },
 
