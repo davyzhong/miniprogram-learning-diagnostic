@@ -6,6 +6,20 @@ function safeVisibleText(value, fallback = '') {
   return sanitizeUserText(value || fallback, { treatAsId: true }) || fallback
 }
 
+function safeRelationOptions(options = []) {
+  return options.map(option => {
+    const rawName = String(option.name || '').trim()
+    const name = sanitizeUserText(rawName, { treatAsId: true })
+    return { ...option, name: name === rawName && name ? name : '家庭成员' }
+  })
+}
+
+const VISIBLE_RELATION_OPTIONS = safeRelationOptions(RELATION_OPTIONS)
+const INVITE_RELATION_INDEX = Math.max(0, VISIBLE_RELATION_OPTIONS.findIndex(option => option.key === 'mother'))
+const EDIT_RELATION_INDEX = Math.max(0, VISIBLE_RELATION_OPTIONS.findIndex(option => option.key === 'other'))
+const DEFAULT_INVITE_RELATION = (VISIBLE_RELATION_OPTIONS[INVITE_RELATION_INDEX] || {}).key || 'other'
+const DEFAULT_EDIT_RELATION = (VISIBLE_RELATION_OPTIONS[EDIT_RELATION_INDEX] || {}).key || 'other'
+
 function formatMember(member) {
   const role = member.role === 'owner' ? '档案创建者' : '共同家长'
   const relationText = member.relationText || (member.role === 'owner' ? '创建者' : '其他')
@@ -32,13 +46,13 @@ Page({
     creating: false,
     saving: false,
     error: '',
-    relationOptions: RELATION_OPTIONS,
-    inviteRelation: 'mother',
-    inviteRelationIndex: 1,
+    relationOptions: VISIBLE_RELATION_OPTIONS,
+    inviteRelation: DEFAULT_INVITE_RELATION,
+    inviteRelationIndex: INVITE_RELATION_INDEX,
     editingMemberIndex: -1,
     editingDisplayName: '',
-    editingRelation: 'other',
-    editingRelationIndex: RELATION_OPTIONS.length - 1,
+    editingRelation: DEFAULT_EDIT_RELATION,
+    editingRelationIndex: EDIT_RELATION_INDEX,
   },
 
   onLoad(options = {}) {
@@ -122,13 +136,15 @@ Page({
     this.setData({
       editingMemberIndex: -1,
       editingDisplayName: '',
-      editingRelation: 'other',
+      editingRelation: DEFAULT_EDIT_RELATION,
       editingRelationIndex: this.findRelationIndex('other')
     })
   },
 
   onDisplayNameInput(e) {
-    this.setData({ editingDisplayName: e.detail.value })
+    this.setData({
+      editingDisplayName: sanitizeUserText(e.detail.value || '', { treatAsId: true })
+    })
   },
 
   onRelationChange(e) {

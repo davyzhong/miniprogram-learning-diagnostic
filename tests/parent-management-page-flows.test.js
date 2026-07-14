@@ -123,6 +123,23 @@ test('parent management hides backend details when member loading fails', async 
   assert.equal(page.data.studentId, 'student-route-id')
 })
 
+test('parent management sanitizes editable names and selected relation labels', () => {
+  const { page } = loadPage('miniprogram/pages/parent-management/parent-management.js', {
+    modules: {
+      '../../utils/cloud': {},
+      '../../utils/constants': {
+        RELATION_OPTIONS: [{ key: 'other', name: '失败 BN-RELATION-01 cloud://env/file' }]
+      }
+    }
+  })
+
+  page.onDisplayNameInput({ detail: { value: '复测 BN-PARENT-01 与 cloud://env/file' } })
+
+  assert.equal(page.data.editingDisplayName, '复测')
+  assert.equal(page.data.relationOptions[0].name, '家庭成员')
+  assert.equal(page.data.editingRelationIndex, 0)
+})
+
 test('valid invite renders child summary and accepted invite navigates home', async () => {
   const wx = createWxMock()
   const cloud = {
@@ -239,6 +256,25 @@ test('invite code lookup renders child summary and joins by code', async () => {
   await page.onAccept()
   assert.equal(page.data.status, 'success')
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/index\/index/)
+})
+
+test('join student sanitizes bound input values and selected relation labels', () => {
+  const { page } = loadPage('miniprogram/pages/join-student/join-student.js', {
+    modules: {
+      '../../utils/cloud': {},
+      '../../utils/constants': {
+        RELATION_OPTIONS: [{ key: 'other', name: '失败 ERR-RELATION-01 cloud://env/file' }]
+      }
+    }
+  })
+
+  page.onInviteCodeInput({ detail: { value: 'BN-INPUT-01' } })
+  page.onDisplayNameInput({ detail: { value: '复测 BN-NAME-01 与 cloud://env/file' } })
+
+  assert.equal(page.data.inviteCode, '')
+  assert.equal(page.data.displayName, '复测')
+  assert.equal(page.data.relationOptions[0].name, '家庭成员')
+  assert.equal(page.data.relationIndex, 0)
 })
 
 test('invalid invite shows error state', async () => {

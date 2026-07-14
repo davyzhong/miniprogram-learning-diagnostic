@@ -167,6 +167,9 @@ function sanitizeUserText(value, options = {}) {
     .replace(/[：:]\s*(?=[。；！？]|$)/g, '')
     .replace(/\s+(?:与|和)\s*(?=[。；！？]|$)/g, '')
     .replace(/[ \t]{2,}/g, ' ')
+    .replace(/^\s*(?:与|和)\s*/g, '')
+    .replace(/请查看\s*后重试/g, '请稍后重试')
+    .replace(/[，,]?\s*请查看(?=[。；！？]|$)/g, '')
     .trim()
 }
 

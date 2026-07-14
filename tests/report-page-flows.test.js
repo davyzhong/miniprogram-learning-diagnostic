@@ -564,6 +564,23 @@ test('report learning resource cards copy resource links for parent review', () 
   assert.equal(clipboardCall.payload.data, 'https://www.bilibili.com/video/BV1M6B3BuEFn/')
 })
 
+test('report sanitizes internal identifiers from bound feedback values', () => {
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    modules: {
+      '../../utils/cloud': {},
+      '../../utils/util': { formatChineseDateTime: () => '' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {} }) },
+      './report-presenter': { buildReportView: () => ({}) }
+    }
+  })
+
+  page.onFeedbackReasonInput({ detail: { value: '复测 BN-FEEDBACK-01 与 cloud://env/file' } })
+  page.onFeedbackNoteInput({ detail: { value: '失败 ERR-FEEDBACK-01 cloud://env/file' } })
+
+  assert.equal(page.data.feedbackDialog.reason, '复测')
+  assert.equal(page.data.feedbackDialog.note, '失败')
+})
+
 test('report generates, downloads and opens its printable PDF', async () => {
   const cloud = {
     callGenerateReportPDF: async () => ({ pdfFileId: 'cloud://report.pdf' })

@@ -6,6 +6,7 @@ const { buildReportView } = require('./report-presenter')
 const { getSubjectName } = require('../../utils/constants')
 const { navigateToVerificationPaper, startVerificationPoller, stopVerificationPoller } = require('../../utils/shared-navigation')
 const { appStatus, OP_TYPES, OP_STATUS } = require('../../utils/app-status')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
 
 function downloadCloudFile(fileID) {
   return new Promise((resolve, reject) => {
@@ -455,11 +456,15 @@ Page({
   },
 
   onFeedbackReasonInput(e) {
-    this.setData({ 'feedbackDialog.reason': e.detail.value || '' })
+    this.setData({
+      'feedbackDialog.reason': sanitizeUserText(e.detail.value || '', { treatAsId: true })
+    })
   },
 
   onFeedbackNoteInput(e) {
-    this.setData({ 'feedbackDialog.note': e.detail.value || '' })
+    this.setData({
+      'feedbackDialog.note': sanitizeUserText(e.detail.value || '', { treatAsId: true })
+    })
   },
 
   async onSubmitFeedback() {

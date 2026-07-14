@@ -11,7 +11,10 @@ const {
   sanitizeUserText,
   compactReadableTargets
 } = require('../miniprogram/utils/user-facing-text')
-const { PAGE_AUDIT_REGISTRY } = require('./helpers/user-facing-page-audit')
+const {
+  PAGE_AUDIT_REGISTRY,
+  ALLOWED_UNRESOLVED_BINDING_REASONS
+} = require('./helpers/user-facing-page-audit')
 
 function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
@@ -52,7 +55,7 @@ function visibleModelFailures(page, state, projection) {
 
 function visibleWxmlBindings(source) {
   const bindings = []
-  const visibleAttributes = /\b(?:aria-label|title|placeholder|alt)="([^"]*\{\{[^}]+\}\}[^"]*)"/g
+  const visibleAttributes = /\b(?:aria-label|title|placeholder|alt|value|checked|label)="([^"]*\{\{[^}]+\}\}[^"]*)"/g
   for (const match of source.matchAll(visibleAttributes)) bindings.push(match[1])
   const textNodes = source.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]+>/g, '\n')
   for (const match of textNodes.matchAll(/\{\{[^}]+\}\}/g)) bindings.push(match[0])
@@ -107,6 +110,7 @@ test('all registered page adapters execute real modules and keep legacy IDs out 
     assert.equal(typeof adapter.supportsError, 'boolean', `${page} missing supportsError declaration`)
     assert.ok(Array.isArray(adapter.visiblePaths) && adapter.visiblePaths.length > 0, `${page} missing WXML-derived visible paths`)
     assert.equal(typeof adapter.projectVisible, 'function', `${page} missing visible projection`)
+    assert.equal(typeof adapter.inspectVisibleBindings, 'function', `${page} missing binding resolution audit`)
     const states = await adapter.buildStates()
     assert.ok(states.some(item => ['normal', 'loading', 'empty'].includes(item.state)), `${page} missing supported base state`)
     if (adapter.supportsError) {
@@ -114,8 +118,14 @@ test('all registered page adapters execute real modules and keep legacy IDs out 
     }
     assert.ok(states.some(item => item.state === 'legacy-id-only'), `${page} missing legacy ID-only state`)
     for (const fixture of states) {
-      const projection = adapter.projectVisible(fixture.model)
+      const { projection, unresolved } = adapter.inspectVisibleBindings(fixture.model)
       assert.ok(Object.keys(projection).length > 0, `${page} / ${fixture.state} has no rendered values`)
+      const invalidUnresolved = unresolved.filter(item => !ALLOWED_UNRESOLVED_BINDING_REASONS.has(item.reason))
+      assert.deepEqual(
+        invalidUnresolved,
+        [],
+        `${page} / ${fixture.state} has unresolved applicable bindings:\n${invalidUnresolved.map(item => item.path).join('\n')}`
+      )
       failures.push(...visibleModelFailures(page, fixture.state, projection))
     }
   }
@@ -147,6 +157,23 @@ test('page projections include WXML-rendered paths and exclude unrelated fields 
   assert.deepEqual(projection, {
     'model.visibleEvidenceChain[0].summary': 'rendered summary'
   })
+})
+
+test('page projections include bound form values and resolve fixture-selected member paths', () => {
+  const joinAdapter = PAGE_AUDIT_REGISTRY['pages/join-student/join-student']
+  const projection = joinAdapter.projectVisible({
+    inviteCode: 'BN-INPUT-LEAK',
+    displayName: 'cloud://env/input-name',
+    relationOptions: [
+      { name: '妈妈' },
+      { name: 'ERR-RELATION-LEAK' }
+    ],
+    relationIndex: 1
+  })
+
+  assert.equal(projection['model.inviteCode'], 'BN-INPUT-LEAK')
+  assert.equal(projection['model.displayName'], 'cloud://env/input-name')
+  assert.equal(projection['model.relationOptions[1].name'], 'ERR-RELATION-LEAK')
 })
 
 test('detects internal identifiers without treating readable labels as IDs', () => {
@@ -246,6 +273,21 @@ test('removes backend identifiers from generic prose without inventing bottlenec
   assert.equal(
     sanitizeUserText('文件上传失败：cloud://env/file。'),
     '文件上传失败。'
+  )
+})
+
+test('keeps neutral prose grammatical when unknown tokens occur at clause boundaries', () => {
+  assert.equal(
+    sanitizeUserText('BN-UNKNOWN-01 与计算基础相关。'),
+    '计算基础相关。'
+  )
+  assert.equal(
+    sanitizeUserText('请查看 cloud://env/file 后重试。'),
+    '请稍后重试。'
+  )
+  assert.equal(
+    sanitizeUserText('上传失败，请查看 ERR-UPLOAD-01。'),
+    '上传失败。'
   )
 })
 
