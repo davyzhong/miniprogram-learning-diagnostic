@@ -320,7 +320,7 @@ test('family workbench CSS fixes compact dimensions and four-column metrics', ()
   assert.doesNotMatch(familyRules, /linear-gradient|radial-gradient/)
 })
 
-test('child workbench sections use flat rows and bands instead of nested cards', () => {
+test('family workbench sections use flat rows and bands instead of nested cards', () => {
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
   const rule = selector => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -330,6 +330,7 @@ test('child workbench sections use flat rows and bands instead of nested cards',
   }
 
   for (const selector of [
+    '.family-metric-cell',
     '.child-metric-cell',
     '.child-priority-row',
     '.child-secondary-action',
@@ -341,7 +342,7 @@ test('child workbench sections use flat rows and bands instead of nested cards',
     assert.doesNotMatch(declarations, /border\s*:\s*1rpx/, `${selector} should not have a framed border`)
   }
 
-  for (const selector of ['.child-metric-cell', '.child-secondary-action', '.child-subject-row']) {
+  for (const selector of ['.family-metric-cell', '.child-metric-cell', '.child-secondary-action', '.child-subject-row']) {
     assert.doesNotMatch(rule(selector), /background\s*:/, `${selector} should stay unfilled`)
   }
 
@@ -350,6 +351,7 @@ test('child workbench sections use flat rows and bands instead of nested cards',
   }
 
   assert.doesNotMatch(rule('.child-quick-link'), /border\s*:\s*1rpx|box-shadow\s*:/)
+  assert.match(rule('.family-metric-cell'), /border-right\s*:/)
   assert.match(rule('.child-metric-strip'), /border-(?:top|bottom)\s*:/)
   assert.match(rule('.child-secondary-action'), /border-top\s*:/)
   assert.match(rule('.child-subject-row'), /border-top\s*:/)
