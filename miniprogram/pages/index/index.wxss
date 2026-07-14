@@ -628,14 +628,16 @@
 .family-metric-cell {
   min-height: 60rpx;
   padding: 7rpx 5rpx;
-  border-radius: 10rpx;
-  background: #fff;
-  border: 1rpx solid #d7e2e8;
+  border-right: 1rpx solid #cbdde3;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 22rpx minmax(0, 1fr);
   align-items: center;
   column-gap: 3rpx;
+}
+
+.family-metric-cell:last-child {
+  border-right: 0;
 }
 
 .family-metric-icon {
