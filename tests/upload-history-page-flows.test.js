@@ -72,7 +72,7 @@ test('learning records group uploads reports and verification papers by day', as
   assert.ok(page.data.days[0].events[0].chips.some(chip => /证据时间 6月11日/.test(chip)))
   assert.equal(page.data.days[0].events[1].paperCode, '数学-20260611-01')
   assert.equal(page.data.days[0].events[1].showPaperCode, true)
-  assert.ok(page.data.days[0].events[1].chips.includes('试卷日期 6月11日'))
+  assert.ok(page.data.days[0].events[1].chips.includes('3题'))
   assert.match(page.data.days[0].events[2].photos[0].summaryText, /暂无 OCR/)
   page.onPreviewPhoto({ currentTarget: { dataset: { dayIndex: 0, eventIndex: 2, photoIndex: 0 } } })
   assert.equal(wx.calls.find(call => call.name === 'previewImage').payload.current, 'https://temp/legacy-photo')
@@ -172,8 +172,7 @@ test('learning records fold evidence, compact transient states, and hide low fre
   assert.equal(day.events.find(event => event.kind === 'diagnosis-report').foldedEvidence.length, 2)
   assert.equal(day.events.find(event => event.kind === 'verification-paper').paperCode, '数学-20260612-01')
   assert.equal(day.events.find(event => event.kind === 'verification-paper').showPaperCode, true)
-  assert.ok(day.events.find(event => event.kind === 'verification-paper').chips.includes('学生卷1页'))
-  assert.ok(day.events.find(event => event.kind === 'verification-paper').chips.includes('答案1页'))
+  assert.ok(day.events.find(event => event.kind === 'verification-paper').chips.includes('学生卷1页 · 答案1页'))
   assert.ok(day.events.find(event => event.kind === 'verification-report').chips.includes('关联 数学-20260612-01'))
   assert.ok(day.events.find(event => event.kind === 'diagnosis-report').chips.includes('计算基础'))
 
@@ -226,8 +225,7 @@ test('learning records surface stable readable codes for legacy verification pap
   assert.equal(eventsById.get('paper-late').paperCode, '数学-20260612-02')
   assert.equal(eventsById.get('paper-late').showPaperCode, true)
   assert.ok(eventsById.get('paper-late').chips.includes('6题'))
-  assert.ok(eventsById.get('paper-late').chips.includes('学生卷1页'))
-  assert.ok(eventsById.get('paper-late').chips.includes('答案1页'))
+  assert.ok(eventsById.get('paper-late').chips.includes('学生卷1页 · 答案1页'))
 })
 
 test('learning records load all subjects when no subject filter is provided', async () => {
@@ -667,4 +665,100 @@ test('learning records treat route subject as an initial filter on the complete 
     '语文诊断报告'
   ])
   assert.equal(page.data.filters.find(item => item.key === '').active, true)
+})
+
+test('learning record screenshot fixture keeps a dense verification paper readable and sanitized', async () => {
+  const rawTargets = Array.from({ length: 36 }, (_, index) =>
+    `BN-SCREENSHOT-REGRESSION-${String(index + 1).padStart(2, '0')}`
+  )
+  const cloud = {
+    getLearningTimeline: async () => ({
+      reports: [{
+        _id: 'report-internal-665f8c1a2b3c4d5e6f708192',
+        subject: 'math',
+        type: 'verification',
+        status: 'completed',
+        paperId: 'paper-internal-665f8c1a2b3c4d5e6f708192',
+        createdAt: '2026-07-12T10:30:00+08:00',
+        comparisonSummary: 'BN-SCREENSHOT-REGRESSION-01 已改善，RES-PRIVATE-01 已完成',
+        verificationEvidence: [{
+          bottleneckId: 'BN-SCREENSHOT-REGRESSION-01',
+          complete: true,
+          allCorrect: true
+        }]
+      }],
+      papers: [{
+        _id: 'paper-internal-665f8c1a2b3c4d5e6f708192',
+        studentId: 'student-internal-665f8c1a2b3c4d5e6f708192',
+        subject: 'math',
+        type: 'verification',
+        paperDisplayCode: '数学-20260712-06',
+        createdAt: '2026-07-12T10:00:00+08:00',
+        generatedAt: '2026-07-12T10:05:00+08:00',
+        paperDate: '2026-07-12',
+        questionCount: 36,
+        studentPages: 12,
+        answerPages: 4,
+        totalPages: 16,
+        bottleneckTargets: rawTargets,
+        verificationPack: {
+          pages: Array.from({ length: 12 }, (_, index) => ({
+            pageCode: `VER-PAGE-INTERNAL-${index + 1}`,
+            targetIds: rawTargets.slice(index * 3, index * 3 + 3)
+          }))
+        }
+      }],
+      hasMore: false
+    }),
+    getTempFileURLs: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', activeSubject: 'math', subjectName: '数学' })
+
+  await page.loadHistory()
+
+  const paperEvent = page.data.days[0].events.find(event => event.kind === 'verification-paper')
+  const reportEvent = page.data.days[0].events.find(event => event.kind === 'verification-report')
+  const paperVisibleModel = {
+    icon: paperEvent.icon,
+    title: paperEvent.title,
+    summary: paperEvent.summary,
+    statusText: paperEvent.statusText,
+    paperCode: paperEvent.paperCode,
+    chips: paperEvent.chips,
+    actionText: paperEvent.actionText
+  }
+  const reportVisibleModel = {
+    title: reportEvent.title,
+    summary: reportEvent.summary,
+    statusText: reportEvent.statusText,
+    paperCode: reportEvent.paperCode,
+    chips: reportEvent.chips
+  }
+  const visibleText = JSON.stringify([paperVisibleModel, reportVisibleModel])
+
+  assert.equal(paperEvent.icon, '🧪')
+  assert.equal(paperEvent.paperCode, '数学-20260712-06')
+  assert.equal(paperEvent.showPaperCode, true)
+  assert.match(paperEvent.summary, /覆盖 36 个数学学习卡点/)
+  assert.ok(paperEvent.chips.length <= 3)
+  assert.ok(paperEvent.chips.includes('36题'))
+  assert.ok(paperEvent.chips.some(chip => /学生卷12页/.test(chip) && /答案4页/.test(chip)))
+  assert.equal(reportEvent.chips.filter(chip => chip.includes('数学-20260712-06')).length, 1)
+  assert.doesNotMatch(visibleText, /(?:BN|LP|ERR|NODE|RES)-[A-Z0-9_-]+/)
+  assert.doesNotMatch(visibleText, /665f8c1a2b3c4d5e6f708192/)
+
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload-history/upload-history.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload-history/upload-history.wxss'), 'utf8')
+  assert.match(wxml, /class="event-meta"/)
+  assert.match(wxml, /class="paper-code"/)
+  assert.doesNotMatch(wxml, /paper-code-row/)
+  assert.match(wxss, /\.event-meta\s*\{/)
+  assert.match(wxss, /\.paper-code\s*\{/)
+  assert.doesNotMatch(wxss, /paper-code-(?:row|label|value)/)
 })

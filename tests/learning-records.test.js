@@ -392,8 +392,9 @@ test('verification paper timeline event shows task-pack page progress chips', ()
   const { events } = buildTimelineEvents(reports, papers, new Map(), 'math', '数学')
   const paperEvent = events.find(event => event.kind === 'verification-paper')
 
-  assert.ok(paperEvent.chips.includes('任务包3页'))
-  assert.ok(paperEvent.chips.includes('已回传1页'))
+  assert.ok(paperEvent.chips.includes('学生卷1页 · 答案1页'))
+  assert.ok(paperEvent.chips.includes('已回传1/3页'))
+  assert.ok(paperEvent.chips.length <= 3)
 })
 
 test('photo evidence summaries hide unreliable AI-inferred grade labels', () => {
