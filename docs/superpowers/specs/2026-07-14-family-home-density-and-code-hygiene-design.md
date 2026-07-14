@@ -10,7 +10,7 @@ Finish the B+ migration of the family learning workbench and remove internal ide
 - Compress those sections instead of removing them. The common phone viewport should expose the important state of two children with substantially less empty space than the current page.
 - Use semantic emoji and lightweight CSS graphics. Do not add image assets, icon fonts, or dependencies.
 - Never expose internal identifiers such as `BN-*`, `LP-*`, `ERR-*`, knowledge-node IDs, resource IDs, task-page codes, report database IDs, or raw cloud IDs.
-- Human-oriented paper display codes such as `数学-20260712-06` may appear only on the paper workbench/detail page. Timeline cards, family cards, reports, uploads, and general lists hide them.
+- Human-oriented paper display codes such as `数学-20260712-06` contain useful subject/date/sequence information and may remain on relevant user-facing pages. They are not internal identifiers and must not be removed by the sanitizer.
 - Internal identifiers remain available in data fields, route parameters, analytics, and lookup logic. The restriction applies to rendered text and user-facing presenter fields, not system behavior.
 
 ## Family Workbench Design
@@ -96,7 +96,7 @@ The paper event card contains only:
 - compact page/question counts when meaningful;
 - one next action.
 
-The general timeline does not show the paper display code. It also does not repeat student-page, answer-page, and task-pack metadata when those values do not help the parent choose an action. Repeated paper cards from the same day remain separate records when they represent separate workflows, but their content stays compact.
+The general timeline may show the paper display code as one compact secondary identifier. It does not repeat student-page, answer-page, and task-pack metadata when those values do not help the parent choose an action. Repeated paper cards from the same day remain separate records when they represent separate workflows, but their content stays compact.
 
 ### Shared Sanitizer
 
@@ -129,7 +129,7 @@ Static source matches inside data seeds, route construction, comparisons, and te
 - Legacy records containing only IDs must still render. They use mapped titles or semantic count summaries.
 - Missing taxonomy entries must not crash rendering and must not reveal the unknown ID.
 - Existing navigation continues to use the original IDs internally.
-- Existing human paper codes remain available on paper detail pages for parents who need to distinguish printed sheets.
+- Existing human paper codes remain available on relevant pages for parents who need to distinguish printed sheets; sanitizer and audit tests explicitly treat them as readable information.
 - Loading, empty, permission-restricted, and failure states follow the same code-hygiene rules.
 
 ## Testing
@@ -139,7 +139,7 @@ Static source matches inside data seeds, route construction, comparisons, and te
 - Sanitizer tests cover standalone IDs, IDs embedded in prose, mixed readable text and IDs, unknown IDs, and count fallback.
 - Child-workbench tests assert icon fields and compact summaries for every section.
 - Upload-history tests use fixtures containing long `BN-*` arrays and assert that no internal code reaches event titles, summaries, chips, or status text.
-- Paper detail tests verify that the human paper display code remains visible only on the paper workbench/detail presenter.
+- Presenter tests verify that human paper display codes remain readable and are never mistaken for internal IDs.
 
 ### Static Gate
 

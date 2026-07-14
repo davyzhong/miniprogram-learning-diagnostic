@@ -23,7 +23,7 @@
 
 ### Learning records and related presenters
 
-- Modify `miniprogram/pages/upload-history/upload-history-presenter.js`: compact paper events and remove list-page paper codes and raw target joins.
+- Modify `miniprogram/pages/upload-history/upload-history-presenter.js`: compact paper events, retain human-readable paper codes, and remove raw target joins.
 - Modify `miniprogram/pages/upload-history/upload-history.wxml`: remove paper-code row and keep compact lifecycle/action content.
 - Modify `miniprogram/pages/upload-history/upload-history.wxss`: reduce card spacing and constrain readable summaries.
 - Modify `tests/upload-history-page-flows.test.js`: ID-only legacy fixtures and no-leak assertions.
@@ -237,10 +237,10 @@ git commit -m "fix: keep internal targets out of paper labels"
 Create a verification paper fixture matching the reported problem: dozens of `BN-*` targets, one student page, one answer page, and a saved paper display code. Assert the resulting timeline event:
 
 ```js
-assert.equal(Object.hasOwn(event, 'showPaperCode'), false)
-assert.equal(Object.hasOwn(event, 'paperCode'), false)
+assert.equal(event.showPaperCode, true)
+assert.equal(event.paperCode, '数学-20260712-06')
 assert.match(event.summary, /覆盖 39 个数学学习卡点|重点复测/)
-assert.doesNotMatch(JSON.stringify(event), /BN-|LP-|ERR-|数学-20260712-06/)
+assert.doesNotMatch(JSON.stringify(event), /BN-|LP-|ERR-/)
 assert.ok(event.chips.length <= 3)
 ```
 
@@ -250,24 +250,24 @@ assert.ok(event.chips.length <= 3)
 node --test --test-name-pattern="internal code|compact paper" tests/upload-history-page-flows.test.js
 ```
 
-Expected: FAIL on raw bottleneck text and visible paper code.
+Expected: FAIL on raw bottleneck text and overly verbose card content.
 
 - [ ] **Step 3: Build compact paper events**
 
 In `buildPaperEvent`:
 
-- omit `paperCode` and `showPaperCode` from list-page output;
+- retain `paperCode` and `showPaperCode` as a compact subject/date/sequence identifier;
 - use `display.coverageText` rather than `display.bottleneckText`;
 - keep at most three actionable chips: question count, page count, return progress;
 - use semantic icon `🧪` or `📝` instead of the text glyph `卷`;
 - limit summary to readable coverage plus one next-step sentence;
 - sanitize all title, summary, status, and chip output.
 
-In `buildReportEvent`, remove `关联 ${paperCode}` from chips and link the verification relationship through the event action instead.
+In `buildReportEvent`, keep at most one compact paper-code relationship chip when it helps distinguish a printed sheet; link the verification relationship through the event action.
 
 - [ ] **Step 4: Simplify WXML and spacing**
 
-Delete `.paper-code-row` markup from the timeline. Add compact state/action rows and reduce `.record-card`, `.event-body`, `.chips`, and day-group vertical gaps by 20-30%. Keep the whole card clickable and preserve folded photo evidence.
+Compress `.paper-code-row` into the secondary metadata line. Add compact state/action rows and reduce `.record-card`, `.event-body`, `.chips`, and day-group vertical gaps by 20-30%. Keep the whole card clickable and preserve folded photo evidence.
 
 - [ ] **Step 5: Run timeline tests**
 
@@ -275,7 +275,7 @@ Delete `.paper-code-row` markup from the timeline. Add compact state/action rows
 node --test tests/upload-history-page-flows.test.js tests/learning-records.test.js tests/paper-preview-presenter.test.js
 ```
 
-Expected: PASS with no internal IDs or list-page paper codes.
+Expected: PASS with no internal IDs and with readable paper codes preserved compactly.
 
 - [ ] **Step 6: Commit**
 
@@ -295,7 +295,7 @@ git commit -m "feat: simplify learning record timeline"
 
 Read all main and subpackage pages from `miniprogram/app.json`. Build a fixture registry with one entry for every registered page, whether the page uses a dedicated presenter or prepares visible data in its controller. Exercise normal, loading, error, empty, and ID-only legacy states that the page supports. Scan WXML visible bindings plus fixture output, while explicitly ignoring `data-*` attributes, route query construction, and internal object keys. Fail with page, state, and field context when visible output contains an internal code or a raw document/file/resource/route identifier.
 
-The registry assertion must prove its keys exactly equal the manifest-derived page list, so a newly registered page fails until it supplies code-hygiene fixtures. Include controller-only surfaces such as `bottleneck-detail`, and cover generic opaque-ID fallbacks in addition to known prefixes. Detect human paper display codes as restricted presentation identifiers and allow them only in the `pages/paper-preview/paper-preview` detail/workbench fixture; fail if they appear in family, timeline, report, upload, or any general-list visible field.
+The registry assertion must prove its keys exactly equal the manifest-derived page list, so a newly registered page fails until it supplies code-hygiene fixtures. Include controller-only surfaces such as `bottleneck-detail`, and cover generic opaque-ID fallbacks in addition to known prefixes. Explicitly classify human paper display codes as readable information so the sanitizer and audit gate preserve them on relevant pages.
 
 Add source-level checks for dangerous visible fallbacks:
 
@@ -354,7 +354,8 @@ assert.equal(card.subjectRows.length, 3)
 assert.deepEqual(card.subjectRows.map(item => item.icon), ['📐', '📖', '🔤'])
 assert.ok(card.latestDiagnosis.icon)
 assert.ok(card.quickLinks.every(item => item.icon))
-assert.doesNotMatch(JSON.stringify(card), /BN-|LP-|ERR-|[\u4e00-\u9fff]+-\d{8}(?:-\d{2})?/)
+assert.doesNotMatch(JSON.stringify(card), /BN-|LP-|ERR-/)
+assert.match(JSON.stringify(card), /数学-20260712-06/)
 ```
 
 Also assert the household summary exposes exactly four compact icon metrics:
@@ -374,7 +375,7 @@ node --test --test-name-pattern="compact icon contract" tests/index-presenter.te
 
 - [ ] **Step 3: Add semantic fields using the shared icon map**
 
-Use `UI_ICONS` and `subjectIcon` from `utils/ui-icons.js`. Remove paper display codes from `paperShortSummary`, priority actions, current-paper quick links, and every other family-visible field while retaining paper IDs internally in URLs. Suggested mapping:
+Use `UI_ICONS` and `subjectIcon` from `utils/ui-icons.js`. Keep human paper display codes in compact paper summaries and quick links while ensuring internal IDs never enter visible fields. Suggested mapping:
 
 - metrics: `🧩` active, `🧪` waiting, `🔁` persisting, `✅` improved;
 - priority: `🧪`, `📤`, or `📚` by action type;
