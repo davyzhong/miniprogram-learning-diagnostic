@@ -118,6 +118,17 @@ function sanitizeVisibleChips(values = [], limit = Infinity) {
     .slice(0, limit)
 }
 
+function sanitizeVisibleChipItems(items = [], limit = Infinity) {
+  const seen = new Set()
+  return (items || []).reduce((result, item = {}) => {
+    const text = sanitizeVisibleText(item.text)
+    if (!text || seen.has(text) || result.length >= limit) return result
+    seen.add(text)
+    result.push({ ...item, text })
+    return result
+  }, [])
+}
+
 function readablePaperCode(value = '') {
   const code = String(value || '').trim()
   if (!HUMAN_PAPER_CODE_PATTERN.test(code)) return ''
@@ -212,14 +223,15 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
     subject,
     filter: isVerification ? 'answer-uploads' : 'sources'
   })
-  const chips = sanitizeVisibleChips([
-    isVerification && paperCode ? `关联 ${paperCode}` : '',
-    dateTimeChip('证据时间', eventTime),
-    photoCount > 0 ? `${photoCount}张照片` : '',
-    isVerification && improvedCount > 0 ? `${improvedCount} 个已改善` : '',
-    !isVerification && report.totalErrors ? `${report.totalErrors} 道相关错题` : '',
-    bottleneckText
+  const chipItems = sanitizeVisibleChipItems([
+    { text: isVerification && paperCode ? `关联 ${paperCode}` : '', url: paperUrl },
+    { text: dateTimeChip('证据时间', eventTime), url: reportUrl },
+    { text: photoCount > 0 ? `${photoCount}张照片` : '', url: sourceUrl },
+    { text: isVerification && improvedCount > 0 ? `${improvedCount} 个已改善` : '', url: reportUrl },
+    { text: !isVerification && report.totalErrors ? `${report.totalErrors} 道相关错题` : '', url: reportUrl },
+    { text: bottleneckText, url: bottleneckUrl }
   ])
+  const chips = chipItems.map(item => item.text)
 
   return {
     id: report._id,
@@ -242,12 +254,7 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
     paperCode,
     paperCodeUrl: paperUrl,
     chips,
-    chipItems: chips.map(text => ({
-      text,
-      url: text.startsWith('关联 ') ? paperUrl
-        : (text.includes('照片') ? sourceUrl
-          : (text.includes('卡点') || text === bottleneckText ? bottleneckUrl : reportUrl))
-    }))
+    chipItems
   }
 }
 

@@ -762,3 +762,38 @@ test('learning record screenshot fixture keeps a dense verification paper readab
   assert.match(wxss, /\.paper-code\s*\{/)
   assert.doesNotMatch(wxss, /paper-code-(?:row|label|value)/)
 })
+
+test('learning record keeps sanitized known bottleneck chips linked to the bottleneck center', async () => {
+  const cloud = {
+    getLearningTimeline: async () => ({
+      reports: [{
+        _id: 'report-known-bottleneck',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        createdAt: '2026-07-12T11:00:00+08:00',
+        summary: '本次诊断已完成',
+        bottleneckSummary: 'BN-DEC-MUL-POINT-COUNT'
+      }],
+      papers: [],
+      hasMore: false
+    }),
+    getTempFileURLs: async () => []
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', activeSubject: 'math', subjectName: '数学' })
+
+  await page.loadHistory()
+
+  const event = page.data.days[0].events[0]
+  const bottleneckChip = event.chipItems.find(item => /小数/.test(item.text))
+  assert.ok(bottleneckChip)
+  assert.doesNotMatch(bottleneckChip.text, /BN-/)
+  assert.match(bottleneckChip.url, /\/pages\/bottleneck-center\/bottleneck-center/)
+})
