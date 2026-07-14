@@ -115,6 +115,36 @@ test('sanitizes opaque document IDs when explicitly treated as IDs', () => {
   )
 })
 
+const explicitIdConsistencyCases = [
+  {
+    value: '665f8c1a2b3c4d5e6f708192a',
+    internal: true,
+    expected: '文档1 个学习卡点。'
+  },
+  {
+    value: '123e4567-e89b-12d3-a456-426614174000x',
+    internal: true,
+    expected: '文档1 个学习卡点。'
+  },
+  {
+    value: '1234567890123456789012345',
+    internal: false,
+    expected: '文档1234567890123456789012345。'
+  },
+  {
+    value: 'MATH-20260613-000001',
+    internal: false,
+    expected: '文档MATH-20260613-000001。'
+  }
+]
+
+for (const { value, internal, expected } of explicitIdConsistencyCases) {
+  test(`keeps explicit-ID sanitation consistent for ${value}`, () => {
+    assert.equal(isInternalIdentifier(value, { treatAsId: true }), internal, value)
+    assert.equal(sanitizeUserText(`文档${value}。`, { treatAsId: true }), expected, value)
+  })
+}
+
 test('compacts at most three unique readable target names with a reliable total', () => {
   assert.equal(
     compactReadableTargets(['BN-A', { displayName: '小数除法' }, { title: '单位换算' }], { totalCount: 3 }),

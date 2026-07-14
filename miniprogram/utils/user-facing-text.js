@@ -10,7 +10,8 @@ const INTERNAL_ID_PATTERNS = [
   /^(?:PAGE|TASK-PAGE|VER-PAGE)-[A-Z0-9_-]+$/i,
   /^cloud:\/\//i
 ]
-const HUMAN_PAPER_CODE_PATTERN = /^(?:(?:MATH|CHI)-\d{8}-\d+|MATH-\d{2,3})$/i
+const HUMAN_PAPER_CODE_SOURCE = '(?:(?:MATH|CHI)-\\d{8}-\\d+|MATH-\\d{2,3})'
+const HUMAN_PAPER_CODE_PATTERN = new RegExp(`^${HUMAN_PAPER_CODE_SOURCE}$`, 'i')
 
 const OPAQUE_ID_PATTERNS = [
   /^[a-f0-9]{24}$/i,
@@ -19,7 +20,8 @@ const OPAQUE_ID_PATTERNS = [
 ]
 
 const INTERNAL_TOKEN_SOURCE = '(?:(?:TASK-PAGE|VER-PAGE|PAGE|BN|LP|ERR|NODE|RES)-[A-Z0-9_-]+|MATH-(?!(?:\\d{8}-\\d+|\\d{2,3})(?![A-Z0-9_-]))[A-Z0-9_-]+|CHI-(?!\\d{8}-\\d+(?![A-Z0-9_-]))[A-Z0-9_-]+|cloud:\\/\\/[A-Z0-9._~:/?#@&+=%-]+)'
-const OPAQUE_TOKEN_SOURCE = '(?:[A-F0-9]{24}|[A-F0-9]{8}-[A-F0-9]{4}-[1-5][A-F0-9]{3}-[89AB][A-F0-9]{3}-[A-F0-9]{12}|(?=[A-Z0-9_-]{20,}(?![A-Z0-9_-]))(?=[A-Z0-9_-]*[A-Z])(?=[A-Z0-9_-]*\\d)[A-Z0-9_-]+)'
+const OPAQUE_TOKEN_BODY = '(?:[A-F0-9]{24}|[A-F0-9]{8}-[A-F0-9]{4}-[1-5][A-F0-9]{3}-[89AB][A-F0-9]{3}-[A-F0-9]{12}|(?=[A-Z0-9_-]{20,}(?![A-Z0-9_-]))(?=[A-Z0-9_-]*[A-Z])(?=[A-Z0-9_-]*\\d)[A-Z0-9_-]+)'
+const OPAQUE_TOKEN_SOURCE = `(?!${HUMAN_PAPER_CODE_SOURCE}(?![A-Z0-9_-]))${OPAQUE_TOKEN_BODY}(?![A-Z0-9_-])`
 const resourcesById = new Map((resourceSeed.resources || []).map(resource => [resource.resourceId, resource]))
 
 function isExplicitIdContext(options = {}) {
