@@ -90,6 +90,31 @@ test('removes dangling list punctuation after sanitizing identifier runs', () =>
   )
 })
 
+test('preserves closing delimiters around sanitized cloud identifiers', () => {
+  assert.equal(
+    sanitizeUserText('查看（cloud://env/file）。'),
+    '查看（1 个学习卡点）。'
+  )
+})
+
+test('requires an ASCII left boundary without blocking Chinese-adjacent identifiers', () => {
+  assert.equal(
+    sanitizeUserText('图书 ISBN-9787300000000。'),
+    '图书 ISBN-9787300000000。'
+  )
+  assert.equal(
+    sanitizeUserText('复测BN-A。'),
+    '复测1 个学习卡点。'
+  )
+})
+
+test('sanitizes opaque document IDs when explicitly treated as IDs', () => {
+  assert.equal(
+    sanitizeUserText('文档665f8c1a2b3c4d5e6f708192。', { treatAsId: true }),
+    '文档1 个学习卡点。'
+  )
+})
+
 test('compacts at most three unique readable target names with a reliable total', () => {
   assert.equal(
     compactReadableTargets(['BN-A', { displayName: '小数除法' }, { title: '单位换算' }], { totalCount: 3 }),

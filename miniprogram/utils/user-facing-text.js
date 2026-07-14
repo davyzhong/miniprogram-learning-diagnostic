@@ -18,9 +18,24 @@ const OPAQUE_ID_PATTERNS = [
   /^(?=[A-Za-z0-9_-]{20,}$)(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9_-]+$/
 ]
 
-const INTERNAL_TOKEN_SOURCE = '(?:(?:TASK-PAGE|VER-PAGE|PAGE|BN|LP|ERR|NODE|RES)-[A-Z0-9_-]+|MATH-(?!(?:\\d{8}-\\d+|\\d{2,3})(?![A-Z0-9_-]))[A-Z0-9_-]+|CHI-(?!\\d{8}-\\d+(?![A-Z0-9_-]))[A-Z0-9_-]+|cloud:\\/\\/[^\\s，。；！？、]+)'
-const INTERNAL_RUN_PATTERN = new RegExp(`${INTERNAL_TOKEN_SOURCE}(?:[\\s、,，]+${INTERNAL_TOKEN_SOURCE})*`, 'gi')
+const INTERNAL_TOKEN_SOURCE = '(?:(?:TASK-PAGE|VER-PAGE|PAGE|BN|LP|ERR|NODE|RES)-[A-Z0-9_-]+|MATH-(?!(?:\\d{8}-\\d+|\\d{2,3})(?![A-Z0-9_-]))[A-Z0-9_-]+|CHI-(?!\\d{8}-\\d+(?![A-Z0-9_-]))[A-Z0-9_-]+|cloud:\\/\\/[A-Z0-9._~:/?#@&+=%-]+)'
+const OPAQUE_TOKEN_SOURCE = '(?:[A-F0-9]{24}|[A-F0-9]{8}-[A-F0-9]{4}-[1-5][A-F0-9]{3}-[89AB][A-F0-9]{3}-[A-F0-9]{12}|(?=[A-Z0-9_-]{20,}(?![A-Z0-9_-]))(?=[A-Z0-9_-]*[A-Z])(?=[A-Z0-9_-]*\\d)[A-Z0-9_-]+)'
 const resourcesById = new Map((resourceSeed.resources || []).map(resource => [resource.resourceId, resource]))
+
+function isExplicitIdContext(options = {}) {
+  return options.treatAsId === true || options.explicitId === true || options.idContext === true
+}
+
+function tokenSourceFor(options = {}) {
+  return isExplicitIdContext(options)
+    ? `(?:${INTERNAL_TOKEN_SOURCE}|${OPAQUE_TOKEN_SOURCE})`
+    : INTERNAL_TOKEN_SOURCE
+}
+
+function internalRunPatternFor(tokenSource) {
+  const runSource = `${tokenSource}(?:[\\s、,，]+${tokenSource})*`
+  return new RegExp(`(^|[^A-Z0-9_])(${runSource})`, 'gi')
+}
 
 function isInternalIdentifier(value = '', options = {}) {
   const text = String(value || '').trim()
@@ -28,8 +43,7 @@ function isInternalIdentifier(value = '', options = {}) {
   if (HUMAN_PAPER_CODE_PATTERN.test(text)) return false
   if (INTERNAL_ID_PATTERNS.some(pattern => pattern.test(text))) return true
 
-  const explicitId = options.treatAsId === true || options.explicitId === true || options.idContext === true
-  return explicitId && OPAQUE_ID_PATTERNS.some(pattern => pattern.test(text))
+  return isExplicitIdContext(options) && OPAQUE_ID_PATTERNS.some(pattern => pattern.test(text))
 }
 
 function resourceNameOf(resourceId) {
@@ -127,17 +141,18 @@ function sanitizeUserText(value, options = {}) {
   const text = String(value || '')
   if (!text) return ''
   const noun = String(options.noun || '学习卡点').trim() || '学习卡点'
+  const tokenSource = tokenSourceFor(options)
 
   return text
-    .replace(INTERNAL_RUN_PATTERN, run => {
-      const identifiers = run.match(new RegExp(INTERNAL_TOKEN_SOURCE, 'gi')) || []
+    .replace(internalRunPatternFor(tokenSource), (match, prefix, run) => {
+      const identifiers = run.match(new RegExp(tokenSource, 'gi')) || []
       const resolvedNames = identifiers.map(identifier => resolveKnownIdentifier(identifier, options))
       const names = unique(resolvedNames)
-      if (resolvedNames.every(Boolean)) return names.join('、')
+      if (resolvedNames.every(Boolean)) return prefix + names.join('、')
 
       const count = positiveCount(options.count) || unique(identifiers).length
-      if (names.length > 0) return `${names.slice(0, 3).join('、')}等 ${count} 个${noun}`
-      return semanticCountText(count, noun)
+      if (names.length > 0) return `${prefix}${names.slice(0, 3).join('、')}等 ${count} 个${noun}`
+      return prefix + semanticCountText(count, noun)
     })
     .replace(/\s+([，。；！？、])/g, '$1')
     .replace(/[、，,]+\s*(?=[。；！？])/g, '')
