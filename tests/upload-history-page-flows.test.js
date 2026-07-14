@@ -378,7 +378,7 @@ test('learning records render before stale cleanup preview resolves', async () =
   assert.equal(page.data.cleanup.count, 1)
 })
 
-test('learning records limit initial temporary urls and lazily load photo previews', async () => {
+test('learning records limit temporary urls and cap inline photo previews', async () => {
   const tempUrlRequests = []
   const imageFiles = Array.from({ length: 20 }, (_, index) => ({
     fileID: `cloud://photo-${index + 1}`,
@@ -413,15 +413,16 @@ test('learning records limit initial temporary urls and lazily load photo previe
 
   assert.equal(tempUrlRequests.length, 1)
   assert.equal(tempUrlRequests[0].length, 12)
-  assert.equal(page.data.days[0].events[0].foldedEvidence[11].tempFileURL, 'https://temp/cloud://photo-12')
-  assert.equal(page.data.days[0].events[0].foldedEvidence[12].tempFileURL, '')
+  assert.equal(page.data.days[0].events[0].foldedEvidence.length, 3)
+  assert.equal(page.data.days[0].events[0].remainingEvidenceCount, 17)
+  assert.equal(page.data.days[0].events[0].foldedEvidence[2].tempFileURL, 'https://temp/cloud://photo-3')
 
   await page.onPreviewFoldedEvidence({
-    currentTarget: { dataset: { dayIndex: 0, eventIndex: 0, evidenceIndex: 12 } }
+    currentTarget: { dataset: { dayIndex: 0, eventIndex: 0, evidenceIndex: 2 } }
   })
 
-  assert.deepEqual(JSON.parse(JSON.stringify(tempUrlRequests[1])), ['cloud://photo-13'])
-  assert.equal(wx.calls.find(call => call.name === 'previewImage').payload.current, 'https://temp/cloud://photo-13')
+  assert.equal(tempUrlRequests.length, 1)
+  assert.equal(wx.calls.find(call => call.name === 'previewImage').payload.current, 'https://temp/cloud://photo-3')
 })
 
 test('learning records render English sessions from shared timeline', async () => {
@@ -796,4 +797,187 @@ test('learning record keeps sanitized known bottleneck chips linked to the bottl
   assert.ok(bottleneckChip)
   assert.doesNotMatch(bottleneckChip.text, /BN-/)
   assert.match(bottleneckChip.url, /\/pages\/bottleneck-center\/bottleneck-center/)
+})
+
+test('learning record sanitizes complete visible evidence and resource models without losing internal file handles', async () => {
+  const imageFiles = [
+    { fileID: 'cloud://secret/path-1', fileName: 'BN-PRIVATE-TARGET.jpg', ocrSummary: 'RES-PRIVATE-01' },
+    { fileID: 'cloud://secret/path-2', fileName: 'cloud://secret/path', ocrSummary: 'cloud://secret/ocr' },
+    { fileID: 'cloud://secret/path-3', fileName: '665f8c1a2b3c4d5e6f708192.jpg', ocrSummary: 'NODE-PRIVATE-03' },
+    { fileID: 'cloud://secret/path-4', fileName: '数学作答4.jpg', ocrSummary: '第四页计算过程' },
+    { fileID: 'cloud://secret/path-5', fileName: '数学作答5.jpg', ocrSummary: '第五页计算过程' }
+  ]
+  const cloud = {
+    getLearningTimeline: async () => ({
+      reports: [{
+        _id: 'report-evidence-owner',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'verification',
+        status: 'completed',
+        paperId: 'paper-evidence-owner',
+        createdAt: '2026-07-13T10:30:00+08:00',
+        comparisonSummary: '验证反馈已生成',
+        imageFiles
+      }],
+      papers: [{
+        _id: 'paper-evidence-owner',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'verification',
+        paperDisplayCode: 'MATH-20260713-01',
+        generatedAt: '2026-07-13T10:00:00+08:00',
+        questionCount: 5
+      }],
+      learningResourcePacks: [{
+        _id: 'pack-private',
+        subject: 'math',
+        title: 'RES-PRIVATE-01',
+        status: 'pending',
+        createdAt: '2026-07-13T09:00:00+08:00'
+      }],
+      hasMore: false
+    }),
+    getTempFileURLs: async fileIDs => fileIDs.map(fileID => ({
+      fileID,
+      tempFileURL: `https://temp/${encodeURIComponent(fileID)}`
+    }))
+  }
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', activeSubject: 'math', subjectName: '数学' })
+
+  await page.loadHistory()
+
+  const reportEvent = page.data.days.flatMap(day => day.events).find(event => event.kind === 'verification-report')
+  const paperEvent = page.data.days.flatMap(day => day.events).find(event => event.kind === 'verification-paper')
+  const resourceEvent = page.data.days.flatMap(day => day.events).find(event => event.kind === 'learning-resource')
+  const visibleEventModel = event => ({
+    icon: event.icon,
+    title: event.title,
+    timeText: event.timeText,
+    summary: event.summary,
+    statusText: event.statusText,
+    actionText: event.actionText,
+    paperCode: event.paperCode,
+    chips: event.chips,
+    remainingEvidenceCount: event.remainingEvidenceCount,
+    foldedEvidence: event.foldedEvidence.map(item => ({
+      icon: item.icon,
+      title: item.title,
+      summary: item.summary,
+      isDuplicate: item.isDuplicate
+    }))
+  })
+  const visibleText = JSON.stringify([
+    visibleEventModel(reportEvent),
+    visibleEventModel(paperEvent),
+    visibleEventModel(resourceEvent)
+  ])
+
+  assert.doesNotMatch(visibleText, /(?:BN|LP|ERR|NODE|RES)-[A-Z0-9_-]+|cloud:\/\//)
+  assert.equal(reportEvent.foldedEvidence.length, 3)
+  assert.equal(reportEvent.remainingEvidenceCount, 2)
+  assert.equal(reportEvent.evidenceCount, 5)
+  assert.equal(reportEvent.foldedEvidence[0].title, '验证卷作答1')
+  assert.equal(reportEvent.foldedEvidence[1].title, '验证卷作答2')
+  assert.equal(reportEvent.foldedEvidence[0].fileID, 'cloud://secret/path-1')
+  assert.match(reportEvent.foldedEvidence[0].tempFileURL, /^https:\/\/temp\//)
+  assert.equal(paperEvent.foldedEvidence.length, 0)
+  assert.equal(paperEvent.evidenceCount, 5)
+  assert.match(resourceEvent.title, /学习任务包/)
+  assert.doesNotMatch(resourceEvent.title, /RES-/)
+
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload-history/upload-history.wxml'), 'utf8')
+  assert.match(wxml, /remainingEvidenceCount/)
+  assert.match(wxml, /class="fold-remaining"/)
+})
+
+test('learning record photo chip opens the report evidence destination through the controller', async () => {
+  const cloud = {
+    getLearningTimeline: async () => ({
+      reports: [{
+        _id: 'report-photo-destination',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        createdAt: '2026-07-13T11:00:00+08:00',
+        imageFiles: [{ fileID: 'cloud://photo-destination', fileName: '数学试卷.jpg' }]
+      }],
+      papers: [],
+      hasMore: false
+    }),
+    getTempFileURLs: async () => []
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/upload-history/upload-history.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': util
+    }
+  })
+  page.setData({ studentId: 'student-1', activeSubject: 'math', subjectName: '数学' })
+
+  await page.loadHistory()
+
+  const event = page.data.days[0].events[0]
+  const photoChip = event.chipItems.find(item => item.text === '1张照片')
+  page.onTraceableUrlTap({ currentTarget: { dataset: { url: photoChip.url } } })
+
+  const navigation = wx.calls.find(call => call.name === 'navigateTo')
+  assert.deepEqual(JSON.parse(JSON.stringify(navigation.payload)), {
+    url: '/pages/report/report?id=report-photo-destination'
+  })
+})
+
+test('learning record narrow-layout verifier enforces viewport and geometry bounds', () => {
+  const scriptPath = path.join(ROOT, 'scripts/devtools-upload-history-layout.js')
+  assert.equal(fs.existsSync(scriptPath), true, 'focused DevTools layout verifier must exist')
+  const { validateLayoutMetrics } = require(scriptPath)
+  const valid = {
+    windowWidth: 375,
+    pageWidth: 375,
+    codeHeight: 20,
+    cardRects: [
+      { left: 12, width: 351, height: 340 },
+      { left: 12, width: 351, height: 210 }
+    ],
+    evidenceRects: [
+      { left: 54, width: 295, height: 54 },
+      { left: 54, width: 295, height: 54 },
+      { left: 54, width: 295, height: 54 }
+    ],
+    titleRect: { left: 54, top: 120, width: 118, height: 24 },
+    metaRect: { left: 178, top: 116, width: 171, height: 44 }
+  }
+  assert.doesNotThrow(() => validateLayoutMetrics(valid))
+  assert.throws(() => validateLayoutMetrics({ ...valid, pageWidth: 410 }), /horizontal overflow/)
+  assert.throws(() => validateLayoutMetrics({
+    ...valid,
+    titleRect: { left: 54, top: 120, width: 200, height: 24 },
+    metaRect: { left: 240, top: 116, width: 109, height: 44 }
+  }), /title.*metadata overlap/)
+  assert.throws(() => validateLayoutMetrics({
+    ...valid,
+    cardRects: [{ left: 12, width: 351, height: 500 }]
+  }), /card height/)
+
+  const source = fs.readFileSync(scriptPath, 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload-history/upload-history.wxss'), 'utf8')
+  const packageJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
+  assert.match(source, /超长学科学习验证试卷号-20260712-999/)
+  assert.match(source, /\/tmp\/learning-record-timeline-narrow\.png/)
+  assert.match(source, /\.screenshot\(/)
+  assert.match(source, /\.size\(\)/)
+  assert.match(source, /\.offset\(\)/)
+  assert.match(wxss, /\.record-verification-paper \.event-topline\s*\{[^}]*flex-wrap:\s*wrap/s)
+  assert.match(wxss, /\.record-verification-paper \.event-meta\s*\{[^}]*flex-basis:\s*100%/s)
+  assert.match(wxss, /\.paper-code\s*\{[^}]*white-space:\s*nowrap/s)
+  assert.equal(packageJson.scripts['test:e2e:upload-history-layout'], 'node scripts/devtools-upload-history-layout.js')
 })

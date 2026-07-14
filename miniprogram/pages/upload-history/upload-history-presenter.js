@@ -22,6 +22,7 @@ const { sanitizeUserText } = require('../../utils/user-facing-text')
 const { formatDate, formatClock, formatMonthDay } = require('../../utils/util')
 
 const HUMAN_PAPER_CODE_PATTERN = /^(?:[\u4e00-\u9fa5]{1,12}|[A-Z]{2,12})-(?:\d{8}-\d{1,3}|\d{2,3})$/i
+const MAX_INLINE_EVIDENCE = 3
 
 const SUBJECT_FILTERS = [
   { key: '', name: '全部' },
@@ -157,19 +158,23 @@ function displayPhotoTitle(photo = {}, index = 0, kind = 'photo') {
   const fallback = kind === 'answer-upload' ? `验证卷作答${index + 1}` : `试卷照片${index + 1}`
   const fileName = String(photo.fileName || '').trim()
   if (!fileName || isMachineGeneratedFileName(fileName)) return fallback
-  return fileName
+  const safeFileName = sanitizeVisibleText(fileName, { noun: '文件' })
+  return safeFileName && safeFileName === fileName ? safeFileName : fallback
 }
 
 function buildPhotoEvidenceRows(photos = [], kind = 'photo') {
-  return photos.map((photo, index) => ({
-    kind,
-    icon: kind === 'answer-upload' ? '传' : '片',
-    title: displayPhotoTitle(photo, index, kind),
-    summary: cleanPhotoSummary(photo.summaryText || photo.ocrSummary) || '暂无 OCR 摘要',
-    isDuplicate: Boolean(photo.isDuplicate),
-    fileID: photo.fileID || '',
-    tempFileURL: photo.tempFileURL || ''
-  }))
+  return photos.map((photo, index) => {
+    const cleanSummary = cleanPhotoSummary(photo.summaryText || photo.ocrSummary)
+    return {
+      kind,
+      icon: kind === 'answer-upload' ? '传' : '片',
+      title: displayPhotoTitle(photo, index, kind),
+      summary: sanitizeVisibleText(cleanSummary, { noun: '识别内容' }) || '暂无 OCR 摘要',
+      isDuplicate: Boolean(photo.isDuplicate),
+      fileID: photo.fileID || '',
+      tempFileURL: photo.tempFileURL || ''
+    }
+  })
 }
 
 function buildStatusItem(report, subjectName = '', fallbackSubject = '') {
@@ -206,7 +211,9 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
     (report.paperId && options.paperCodeById ? options.paperCodeById.get(report.paperId) : '')
       || paperCodeOf(linkedPaper)
   )
-  const foldedEvidence = buildPhotoEvidenceRows(photos, isVerification ? 'answer-upload' : 'photo')
+  const allFoldedEvidence = buildPhotoEvidenceRows(photos, isVerification ? 'answer-upload' : 'photo')
+  const foldedEvidence = allFoldedEvidence.slice(0, MAX_INLINE_EVIDENCE)
+  const evidenceCount = Math.max(photoCount, allFoldedEvidence.length)
   const reportUrl = buildTraceableUrl({ type: 'report-detail', id: report._id })
   const paperUrl = report.paperId
     ? buildTraceableUrl({ type: 'paper-workbench', id: report.paperId })
@@ -217,16 +224,10 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
     subject,
     filter: isVerification ? 'all' : 'active'
   })
-  const sourceUrl = buildTraceableUrl({
-    type: 'learning-records',
-    studentId: report.studentId,
-    subject,
-    filter: isVerification ? 'answer-uploads' : 'sources'
-  })
   const chipItems = sanitizeVisibleChipItems([
     { text: isVerification && paperCode ? `关联 ${paperCode}` : '', url: paperUrl },
     { text: dateTimeChip('证据时间', eventTime), url: reportUrl },
-    { text: photoCount > 0 ? `${photoCount}张照片` : '', url: sourceUrl },
+    { text: photoCount > 0 ? `${photoCount}张照片` : '', url: reportUrl },
     { text: isVerification && improvedCount > 0 ? `${improvedCount} 个已改善` : '', url: reportUrl },
     { text: !isVerification && report.totalErrors ? `${report.totalErrors} 道相关错题` : '', url: reportUrl },
     { text: bottleneckText, url: bottleneckUrl }
@@ -249,6 +250,8 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
     paperUrl,
     photos,
     foldedEvidence,
+    evidenceCount,
+    remainingEvidenceCount: Math.max(0, evidenceCount - foldedEvidence.length),
     photoCount,
     duplicateCount,
     paperCode,
@@ -319,6 +322,9 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     pageChip,
     ...taskPackProgressChips(paper, latestFeedback)
   ], 3)
+  const evidenceCount = linkedReports.reduce((count, report) => (
+    count + Math.max(getReportPhotos(report).length, Number(report.imageFileCount) || 0)
+  ), 0)
 
   return {
     id: paper._id,
@@ -337,8 +343,10 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     paperCodeUrl: paperUrl,
     showPaperCode: Boolean(paperCode),
     photos: [],
-    foldedEvidence: linkedReports.flatMap(report => buildPhotoEvidenceRows(getReportPhotos(report), 'answer-upload')),
-    photoCount: 0,
+    foldedEvidence: [],
+    evidenceCount,
+    remainingEvidenceCount: 0,
+    photoCount: evidenceCount,
     duplicateCount: 0,
     statusText: sanitizeVisibleText(paperFeedbackStatus(latestFeedback)),
     statusUrl: latestFeedback ? feedbackUrl : uploadUrl,
@@ -434,14 +442,17 @@ function resourcePackTimeOf(pack = {}) {
 
 function buildLearningResourceEvent(pack = {}, subjectName = '') {
   const eventTime = resourcePackTimeOf(pack)
-  const title = pack.title || (pack.target && pack.target.title) || '未命名卡点'
+  const title = sanitizeVisibleText(
+    pack.title || (pack.target && pack.target.title) || '学习内容',
+    { noun: '学习内容' }
+  ) || '学习内容'
   const completed = pack.status === 'completed'
   const scheduled = Boolean(pack.scheduledVerificationAt)
-  const chips = [
+  const chips = sanitizeVisibleChips([
     pack.estimatedMinutes ? `约 ${pack.estimatedMinutes} 分钟` : '',
     scheduled ? '已加入验证' : '',
     subjectName
-  ].filter(Boolean)
+  ])
 
   return {
     id: pack._id,
@@ -450,17 +461,17 @@ function buildLearningResourceEvent(pack = {}, subjectName = '') {
     displayLevel: 'main',
     icon: '学',
     url: `/pages/learning-resource/learning-resource?packId=${encodeURIComponent(pack._id || '')}`,
-    title: `学习任务包：${title}`,
+    title: sanitizeVisibleText(`学习任务包：${title}`, { noun: '学习内容' }),
     timeText: timeText(eventTime),
     createdAt: eventTime,
-    summary: completed ? '已完成学习' : '待完成学习',
-    actionText: '查看任务包',
+    summary: sanitizeVisibleText(completed ? '已完成学习' : '待完成学习'),
+    actionText: sanitizeVisibleText('查看任务包'),
     packId: pack._id,
     photos: [],
     foldedEvidence: [],
     photoCount: 0,
     duplicateCount: 0,
-    statusText: completed ? '已完成' : '待完成',
+    statusText: sanitizeVisibleText(completed ? '已完成' : '待完成'),
     statusUrl: '',
     chips,
     chipItems: chips.map(text => ({ text, url: '' }))
