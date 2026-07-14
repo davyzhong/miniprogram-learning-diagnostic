@@ -22,6 +22,7 @@
     "test:e2e-real-image": "npm run test:e2e:real-image",
     "test:devtools-english": "npm run test:e2e:english",
     "test:devtools-parent-timeline": "node scripts/devtools-parent-timeline-e2e.js",
+    "test:e2e:upload-history-layout": "node scripts/devtools-upload-history-layout.js",
     "test:real-data-smoke": "npm run test:e2e:real-data",
     "test:e2e:data-driven": "node scripts/devtools-e2e-data-driven.js",
     "test:e2e:knowledge-map": "node scripts/devtools-knowledge-map-e2e.js",

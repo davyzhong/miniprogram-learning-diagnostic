@@ -361,7 +361,8 @@ test('verification paper event follows the latest linked feedback report lifecyc
   assert.equal(paperEvent.statusText, '反馈失败，可重新上传')
   assert.match(paperEvent.statusUrl, /report-latest-failed/)
   assert.match(paperEvent.feedbackUrl, /report-latest-failed/)
-  assert.equal(paperEvent.foldedEvidence.length, 2)
+  assert.equal(paperEvent.foldedEvidence.length, 0)
+  assert.equal(paperEvent.evidenceCount, 2)
 })
 
 test('verification paper timeline event shows task-pack page progress chips', () => {

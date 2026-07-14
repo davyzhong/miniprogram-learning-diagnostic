@@ -117,6 +117,7 @@
               <text class="preview-arrow">›</text>
             </view>
           </view>
+          <text class="fold-remaining" wx:if="{{event.remainingEvidenceCount > 0}}">还有 {{event.remainingEvidenceCount}} 张证据，进入报告查看</text>
 
           <text class="event-action" wx:if="{{event.actionText}}">{{event.actionText}} ›</text>
         </view>
