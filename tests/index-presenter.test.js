@@ -269,7 +269,83 @@ test('family workbench hero turns the household overview into a real action entr
   assert.match(hero.summary, /2 个学习卡点/)
   assert.equal(hero.actionText, '处理今日优先行动')
   assert.match(hero.url, /pages\/generate-verification\/generate-verification|pages\/subject-home\/subject-home/)
-  assert.deepEqual(hero.stats.map(item => item.label), ['孩子', '待办', '待验证'])
+  assert.deepEqual(hero.stats.map(item => item.key), ['children', 'pendingActions', 'improvements', 'formalDiagnoses'])
+})
+
+test('family workbench exposes a compact icon contract without leaking internal IDs', () => {
+  const cards = buildChildWorkbenchCards({
+    students: [{ _id: 'student-route-id', name: '钟青羽', grade: 6 }],
+    profilesByStudentId: {
+      'student-route-id': [{
+        subject: 'math',
+        currentBottlenecks: [
+          { lpCode: 'LP-UNKNOWN-01', status: 'needs_verification' },
+          { lpCode: 'LP-PERSISTING-01', status: 'persisting' },
+          { lpCode: 'LP-IMPROVED-01', status: 'improved' }
+        ]
+      }]
+    },
+    reportsByStudentId: {
+      'student-route-id': [{
+        _id: 'report-route-id',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        createdAt: '2026-07-12T09:00:00+08:00',
+        summary: '复测 BN-UNKNOWN-01、ERR-OPAQUE-02'
+      }]
+    },
+    papersByStudentId: {
+      'student-route-id': [{
+        _id: 'paper-route-id',
+        subject: 'math',
+        type: 'verification',
+        paperDisplayCode: '数学-20260712-06',
+        generatedAt: '2026-07-12T10:00:00+08:00',
+        totalPages: 3,
+        questions: [{}, {}, {}],
+        bottleneckSummaries: ['NODE-OPAQUE-01', 'RES-OPAQUE-02']
+      }]
+    }
+  }, relative)
+
+  const card = cards[0]
+  assert.equal(card.statusItems.length, 4)
+  assert.deepEqual(card.statusItems.map(item => item.icon), ['🧩', '🧪', '🔁', '✅'])
+  assert.ok(card.statusItems.every(item => item.shortLabel))
+  assert.ok(card.priorityAction.icon)
+  assert.ok(Array.isArray(card.secondaryActions))
+  assert.deepEqual(card.subjectRows.map(item => item.key), ['math', 'chinese', 'english'])
+  assert.deepEqual(card.subjectRows.map(item => item.icon), ['📐', '🀄', '🔤'])
+  assert.equal(card.latestDiagnosis.icon, '🩺')
+  assert.equal(card.latestDiagnosis.subjectIcon, '📐')
+  assert.deepEqual(card.quickLinks.map(item => item.icon), ['📋', '🧾', '🗺️', '🕘'])
+
+  const visibleText = [
+    ...card.statusItems.flatMap(item => [item.label, item.shortLabel, item.value]),
+    card.priorityAction.title,
+    card.priorityAction.summary,
+    ...card.secondaryActions.flatMap(item => [item.title, item.summary]),
+    ...card.subjectRows.flatMap(item => [item.name, item.shortName, item.summary, item.statusText]),
+    card.latestValue.title,
+    card.latestValue.summary,
+    card.latestDiagnosis.title,
+    card.latestDiagnosis.summary,
+    ...card.quickLinks.flatMap(item => [item.title, item.summary])
+  ].filter(Boolean).join(' ')
+  assert.doesNotMatch(visibleText, /(?:BN|LP|ERR|NODE|RES|MATH)-[A-Z0-9_-]+/)
+  assert.match(visibleText, /数学-20260712-06/)
+  assert.match(card.priorityAction.url, /paper-route-id/)
+  assert.match(card.latestDiagnosis.url, /report-route-id/)
+
+  const hero = buildFamilyWorkbenchHero(cards)
+  assert.deepEqual(hero.stats.map(item => item.key), [
+    'children',
+    'pendingActions',
+    'improvements',
+    'formalDiagnoses'
+  ])
+  assert.ok(hero.stats.every(item => item.icon && item.shortLabel && item.value !== undefined))
 })
 
 test('child workbench cards put sixth-grade Qingyu before Xiaoyu regardless source order', () => {
