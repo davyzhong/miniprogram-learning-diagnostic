@@ -2,6 +2,18 @@ const cloud = require('../../utils/cloud')
 const { RELATION_OPTIONS } = require('../../utils/constants')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
 
+function safeRelationOptions(options = []) {
+  return options.map(option => {
+    const rawName = String(option.name || '').trim()
+    const name = sanitizeUserText(rawName, { treatAsId: true })
+    return { ...option, name: name === rawName && name ? name : '家庭成员' }
+  })
+}
+
+const VISIBLE_RELATION_OPTIONS = safeRelationOptions(RELATION_OPTIONS)
+const DEFAULT_RELATION_INDEX = Math.max(0, VISIBLE_RELATION_OPTIONS.findIndex(option => option.key === 'other'))
+const DEFAULT_RELATION = (VISIBLE_RELATION_OPTIONS[DEFAULT_RELATION_INDEX] || {}).key || 'other'
+
 const INVITE_DOMAIN_ERROR_MESSAGES = new Set([
   '邀请不存在或已失效',
   '邀请已过期',
@@ -31,9 +43,9 @@ Page({
     status: 'loading',
     student: null,
     role: '',
-    relationOptions: RELATION_OPTIONS,
-    relation: 'other',
-    relationIndex: RELATION_OPTIONS.length - 1,
+    relationOptions: VISIBLE_RELATION_OPTIONS,
+    relation: DEFAULT_RELATION,
+    relationIndex: DEFAULT_RELATION_INDEX,
     displayName: '',
     error: '',
     accepting: false,
@@ -150,14 +162,17 @@ Page({
   },
 
   onInviteCodeInput(e) {
+    const inviteCode = sanitizeUserText(String(e.detail.value || '').trim().toUpperCase(), { treatAsId: true })
     this.setData({
-      inviteCode: String(e.detail.value || '').trim().toUpperCase(),
+      inviteCode,
       error: ''
     })
   },
 
   onDisplayNameInput(e) {
-    this.setData({ displayName: e.detail.value })
+    this.setData({
+      displayName: sanitizeUserText(e.detail.value || '', { treatAsId: true })
+    })
   },
 
   onRelationChange(e) {

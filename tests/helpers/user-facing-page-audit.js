@@ -8,6 +8,10 @@ const INTERNAL_SUMMARY = '复测 BN-AUDIT-LEAK-01 与 cloud://env/file'
 const BACKEND_ERROR = '失败 BN-ERROR-01 cloud://env/file'
 const OPAQUE_ID = '665f8c1a2b3c4d5e6f708192'
 
+// A binding may be absent only when its conditional branch is not mounted or a wx:for alias has no row.
+const ALLOWED_UNRESOLVED_BINDING_REASONS = new Set(['conditional-absent', 'loop-alias-absent'])
+const LOOP_INDEX_ALIAS = Symbol('loop-index')
+
 function state(name, model) {
   return { state: name, model }
 }
@@ -29,26 +33,32 @@ function visibleControllerModel(page, wx) {
 }
 
 function resolveVisiblePath(candidate, aliases) {
-  let normalized = candidate.replace(/\.(?:length|join)$/, '')
-  const [head, ...tail] = normalized.split('.')
+  let normalized = candidate.replace(/\.join$/, '[]')
+  const headMatch = normalized.match(/^[A-Za-z_$][\w$]*/)
+  const head = headMatch ? headMatch[0] : ''
   if (aliases.has(head)) {
     const base = aliases.get(head)
-    if (!base) return ''
-    normalized = tail.length > 0 ? `${base}.${tail.join('.')}` : base
+    if (!base || base === LOOP_INDEX_ALIAS) return ''
+    normalized = `${base}${normalized.slice(head.length)}`
   }
-  return normalized
+  return normalized.replace(/\[([A-Za-z_$][\w$]*)\]/g, (match, indexName) => (
+    aliases.get(indexName) === LOOP_INDEX_ALIAS ? '[]' : match
+  ))
 }
 
 function bindingPaths(binding, aliases) {
   const withoutLiterals = binding.replace(/(['"])(?:\\.|(?!\1).)*\1/g, '')
   const paths = []
-  for (const match of withoutLiterals.matchAll(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*/g)) {
+  const memberPath = /\b[A-Za-z_$][\w$]*(?:(?:\.[A-Za-z_$][\w$]*)|(?:\[(?:[A-Za-z_$][\w$]*|\d+)\]))*/g
+  for (const match of withoutLiterals.matchAll(memberPath)) {
     const candidate = match[0]
     if (['true', 'false', 'null', 'undefined'].includes(candidate)) continue
     const resolved = resolveVisiblePath(candidate, aliases)
     if (resolved) paths.push(resolved)
   }
-  return paths
+  return paths.filter(path => !paths.some(other => (
+    other !== path && (other.startsWith(`${path}.`) || other.startsWith(`${path}[`))
+  )))
 }
 
 function visiblePathsForPage(pagePath) {
@@ -72,10 +82,10 @@ function visiblePathsForPage(pagePath) {
         const itemMatch = token.match(/\bwx:for-item="([^"]+)"/)
         const indexMatch = token.match(/\bwx:for-index="([^"]+)"/)
         aliases.set(itemMatch ? itemMatch[1] : 'item', sourceCandidate ? `${sourceCandidate}[]` : '')
-        aliases.set(indexMatch ? indexMatch[1] : 'index', '')
+        aliases.set(indexMatch ? indexMatch[1] : 'index', LOOP_INDEX_ALIAS)
       }
 
-      const visibleAttributes = /\b(?:aria-label|title|placeholder|alt)="([^"]*\{\{[^}]+\}\}[^"]*)"/g
+      const visibleAttributes = /\b(?:aria-label|title|placeholder|alt|value|checked|label)="([^"]*\{\{[^}]+\}\}[^"]*)"/g
       for (const match of token.matchAll(visibleAttributes)) {
         bindingPaths(match[1], aliases).forEach(item => paths.add(item))
       }
@@ -92,37 +102,68 @@ function visiblePathsForPage(pagePath) {
 }
 
 function visibleProjection(model, visiblePaths) {
+  return inspectVisibleBindings(model, visiblePaths).projection
+}
+
+function pathAccessors(visiblePath) {
+  const accessors = []
+  for (const match of visiblePath.matchAll(/([A-Za-z_$][\w$]*)|\[([A-Za-z_$][\w$]*|\d*)\]/g)) {
+    if (match[1]) accessors.push({ type: 'property', key: match[1] })
+    else if (match[2] === '') accessors.push({ type: 'wildcard' })
+    else if (/^\d+$/.test(match[2])) accessors.push({ type: 'index', index: Number(match[2]) })
+    else accessors.push({ type: 'computed-index', key: match[2] })
+  }
+  return accessors
+}
+
+function inspectVisibleBindings(model, visiblePaths) {
   const projection = {}
+  const unresolved = []
 
-  function collect(value, segments, modelPath) {
-    if (value === null || value === undefined || segments.length === 0) return
-    const [segment, ...rest] = segments
-    const isArray = segment.endsWith('[]')
-    const key = isArray ? segment.slice(0, -2) : segment
-    const child = value && typeof value === 'object' ? value[key] : undefined
-    const childPath = `${modelPath}.${key}`
-
-    if (isArray) {
-      if (!Array.isArray(child)) return
-      child.forEach((item, index) => {
-        const itemPath = `${childPath}[${index}]`
-        if (rest.length === 0) {
-          if (typeof item !== 'object' && item !== undefined) projection[itemPath] = item
-        } else {
-          collect(item, rest, itemPath)
-        }
-      })
-      return
-    }
-    if (rest.length === 0) {
-      if (typeof child !== 'object' && child !== undefined) projection[childPath] = child
-      return
-    }
-    collect(child, rest, childPath)
+  function miss(path, reason, binding) {
+    unresolved.push({ path, reason, binding })
   }
 
-  visiblePaths.forEach(visiblePath => collect(model, visiblePath.split('.'), 'model'))
-  return projection
+  function collect(value, accessors, modelPath, binding) {
+    if (accessors.length === 0) {
+      if (value !== null && typeof value !== 'object' && value !== undefined) projection[modelPath] = value
+      else miss(modelPath, 'applicable-unresolved', binding)
+      return
+    }
+
+    const [accessor, ...rest] = accessors
+    if (accessor.type === 'property') {
+      if (value === null || value === undefined || typeof value !== 'object' || !(accessor.key in value)) {
+        miss(`${modelPath}.${accessor.key}`, 'conditional-absent', binding)
+        return
+      }
+      collect(value[accessor.key], rest, `${modelPath}.${accessor.key}`, binding)
+      return
+    }
+
+    if (!Array.isArray(value)) {
+      miss(modelPath, 'applicable-unresolved', binding)
+      return
+    }
+    if (accessor.type === 'wildcard') {
+      if (value.length === 0) {
+        miss(`${modelPath}[]`, 'loop-alias-absent', binding)
+        return
+      }
+      value.forEach((item, index) => collect(item, rest, `${modelPath}[${index}]`, binding))
+      return
+    }
+
+    const index = accessor.type === 'index' ? accessor.index : Number(model[accessor.key])
+    if (!Number.isInteger(index) || index < 0 || index >= value.length) {
+      miss(`${modelPath}[${accessor.type === 'computed-index' ? accessor.key : index}]`, 'applicable-unresolved', binding)
+      return
+    }
+    collect(value[index], rest, `${modelPath}[${index}]`, binding)
+  }
+
+  visiblePaths.forEach(visiblePath => collect(model, pathAccessors(visiblePath), 'model', visiblePath))
+  return { projection, unresolved }
 }
 
 function attachVisibleProjection(pagePath, adapter) {
@@ -132,13 +173,16 @@ function attachVisibleProjection(pagePath, adapter) {
     visiblePaths,
     projectVisible(model) {
       return visibleProjection(model, visiblePaths)
+    },
+    inspectVisibleBindings(model) {
+      return inspectVisibleBindings(model, visiblePaths)
     }
   }
 }
 
-async function runController(modulePath, cloud = {}, execute = async () => {}) {
+async function runController(modulePath, cloud = {}, execute = async () => {}, modules = {}) {
   const wx = createWxMock()
-  const { page } = loadPage(modulePath, { wx, modules: { '../../utils/cloud': cloud } })
+  const { page } = loadPage(modulePath, { wx, modules: { ...modules, '../../utils/cloud': cloud } })
   await execute(page, wx)
   return visibleControllerModel(page, wx)
 }
@@ -217,6 +261,11 @@ async function reportStates() {
     }, async page => {
       page._fullReport = { _id: OPAQUE_ID, studentId: 'student-route-id', subject: 'math' }
       await page.onBottleneckSnapshotTap({ currentTarget: { dataset: { lpCode: 'LP-001', lpName: '计算基础' } } })
+    })),
+    state('form-value-hostile', await runController('miniprogram/pages/report/report.js', {}, async page => {
+      page.onOpenFeedback({ currentTarget: { dataset: { targetType: 'report', targetId: OPAQUE_ID } } })
+      page.onFeedbackReasonInput({ detail: { value: INTERNAL_SUMMARY } })
+      page.onFeedbackNoteInput({ detail: { value: BACKEND_ERROR } })
     }))
   ]
 }
@@ -514,7 +563,15 @@ async function parentManagementStates() {
         permissions: {},
         members: [{ memberOpenId: OPAQUE_ID, displayName: 'BN-AUDIT-LEAK-01', relationText: '妈妈' }]
       })
-    }, async page => { page.setData({ studentId: 'student-1' }); await page.loadMembers() }))
+    }, async page => { page.setData({ studentId: 'student-1' }); await page.loadMembers() })),
+    state('form-value-hostile', await runController(modulePath, {}, async page => {
+      page.onDisplayNameInput({ detail: { value: INTERNAL_SUMMARY } })
+    })),
+    state('indexed-relation-hostile', await runController(modulePath, {}, async page => {
+      page.setData({ editingMemberIndex: 0 })
+    }, {
+      '../../utils/constants': { RELATION_OPTIONS: [{ key: 'other', name: BACKEND_ERROR }] }
+    }))
   ]
 }
 
@@ -527,7 +584,20 @@ async function joinStudentStates() {
     }, async page => { page.setData({ inviteId: 'invite-route-id', token: 'route-token' }); await page.loadInvite() })),
     state('legacy-id-only', await runController(modulePath, {
       getStudentInvite: async () => ({ student: { _id: OPAQUE_ID, name: INTERNAL_SUMMARY }, presetRelationText: '妈妈' })
-    }, async page => { page.setData({ inviteId: OPAQUE_ID, token: 'route-token' }); await page.loadInvite() }))
+    }, async page => { page.setData({ inviteId: OPAQUE_ID, token: 'route-token' }); await page.loadInvite() })),
+    state('form-value-hostile', await runController(modulePath, {}, async page => {
+      page.setData({ status: 'ready' })
+      page.onDisplayNameInput({ detail: { value: INTERNAL_SUMMARY } })
+    })),
+    state('form-code-hostile', await runController(modulePath, {}, async page => {
+      page.setData({ status: 'code' })
+      page.onInviteCodeInput({ detail: { value: 'BN-INPUT-LEAK-01' } })
+    })),
+    state('indexed-relation-hostile', await runController(modulePath, {}, async page => {
+      page.setData({ status: 'ready', student: { name: '小明' } })
+    }, {
+      '../../utils/constants': { RELATION_OPTIONS: [{ key: 'other', name: BACKEND_ERROR }] }
+    }))
   ]
 }
 
@@ -561,4 +631,9 @@ const PAGE_AUDIT_REGISTRY = Object.fromEntries(
   ))
 )
 
-module.exports = { PAGE_AUDIT_REGISTRY, visibleProjection, visiblePathsForPage }
+module.exports = {
+  PAGE_AUDIT_REGISTRY,
+  visibleProjection,
+  visiblePathsForPage,
+  ALLOWED_UNRESOLVED_BINDING_REASONS
+}
