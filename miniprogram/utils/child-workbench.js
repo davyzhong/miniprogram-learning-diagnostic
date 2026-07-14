@@ -14,9 +14,13 @@ function visibleText(value, options = {}) {
   return sanitizeUserText(value, { ...options, treatAsId: true }).trim()
 }
 
+const HUMAN_PAPER_CODE_PATTERN = /^(?:(?:数学|语文|英语)|(?:MATH|CHI|ENG))-(?:\d{8}(?:-\d{1,3})?|\d{1,3})$/i
+
 function visiblePaperCode(paper = {}, subjectName = '') {
-  const savedCode = paper.paperDisplayCode || paper.paperCode || paper.displayCode || ''
-  if (savedCode) return visibleText(savedCode)
+  const savedCode = [paper.paperDisplayCode, paper.paperCode, paper.displayCode]
+    .map(value => String(value || '').trim())
+    .find(value => HUMAN_PAPER_CODE_PATTERN.test(value))
+  if (savedCode) return savedCode
 
   const dateCode = paperDateCode(paper.paperDate || paper.generatedAt || paper.createdAt)
   if (!dateCode) return ''
@@ -214,7 +218,7 @@ function buildLatestValue(student, reports, papers, subjectByKey) {
     const coverageText = compactPaperCoverageText(display)
     return {
       kind: 'paper',
-      icon: '🧾',
+      icon: UI_ICONS.PAPER_SUMMARY,
       subjectIcon: subjectIcon(paper.subject),
       title: `${subjectName}验证试卷`,
       summary: [
@@ -294,7 +298,7 @@ function buildPriorityAction(student, profiles = [], papers = []) {
     const summary = paperShortSummary(paper, subjectName)
     return {
       type: 'current-paper',
-      icon: '🧪',
+      icon: UI_ICONS.VERIFICATION,
       subject: paper.subject || 'math',
       title: `上传${subjectName}验证卷作答照片`,
       summary: summary
@@ -310,7 +314,7 @@ function buildPriorityAction(student, profiles = [], papers = []) {
   if (activeEntry) {
     return {
       type: 'verification-paper-status',
-      icon: '🧪',
+      icon: UI_ICONS.VERIFICATION,
       subject: activeEntry.key,
       title: `查看${activeEntry.subject.name}验证卷`,
       summary: `${compactBottleneckText(activeEntry.active)}等待验证，系统会自动准备纸面题，准备好后可下载打印。`,
@@ -380,7 +384,7 @@ function buildQuickLinks(student, reports = [], papers = []) {
 
   return [{
     key: 'latestReport',
-    icon: '📋',
+    icon: UI_ICONS.DIAGNOSIS_LIST,
     title: '最新诊断',
     summary: latestReport ? `${reportSubjectName} · ${latestReport.type === 'verification' ? '验证反馈' : '诊断报告'}` : '暂无诊断，先上传作业',
     url: latestReport
@@ -395,7 +399,7 @@ function buildQuickLinks(student, reports = [], papers = []) {
         })
   }, {
     key: 'currentPaper',
-    icon: '🧾',
+    icon: UI_ICONS.PAPER_SUMMARY,
     title: '当前试卷',
     summary: paper ? paperShortSummary(paper, paperSubjectName) : '暂无试卷，先进入学科',
     url: paper
@@ -458,7 +462,7 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
         studentName: student.name,
         filter: 'analyzing'
       }),
-      statusItem('pendingVerification', '待验证点', '待验证', '🧪', allActive.length, 'primary', {
+      statusItem('pendingVerification', '待验证点', '待验证', UI_ICONS.VERIFICATION, allActive.length, 'primary', {
         type: 'bottleneck-center',
         studentId: student._id,
         studentName: student.name,
@@ -526,6 +530,7 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
       quickLinks,
       diagnosisCoverageText: `已有 ${diagnosisSubjects.size}/3 科诊断`,
       diagnosisCoverageCount: diagnosisSubjects.size,
+      formalDiagnosisCount: formalDiagnoses.length,
       latestDiagnosis
     }
   })
@@ -554,7 +559,7 @@ function buildFamilyWorkbenchHero(cards = []) {
     return sum + numericStatusValue(card, 'improved')
   }, 0)
   const totalFormalDiagnoses = visibleCards.reduce((sum, card) => {
-    const value = Number(card.diagnosisCoverageCount)
+    const value = Number(card.formalDiagnosisCount)
     return sum + (Number.isFinite(value) ? value : 0)
   }, 0)
   const focusCard = visibleCards.find(card => numericStatusValue(card, 'pendingUpload') > 0)

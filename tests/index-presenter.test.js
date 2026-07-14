@@ -3,6 +3,7 @@ const assert = require('node:assert/strict')
 
 const { buildLearningProfileHomeView } = require('../miniprogram/pages/index/index-presenter')
 const { buildChildWorkbenchCards, buildFamilyWorkbenchHero } = require('../miniprogram/utils/child-workbench')
+const { UI_ICONS, subjectIcon } = require('../miniprogram/utils/ui-icons')
 
 const relative = () => '今天'
 
@@ -290,6 +291,12 @@ test('family workbench hero turns the household overview into a real action entr
   assert.deepEqual(hero.stats.map(item => item.key), ['children', 'pendingActions', 'improvements', 'formalDiagnoses'])
 })
 
+test('shared icon map defines every family workbench semantic', () => {
+  for (const key of ['VERIFICATION', 'PAPER_SUMMARY', 'DIAGNOSIS_LIST']) {
+    assert.ok(UI_ICONS[key])
+  }
+})
+
 test('family workbench exposes a compact icon contract without leaking internal IDs', () => {
   const cards = buildChildWorkbenchCards({
     students: [{ _id: 'student-route-id', name: '钟青羽', grade: 6 }],
@@ -329,15 +336,25 @@ test('family workbench exposes a compact icon contract without leaking internal 
 
   const card = cards[0]
   assert.equal(card.statusItems.length, 4)
-  assert.deepEqual(card.statusItems.map(item => item.icon), ['🧩', '🧪', '🔁', '✅'])
+  assert.deepEqual(card.statusItems.map(item => item.icon), [
+    UI_ICONS.BOTTLENECK,
+    UI_ICONS.VERIFICATION,
+    UI_ICONS.PERSISTING,
+    UI_ICONS.IMPROVED
+  ])
   assert.ok(card.statusItems.every(item => item.shortLabel))
   assert.ok(card.priorityAction.icon)
   assert.ok(Array.isArray(card.secondaryActions))
   assert.deepEqual(card.subjectRows.map(item => item.key), ['math', 'chinese', 'english'])
-  assert.deepEqual(card.subjectRows.map(item => item.icon), ['📐', '🀄', '🔤'])
-  assert.equal(card.latestDiagnosis.icon, '🩺')
-  assert.equal(card.latestDiagnosis.subjectIcon, '📐')
-  assert.deepEqual(card.quickLinks.map(item => item.icon), ['📋', '🧾', '🗺️', '🕘'])
+  assert.deepEqual(card.subjectRows.map(item => item.icon), ['math', 'chinese', 'english'].map(subjectIcon))
+  assert.equal(card.latestDiagnosis.icon, UI_ICONS.DIAGNOSIS)
+  assert.equal(card.latestDiagnosis.subjectIcon, subjectIcon('math'))
+  assert.deepEqual(card.quickLinks.map(item => item.icon), [
+    UI_ICONS.DIAGNOSIS_LIST,
+    UI_ICONS.PAPER_SUMMARY,
+    UI_ICONS.KNOWLEDGE_MAP,
+    UI_ICONS.TIME
+  ])
 
   const visibleText = [
     ...card.statusItems.flatMap(item => [item.label, item.shortLabel, item.value]),
@@ -407,6 +424,81 @@ test('child workbench never displays an opaque-only paper fallback code', () => 
   assert.match(datedCard.latestValue.summary, /数学-20260713/)
   assert.match(datedCard.priorityAction.summary, /数学-20260713/)
   assert.match(datedCard.quickLinks.find(item => item.key === 'currentPaper').summary, /数学-20260713/)
+
+  for (const codeField of ['paperDisplayCode', 'paperCode']) {
+    const [opaqueSavedCard] = buildChildWorkbenchCards({
+      students: [{ _id: 'student-route-id', name: '钟青羽', grade: 6 }],
+      papersByStudentId: {
+        'student-route-id': [{
+          _id: opaquePaperId,
+          subject: 'math',
+          type: 'verification',
+          [codeField]: '507f1f77bcf86cd799439011'
+        }]
+      }
+    }, relative)
+    const summaries = [
+      opaqueSavedCard.latestValue.summary,
+      opaqueSavedCard.priorityAction.summary,
+      opaqueSavedCard.quickLinks.find(item => item.key === 'currentPaper').summary
+    ].join(' ')
+    assert.doesNotMatch(summaries, /507f1f77bcf86cd799439011|学习卡点/)
+    assert.equal(opaqueSavedCard.latestValue.code, '')
+  }
+
+  const [opaqueDatedCard] = buildChildWorkbenchCards({
+    students: [{ _id: 'student-route-id', name: '钟青羽', grade: 6 }],
+    papersByStudentId: {
+      'student-route-id': [{
+        _id: opaquePaperId,
+        subject: 'math',
+        type: 'verification',
+        paperDisplayCode: '507f1f77bcf86cd799439011',
+        generatedAt: '2026-07-14T10:00:00+08:00'
+      }]
+    }
+  }, relative)
+  assert.equal(opaqueDatedCard.latestValue.code, '数学-20260714')
+
+  for (const [codeField, code] of [
+    ['paperDisplayCode', '数学-20260712-06'],
+    ['paperCode', 'MATH-20260712-06']
+  ]) {
+    const [humanCodeCard] = buildChildWorkbenchCards({
+      students: [{ _id: 'student-route-id', name: '钟青羽', grade: 6 }],
+      papersByStudentId: {
+        'student-route-id': [{
+          _id: opaquePaperId,
+          subject: 'math',
+          type: 'verification',
+          [codeField]: code
+        }]
+      }
+    }, relative)
+    assert.equal(humanCodeCard.latestValue.code, code)
+    assert.match(humanCodeCard.priorityAction.summary, new RegExp(code))
+    assert.match(humanCodeCard.quickLinks.find(item => item.key === 'currentPaper').summary, new RegExp(code))
+  }
+})
+
+test('family workbench counts formal diagnosis records separately from subject coverage', () => {
+  const [card] = buildChildWorkbenchCards({
+    students: [{ _id: 'student-route-id', name: '钟青羽', grade: 6 }],
+    reportsByStudentId: {
+      'student-route-id': [{
+        _id: 'math-report-1', subject: 'math', type: 'diagnosis', status: 'completed', createdAt: '2026-07-10T10:00:00+08:00'
+      }, {
+        _id: 'math-report-2', subject: 'math', type: 'diagnosis', status: 'completed', createdAt: '2026-07-11T10:00:00+08:00'
+      }, {
+        _id: 'chinese-report-1', subject: 'chinese', type: 'diagnosis', status: 'completed', createdAt: '2026-07-12T10:00:00+08:00'
+      }]
+    }
+  }, relative)
+
+  assert.equal(card.diagnosisCoverageCount, 2)
+  assert.equal(card.formalDiagnosisCount, 3)
+  const formalDiagnoses = buildFamilyWorkbenchHero([card]).stats.find(item => item.key === 'formalDiagnoses')
+  assert.equal(formalDiagnoses.value, '3')
 })
 
 test('child workbench cards put sixth-grade Qingyu before Xiaoyu regardless source order', () => {
@@ -689,7 +781,7 @@ test('learning profile builds dense diagnosis workbenches only for subjects with
 
   assert.deepEqual(view.diagnosisWorkbenches.map(item => item.subject), ['math', 'chinese'])
   assert.equal(view.diagnosisWorkbenches.some(item => item.subject === 'english'), false)
-  assert.equal(view.diagnosisWorkbenches[0].subjectIcon, '📐')
+  assert.equal(view.diagnosisWorkbenches[0].subjectIcon, subjectIcon('math'))
   assert.equal(view.diagnosisWorkbenches[0].evidenceCount, 6)
   assert.equal(view.diagnosisWorkbenches[0].improvedCount, 1)
   assert.equal(view.diagnosisWorkbenches[0].persistingCount, 1)
