@@ -83,13 +83,12 @@
         <view class="event-body">
           <view class="event-topline">
             <text class="event-title">{{event.title}}</text>
-            <text class="event-time">{{event.timeText}}</text>
+            <view class="event-meta">
+              <text class="event-time">{{event.timeText}}</text>
+              <text class="paper-code" wx:if="{{event.showPaperCode}}" catchtap="onTraceableUrlTap" data-url="{{event.paperCodeUrl}}">{{event.paperCode}}</text>
+            </view>
           </view>
           <text class="event-summary">{{event.summary}}</text>
-          <view class="paper-code-row" wx:if="{{event.showPaperCode}}" catchtap="onTraceableUrlTap" data-url="{{event.paperCodeUrl}}">
-            <text class="paper-code-label">🧾 验证卷编号</text>
-            <text class="paper-code-value">{{event.paperCode}}</text>
-          </view>
           <text class="event-status" wx:if="{{event.statusText}}" catchtap="onTraceableUrlTap" data-url="{{event.statusUrl}}">{{event.statusText}}</text>
           <view class="chips" wx:if="{{event.chipItems.length > 0}}">
             <text class="chip" wx:for="{{event.chipItems}}" wx:key="text" wx:for-item="chip" catchtap="onTraceableUrlTap" data-url="{{chip.url}}">{{chip.text}}</text>

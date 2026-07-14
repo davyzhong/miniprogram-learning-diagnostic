@@ -235,7 +235,7 @@
 }
 
 .day-group {
-  margin-bottom: 30rpx;
+  margin-bottom: 22rpx;
 }
 
 .day-header {
@@ -321,7 +321,7 @@
 .timeline {
   display: flex;
   flex-direction: column;
-  gap: 14rpx;
+  gap: 10rpx;
 }
 
 .record-card {
@@ -331,7 +331,7 @@
   border-radius: 12rpx;
   box-shadow: 0 3rpx 14rpx rgba(23, 32, 51, 0.05);
   display: flex;
-  padding: 18rpx 20rpx;
+  padding: 14rpx 16rpx;
 }
 
 .record-verification-report {
@@ -366,7 +366,7 @@
   font-weight: 800;
   height: 54rpx;
   justify-content: center;
-  margin-right: 18rpx;
+  margin-right: 14rpx;
   width: 54rpx;
 }
 
@@ -376,11 +376,11 @@
 }
 
 .event-topline {
-  align-items: center;
+  align-items: flex-start;
   display: flex;
   gap: 14rpx;
   justify-content: space-between;
-  margin-bottom: 8rpx;
+  margin-bottom: 6rpx;
 }
 
 .event-title {
@@ -395,6 +395,14 @@
   font-size: 21rpx;
 }
 
+.event-meta {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 2rpx;
+}
+
 .event-summary {
   color: #5f6f83;
   display: block;
@@ -402,15 +410,20 @@
   line-height: 1.48;
 }
 
-.paper-code-row {
+.paper-code {
   align-items: center;
+  background: #eef6ff;
+  border-radius: 6rpx;
+  color: #2459a5;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10rpx;
-  margin-top: 12rpx;
+  font-size: 19rpx;
+  font-weight: 760;
+  line-height: 1;
+  min-height: 40rpx;
+  padding: 0 8rpx;
 }
 
-.paper-code-row:active,
+.paper-code:active,
 .event-status:active,
 .chip:active,
 .event-action:active,
@@ -419,43 +432,19 @@
   opacity: 0.74;
 }
 
-.paper-code-label,
-.paper-code-value {
-  align-items: center;
-  border-radius: 8rpx;
-  display: flex;
-  line-height: 1;
-  min-height: 38rpx;
-  padding: 0 12rpx;
-}
-
-.paper-code-label {
-  background: #eef6ff;
-  color: #4c6f97;
-  font-size: 19rpx;
-  font-weight: 700;
-}
-
-.paper-code-value {
-  background: #dbeafe;
-  color: #1f5aa6;
-  font-size: 22rpx;
-  font-weight: 850;
-}
-
 .event-status {
   color: #2d6cdf;
   display: block;
   font-size: 21rpx;
   font-weight: 680;
-  margin-top: 8rpx;
+  margin-top: 6rpx;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 10rpx;
-  margin-top: 14rpx;
+  gap: 8rpx;
+  margin-top: 10rpx;
 }
 
 .chip {
@@ -475,7 +464,7 @@
 
 .folded-evidence {
   border-top: 1rpx solid #edf2f7;
-  margin-top: 14rpx;
+  margin-top: 10rpx;
   padding-top: 8rpx;
 }
 
@@ -617,7 +606,7 @@
   display: block;
   font-size: 23rpx;
   font-weight: 650;
-  margin-top: 14rpx;
+  margin-top: 10rpx;
 }
 
 .load-more-btn {

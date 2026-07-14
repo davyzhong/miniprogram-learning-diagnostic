@@ -18,7 +18,10 @@ const {
   normalizeSubject: normalizeKnownSubject
 } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
 const { formatDate, formatClock, formatMonthDay } = require('../../utils/util')
+
+const HUMAN_PAPER_CODE_PATTERN = /^(?:[\u4e00-\u9fa5]{1,12}|[A-Z]{2,12})-(?:\d{8}-\d{1,3}|\d{2,3})$/i
 
 const SUBJECT_FILTERS = [
   { key: '', name: '全部' },
@@ -101,6 +104,26 @@ function reportSummary(report) {
   return '查看这次学习诊断的详细结果。'
 }
 
+function sanitizeVisibleText(value, options = {}) {
+  const raw = Array.isArray(value)
+    ? value.filter(item => typeof item === 'string' || typeof item === 'number').join('、')
+    : (value && typeof value === 'object' ? '' : String(value || ''))
+  return sanitizeUserText(raw, { ...options, treatAsId: true }).trim()
+}
+
+function sanitizeVisibleChips(values = [], limit = Infinity) {
+  return [...new Set((values || [])
+    .map(value => sanitizeVisibleText(value))
+    .filter(Boolean))]
+    .slice(0, limit)
+}
+
+function readablePaperCode(value = '') {
+  const code = String(value || '').trim()
+  if (!HUMAN_PAPER_CODE_PATTERN.test(code)) return ''
+  return sanitizeVisibleText(code)
+}
+
 function cleanPhotoSummary(summary = '') {
   const text = String(summary || '').trim()
   if (!text) return ''
@@ -147,10 +170,10 @@ function buildStatusItem(report, subjectName = '', fallbackSubject = '') {
     subject,
     reportId: report._id,
     url: buildTraceableUrl({ type: 'report-detail', id: report._id }),
-    title: buildStatusTitle(report, subjectName),
+    title: sanitizeVisibleText(buildStatusTitle(report, subjectName)),
     status: report.status || 'analyzing',
     statusIcon: report.status === 'failed' || report.status === 'timeout' ? '!' : '…',
-    statusText: buildStatusText(report),
+    statusText: sanitizeVisibleText(buildStatusText(report)),
     timeText: timeText(eventTime),
     createdAt: eventTime
   }
@@ -168,8 +191,10 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
   const evidence = report.verificationEvidence || []
   const improvedCount = evidence.filter(item => item.complete && item.allCorrect).length
   const linkedPaper = report.paperId && options.paperById ? options.paperById.get(report.paperId) : null
-  const paperCode = (report.paperId && options.paperCodeById ? options.paperCodeById.get(report.paperId) : '')
-    || paperCodeOf(linkedPaper)
+  const paperCode = readablePaperCode(
+    (report.paperId && options.paperCodeById ? options.paperCodeById.get(report.paperId) : '')
+      || paperCodeOf(linkedPaper)
+  )
   const foldedEvidence = buildPhotoEvidenceRows(photos, isVerification ? 'answer-upload' : 'photo')
   const reportUrl = buildTraceableUrl({ type: 'report-detail', id: report._id })
   const paperUrl = report.paperId
@@ -187,14 +212,14 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
     subject,
     filter: isVerification ? 'answer-uploads' : 'sources'
   })
-  const chips = [
+  const chips = sanitizeVisibleChips([
     isVerification && paperCode ? `关联 ${paperCode}` : '',
     dateTimeChip('证据时间', eventTime),
     photoCount > 0 ? `${photoCount}张照片` : '',
     isVerification && improvedCount > 0 ? `${improvedCount} 个已改善` : '',
     !isVerification && report.totalErrors ? `${report.totalErrors} 道相关错题` : '',
     bottleneckText
-  ].filter(Boolean)
+  ])
 
   return {
     id: report._id,
@@ -203,11 +228,11 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
     displayLevel: 'main',
     icon: isVerification ? '✓' : '◎',
     url: reportUrl,
-    title: reportTitle(report, subjectName),
+    title: sanitizeVisibleText(reportTitle(report, subjectName)),
     timeText: timeText(eventTime),
     createdAt: eventTime,
-    summary: reportSummary(report),
-    actionText: '查看报告',
+    summary: sanitizeVisibleText(reportSummary(report)),
+    actionText: sanitizeVisibleText('查看报告'),
     reportId: report._id,
     paperUrl,
     photos,
@@ -251,16 +276,14 @@ function taskPackProgressChips(paper = {}, latestFeedback = null) {
       : [])
   ])
   return [
-    `任务包${pages.length}页`,
-    returnedCodes.size > 0 ? `已回传${returnedCodes.size}页` : ''
+    returnedCodes.size > 0 ? `已回传${returnedCodes.size}/${pages.length}页` : ''
   ].filter(Boolean)
 }
 
 function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedReports = [], options = {}) {
   const eventTime = paper.generatedAt || paper.createdAt
   const display = buildPaperDisplay(paper, subjectName, options)
-  const paperCode = display.paperCode
-  const bottleneckText = display.bottleneckText
+  const paperCode = readablePaperCode(display.paperCode)
   const latestFeedback = latestReportOf(linkedReports)
   const subject = paper.subject || fallbackSubject
   const paperUrl = buildTraceableUrl({ type: 'paper-workbench', id: paper._id })
@@ -282,22 +305,26 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     subject,
     filter: 'active'
   })
-  const chips = display.chips.concat(taskPackProgressChips(paper, latestFeedback))
+  const pageChip = [display.studentPagesText, display.answerPagesText].filter(Boolean).join(' · ')
+    || display.totalPagesText
+  const chips = sanitizeVisibleChips([
+    display.questionCount ? `${display.questionCount}题` : '',
+    pageChip,
+    ...taskPackProgressChips(paper, latestFeedback)
+  ], 3)
 
   return {
     id: paper._id,
     subject,
     kind: 'verification-paper',
     displayLevel: 'main',
-    icon: '卷',
+    icon: '🧪',
     url: paperUrl,
-    title: `${subjectName}纸面验证卷`,
+    title: sanitizeVisibleText(`${subjectName}纸面验证卷`),
     timeText: timeText(eventTime),
     createdAt: eventTime,
-    summary: bottleneckText
-      ? `复测 ${bottleneckText}。纸面作答后回到本工作台上传。`
-      : '纸面作答后回到本工作台上传验证。',
-    actionText: '查看试卷',
+    summary: sanitizeVisibleText(`${display.coverageText}。纸面作答后回到本工作台上传验证。`),
+    actionText: sanitizeVisibleText('查看试卷'),
     paperId: paper._id,
     paperCode,
     paperCodeUrl: paperUrl,
@@ -306,7 +333,7 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     foldedEvidence: linkedReports.flatMap(report => buildPhotoEvidenceRows(getReportPhotos(report), 'answer-upload')),
     photoCount: 0,
     duplicateCount: 0,
-    statusText: paperFeedbackStatus(latestFeedback),
+    statusText: sanitizeVisibleText(paperFeedbackStatus(latestFeedback)),
     statusUrl: latestFeedback ? feedbackUrl : uploadUrl,
     uploadUrl,
     feedbackUrl,
