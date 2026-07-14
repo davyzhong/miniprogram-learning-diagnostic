@@ -346,14 +346,14 @@ function paperCoverageText(paper = {}, subjectName = '') {
   if (readableNames.length > 0) {
     return sanitizeUserText(
       `重点复测：${compactReadableTargets(readableNames, { totalCount })}`,
-      { treatAsId: true, count: totalCount }
+      { treatAsId: true, count: totalCount, noun: '学习卡点' }
     ).trim()
   }
   if (totalCount > 0) {
     const resolvedSubjectName = getSubjectName(paper.subject, paper.subjectName || subjectName || '')
     return sanitizeUserText(
       `覆盖 ${totalCount} 个${resolvedSubjectName}学习卡点`,
-      { treatAsId: true, count: totalCount }
+      { treatAsId: true, count: totalCount, noun: '学习卡点' }
     ).trim()
   }
   return '覆盖本轮重点学习内容'

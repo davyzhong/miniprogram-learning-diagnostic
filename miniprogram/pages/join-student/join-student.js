@@ -2,6 +2,18 @@ const cloud = require('../../utils/cloud')
 const { RELATION_OPTIONS } = require('../../utils/constants')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
 
+const INVITE_DOMAIN_ERROR_MESSAGES = new Set([
+  '邀请不存在或已失效',
+  '邀请已过期',
+  '邀请码无效',
+  '已绑定'
+])
+
+function inviteErrorText(error, fallback) {
+  const message = String(error && error.message ? error.message : error || '').trim()
+  return INVITE_DOMAIN_ERROR_MESSAGES.has(message) ? message : fallback
+}
+
 function safeStudent(student) {
   if (!student) return null
   return {
@@ -67,7 +79,7 @@ Page({
       console.error('邀请信息加载失败', error)
       this.setData({
         status: 'error',
-        error: '加载失败，请稍后重试',
+        error: inviteErrorText(error, '加载失败，请稍后重试'),
       })
     }
   },
@@ -87,7 +99,7 @@ Page({
       this.setData({
         accepting: false,
         status: 'success',
-        student: result.student || this.data.student,
+        student: safeStudent(result.student) || this.data.student,
         role: result.role || this.data.role,
       })
       wx.navigateTo({ url: '/pages/index/index' })
@@ -96,7 +108,7 @@ Page({
       this.setData({
         accepting: false,
         status: 'error',
-        error: '加入失败，请稍后重试',
+        error: inviteErrorText(error, '加入失败，请稍后重试'),
       })
     }
   },
@@ -132,7 +144,7 @@ Page({
         mode: 'code',
         lookingUp: false,
         status: 'code',
-        error: '查询失败，请稍后重试'
+        error: inviteErrorText(error, '查询失败，请稍后重试')
       })
     }
   },

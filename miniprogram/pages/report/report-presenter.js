@@ -304,7 +304,7 @@ function buildReportSummaryText(report = {}, bottleneckList = []) {
   if (shouldUseFineBottlenecks(report) && bottleneckList.length > 0) {
     return '本页已按细颗粒度卡点展开；粗类只作为归属维度，用于理解这些卡点属于哪一类能力。'
   }
-  return sanitizeUserText(report.summary || '', { treatAsId: true, count: bottleneckList.length })
+  return sanitizeUserText(report.summary || '', { treatAsId: true, count: bottleneckList.length, noun: '学习卡点' })
 }
 
 function reportImageFiles(report = {}) {
@@ -462,7 +462,7 @@ function buildReportView(report, options = {}) {
   const qualityView = qualityViewOf(report.quality)
   const rawHeadline = sanitizeUserText(
     report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断结果',
-    { treatAsId: true, count: bottlenecks.length }
+    { treatAsId: true, count: bottlenecks.length, noun: '学习卡点' }
   )
   const headline = buildFineReportHeadline(report, bottleneckList, rawHeadline)
   const reportSummaryText = buildReportSummaryText(report, bottleneckList)
@@ -661,7 +661,7 @@ function buildVerificationFeedback(report, options = {}) {
     verificationReportDate: verReport.createdAt,
     verificationComparisonSummary: sanitizeUserText(
       verReport.comparisonSummary || verReport.changeSummary || '',
-      { treatAsId: true, count: verBottlenecks.length }
+      { treatAsId: true, count: verBottlenecks.length, noun: '学习卡点' }
     ),
     hasImprovedBottlenecks: improvedNames.length > 0,
     improvedBottleneckNames: improvedNames,

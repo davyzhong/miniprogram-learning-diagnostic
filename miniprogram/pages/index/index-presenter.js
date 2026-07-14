@@ -219,7 +219,7 @@ function buildPrimaryReport(reports, subjectByKey, formatRelativeTime) {
     title: `最新${subject.name}${isVerification ? '验证反馈' : '诊断报告'}`,
     summary: sanitizeUserText(report.comparisonSummary || report.changeSummary || report.summary || (
       bottleneckText ? `重点关注：${bottleneckText}` : '点击阅读本次报告'
-    ), { treatAsId: true, count: (report.bottlenecks || []).length }),
+    ), { treatAsId: true, count: (report.bottlenecks || []).length, noun: '学习卡点' }),
     generatedAtText,
     evidenceTimeText,
     findingText,
@@ -327,7 +327,7 @@ function buildDiagnosisWorkbenches(input, profileBySubject, subjectByKey, format
         waitingIcon: UI_ICONS.WAITING,
         uploadIcon: UI_ICONS.UPLOAD,
         title: `${subject.name}诊断报告`,
-        judgment: compactSummary(judgment, 44),
+        judgment: compactSummary(sanitizeUserText(judgment, { treatAsId: true }), 44),
         generatedAtText: formatChineseDateTime(report.createdAt),
         relativeTimeText: formatRelativeTime(report.createdAt),
         evidenceCount: workbenchEvidenceCount(report),

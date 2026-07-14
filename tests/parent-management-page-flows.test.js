@@ -153,6 +153,43 @@ test('valid invite renders child summary and accepted invite navigates home', as
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/index\/index/)
 })
 
+for (const mode of ['link', 'code']) {
+  test(`${mode} invite sanitizes the accepted student while preserving identity and navigation`, async () => {
+    const wx = createWxMock()
+    const acceptedStudent = {
+      _id: '665f8c1a2b3c4d5e6f708192',
+      name: 'BN-STUDENT-LEAK-01 cloud://env/file',
+      grade: 6
+    }
+    const cloud = mode === 'link'
+      ? {
+          acceptStudentInvite: async () => ({ student: acceptedStudent, role: 'viewer' })
+        }
+      : {
+          acceptStudentInviteByCode: async () => ({ student: acceptedStudent, role: 'viewer' })
+        }
+    const { page } = loadPage('miniprogram/pages/join-student/join-student.js', {
+      wx,
+      modules: { '../../utils/cloud': cloud }
+    })
+
+    page.setData({
+      mode,
+      status: 'ready',
+      inviteId: 'invite-route-id',
+      token: 'route-token',
+      inviteCode: 'QY8392',
+      student: { _id: 'student-before', name: '小明' }
+    })
+    await page.onAccept()
+
+    assert.equal(page.data.student._id, acceptedStudent._id)
+    assert.equal(page.data.student.name, '孩子档案')
+    assert.equal(page.data.status, 'success')
+    assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/index\/index/)
+  })
+}
+
 test('join student hides backend details when invite loading fails', async () => {
   const cloud = {
     getStudentInvite: async () => {
@@ -215,5 +252,32 @@ test('invalid invite shows error state', async () => {
   page.onLoad({ inviteId: 'bad', token: 'bad' })
   await waitForPageLoad(page)
   assert.equal(page.data.status, 'error')
-  assert.equal(page.data.error, '加载失败，请稍后重试')
+  assert.equal(page.data.error, '邀请不存在或已失效')
+})
+
+test('join student preserves exact actionable invite errors but hides decorated backend errors', async () => {
+  const messages = ['邀请已过期', '邀请码无效', '已绑定']
+  for (const message of messages) {
+    const { page } = loadPage('miniprogram/pages/join-student/join-student.js', {
+      modules: {
+        '../../utils/cloud': {
+          getStudentInviteByCode: async () => { throw new Error(message) }
+        }
+      }
+    })
+    page.setData({ inviteCode: 'QY8392' })
+    await page.onLookupCode()
+    assert.equal(page.data.error, message)
+  }
+
+  const { page } = loadPage('miniprogram/pages/join-student/join-student.js', {
+    modules: {
+      '../../utils/cloud': {
+        acceptStudentInvite: async () => { throw new Error('邀请已过期 BN-ERROR-01 cloud://env/file') }
+      }
+    }
+  })
+  page.setData({ status: 'ready', inviteId: 'invite-route-id', token: 'route-token' })
+  await page.onAccept()
+  assert.equal(page.data.error, '加入失败，请稍后重试')
 })

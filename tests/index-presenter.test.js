@@ -29,6 +29,24 @@ test('family index presenter sanitizes ID-only visible summaries without changin
   assert.match(view.primaryReport.url, /report-route-id/)
 })
 
+test('family index presenter sanitizes hostile diagnosis workbench judgment text', () => {
+  const view = buildLearningProfileHomeView({
+    student: { _id: 'student-route-id', name: '小明' },
+    profiles: [{ subject: 'math', currentBottlenecks: [] }],
+    reports: [{
+      _id: 'report-route-id',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      summary: '复测 BN-WORKBENCH-LEAK-01 与 cloud://env/file'
+    }],
+    papers: []
+  }, relative)
+
+  assert.equal(view.diagnosisWorkbenches[0].judgment, '复测')
+  assert.match(view.diagnosisWorkbenches[0].reportUrl, /report-route-id/)
+})
+
 test('child workbench cards combine pending actions and subject rows for multiple children', () => {
   const cards = buildChildWorkbenchCards({
     students: [{
