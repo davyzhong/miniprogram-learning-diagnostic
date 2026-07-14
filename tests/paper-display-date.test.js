@@ -7,8 +7,28 @@ const {
   paperDateCode,
   paperCodeOf,
   paperPageInfo,
+  paperCoverageText,
   buildPaperDisplay
 } = require('../miniprogram/utils/paper-display')
+
+function visiblePaperFields(display) {
+  return {
+    bottleneckText: display.bottleneckText,
+    coverageText: display.coverageText,
+    hierarchy: display.bottleneckHierarchy.groups.map(group => ({
+      title: group.title,
+      summaryText: group.summaryText,
+      families: (group.families || []).map(family => ({
+        title: family.title,
+        summaryText: family.summaryText,
+        items: (family.items || []).map(item => ({
+          displayName: item.displayName,
+          detailText: item.detailText
+        }))
+      }))
+    }))
+  }
+}
 
 test('paperDateCode trusts an explicit ISO date prefix when present', () => {
   // 带 YYYY-MM-DD 前缀的 ISO 串直接取前缀日期（设计如此：显式日期优先）
@@ -50,4 +70,61 @@ test('paperPageInfo computes student and answer page split', () => {
   assert.equal(info.studentPages, 2)
   assert.equal(info.answerPages, 1)
   assert.equal(info.totalPages, 3)
+})
+
+test('legacy papers summarize unknown fine-target IDs by reliable count without exposing them', () => {
+  const bottleneckTargets = Array.from(
+    { length: 30 },
+    (_, index) => `BN-LEGACY-UNMAPPED-${String(index + 1).padStart(2, '0')}`
+  )
+  const paper = {
+    _id: 'legacy-paper-30-targets',
+    type: 'verification',
+    subject: 'math',
+    paperDisplayCode: '数学-20260714-01',
+    bottleneckTargets,
+    questions: bottleneckTargets.map((bottleneckId, index) => ({
+      index: index + 1,
+      content: `${index + 1} + 1 =`,
+      bottleneckId
+    }))
+  }
+
+  const display = buildPaperDisplay(paper, '数学')
+
+  assert.equal(display.paperCode, '数学-20260714-01')
+  assert.equal(display.bottleneckText, '覆盖 30 个数学学习卡点')
+  assert.equal(display.coverageText, '覆盖 30 个数学学习卡点')
+  assert.equal(display.bottleneckHierarchy.totalCount, 30)
+  assert.doesNotMatch(JSON.stringify(visiblePaperFields(display)), /BN-|LP-|ERR-/)
+})
+
+test('paper coverage resolves known taxonomy IDs and compacts readable names', () => {
+  const paper = {
+    subject: 'math',
+    bottleneckTargets: [
+      'BN-INT-MUL-PARTIAL-OMIT',
+      'BN-INT-DIV-DIVISOR-SIMPLIFY',
+      'BN-DEC-PLACE-VALUE-WEAK',
+      'BN-DEC-MUL-POINT-COUNT'
+    ]
+  }
+
+  const display = buildPaperDisplay(paper, '数学')
+
+  assert.equal(
+    display.coverageText,
+    '重点复测：多位数乘法拆分时遗漏部分积、长除法中把两位除数误简化为一位数、小数位值和数量级意识不稳等 4 个学习卡点'
+  )
+  assert.doesNotMatch(JSON.stringify(visiblePaperFields(display)), /BN-|LP-|ERR-/)
+  assert.deepEqual(
+    display.bottleneckHierarchy.groups.flatMap(group => group.families)
+      .flatMap(family => family.items).map(item => item.bottleneckId).sort(),
+    [...paper.bottleneckTargets].sort()
+  )
+})
+
+test('paper coverage uses a neutral fallback without reliable names or counts', () => {
+  assert.equal(paperCoverageText({ subject: 'math' }, '数学'), '覆盖本轮重点学习内容')
+  assert.equal(buildPaperDisplay({ subject: 'math' }, '数学').coverageText, '覆盖本轮重点学习内容')
 })
