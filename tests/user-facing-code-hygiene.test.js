@@ -27,7 +27,7 @@ function registeredPages() {
   ]
 }
 
-const VISIBLE_FIELD = /(?:title|label|summary|message|name|text|description|content|notice|hint|caption|heading|toast|error|empty|loading|accessibility|aria|pdf|scope|targetNames|display)/i
+const VISIBLE_FIELD = /(?:title|label|summary|message|name|text|description|detail|desc|reason|feedback|content|notice|hint|caption|heading|toast|error|empty|loading|accessibility|aria|pdf|scope|targetNames|display)/i
 const INTERNAL_FIELD = /(?:^|\.)(?:_?id|.*Id|.*Ids|.*Code|.*Url|code|key|status|type|url|path|route|dataset|data)(?:\.|\[|$)/i
 const INTERNAL_CONTAINER = /(?:^|\.)(?:relatedReports|relatedPapers|allEvents|allStatusItems)(?:\.|\[|$)/
 
@@ -92,7 +92,7 @@ test('registered page sources do not use internal IDs as visible fallbacks', () 
         .map(file => path.join(pageDir, file))
     ]
     const visibleFallback = new RegExp(
-      `(?:title|label|summary|message|name|text|description|scopeText|targetNames)\\s*:\\s*[^\\n]*(?:\\|\\||\\.join\\()[^\\n]*\\b${idField}\\b`,
+      `(?:title|label|summary|message|name|text|description|detail|desc|reason|feedback|hint|scopeText|targetNames)\\s*:\\s*[^\\n]*(?:\\|\\||\\.join\\()[^\\n]*\\b${idField}\\b`,
       'g'
     )
     for (const sourceFile of sourceFiles) {
@@ -129,13 +129,15 @@ test('runtime visible-model gate reports every leak with page, state, and field 
   const failures = visibleModelFailures('pages/example/example', 'error', {
     title: 'BN-UNKNOWN-A',
     errorMessage: '加载失败 cloud://env/file',
+    reason: '判断失败 BN-REASON-LEAK',
     routeId: 'BN-ROUTE-ALLOWED',
     dataset: { bottleneckId: 'BN-DATASET-ALLOWED' },
     paperCodeText: 'MATH-20260613-01'
   })
-  assert.equal(failures.length, 2)
+  assert.equal(failures.length, 3)
   assert.match(failures[0], /pages\/example\/example \/ error \/ model\.title/)
   assert.match(failures[1], /model\.errorMessage/)
+  assert.match(failures[2], /model\.reason/)
 })
 
 test('detects internal identifiers without treating readable labels as IDs', () => {

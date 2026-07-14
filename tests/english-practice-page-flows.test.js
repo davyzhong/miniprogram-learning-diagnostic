@@ -160,6 +160,65 @@ test('English practice page submits AI recognition attempts and requeues wrong w
   assert.equal(page.data.currentItem.retryCount, 1)
 })
 
+test('English practice sanitizes hostile judgment reasons while preserving judgment semantics', async () => {
+  const cloud = {
+    submitEnglishRecognitionAttempt: async () => ({
+      judgment: {
+        status: 'incorrect',
+        reason: '失败 BN-ERROR-01 cloud://env/file',
+        normalizedText: 'siense',
+        judgmentId: '665f8c1a2b3c4d5e6f708192'
+      },
+      shouldRepeat: true
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+  const item = { queueKey: 'word-1:0', wordId: 'word-route-id', word: 'science', promptType: 'chinese' }
+  page.setData({
+    studentId: 'student-route-id',
+    sessionId: 'session-route-id',
+    queue: [item],
+    currentItem: item,
+    currentIndex: 0
+  })
+
+  await page.onRecognitionResult({ recognizedText: 'siense', audioFileID: 'audio-route-id' })
+
+  assert.equal(page.data.lastResult.status, 'incorrect')
+  assert.equal(page.data.lastResult.reason, '回答还不准确，稍后再试一次。')
+  assert.equal(page.data.lastResult.normalizedText, 'siense')
+  assert.equal(page.data.lastResult.judgmentId, '665f8c1a2b3c4d5e6f708192')
+  assert.equal(page.data.lastResult.shouldRepeat, true)
+  assert.equal(page.data.sessionId, 'session-route-id')
+})
+
+test('English practice replaces hostile answer-submit errors with neutral feedback', async () => {
+  const cloud = {
+    submitEnglishRecognitionAttempt: async () => {
+      throw new Error('失败 BN-ERROR-01 cloud://env/file')
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+  const item = { queueKey: 'word-1:0', wordId: 'word-route-id', word: 'science', promptType: 'chinese' }
+  page.setData({
+    studentId: 'student-route-id',
+    sessionId: 'session-route-id',
+    queue: [item],
+    currentItem: item,
+    currentIndex: 0
+  })
+
+  await page.onRecognitionResult({ recognizedText: 'science', audioFileID: 'audio-route-id' })
+
+  assert.equal(page.data.lastResult.status, 'unclear')
+  assert.equal(page.data.lastResult.reason, 'AI 判定失败，请稍后重试。')
+  assert.equal(page.data.sessionId, 'session-route-id')
+})
+
 test('English practice page cleans voice and prompt audio resources', async () => {
   let stopCount = 0
   const manager = {

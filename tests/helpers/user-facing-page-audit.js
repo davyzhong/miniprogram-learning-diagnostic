@@ -312,6 +312,39 @@ async function englishSessionStates(modulePath, method, cloudMethod) {
   ]
 }
 
+async function englishPracticeStates() {
+  const modulePath = 'miniprogram/pages/english-practice/english-practice.js'
+  const sessionStates = await englishSessionStates(modulePath, 'generateSession', 'generateEnglishRecognitionSession')
+  const answerItem = { queueKey: 'word-1:0', wordId: 'word-route-id', word: 'science', promptType: 'chinese' }
+  const runAnswer = (cloud, recognizedText) => runController(modulePath, cloud, async page => {
+    page.setData({
+      studentId: 'student-route-id',
+      sessionId: 'session-route-id',
+      queue: [answerItem],
+      currentItem: answerItem,
+      currentIndex: 0
+    })
+    await page.onRecognitionResult({ recognizedText, audioFileID: 'audio-route-id' })
+  })
+  return [
+    ...sessionStates,
+    state('answer-success', await runAnswer({
+      submitEnglishRecognitionAttempt: async () => ({
+        judgment: {
+          status: 'incorrect',
+          reason: BACKEND_ERROR,
+          normalizedText: 'siense',
+          judgmentId: OPAQUE_ID
+        },
+        shouldRepeat: true
+      })
+    }, 'siense')),
+    state('answer-error', await runAnswer({
+      submitEnglishRecognitionAttempt: async () => { throw new Error(BACKEND_ERROR) }
+    }, 'science'))
+  ]
+}
+
 async function wrongWordsStates() {
   const modulePath = 'miniprogram/pages/english-wrong-words/english-wrong-words.js'
   return [
@@ -396,7 +429,7 @@ const PAGE_AUDIT_REGISTRY = {
   'pages/bottleneck-center/bottleneck-center': controllerAdapter('miniprogram/pages/bottleneck-center/bottleneck-center.js', bottleneckCenterStates),
   'pages/bottleneck-detail/bottleneck-detail': controllerAdapter('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', bottleneckDetailStates),
   'pages/knowledge-map/knowledge-map': presenterAdapter('miniprogram/pages/knowledge-map/knowledge-map-presenter.js', knowledgeMapStates, true),
-  'pages/english-practice/english-practice': controllerAdapter('miniprogram/pages/english-practice/english-practice.js', () => englishSessionStates('miniprogram/pages/english-practice/english-practice.js', 'generateSession', 'generateEnglishRecognitionSession')),
+  'pages/english-practice/english-practice': controllerAdapter('miniprogram/pages/english-practice/english-practice.js', englishPracticeStates),
   'pages/english-dictation/english-dictation': controllerAdapter('miniprogram/pages/english-dictation/english-dictation.js', () => englishSessionStates('miniprogram/pages/english-dictation/english-dictation.js', 'generateSession', 'generateEnglishPaperDictationSession')),
   'pages/english-wrong-words/english-wrong-words': controllerAdapter('miniprogram/pages/english-wrong-words/english-wrong-words.js', wrongWordsStates),
   'pages/learning-resource/learning-resource': presenterAdapter('miniprogram/pages/learning-resource/learning-resource-presenter.js', learningResourceStates, true),

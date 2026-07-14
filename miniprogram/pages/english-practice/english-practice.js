@@ -1,5 +1,6 @@
 const cloud = require('../../utils/cloud')
 const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
 
 const RECOGNITION_WAIT_TIMEOUT_MS = 12000
 const RECORD_BUTTON_READY = '开始回答'
@@ -27,6 +28,24 @@ function bindVoiceEvent(manager, eventName, handler) {
 function calculateProgressPercent(currentIndex, queueLength) {
   if (!queueLength) return 0
   return Math.min(100, Math.round(((currentIndex + 1) / queueLength) * 100))
+}
+
+function judgmentReason(judgment = {}) {
+  const reason = String(judgment.reason || '').trim()
+  const sanitized = sanitizeUserText(reason, { treatAsId: true })
+  if (reason && sanitized === reason) return reason
+  if (judgment.status === 'correct') return '回答正确。'
+  if (judgment.status === 'incorrect') return '回答还不准确，稍后再试一次。'
+  return '暂时无法确认，请再试一次。'
+}
+
+function visibleJudgment(judgment, shouldRepeat) {
+  if (!judgment) return null
+  return {
+    ...judgment,
+    reason: judgmentReason(judgment),
+    shouldRepeat: Boolean(shouldRepeat)
+  }
 }
 
 function withDisplayFields(item) {
@@ -331,7 +350,7 @@ Page({
         submitting: false,
         queue,
         // 把 shouldRepeat 带入 lastResult，让 UI 能显示"本题稍后再测"即时反馈
-        lastResult: response.judgment ? { ...response.judgment, shouldRepeat: Boolean(response.shouldRepeat) } : null,
+        lastResult: visibleJudgment(response.judgment, response.shouldRepeat),
         lastAnsweredItem: current,
         currentIndex: nextIndex,
         currentItem: queue[nextIndex] || null,
@@ -342,13 +361,14 @@ Page({
       })
       this._answerStartedAt = Date.now()
     } catch (error) {
+      console.error('英语回答判定失败', error)
       this.setData({
         submitting: false,
         recognizing: false,
         recordButtonText: RECORD_BUTTON_READY,
         lastResult: {
           status: 'unclear',
-          reason: error && error.message ? error.message : 'AI 判定失败，请稍后重试。'
+          reason: 'AI 判定失败，请稍后重试。'
         }
       })
     }
