@@ -28,7 +28,11 @@ test('detects internal identifiers without treating readable labels as IDs', () 
   }
 
   assert.equal(isInternalIdentifier('数学-20260712-06'), false)
+  assert.equal(isInternalIdentifier('MATH-20260613-01'), false)
+  assert.equal(isInternalIdentifier('CHI-20260616-02'), false)
   assert.equal(isInternalIdentifier('小数除法'), false)
+  assert.equal(isInternalIdentifier('MATH-NUM-DEC-DIV-POINT'), true)
+  assert.equal(isInternalIdentifier('CHI-READ-01'), true)
 })
 
 test('only detects opaque cloud and document IDs in an explicit ID context', () => {
@@ -59,6 +63,24 @@ test('sanitizes mixed prose with a semantic count and intact Chinese punctuation
   assert.equal(
     sanitizeUserText('复习 LP-001、LP-001。'),
     '复习 计算基础。'
+  )
+})
+
+test('preserves human paper codes in user-facing prose', () => {
+  assert.equal(
+    sanitizeUserText('试卷 MATH-20260613-01、CHI-20260616-02。'),
+    '试卷 MATH-20260613-01、CHI-20260616-02。'
+  )
+  assert.equal(
+    sanitizeUserText('查看（CHI-20260616-02）。'),
+    '查看（CHI-20260616-02）。'
+  )
+})
+
+test('removes dangling list punctuation after sanitizing identifier runs', () => {
+  assert.equal(
+    sanitizeUserText('复测 BN-A、BN-B、。', { count: 2 }),
+    '复测 2 个学习卡点。'
   )
 })
 
