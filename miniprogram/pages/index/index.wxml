@@ -62,7 +62,15 @@
         wx:for-item="child"
       >
         <view class="child-card-content">
-          <view class="child-identity-row">
+          <view
+            class="child-identity-row"
+            bindtap="onStudentTap"
+            data-id="{{child.id}}"
+            data-name="{{child.name}}"
+            data-grade="{{child.gradeText}}"
+            aria-role="button"
+            aria-label="打开{{child.name}}学习档案"
+          >
             <view class="child-avatar">{{child.avatarText}}</view>
             <view class="child-identity-copy">
               <view class="child-identity-title">
@@ -72,7 +80,7 @@
               <view class="child-identity-status">
                 <text class="child-status child-status-{{child.statusClass}}"><text class="child-status-icon" aria-hidden="true">{{child.statusClass === 'pending' ? '●' : '✓'}}</text>{{child.statusText}}</text>
                 <text class="child-updated">{{child.recentUpdateText}}</text>
-                <text class="child-profile-link" catchtap="onTraceableUrlTap" data-url="{{child.profileUrl}}" aria-role="button" aria-label="查看{{child.name}}学习档案">查看档案 ›</text>
+                <text class="child-profile-link">查看档案 ›</text>
               </view>
             </view>
           </view>
@@ -82,6 +90,10 @@
               class="child-metric-cell status-cell-{{item.tone}}"
               wx:for="{{child.statusItems}}"
               wx:key="key"
+              catchtap="onTraceableUrlTap"
+              data-url="{{item.url}}"
+              aria-role="button"
+              aria-label="{{item.label}}：{{item.value}}"
             >
               <text class="child-metric-icon" aria-hidden="true">{{item.icon}}</text>
               <text class="child-metric-num">{{item.value}}</text>

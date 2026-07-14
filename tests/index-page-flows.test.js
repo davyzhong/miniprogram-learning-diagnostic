@@ -302,14 +302,13 @@ test('family workbench CSS fixes compact dimensions and four-column metrics', ()
   assert.match(rule('.family-metric-cell'), /min-height:\s*(?:58|59|60|61|62|63|64|65|66)rpx/)
   assert.match(rule('.child-card'), /padding:\s*(?:14|15|16)rpx/)
   assert.match(rule('.child-card'), /border-radius:\s*(?:14|15|16)rpx/)
-  assert.match(rule('.child-metric-cell'), /min-height:\s*(?:58|59|60|61|62|63|64|65|66)rpx/)
+  assert.match(rule('.child-metric-cell'), /min-height:\s*88rpx/)
   assert.match(rule('.child-avatar'), /width:\s*(?:56|57|58|59|60|61|62)rpx/)
   assert.match(rule('.child-avatar'), /height:\s*(?:56|57|58|59|60|61|62)rpx/)
   assert.match(rule('.child-card-content'), /gap:\s*(?:8|9|10)rpx/)
   assert.match(wxss, /\.child-name\s*\{[^}]*-webkit-line-clamp:\s*2/s)
 
   assert.doesNotMatch(wxss, /\.child-card\s*\{[^}]*padding:\s*(?:2[0-9]|[3-9][0-9])rpx/s)
-  assert.doesNotMatch(wxss, /\.child-metric-cell\s*\{[^}]*min-height:\s*(?:[7-9][0-9]|[1-9][0-9]{2,})rpx/s)
   assert.doesNotMatch(wxss, /\.child-avatar\s*\{[^}]*(?:width|height):\s*(?:[7-9][0-9]|[1-9][0-9]{2,})rpx/s)
   const familyRules = [
     rule('.family-workbench-hero'),
@@ -370,16 +369,25 @@ test('family actions own their taps and expose accessible 88rpx targets', () => 
   }
 
   const [childCardTag] = tagsFor('child-card')
+  const [childIdentityTag] = tagsFor('child-identity-row')
   const [childMetricTag] = tagsFor('child-metric-cell')
+  const [childProfileTag] = tagsFor('child-profile-link')
   const [familyHeroTag] = tagsFor('family-workbench-hero')
   assert.doesNotMatch(childCardTag, /(?:bind|catch)tap=/)
-  assert.doesNotMatch(childMetricTag, /(?:bind|catch)tap=/)
   assert.doesNotMatch(familyHeroTag, /(?:bind|catch)tap=/)
+  assert.doesNotMatch(childProfileTag, /(?:bind|catch)tap=/)
+  assert.match(childIdentityTag, /bindtap="onStudentTap"/)
+  assert.match(childIdentityTag, /data-id="{{child\.id}}"/)
+  assert.match(childIdentityTag, /data-name="{{child\.name}}"/)
+  assert.match(childIdentityTag, /data-grade="{{child\.gradeText}}"/)
+  assert.match(childMetricTag, /catchtap="onTraceableUrlTap"/)
+  assert.match(childMetricTag, /data-url="{{item\.url}}"/)
 
   for (const className of [
     'family-manage-link',
     'family-summary-row',
-    'child-profile-link',
+    'child-identity-row',
+    'child-metric-cell',
     'child-priority-row',
     'child-secondary-action',
     'child-subject-row',
@@ -397,7 +405,8 @@ test('family actions own their taps and expose accessible 88rpx targets', () => 
   for (const selector of [
     '.family-manage-link',
     '.family-summary-row',
-    '.child-profile-link',
+    '.child-identity-row',
+    '.child-metric-cell',
     '.child-priority-row',
     '.child-secondary-action',
     '.child-subject-row',
@@ -421,6 +430,9 @@ test('family actions own their taps and expose accessible 88rpx targets', () => 
   ]) {
     for (const tag of tagsFor(iconClass)) assert.match(tag, /aria-hidden="true"/)
   }
+
+  assert.doesNotMatch(wxss, /\.family-workbench-hero:active/)
+  assert.match(wxss, /\.family-summary-row:active/)
 })
 
 test('narrow family identity keeps metadata visible within two clamped lines', () => {
