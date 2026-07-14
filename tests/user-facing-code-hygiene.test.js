@@ -30,6 +30,8 @@ test('detects internal identifiers without treating readable labels as IDs', () 
   assert.equal(isInternalIdentifier('数学-20260712-06'), false)
   assert.equal(isInternalIdentifier('MATH-20260613-01'), false)
   assert.equal(isInternalIdentifier('CHI-20260616-02'), false)
+  assert.equal(isInternalIdentifier('MATH-001'), false)
+  assert.equal(isInternalIdentifier('MATH-01'), false)
   assert.equal(isInternalIdentifier('小数除法'), false)
   assert.equal(isInternalIdentifier('MATH-NUM-DEC-DIV-POINT'), true)
   assert.equal(isInternalIdentifier('CHI-READ-01'), true)
@@ -74,6 +76,10 @@ test('preserves human paper codes in user-facing prose', () => {
   assert.equal(
     sanitizeUserText('查看（CHI-20260616-02）。'),
     '查看（CHI-20260616-02）。'
+  )
+  assert.equal(
+    sanitizeUserText('历史试卷 MATH-001、MATH-01。'),
+    '历史试卷 MATH-001、MATH-01。'
   )
 })
 
