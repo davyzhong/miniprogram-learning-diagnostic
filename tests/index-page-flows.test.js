@@ -226,18 +226,106 @@ test('index family workbench renders actionable card sections instead of old lat
   assert.match(wxml, /home-error-state/)
   assert.match(wxml, /onRetryLoadStudents/)
   assert.doesNotMatch(wxml, /\/assets\/images\//)
-  assert.match(wxml, /child-priority-action/)
-  assert.match(wxml, /secondary-action-grid/)
-  assert.match(wxml, /child-quick-grid/)
+  assert.match(wxml, /child-priority-row/)
+  assert.match(wxml, /child-secondary-actions/)
+  assert.match(wxml, /child-quick-actions/)
   assert.match(wxml, /AI 用量/)
   assert.match(wxml, /\/pages\/ai-usage\/ai-usage/)
   assert.doesNotMatch(wxml, /child-latest-row/)
   assert.doesNotMatch(wxml, /child-next-row/)
 
-  assert.match(wxss, /\.child-priority-action/)
-  assert.match(wxss, /\.secondary-action-card/)
+  assert.match(wxss, /\.child-priority-row/)
+  assert.match(wxss, /\.child-secondary-action/)
   assert.match(wxss, /\.child-quick-link/)
   assert.match(wxss, /\.family-workbench-hero/)
+})
+
+test('family workbench keeps every dense B+ section and binds presenter icons', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+
+  for (const marker of [
+    'family-metric-strip',
+    'child-identity-row',
+    'child-priority-row',
+    'child-subject-status',
+    'child-diagnosis-row',
+    'child-quick-actions'
+  ]) {
+    assert.match(wxml, new RegExp(`class="[^"]*${marker}`), `${marker} should remain a semantic layout marker`)
+  }
+
+  for (const preservedSection of [
+    /child\.statusItems/,
+    /child\.priorityAction/,
+    /child\.secondaryActions/,
+    /child\.subjectRows/,
+    /child\.latestDiagnosis/,
+    /child\.quickLinks/
+  ]) {
+    assert.match(wxml, preservedSection)
+  }
+
+  for (const iconBinding of [
+    /familyHero\.stats[^}]*}}[\s\S]*?item\.icon/,
+    /child\.statusItems[^}]*}}[\s\S]*?item\.icon/,
+    /child\.priorityAction\.icon/,
+    /child\.secondaryActions[^}]*}}[\s\S]*?item\.icon/,
+    /child\.subjectRows[^}]*}}[\s\S]*?item\.icon/,
+    /child\.latestDiagnosis\.subjectIcon/,
+    /child\.latestDiagnosis\.icon/,
+    /child\.quickLinks[^}]*}}[\s\S]*?item\.icon/
+  ]) {
+    assert.match(wxml, iconBinding)
+  }
+
+  assert.match(wxml, />[^<]*AI 用量</)
+  assert.match(wxml, />[^<]*添加孩子</)
+  assert.match(wxml, /diagnosisCoverageText/)
+  assert.match(wxml, /priority-summary">{{child\.priorityAction\.summary}}/)
+  assert.match(wxml, /quick-link-summary">{{item\.summary}}/)
+  assert.doesNotMatch(wxml, /child-card-top|child-status-grid|secondary-action-grid|child-subject-list|child-quick-grid/)
+  assert.doesNotMatch(wxml, /paperDisplayCode|paperCode/)
+})
+
+test('family workbench CSS fixes compact dimensions and four-column metrics', () => {
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
+  const rule = selector => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const match = wxss.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))
+    assert.ok(match, `${selector} should have a CSS rule`)
+    return match[1]
+  }
+
+  assert.match(rule('.family-metric-strip'), /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/)
+  assert.match(rule('.child-metric-strip'), /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/)
+  assert.match(rule('.child-card'), /padding:\s*(?:14|15|16)rpx/)
+  assert.match(rule('.child-card'), /border-radius:\s*(?:14|15|16)rpx/)
+  assert.match(rule('.child-metric-cell'), /min-height:\s*(?:58|59|60|61|62|63|64|65|66)rpx/)
+  assert.match(rule('.child-avatar'), /width:\s*(?:56|57|58|59|60|61|62)rpx/)
+  assert.match(rule('.child-avatar'), /height:\s*(?:56|57|58|59|60|61|62)rpx/)
+  assert.match(rule('.child-card-content'), /gap:\s*(?:8|9|10)rpx/)
+  assert.match(rule('.child-name'), /-webkit-line-clamp:\s*2/)
+
+  assert.doesNotMatch(wxss, /\.child-card\s*\{[^}]*padding:\s*(?:2[0-9]|[3-9][0-9])rpx/s)
+  assert.doesNotMatch(wxss, /\.child-metric-cell\s*\{[^}]*min-height:\s*(?:[7-9][0-9]|[1-9][0-9]{2,})rpx/s)
+  assert.doesNotMatch(wxss, /\.child-avatar\s*\{[^}]*(?:width|height):\s*(?:[7-9][0-9]|[1-9][0-9]{2,})rpx/s)
+  const familyRules = [
+    rule('.family-workbench-hero'),
+    rule('.family-hero-copy'),
+    rule('.child-card'),
+    rule('.child-priority-row')
+  ].join('\n')
+  assert.doesNotMatch(familyRules, /linear-gradient|radial-gradient/)
+})
+
+test('single-profile index markers remain intact beside family mode', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+
+  assert.match(wxml, /homeMode === 'single-profile'/)
+  assert.match(wxml, /diagnosis-workbench-section/)
+  assert.match(wxml, /personal-action-queue/)
+  assert.match(wxml, /personal-subject-list/)
+  assert.match(wxml, /onParentManagement/)
 })
 
 test('index and student profile render the redesigned personal action workbench', () => {
