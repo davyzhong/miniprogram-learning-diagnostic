@@ -191,6 +191,28 @@ test('paper preview exposes returned answer-page progress without internal page 
   assert.equal(state.taskPackPages.some(page => /^MATH-/.test(page.displayCode || '')), false)
 })
 
+test('paper preview keeps bottleneckText fragment-only and omits unresolved hierarchy chips', () => {
+  const state = buildPaperPreviewState({
+    paper: {
+      ...basePaper(),
+      bottleneckSummaries: [],
+      questions: [],
+      bottleneckTargets: ['BN-UNKNOWN-1', 'BN-UNKNOWN-2']
+    },
+    detail: { student: { name: '钟青羽' } },
+    subjectName: '数学'
+  })
+
+  assert.equal(state.bottleneckText, '')
+  assert.equal(state.coverageText, '覆盖 2 个数学学习卡点')
+  assert.equal(state.bottleneckHierarchy.totalCount, 2)
+  assert.equal(
+    state.bottleneckHierarchy.groups.flatMap(group => group.families)
+      .flatMap(family => family.items).length,
+    0
+  )
+})
+
 // ── Page-level helper (migrated from page-flows.test.js) ──
 
 test('paper preview formats default paper names without repeating the grade key', () => {

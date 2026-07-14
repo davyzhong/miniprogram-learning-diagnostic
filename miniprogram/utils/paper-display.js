@@ -86,9 +86,19 @@ function uniqueReadableNames(values = []) {
   return [...new Set(values.filter(Boolean))]
 }
 
+function visibleNameOf(value, options = {}) {
+  const readableName = readableNameOf(value, { treatAsId: true })
+  if (!readableName) return ''
+  return sanitizeUserText(readableName, {
+    treatAsId: true,
+    count: options.count,
+    noun: options.noun || '学习卡点'
+  }).trim()
+}
+
 function paperReadableTargetNames(paper = {}) {
   if (Array.isArray(paper.bottleneckSummaries) && paper.bottleneckSummaries.length > 0) {
-    return uniqueReadableNames(paper.bottleneckSummaries.map(summary => readableNameOf(summary)))
+    return uniqueReadableNames(paper.bottleneckSummaries.map(summary => visibleNameOf(summary, { count: 1 })))
   }
 
   const questions = Array.isArray(paper.questions) ? paper.questions : []
@@ -96,25 +106,27 @@ function paperReadableTargetNames(paper = {}) {
   const questionNamesById = new Map()
   questions.forEach(question => {
     const targetId = targetIdOf(question)
-    const readableName = readableNameOf(question)
+    const readableName = visibleNameOf(question, { count: 1 })
     if (targetId && readableName && !questionNamesById.has(targetId)) {
       questionNamesById.set(targetId, readableName)
     }
   })
   const targetNames = uniqueReadableNames(targets.map(target => (
-    questionNamesById.get(targetIdOf(target)) || readableNameOf(target, { treatAsId: true })
+    questionNamesById.get(targetIdOf(target)) || visibleNameOf(target, { count: 1 })
   )))
   if (targetNames.length > 0) return targetNames
 
-  return uniqueReadableNames(questions.map(question => readableNameOf(question)))
+  return uniqueReadableNames(questions.map(question => visibleNameOf(question, { count: 1 })))
 }
 
 function paperBottleneckSummaries(paper = {}) {
   return uniqueBottleneckSummaries(paperReadableTargetNames(paper))
+    .map(summary => visibleNameOf(summary))
+    .filter(Boolean)
 }
 
 function paperBottleneckText(paper = {}) {
-  return paperBottleneckSummaries(paper).join('、')
+  return sanitizeUserText(paperBottleneckSummaries(paper).join('、'), { treatAsId: true }).trim()
 }
 
 function firstNonEmpty(...values) {
@@ -138,7 +150,7 @@ function targetIdOf(target = {}) {
 }
 
 function targetNameOf(target = {}) {
-  return readableNameOf(target, { treatAsId: typeof target === 'string' })
+  return visibleNameOf(target, { count: 1 })
 }
 
 function collectPaperTargets(paper = {}) {
@@ -178,10 +190,12 @@ function collectPaperTargets(paper = {}) {
 
 function compactGroupItems(items = []) {
   return items.map(item => {
-    const resolvedName = readableNameOf(item)
+    const resolvedName = targetNameOf(item)
     const displayName = /^待确认细卡点(?:\s+\d+)?$/.test(resolvedName) ? '' : resolvedName
-    const detailText = [item.familyTitle, item.categoryTitle]
-      .map(value => readableNameOf(value, { treatAsId: true }))
+    const categoryTitle = visibleNameOf(item.categoryTitle, { count: 1 })
+    const familyTitle = visibleNameOf(item.familyTitle, { count: 1 })
+    const detailText = uniqueReadableNames([item.detailText, familyTitle, categoryTitle]
+      .map(value => visibleNameOf(value, { count: 1 })))
       .filter(value => value && value !== '待归类卡点组' && value !== '待归类')
       .join(' · ')
     return {
@@ -190,26 +204,44 @@ function compactGroupItems(items = []) {
       displayName,
       displayTitle: displayName,
       title: displayName,
-      lpName: readableNameOf(item.lpName, { treatAsId: true }),
-      bottleneckText: readableNameOf(item.bottleneckText, { treatAsId: true }),
-      detailText: sanitizeUserText(detailText)
+      targetText: visibleNameOf(item.targetText, { count: 1 }),
+      lpName: visibleNameOf(item.lpName, { count: 1 }),
+      name: visibleNameOf(item.name, { count: 1 }),
+      label: visibleNameOf(item.label, { count: 1 }),
+      summary: visibleNameOf(item.summary, { count: 1 }),
+      bottleneckText: visibleNameOf(item.bottleneckText, { count: 1 }),
+      categoryTitle,
+      familyTitle,
+      detailText: sanitizeUserText(detailText, { treatAsId: true }).trim()
     }
-  })
+  }).filter(item => item.displayName)
 }
 
 function readableHierarchyTitle(value, fallback) {
-  return readableNameOf(value, { treatAsId: true }) || fallback
+  return visibleNameOf(value, { count: 1 }) || fallback
+}
+
+function positiveCount(value) {
+  const count = Number(value)
+  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0
+}
+
+function authoritativePaperTargetCount(paper = {}, targets = [], readableNames = []) {
+  if (targets.length > 0) return targets.length
+  const packCount = positiveCount((paper.verificationPack || {}).totalTargets)
+  return packCount || readableNames.length
 }
 
 function paperBottleneckHierarchy(paper = {}) {
   const targets = collectPaperTargets(paper)
   const summaries = paperBottleneckSummaries(paper)
+  const totalCount = authoritativePaperTargetCount(paper, targets, summaries)
   if (targets.length === 0 && summaries.length === 0) {
     return {
       hasHierarchy: false,
-      totalCount: 0,
+      totalCount,
       groupCount: 0,
-      summaryText: '',
+      summaryText: totalCount > 0 ? `${totalCount} 个细分卡点` : '',
       groups: []
     }
   }
@@ -242,7 +274,6 @@ function paperBottleneckHierarchy(paper = {}) {
         })
       }
     })
-    const totalCount = groups.reduce((sum, group) => sum + (Number(group.itemCount) || 0), 0)
     return {
       hasHierarchy: groups.length > 0,
       totalCount,
@@ -261,22 +292,22 @@ function paperBottleneckHierarchy(paper = {}) {
 
   return {
     hasHierarchy: items.length > 0,
-    totalCount: items.length,
+    totalCount,
     groupCount: items.length > 0 ? 1 : 0,
-    summaryText: items.length > 0 ? `${items.length} 个卡点` : '',
+    summaryText: items.length > 0 ? `${totalCount} 个卡点` : '',
     groups: items.length > 0
       ? [{
         categoryId: 'GENERAL',
         categoryTitle: '覆盖卡点',
         title: '覆盖卡点',
-        itemCount: items.length,
-        summaryText: `${items.length} 个卡点`,
+        itemCount: totalCount,
+        summaryText: `${totalCount} 个卡点`,
         families: [{
           familyId: 'GENERAL',
           familyTitle: '学习卡点',
           title: '学习卡点',
-          itemCount: items.length,
-          summaryText: `${items.length} 个卡点`,
+          itemCount: totalCount,
+          summaryText: `${totalCount} 个卡点`,
           items
         }]
       }]
@@ -284,23 +315,23 @@ function paperBottleneckHierarchy(paper = {}) {
   }
 }
 
-function positiveCount(value) {
-  const count = Number(value)
-  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0
-}
-
 function paperCoverageText(paper = {}, subjectName = '') {
   const readableNames = paperReadableTargetNames(paper)
   const targets = collectPaperTargets(paper)
-  const packCount = positiveCount((paper.verificationPack || {}).totalTargets)
-  const totalCount = Math.max(packCount, targets.length, readableNames.length)
+  const totalCount = authoritativePaperTargetCount(paper, targets, readableNames)
 
   if (readableNames.length > 0) {
-    return `重点复测：${compactReadableTargets(readableNames, { totalCount })}`
+    return sanitizeUserText(
+      `重点复测：${compactReadableTargets(readableNames, { totalCount })}`,
+      { treatAsId: true, count: totalCount }
+    ).trim()
   }
   if (totalCount > 0) {
-    const resolvedSubjectName = subjectName || getSubjectName(paper.subject, paper.subjectName || '')
-    return `覆盖 ${totalCount} 个${resolvedSubjectName}学习卡点`
+    const resolvedSubjectName = getSubjectName(paper.subject, paper.subjectName || subjectName || '')
+    return sanitizeUserText(
+      `覆盖 ${totalCount} 个${resolvedSubjectName}学习卡点`,
+      { treatAsId: true, count: totalCount }
+    ).trim()
   }
   return '覆盖本轮重点学习内容'
 }
@@ -346,7 +377,7 @@ function buildPaperDisplay(paper = {}, subjectName = '', options = {}) {
     || paperCodeOf(paper, subjectName)
   const bottleneckSummaries = paperBottleneckSummaries(paper)
   const coverageText = paperCoverageText(paper, subjectName)
-  const bottleneckText = bottleneckSummaries.join('、') || coverageText
+  const bottleneckText = paperBottleneckText(paper)
   const bottleneckHierarchy = paperBottleneckHierarchy(paper)
 
   return {

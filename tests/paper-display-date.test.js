@@ -13,16 +13,23 @@ const {
 
 function visiblePaperFields(display) {
   return {
+    bottleneckSummaries: display.bottleneckSummaries,
     bottleneckText: display.bottleneckText,
     coverageText: display.coverageText,
     hierarchy: display.bottleneckHierarchy.groups.map(group => ({
+      categoryTitle: group.categoryTitle,
       title: group.title,
       summaryText: group.summaryText,
       families: (group.families || []).map(family => ({
+        familyTitle: family.familyTitle,
         title: family.title,
         summaryText: family.summaryText,
         items: (family.items || []).map(item => ({
           displayName: item.displayName,
+          displayTitle: item.displayTitle,
+          title: item.title,
+          lpName: item.lpName,
+          bottleneckText: item.bottleneckText,
           detailText: item.detailText
         }))
       }))
@@ -93,9 +100,14 @@ test('legacy papers summarize unknown fine-target IDs by reliable count without 
   const display = buildPaperDisplay(paper, '数学')
 
   assert.equal(display.paperCode, '数学-20260714-01')
-  assert.equal(display.bottleneckText, '覆盖 30 个数学学习卡点')
+  assert.equal(display.bottleneckText, '')
   assert.equal(display.coverageText, '覆盖 30 个数学学习卡点')
   assert.equal(display.bottleneckHierarchy.totalCount, 30)
+  assert.equal(
+    display.bottleneckHierarchy.groups.flatMap(group => group.families)
+      .flatMap(family => family.items).length,
+    0
+  )
   assert.doesNotMatch(JSON.stringify(visiblePaperFields(display)), /BN-|LP-|ERR-/)
 })
 
@@ -127,4 +139,67 @@ test('paper coverage resolves known taxonomy IDs and compacts readable names', (
 test('paper coverage uses a neutral fallback without reliable names or counts', () => {
   assert.equal(paperCoverageText({ subject: 'math' }, '数学'), '覆盖本轮重点学习内容')
   assert.equal(buildPaperDisplay({ subject: 'math' }, '数学').coverageText, '覆盖本轮重点学习内容')
+})
+
+test('paper display sanitizes embedded and opaque identifiers at every visible boundary', () => {
+  const opaqueId = 'PRIVATESTUDENTTOKEN123456789'
+  const display = buildPaperDisplay({
+    subject: 'math',
+    bottleneckSummaries: [
+      '重点 BN-UNKNOWN-1',
+      `提醒 ${opaqueId}`
+    ],
+    bottleneckTargets: [{
+      bottleneckId: 'BN-UNKNOWN-TARGET',
+      displayName: '分数复习 BN-UNKNOWN-3',
+      categoryId: 'MATH-CAT-UNKNOWN',
+      categoryTitle: '重点 BN-UNKNOWN-4',
+      familyId: 'MATH-FAM-UNKNOWN',
+      familyTitle: `组别 ${opaqueId}`,
+      detailText: '详情 ERR-UNKNOWN-1'
+    }]
+  }, '数学')
+  const visible = visiblePaperFields(display)
+  const visibleText = JSON.stringify(visible)
+
+  assert.match(display.bottleneckText, /重点/)
+  assert.match(display.bottleneckText, /提醒/)
+  assert.match(visible.hierarchy[0].title, /重点/)
+  assert.match(visible.hierarchy[0].families[0].title, /组别/)
+  assert.match(visible.hierarchy[0].families[0].items[0].displayName, /分数复习/)
+  assert.doesNotMatch(visibleText, /BN-|LP-|ERR-|PRIVATESTUDENTTOKEN/)
+  const countFallback = paperCoverageText(
+    { subject: 'math', bottleneckTargets: ['BN-UNKNOWN-SUBJECT'] },
+    '数学 BN-UNKNOWN-5'
+  )
+  assert.match(countFallback, /^覆盖 1 个数学/)
+  assert.doesNotMatch(countFallback, /BN-/)
+})
+
+test('paper display uses concrete target count consistently when pack metadata disagrees', () => {
+  const display = buildPaperDisplay({
+    subject: 'math',
+    verificationPack: { totalTargets: 5 },
+    bottleneckTargets: [
+      'BN-INT-MUL-PARTIAL-OMIT',
+      'BN-DEC-PLACE-VALUE-WEAK',
+      'BN-FRACTION-ADD-DENOM-MISMATCH',
+      'BN-RATIO-MEANING-ORDER'
+    ]
+  }, '数学')
+
+  assert.match(display.coverageText, /4 个学习卡点$/)
+  assert.equal(display.bottleneckHierarchy.totalCount, 4)
+  assert.match(display.bottleneckHierarchy.summaryText, /4 个细分卡点$/)
+})
+
+test('paper display uses metadata count consistently when no concrete targets exist', () => {
+  const display = buildPaperDisplay({
+    subject: 'math',
+    verificationPack: { totalTargets: 5 }
+  }, '数学')
+
+  assert.equal(display.bottleneckText, '')
+  assert.equal(display.coverageText, '覆盖 5 个数学学习卡点')
+  assert.equal(display.bottleneckHierarchy.totalCount, 5)
 })

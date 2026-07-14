@@ -357,6 +357,7 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
     pageSummary: paperDisplay.pageSummary,
     bottleneckTargets: p.bottleneckTargets || [],
     bottleneckText: paperDisplay.bottleneckText,
+    coverageText: paperDisplay.coverageText,
     bottleneckHierarchy: paperDisplay.bottleneckHierarchy,
     questionPreview: buildQuestionPreview(questions, false, context),
     hasMoreQuestions: questions.length > 4,
