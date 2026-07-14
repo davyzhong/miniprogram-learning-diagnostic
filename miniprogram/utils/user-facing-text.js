@@ -10,7 +10,7 @@ const INTERNAL_ID_PATTERNS = [
   /^(?:PAGE|TASK-PAGE|VER-PAGE)-[A-Z0-9_-]+$/i,
   /^cloud:\/\//i
 ]
-const HUMAN_PAPER_CODE_PATTERN = /^(?:MATH|CHI)-\d{8}-\d+$/i
+const HUMAN_PAPER_CODE_PATTERN = /^(?:(?:MATH|CHI)-\d{8}-\d+|MATH-\d{2,3})$/i
 
 const OPAQUE_ID_PATTERNS = [
   /^[a-f0-9]{24}$/i,
@@ -18,7 +18,7 @@ const OPAQUE_ID_PATTERNS = [
   /^(?=[A-Za-z0-9_-]{20,}$)(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9_-]+$/
 ]
 
-const INTERNAL_TOKEN_SOURCE = '(?:(?:TASK-PAGE|VER-PAGE|PAGE|BN|LP|ERR|NODE|RES)-[A-Z0-9_-]+|(?:MATH|CHI)-(?!\\d{8}-\\d+(?![A-Z0-9_-]))[A-Z0-9_-]+|cloud:\\/\\/[^\\s，。；！？、]+)'
+const INTERNAL_TOKEN_SOURCE = '(?:(?:TASK-PAGE|VER-PAGE|PAGE|BN|LP|ERR|NODE|RES)-[A-Z0-9_-]+|MATH-(?!(?:\\d{8}-\\d+|\\d{2,3})(?![A-Z0-9_-]))[A-Z0-9_-]+|CHI-(?!\\d{8}-\\d+(?![A-Z0-9_-]))[A-Z0-9_-]+|cloud:\\/\\/[^\\s，。；！？、]+)'
 const INTERNAL_RUN_PATTERN = new RegExp(`${INTERNAL_TOKEN_SOURCE}(?:[\\s、,，]+${INTERNAL_TOKEN_SOURCE})*`, 'gi')
 const resourcesById = new Map((resourceSeed.resources || []).map(resource => [resource.resourceId, resource]))
 
