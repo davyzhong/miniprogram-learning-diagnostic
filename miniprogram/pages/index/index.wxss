@@ -42,15 +42,6 @@
   line-height: 1.25;
 }
 
-.page-subtitle {
-  display: block;
-  color: #7a8ca4;
-  font-size: 22rpx;
-  font-weight: 650;
-  line-height: 1.45;
-  margin-top: 8rpx;
-}
-
 .manage-actions {
   display: flex;
   gap: 12rpx;
@@ -68,7 +59,7 @@
 }
 
 .family-manage-link {
-  min-height: 60rpx;
+  min-height: 88rpx;
   padding: 8rpx 14rpx;
   border-radius: 14rpx;
   gap: 6rpx;
@@ -233,17 +224,22 @@
 }
 
 .child-profile-link {
+  min-height: 88rpx;
   color: #245f8c;
   font-size: 19rpx;
   font-weight: 750;
   white-space: nowrap;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
 }
 
 .family-metric-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8rpx;
+  margin-top: 10rpx;
 }
 
 .child-metric-strip {
@@ -318,7 +314,7 @@
 }
 
 .child-subject-row {
-  min-height: 64rpx;
+  min-height: 88rpx;
   padding: 8rpx 10rpx;
   border-top: 1rpx solid #e3ebef;
   display: flex;
@@ -395,7 +391,7 @@
 }
 
 .child-priority-row {
-  min-height: 70rpx;
+  min-height: 88rpx;
   padding: 10rpx 12rpx;
   display: flex;
   align-items: center;
@@ -474,7 +470,7 @@
 }
 
 .child-secondary-action {
-  min-height: 58rpx;
+  min-height: 88rpx;
   padding: 8rpx 10rpx;
   border-top: 1rpx solid #e3ebef;
   box-sizing: border-box;
@@ -518,7 +514,7 @@
 }
 
 .child-quick-link {
-  min-height: 78rpx;
+  min-height: 88rpx;
   border-radius: 8rpx;
   padding: 8rpx 6rpx;
   background: #eef5f7;
@@ -580,6 +576,7 @@
 }
 
 .family-summary-row {
+  min-height: 88rpx;
   display: flex;
   align-items: center;
   gap: 10rpx;
@@ -619,10 +616,6 @@
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.family-metric-strip {
-  margin-top: 10rpx;
 }
 
 .family-metric-cell {
@@ -1987,7 +1980,7 @@
 }
 
 .child-diagnosis-row {
-  min-height: 68rpx;
+  min-height: 88rpx;
   padding: 10rpx 12rpx;
   border-top: 1rpx solid #c7dce1;
   border-bottom: 1rpx solid #c7dce1;
@@ -2023,8 +2016,11 @@
   .diagnosis-next { flex-wrap: wrap; }
   .diagnosis-next .bplus-action-main { flex-basis: calc(100% - 48rpx); }
   .diagnosis-next .bplus-action-button { margin-left: 41rpx; }
+  .child-name { -webkit-line-clamp: 1; }
   .child-meta-inline,
-  .child-updated,
+  .child-updated { display: block; }
+  .child-identity-title,
+  .child-identity-status { flex-wrap: nowrap; }
   .secondary-action-summary,
   .subject-row-summary { display: none; }
   .child-diagnosis-coverage { max-width: 150rpx; overflow: hidden; text-overflow: ellipsis; }

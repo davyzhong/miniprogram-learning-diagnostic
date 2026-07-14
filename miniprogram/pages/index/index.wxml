@@ -20,8 +20,8 @@
       </view>
       <view class="manage-actions">
         <block wx:if="{{homeMode === 'family-workbench'}}">
-          <view class="manage-link family-manage-link" bindtap="onTraceableUrlTap" data-url="/pages/ai-usage/ai-usage"><text class="manage-icon">🤖</text><text>AI 用量</text></view>
-          <view class="manage-link family-manage-link" bindtap="onManageStudents"><text class="manage-icon">➕</text><text>添加孩子</text></view>
+          <view class="manage-link family-manage-link" bindtap="onTraceableUrlTap" data-url="/pages/ai-usage/ai-usage" aria-role="button" aria-label="查看 AI 用量"><text class="manage-icon" aria-hidden="true">🤖</text><text>AI 用量</text></view>
+          <view class="manage-link family-manage-link" bindtap="onManageStudents" aria-role="button" aria-label="添加孩子"><text class="manage-icon" aria-hidden="true">➕</text><text>添加孩子</text></view>
         </block>
         <block wx:else>
           <view class="manage-link" wx:if="{{permissions.canManageParents}}" bindtap="onParentManagement">家长管理</view>
@@ -34,12 +34,10 @@
     <view
       class="family-workbench-hero"
       wx:if="{{homeMode === 'family-workbench' && familyHero}}"
-      catchtap="onTraceableUrlTap"
-      data-url="{{familyHero.url}}"
     >
       <view class="family-hero-copy">
-        <view class="family-summary-row">
-          <text class="family-summary-icon">{{familyHero.stats[0].icon}}</text>
+        <view class="family-summary-row" catchtap="onTraceableUrlTap" data-url="{{familyHero.url}}" aria-role="button" aria-label="{{familyHero.actionText}}：{{familyHero.title}}">
+          <text class="family-summary-icon" aria-hidden="true">{{familyHero.stats[0].icon}}</text>
           <view class="family-summary-copy">
             <text class="family-hero-title">{{familyHero.title}}</text>
             <text class="family-hero-summary">{{familyHero.summary}}</text>
@@ -48,7 +46,7 @@
         </view>
         <view class="family-metric-strip">
           <view class="family-metric-cell" wx:for="{{familyHero.stats}}" wx:key="key">
-            <text class="family-metric-icon">{{item.icon}}</text>
+            <text class="family-metric-icon" aria-hidden="true">{{item.icon}}</text>
             <text class="family-metric-value">{{item.value}}</text>
             <text class="family-metric-label">{{item.shortLabel}}</text>
           </view>
@@ -62,10 +60,6 @@
         wx:for="{{childCards}}"
         wx:key="id"
         wx:for-item="child"
-        bindtap="onStudentTap"
-        data-id="{{child.id}}"
-        data-name="{{child.name}}"
-        data-grade="{{child.gradeText}}"
       >
         <view class="child-card-content">
           <view class="child-identity-row">
@@ -76,9 +70,9 @@
                 <text class="child-meta-inline">{{child.gradeText}}<text wx:if="{{child.gradeText && child.roleText}}"> · </text>{{child.roleText}}<text wx:if="{{child.memberText}}"> · {{child.memberText}}</text></text>
               </view>
               <view class="child-identity-status">
-                <text class="child-status child-status-{{child.statusClass}}"><text class="child-status-icon">{{child.statusClass === 'pending' ? '●' : '✓'}}</text>{{child.statusText}}</text>
+                <text class="child-status child-status-{{child.statusClass}}"><text class="child-status-icon" aria-hidden="true">{{child.statusClass === 'pending' ? '●' : '✓'}}</text>{{child.statusText}}</text>
                 <text class="child-updated">{{child.recentUpdateText}}</text>
-                <text class="child-profile-link" catchtap="onTraceableUrlTap" data-url="{{child.profileUrl}}">查看档案 ›</text>
+                <text class="child-profile-link" catchtap="onTraceableUrlTap" data-url="{{child.profileUrl}}" aria-role="button" aria-label="查看{{child.name}}学习档案">查看档案 ›</text>
               </view>
             </view>
           </view>
@@ -88,10 +82,8 @@
               class="child-metric-cell status-cell-{{item.tone}}"
               wx:for="{{child.statusItems}}"
               wx:key="key"
-              catchtap="onTraceableUrlTap"
-              data-url="{{item.url}}"
             >
-              <text class="child-metric-icon">{{item.icon}}</text>
+              <text class="child-metric-icon" aria-hidden="true">{{item.icon}}</text>
               <text class="child-metric-num">{{item.value}}</text>
               <text class="child-metric-label">{{item.shortLabel}}</text>
             </view>
@@ -101,8 +93,10 @@
             class="child-priority-row priority-{{child.priorityAction.tone}}"
             catchtap="onTraceableUrlTap"
             data-url="{{child.priorityAction.url}}"
+            aria-role="button"
+            aria-label="{{child.priorityAction.actionText}}：{{child.priorityAction.title}}"
           >
-            <text class="priority-icon">{{child.priorityAction.icon}}</text>
+            <text class="priority-icon" aria-hidden="true">{{child.priorityAction.icon}}</text>
             <view class="priority-copy">
               <text class="priority-title">{{child.priorityAction.title}}</text>
               <text class="priority-summary">{{child.priorityAction.summary}}</text>
@@ -117,11 +111,13 @@
               wx:key="subject"
               catchtap="onTraceableUrlTap"
               data-url="{{item.url}}"
+              aria-role="button"
+              aria-label="{{item.title}}：{{item.summary}}"
             >
-              <text class="secondary-action-icon">{{item.icon}}</text>
+              <text class="secondary-action-icon" aria-hidden="true">{{item.icon}}</text>
               <text class="secondary-action-title">{{item.title}}</text>
               <text class="secondary-action-summary">{{item.summary}}</text>
-              <text class="row-chevron">›</text>
+              <text class="row-chevron" aria-hidden="true">›</text>
             </view>
           </view>
 
@@ -133,9 +129,11 @@
               wx:key="key"
               catchtap="onTraceableUrlTap"
               data-url="{{item.url}}"
+              aria-role="button"
+              aria-label="{{item.name}}：{{item.actionText}}"
             >
-              <text class="subject-row-icon">{{item.icon}}</text>
-              <view class="subject-row-accent"></view>
+              <text class="subject-row-icon" aria-hidden="true">{{item.icon}}</text>
+              <view class="subject-row-accent" aria-hidden="true"></view>
               <view class="subject-row-copy">
                 <view class="subject-name-line">
                   <text class="subject-row-name">{{item.shortName}}</text>
@@ -147,16 +145,18 @@
             </view>
           </view>
 
-          <view class="child-panel-label">最新正式诊断</view>
-          <view class="child-diagnosis-row" wx:if="{{child.latestDiagnosis}}" catchtap="onTraceableUrlTap" data-url="{{child.latestDiagnosis.url}}">
-            <text class="child-diagnosis-icon">{{child.latestDiagnosis.icon}}</text>
-            <text class="child-diagnosis-subject">{{child.latestDiagnosis.subjectIcon}}</text>
-            <view class="child-diagnosis-copy">
-              <text class="child-diagnosis-title">{{child.latestDiagnosis.title}}</text>
-              <text class="child-diagnosis-summary">{{child.latestDiagnosis.summary}}</text>
+          <block wx:if="{{child.latestDiagnosis}}">
+            <view class="child-panel-label">最新正式诊断</view>
+            <view class="child-diagnosis-row" catchtap="onTraceableUrlTap" data-url="{{child.latestDiagnosis.url}}" aria-role="button" aria-label="阅读{{child.latestDiagnosis.title}}">
+              <text class="child-diagnosis-icon" aria-hidden="true">{{child.latestDiagnosis.icon}}</text>
+              <text class="child-diagnosis-subject" aria-hidden="true">{{child.latestDiagnosis.subjectIcon}}</text>
+              <view class="child-diagnosis-copy">
+                <text class="child-diagnosis-title">{{child.latestDiagnosis.title}}</text>
+                <text class="child-diagnosis-summary">{{child.latestDiagnosis.summary}}</text>
+              </view>
+              <text class="child-diagnosis-coverage">{{child.diagnosisCoverageText}} · 阅读 ›</text>
             </view>
-            <text class="child-diagnosis-coverage">{{child.diagnosisCoverageText}} · 阅读 ›</text>
-          </view>
+          </block>
 
           <view class="child-panel-label">快捷入口</view>
           <view class="child-quick-actions">
@@ -166,8 +166,10 @@
               wx:key="key"
               catchtap="onTraceableUrlTap"
               data-url="{{item.url}}"
+              aria-role="button"
+              aria-label="{{item.title}}：{{item.summary}}"
             >
-              <text class="quick-link-icon">{{item.icon}}</text>
+              <text class="quick-link-icon" aria-hidden="true">{{item.icon}}</text>
               <text class="quick-link-title">{{item.title}}</text>
               <text class="quick-link-summary">{{item.summary}}</text>
             </view>
