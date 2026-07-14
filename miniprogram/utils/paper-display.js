@@ -1,6 +1,6 @@
 const { uniqueBottleneckSummaries } = require('./bottlenecks')
 const { getSubjectName } = require('./constants')
-const { groupBottlenecksByHierarchy } = require('./math-bottleneck-hierarchy')
+const { groupBottlenecksByHierarchy, normalizeFineBottleneck } = require('./math-bottleneck-hierarchy')
 const { readableNameOf, sanitizeUserText, compactReadableTargets } = require('./user-facing-text')
 const { beijingParts } = require('./util')
 
@@ -160,7 +160,10 @@ function collectPaperTargets(paper = {}) {
     const targetId = targetIdOf(raw)
     const displayName = targetNameOf(raw)
     if (!targetId && !displayName) return
-    const key = targetId || displayName
+    const canonicalId = paper.subject === 'math' && /^BN-/i.test(targetId)
+      ? normalizeFineBottleneck({ bottleneckId: targetId }).bottleneckId
+      : targetId
+    const key = canonicalId || displayName
     if (byId.has(key)) return
     const normalized = typeof raw === 'string'
       ? { targetId, displayName }
@@ -226,8 +229,25 @@ function positiveCount(value) {
   return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0
 }
 
+function rawSummaryCount(paper = {}) {
+  const summaries = Array.isArray(paper.bottleneckSummaries) ? paper.bottleneckSummaries : []
+  return new Set(summaries.map(summary => {
+    if (summary === null || summary === undefined) return ''
+    if (typeof summary === 'string' || typeof summary === 'number') return String(summary).trim()
+    return targetIdOf(summary) || firstNonEmpty(
+      summary.displayName,
+      summary.displayTitle,
+      summary.title,
+      summary.name,
+      summary.label
+    )
+  }).filter(Boolean)).size
+}
+
 function authoritativePaperTargetCount(paper = {}, targets = [], readableNames = []) {
   if (targets.length > 0) return targets.length
+  const summaryCount = rawSummaryCount(paper)
+  if (summaryCount > 0) return summaryCount
   const packCount = positiveCount((paper.verificationPack || {}).totalTargets)
   return packCount || readableNames.length
 }
