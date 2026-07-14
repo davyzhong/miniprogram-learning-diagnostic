@@ -203,3 +203,36 @@ test('paper display uses metadata count consistently when no concrete targets ex
   assert.equal(display.coverageText, '覆盖 5 个数学学习卡点')
   assert.equal(display.bottleneckHierarchy.totalCount, 5)
 })
+
+test('paper display counts canonical math targets after alias normalization', () => {
+  const display = buildPaperDisplay({
+    subject: 'math',
+    bottleneckTargets: [
+      'BN-FRACTION-ADD-COMMON',
+      'BN-FRACTION-ADD-UNLIKE'
+    ]
+  }, '数学')
+  const items = display.bottleneckHierarchy.groups.flatMap(group => group.families)
+    .flatMap(family => family.items)
+
+  assert.equal(items.length, 1)
+  assert.equal(display.bottleneckHierarchy.totalCount, 1)
+  assert.equal(display.bottleneckHierarchy.summaryText, '1 类 · 1 个细分卡点')
+  assert.equal(display.coverageText, `重点复测：${items[0].displayName}`)
+})
+
+test('paper display retains unique opaque summary count without exposing summary IDs', () => {
+  const opaqueA = 'PRIVATEPAPERSUMMARY123456789A'
+  const opaqueB = 'PRIVATEPAPERSUMMARY123456789B'
+  const display = buildPaperDisplay({
+    subject: 'math',
+    bottleneckSummaries: [opaqueA, opaqueB, opaqueA]
+  }, '数学')
+
+  assert.deepEqual(display.bottleneckSummaries, [])
+  assert.equal(display.bottleneckText, '')
+  assert.equal(display.coverageText, '覆盖 2 个数学学习卡点')
+  assert.equal(display.bottleneckHierarchy.totalCount, 2)
+  assert.equal(display.bottleneckHierarchy.summaryText, '2 个细分卡点')
+  assert.doesNotMatch(JSON.stringify(visiblePaperFields(display)), /PRIVATEPAPERSUMMARY/)
+})
