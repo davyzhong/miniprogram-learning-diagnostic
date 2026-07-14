@@ -61,6 +61,15 @@ test('buildLearningResourceView handles empty pack safely', () => {
   assert.equal(view.hasContent, false, '空 pack 的 hasContent 必须为 false')
 })
 
+test('external resource cards do not expose an ID when the title is missing', () => {
+  const view = buildLearningResourceView({
+    externalResources: [{ resourceId: 'RES-LEGACY-UNKNOWN-01', platform: 'B站' }]
+  })
+
+  assert.equal(view.resourceCards[0].title, '学习资源')
+  assert.equal(view.resourceCards[0].resourceId, 'RES-LEGACY-UNKNOWN-01')
+})
+
 test('extractBlocks 把 blocks 数组拆成结构化字段', () => {
   const extracted = extractBlocks([
     { type: 'summary', title: 'A', body: 'a' },

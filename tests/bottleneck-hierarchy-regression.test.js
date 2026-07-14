@@ -50,6 +50,13 @@ test('normalizeFineBottleneck merges seed fields with input overrides correctly'
   assert.equal(normalized.bottleneckId, bn.bottleneckId)
 })
 
+test('normalizeFineBottleneck gives ID-only legacy records a readable display title', () => {
+  const normalized = normalizeFineBottleneck({ bottleneckId: 'BN-LEGACY-UNKNOWN-01' })
+
+  assert.equal(normalized.displayTitle, '待确认细卡点')
+  assert.doesNotMatch(normalized.displayTitle, /BN-/)
+})
+
 // ── 2. groupBottlenecksByHierarchy 分组结构 ──
 
 test('groupBottlenecksByHierarchy groups all bottlenecks without loss', () => {

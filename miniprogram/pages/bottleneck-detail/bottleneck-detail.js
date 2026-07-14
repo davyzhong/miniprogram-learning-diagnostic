@@ -11,6 +11,7 @@ const { SUBJECT_NAMES } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
 const { formatMonthDay, formatClock } = require('../../utils/util')
+const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
 
 // 知识节点 seed（查前序依赖）
 const knowledgeSeed = require('../../data/math/knowledge-nodes.seed')
@@ -30,20 +31,20 @@ function buildKnowledgePosition(bottleneck = {}) {
   const prerequisites = (node.prerequisites || [])
     .map(pid => {
       const preNode = nodeMap.get(pid)
-      return preNode ? { nodeId: pid, title: preNode.title || pid } : null
+      return preNode ? { nodeId: pid, title: readableNameOf(preNode) || '待确认知识点' } : null
     })
     .filter(Boolean)
 
   // 找后续节点：哪些节点的 prerequisites 包含当前 nodeId
   const dependents = (knowledgeSeed.nodes || [])
     .filter(n => (n.prerequisites || []).includes(nodeId))
-    .map(n => ({ nodeId: n.nodeId, title: n.title || n.nodeId }))
+    .map(n => ({ nodeId: n.nodeId, title: readableNameOf(n) || '待确认知识点' }))
 
   return {
     visible: true,
     domain,
     domainIcon,
-    nodeTitle: node.title || nodeId,
+    nodeTitle: readableNameOf(node) || '待确认知识点',
     gradeRange: node.gradeRange || [],
     prerequisites: prerequisites.slice(0, 4),
     dependents: dependents.slice(0, 4),
@@ -73,7 +74,7 @@ function formatDateTime(value) {
 }
 
 function compactText(text = '', maxLength = 34) {
-  const value = String(text || '').replace(/\s+/g, ' ').trim()
+  const value = sanitizeUserText(text, { treatAsId: true }).replace(/\s+/g, ' ').trim()
   if (value.length <= maxLength) return value
   return `${value.slice(0, maxLength)}...`
 }

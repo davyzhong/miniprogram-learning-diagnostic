@@ -7,8 +7,8 @@ const resourceSeed = require('../data/math/learning-resources.seed')
 const INTERNAL_ID_PATTERNS = [
   /^(?:BN|LP|ERR|NODE|RES|CHI)-[A-Z0-9_-]+$/i,
   /^MATH-[A-Z0-9_-]+$/i,
-  /^(?:PAGE|TASK-PAGE|VER-PAGE)-[A-Z0-9_-]+$/i,
-  /^cloud:\/\//i
+  /^(?:PAGE|TASK|VER)-[A-Z0-9_-]+$/i,
+  /^(?:cloud|wxfile|file):\/\//i
 ]
 const HUMAN_PAPER_CODE_SOURCE = '(?:(?:MATH|CHI)-\\d{8}-\\d+|MATH-\\d{2,3})'
 const HUMAN_PAPER_CODE_PATTERN = new RegExp(`^${HUMAN_PAPER_CODE_SOURCE}$`, 'i')
@@ -16,11 +16,12 @@ const HUMAN_PAPER_CODE_PATTERN = new RegExp(`^${HUMAN_PAPER_CODE_SOURCE}$`, 'i')
 const OPAQUE_ID_PATTERNS = [
   /^[a-f0-9]{24}$/i,
   /^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i,
+  /^(?:file|resource)[_-][A-Za-z0-9_-]+$/i,
   /^(?=[A-Za-z0-9_-]{20,}$)(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9_-]+$/
 ]
 
-const INTERNAL_TOKEN_SOURCE = '(?:(?:TASK-PAGE|VER-PAGE|PAGE|BN|LP|ERR|NODE|RES)-[A-Z0-9_-]+|MATH-(?!(?:\\d{8}-\\d+|\\d{2,3})(?![A-Z0-9_-]))[A-Z0-9_-]+|CHI-(?!\\d{8}-\\d+(?![A-Z0-9_-]))[A-Z0-9_-]+|cloud:\\/\\/[A-Z0-9._~:/?#@&+=%-]+)'
-const OPAQUE_TOKEN_BODY = '(?:[A-F0-9]{24}|[A-F0-9]{8}-[A-F0-9]{4}-[1-5][A-F0-9]{3}-[89AB][A-F0-9]{3}-[A-F0-9]{12}|(?=[A-Z0-9_-]{20,}(?![A-Z0-9_-]))(?=[A-Z0-9_-]*[A-Z])(?=[A-Z0-9_-]*\\d)[A-Z0-9_-]+)'
+const INTERNAL_TOKEN_SOURCE = '(?:(?:TASK|VER|PAGE|BN|LP|ERR|NODE|RES)-[A-Z0-9_-]+|MATH-(?!(?:\\d{8}-\\d+|\\d{2,3})(?![A-Z0-9_-]))[A-Z0-9_-]+|CHI-(?!\\d{8}-\\d+(?![A-Z0-9_-]))[A-Z0-9_-]+|(?:cloud|wxfile|file):\\/\\/[A-Z0-9._~:/?#@&+=%-]+)'
+const OPAQUE_TOKEN_BODY = '(?:[A-F0-9]{24}|[A-F0-9]{8}-[A-F0-9]{4}-[1-5][A-F0-9]{3}-[89AB][A-F0-9]{3}-[A-F0-9]{12}|(?:FILE|RESOURCE)[_-][A-Z0-9_-]+|(?=[A-Z0-9_-]{20,}(?![A-Z0-9_-]))(?=[A-Z0-9_-]*[A-Z])(?=[A-Z0-9_-]*\\d)[A-Z0-9_-]+)'
 const OPAQUE_TOKEN_SOURCE = `(?!${HUMAN_PAPER_CODE_SOURCE}(?![A-Z0-9_-]))${OPAQUE_TOKEN_BODY}(?![A-Z0-9_-])`
 const resourcesById = new Map((resourceSeed.resources || []).map(resource => [resource.resourceId, resource]))
 
@@ -70,7 +71,7 @@ function resolveKnownIdentifier(identifier, options = {}) {
 
   if (/^BN-/i.test(text)) {
     const title = bottleneckTitleOf(text)
-    if (title && title !== text) return title
+    if (title && title !== text && title !== '待确认细卡点') return title
     const normalized = normalizeFineBottleneck({ bottleneckId: text })
     return normalized.displayTitle !== '待确认细卡点' ? normalized.displayTitle : ''
   }

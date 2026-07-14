@@ -108,6 +108,18 @@ test('verification page shows readable bottleneck summaries instead of LP codes'
   assert.equal(page.data.selectedSummary, '审题理解、计算基础、待确认卡点')
 })
 
+test('verification task pages use a readable scope for ID-only legacy targets', () => {
+  const { page } = loadPage('miniprogram/pages/generate-verification/generate-verification.js')
+  page.setData({ subject: 'math' })
+
+  const pages = page.buildChunkedTaskPages([
+    { bottleneckId: 'BN-LEGACY-UNKNOWN-01', lpCode: 'LP-UNKNOWN-01', weight: 40 }
+  ])
+
+  assert.deepEqual(JSON.parse(JSON.stringify(pages[0].targetNames)), ['待确认学习卡点'])
+  assert.equal(pages[0].scopeText, '1 个学习卡点')
+})
+
 test('verification page expands math bottlenecks into fine-grained candidates', async () => {
   const currentBottlenecks = [{
     lpCode: 'LP-001',

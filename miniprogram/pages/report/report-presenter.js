@@ -10,6 +10,7 @@ const { paperCodeOf } = require('../../utils/paper-display')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { reportIllustrationOf } = require('../../utils/page-illustrations')
 const { beijingParts } = require('../../utils/util')
+const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
 
 const DEFAULT_SOURCE_EVIDENCE_LIMIT = 3
 const DEFAULT_ERROR_DETAIL_LIMIT = 20
@@ -303,7 +304,7 @@ function buildReportSummaryText(report = {}, bottleneckList = []) {
   if (shouldUseFineBottlenecks(report) && bottleneckList.length > 0) {
     return '本页已按细颗粒度卡点展开；粗类只作为归属维度，用于理解这些卡点属于哪一类能力。'
   }
-  return report.summary || ''
+  return sanitizeUserText(report.summary || '', { treatAsId: true, count: bottleneckList.length })
 }
 
 function reportImageFiles(report = {}) {
@@ -345,14 +346,17 @@ function buildSourceEvidenceItems(photos = [], errorDetails = []) {
       .slice(0, 3)
     return {
       fileID: photo.fileID || '',
-      title: photo.fileName || `试卷照片${sourceIndex}`,
+      title: sanitizeUserText(photo.fileName || `试卷照片${sourceIndex}`, { treatAsId: true }),
       sourceText: sourceTextOf(sourceIndex),
-      summary: photo.ocrSummary || photo.summaryText || (relatedWithOcr && relatedWithOcr.sourceOcrSummary) || '暂无 OCR 摘要',
+      summary: sanitizeUserText(
+        photo.ocrSummary || photo.summaryText || (relatedWithOcr && relatedWithOcr.sourceOcrSummary) || '暂无 OCR 摘要',
+        { treatAsId: true }
+      ),
       duplicateText: photo.isDuplicate ? '疑似重复照片' : '',
       statusText: photo.analysisStatus === 'failed' ? '分析失败' : '已纳入分析',
       relatedErrorCount: relatedErrors.length,
       relatedErrors: relatedErrorTexts,
-      relatedErrorText: relatedErrorTexts.join('、')
+      relatedErrorText: sanitizeUserText(relatedErrorTexts.join('、'), { treatAsId: true })
     }
   })
 }
@@ -456,7 +460,10 @@ function buildReportView(report, options = {}) {
     ...evidenceStatusViewOf(item.evidenceStatus || (item.complete && item.allCorrect ? 'passed' : 'missing'))
   }))
   const qualityView = qualityViewOf(report.quality)
-  const rawHeadline = report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断结果'
+  const rawHeadline = sanitizeUserText(
+    report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断结果',
+    { treatAsId: true, count: bottlenecks.length }
+  )
   const headline = buildFineReportHeadline(report, bottleneckList, rawHeadline)
   const reportSummaryText = buildReportSummaryText(report, bottleneckList)
   const explanation = buildReportExplanation(report, {
@@ -603,7 +610,7 @@ function buildVerificationFeedback(report, options = {}) {
     const afterText = vb.status === 'improved' ? '已改善' : (vb.status === 'persisting' || vb.status === 'worsened' ? '仍需练习' : '需要验证')
     return {
       lpCode: vb.lpCode,
-      lpName: vb.lpName || vb.lpCode,
+      lpName: readableNameOf(vb) || '待确认学习卡点',
       beforeText,
       afterText,
       afterClass: vb.status === 'improved' ? 'improved' : 'persisting',
@@ -652,7 +659,10 @@ function buildVerificationFeedback(report, options = {}) {
     verificationNextActionType: nextActionType,
     verificationReportId: verReport.reportId,
     verificationReportDate: verReport.createdAt,
-    verificationComparisonSummary: verReport.comparisonSummary || verReport.changeSummary || '',
+    verificationComparisonSummary: sanitizeUserText(
+      verReport.comparisonSummary || verReport.changeSummary || '',
+      { treatAsId: true, count: verBottlenecks.length }
+    ),
     hasImprovedBottlenecks: improvedNames.length > 0,
     improvedBottleneckNames: improvedNames,
   }

@@ -6,6 +6,7 @@ const { uniqueBottleneckSummaries } = require('../../utils/bottlenecks')
 const { buildBottleneckViews, profileBottlenecks, buildConfidence } = require('../../utils/bottleneck-view')
 const { groupBottlenecksByHierarchy } = require('../../utils/math-bottleneck-hierarchy')
 const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
+const { readableNameOf, compactReadableTargets } = require('../../utils/user-facing-text')
 
 // 置信度分层出题数（与云函数 generatePaper 保持一致）
 const CONFIDENCE_HIGH_THRESHOLD = 75
@@ -350,7 +351,7 @@ Page({
             ...(item.nodeIds || []),
             ...(item.familyNodeIds || [])
           ]).filter(Boolean)))
-          const targetNames = pageItems.map(item => item.displayName || item.lpName || item.bottleneckId || item.lpCode).filter(Boolean)
+          const targetNames = pageItems.map(item => readableNameOf(item) || '待确认学习卡点')
           pages.push({
             pageIndex: pages.length + 1,
             title: `${family.familyTitle || group.categoryTitle || '专项'}任务页`,
@@ -362,10 +363,10 @@ Page({
             nodeIds,
             targetIds,
             targetNames,
-            targetSummary: family.familyTitle || group.categoryTitle || targetNames.join('、'),
+            targetSummary: family.familyTitle || group.categoryTitle || compactReadableTargets(pageItems),
             targetCount: targetIds.length,
             questionCount: this.questionCountForSelection(pageItems),
-            scopeText: targetNames.join('、')
+            scopeText: compactReadableTargets(pageItems)
           })
         }
       })
@@ -393,8 +394,8 @@ Page({
         title: `任务页 ${pages.length + 1}`,
         targetCount: targets.length,
         questionCount: this.questionCountForSelection(targets),
-        targetNames: targets.map(item => item.displayName || item.lpName || item.bottleneckId || item.lpCode).filter(Boolean),
-        scopeText: targets.map(item => item.displayName || item.lpName || item.bottleneckId || item.lpCode).filter(Boolean).join('、')
+        targetNames: targets.map(item => readableNameOf(item) || '待确认学习卡点'),
+        scopeText: compactReadableTargets(targets)
       })
     }
     return pages

@@ -144,7 +144,7 @@ function readableNodeIdOf(nodeId = '') {
 
 function bottleneckTitleOf(bottleneckId, fallback = '') {
   const bottleneck = bottlenecksById.get(bottleneckId)
-  return bottleneck ? bottleneck.title : (fallback || bottleneckId)
+  return bottleneck ? bottleneck.title : (fallback || '待确认细卡点')
 }
 
 function resourceRoleOf(resource = {}) {

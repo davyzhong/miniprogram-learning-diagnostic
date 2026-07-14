@@ -4,6 +4,7 @@ const {
   profileBottlenecks
 } = require('../../utils/bottleneck-view')
 const { subjectIllustrationOf } = require('../../utils/page-illustrations')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
 
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
 const CHINESE_REVIEW_TYPE_LABELS = {
@@ -136,7 +137,10 @@ function buildLatestDiagnosis(report, subject, subjectName, formatRelativeTime) 
     actionIcon: '🎯',
     title: `最新${subjectName}诊断`,
     dateText: formatRelativeTime(report.createdAt),
-    summary: report.changeSummary || report.comparisonSummary || report.summary || '查看本次正式诊断结论',
+    summary: sanitizeUserText(
+      report.changeSummary || report.comparisonSummary || report.summary || '查看本次正式诊断结论',
+      { treatAsId: true, count: bottlenecks.length }
+    ),
     evidenceCount: Number(report.totalErrors) || 0,
     persistingCount: bottlenecks.filter(item => ['persisting', 'worsened'].includes(item.status)).length,
     improvedCount: bottlenecks.filter(item => item.status === 'improved').length
@@ -148,7 +152,10 @@ function buildRecentChanges(reports, formatRelativeTime) {
     .slice(0, 3)
     .map(report => ({
       _id: report._id,
-      title: report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断报告',
+      title: sanitizeUserText(
+        report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断报告',
+        { treatAsId: true, count: (report.bottlenecks || []).length }
+      ),
       dateText: formatRelativeTime(report.createdAt),
       type: report.type || 'diagnosis'
     }))

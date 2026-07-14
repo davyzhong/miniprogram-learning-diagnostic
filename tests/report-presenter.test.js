@@ -3,6 +3,25 @@ const assert = require('node:assert/strict')
 
 const { buildReportView } = require('../miniprogram/pages/report/report-presenter')
 
+test('report presenter keeps ID-only legacy codes out of visible labels and prose', () => {
+  const view = buildReportView({
+    subject: 'math',
+    type: 'diagnosis',
+    summary: '复测 BN-LEGACY-UNKNOWN-01',
+    bottlenecks: [{ lpCode: 'LP-UNKNOWN-01', errorCount: 1 }],
+    linkedVerificationReport: {
+      reportId: '665f8c1a2b3c4d5e6f708192',
+      verificationEvidence: [],
+      bottlenecks: [{ lpCode: 'LP-UNKNOWN-01', status: 'improved' }]
+    }
+  })
+
+  assert.doesNotMatch(view.reportSummaryText, /BN-|LP-/)
+  assert.doesNotMatch(view.bottleneckList[0].displayName, /BN-|LP-/)
+  assert.doesNotMatch(view.verificationStatusChanges[0].lpName, /BN-|LP-/)
+  assert.equal(view.verificationReportId, '665f8c1a2b3c4d5e6f708192')
+})
+
 test('builds verification report counters and chart widths', () => {
   const view = buildReportView({
     type: 'verification',

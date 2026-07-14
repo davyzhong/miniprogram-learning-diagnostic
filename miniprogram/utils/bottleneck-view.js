@@ -3,6 +3,7 @@ const { SUBJECT_NAMES } = require('./constants')
 const { getBottleneckMeta } = require('./bottleneck-taxonomy')
 const { groupBottlenecksByHierarchy } = require('./math-bottleneck-hierarchy')
 const { formatMonthDay } = require('./util')
+const { readableNameOf } = require('./user-facing-text')
 
 const STATUS_META = {
   needs_verification: { text: '待验证', className: 'pending', icon: '?', badgeText: '待验证', actionText: '查看/下载验证卷' },
@@ -142,7 +143,7 @@ function expandFineBottleneckItems(rawItems = [], options = {}) {
 
     const parentDisplayName = bottleneckLabelOf(item)
     item.candidateBottlenecks.forEach((candidate = {}, index) => {
-      const title = candidate.title || item.lpName || item.lpCode || ''
+      const title = readableNameOf(candidate) || readableNameOf(item) || '待确认细卡点'
       const key = candidateKey(item, candidate, index)
       const dedupeKey = `${item.lpCode || ''}:${title || key}`
       if (seen.has(dedupeKey)) return
@@ -209,8 +210,8 @@ function buildBottleneckView(item = {}, options = {}) {
   const subject = item.subject || options.subject || ''
   const taxonomy = getBottleneckMeta(item) || {}
   const displayName = item.fineBottleneck
-    ? (item.displayName || item.title || item.name || item.label || item.lpName || bottleneckLabelOf(item))
-    : bottleneckLabelOf(item)
+    ? (readableNameOf(item) || '待确认细卡点')
+    : (taxonomy.shortName || bottleneckLabelOf(item))
   const firstSeenText = formatDate(item.firstSeenAt || item.sinceDate)
   const lastSeenText = formatDate(item.lastSeenAt || item.lastVerifiedAt || item.improvedDate)
 

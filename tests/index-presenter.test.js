@@ -6,6 +6,29 @@ const { buildChildWorkbenchCards, buildFamilyWorkbenchHero } = require('../minip
 
 const relative = () => '今天'
 
+test('family index presenter sanitizes ID-only visible summaries without changing routes', () => {
+  const view = buildLearningProfileHomeView({
+    student: { _id: 'student-route-id', name: '小明' },
+    profiles: [{
+      subject: 'math',
+      currentBottlenecks: [{ lpCode: 'LP-UNKNOWN-01', status: 'needs_verification' }]
+    }],
+    reports: [{
+      _id: 'report-route-id',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      summary: '复测 BN-LEGACY-UNKNOWN-01',
+      bottlenecks: [{ lpCode: 'LP-UNKNOWN-01' }]
+    }],
+    papers: []
+  }, relative)
+
+  assert.doesNotMatch(view.primaryReport.summary, /BN-/)
+  assert.doesNotMatch(view.priorityBottlenecks[0].displayName, /LP-/)
+  assert.match(view.primaryReport.url, /report-route-id/)
+})
+
 test('child workbench cards combine pending actions and subject rows for multiple children', () => {
   const cards = buildChildWorkbenchCards({
     students: [{

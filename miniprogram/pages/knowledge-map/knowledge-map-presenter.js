@@ -1,4 +1,5 @@
 const { profileBottlenecks, expandFineBottleneckItems, buildConfidence } = require('../../utils/bottleneck-view')
+const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
 
 const DOMAIN_META = [
   { key: '数与代数', icon: '🔢', short: '数与代数' },
@@ -15,8 +16,8 @@ function statusMeta(status) {
 
 function buildSymptomText(bn = {}) {
   // 优先用 evidenceText（带具体错题数和场景），回退到 parentDescription / lpName
-  if (bn.evidenceText) return bn.evidenceText
-  if (bn.parentDescription) return bn.parentDescription
+  if (bn.evidenceText) return sanitizeUserText(bn.evidenceText, { treatAsId: true })
+  if (bn.parentDescription) return sanitizeUserText(bn.parentDescription, { treatAsId: true })
   if (bn.errorCount && bn.errorCount > 0) return `${bn.errorCount} 道相关错题`
   return '点击查看讲解并练 3 道'
 }
@@ -50,7 +51,7 @@ function buildKnowledgeMapPageView(profile = {}, subject = 'math') {
       lpCode: bn.lpCode || bn.bottleneckId || '',
       bottleneckId: bn.bottleneckId || bn.lpCode || '',
       nodeId: bn.nodeId || '',
-      displayName: bn.displayName || bn.title || bn.lpName || '',
+      displayName: readableNameOf(bn) || '待确认学习卡点',
       statusIcon: meta.icon,
       statusText: meta.text,
       statusClass: meta.cls,
