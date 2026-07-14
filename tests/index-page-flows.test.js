@@ -292,9 +292,9 @@ test('family workbench CSS fixes compact dimensions and four-column metrics', ()
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
   const rule = selector => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const match = wxss.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))
-    assert.ok(match, `${selector} should have a CSS rule`)
-    return match[1]
+    const matches = [...wxss.matchAll(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 'g'))]
+    assert.equal(matches.length, 1, `${selector} should have exactly one CSS rule`)
+    return matches[0][1]
   }
 
   assert.match(rule('.family-metric-strip'), /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/)
@@ -306,7 +306,7 @@ test('family workbench CSS fixes compact dimensions and four-column metrics', ()
   assert.match(rule('.child-avatar'), /width:\s*(?:56|57|58|59|60|61|62)rpx/)
   assert.match(rule('.child-avatar'), /height:\s*(?:56|57|58|59|60|61|62)rpx/)
   assert.match(rule('.child-card-content'), /gap:\s*(?:8|9|10)rpx/)
-  assert.match(rule('.child-name'), /-webkit-line-clamp:\s*2/)
+  assert.match(wxss, /\.child-name\s*\{[^}]*-webkit-line-clamp:\s*2/s)
 
   assert.doesNotMatch(wxss, /\.child-card\s*\{[^}]*padding:\s*(?:2[0-9]|[3-9][0-9])rpx/s)
   assert.doesNotMatch(wxss, /\.child-metric-cell\s*\{[^}]*min-height:\s*(?:[7-9][0-9]|[1-9][0-9]{2,})rpx/s)
@@ -318,15 +318,16 @@ test('family workbench CSS fixes compact dimensions and four-column metrics', ()
     rule('.child-priority-row')
   ].join('\n')
   assert.doesNotMatch(familyRules, /linear-gradient|radial-gradient/)
+  assert.doesNotMatch(wxss, /\.page-subtitle\s*\{/)
 })
 
 test('family workbench sections use flat rows and bands instead of nested cards', () => {
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
   const rule = selector => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const match = wxss.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`))
-    assert.ok(match, `${selector} should have a CSS rule`)
-    return match[1]
+    const matches = [...wxss.matchAll(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 'g'))]
+    assert.equal(matches.length, 1, `${selector} should have exactly one CSS rule`)
+    return matches[0][1]
   }
 
   for (const selector of [
@@ -355,6 +356,92 @@ test('family workbench sections use flat rows and bands instead of nested cards'
   assert.match(rule('.child-metric-strip'), /border-(?:top|bottom)\s*:/)
   assert.match(rule('.child-secondary-action'), /border-top\s*:/)
   assert.match(rule('.child-subject-row'), /border-top\s*:/)
+})
+
+test('family actions own their taps and expose accessible 88rpx targets', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
+  const tagsFor = className => wxml.match(new RegExp(`<(?:view|text)\\b[^>]*class="[^"]*\\b${className}\\b[^"]*"[^>]*>`, 'g')) || []
+  const rule = selector => {
+    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const matches = [...wxss.matchAll(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 'g'))]
+    assert.equal(matches.length, 1, `${selector} should have exactly one CSS rule`)
+    return matches[0][1]
+  }
+
+  const [childCardTag] = tagsFor('child-card')
+  const [childMetricTag] = tagsFor('child-metric-cell')
+  const [familyHeroTag] = tagsFor('family-workbench-hero')
+  assert.doesNotMatch(childCardTag, /(?:bind|catch)tap=/)
+  assert.doesNotMatch(childMetricTag, /(?:bind|catch)tap=/)
+  assert.doesNotMatch(familyHeroTag, /(?:bind|catch)tap=/)
+
+  for (const className of [
+    'family-manage-link',
+    'family-summary-row',
+    'child-profile-link',
+    'child-priority-row',
+    'child-secondary-action',
+    'child-subject-row',
+    'child-diagnosis-row',
+    'child-quick-link'
+  ]) {
+    const tags = tagsFor(className)
+    assert.ok(tags.length > 0, `${className} should render an action`)
+    for (const tag of tags) {
+      assert.match(tag, /aria-role="button"/)
+      assert.match(tag, /aria-label="[^"]+"/)
+    }
+  }
+
+  for (const selector of [
+    '.family-manage-link',
+    '.family-summary-row',
+    '.child-profile-link',
+    '.child-priority-row',
+    '.child-secondary-action',
+    '.child-subject-row',
+    '.child-diagnosis-row',
+    '.child-quick-link'
+  ]) {
+    assert.match(rule(selector), /min-height:\s*88rpx/, `${selector} should provide an 88rpx hit target`)
+  }
+
+  for (const iconClass of [
+    'manage-icon',
+    'family-summary-icon',
+    'family-metric-icon',
+    'child-metric-icon',
+    'priority-icon',
+    'secondary-action-icon',
+    'subject-row-icon',
+    'child-diagnosis-icon',
+    'child-diagnosis-subject',
+    'quick-link-icon'
+  ]) {
+    for (const tag of tagsFor(iconClass)) assert.match(tag, /aria-hidden="true"/)
+  }
+})
+
+test('narrow family identity keeps metadata visible within two clamped lines', () => {
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
+  const narrow = wxss.slice(wxss.lastIndexOf('@media (max-width: 360px)'))
+  const metadataRules = [...narrow.matchAll(/([^{}]+)\{([^}]*)\}/g)]
+    .filter(match => /\.child-(?:meta-inline|updated)/.test(match[1]))
+
+  assert.ok(metadataRules.length > 0)
+  assert.ok(metadataRules.every(match => !/display:\s*none/.test(match[2])))
+  assert.match(narrow, /\.child-name\s*\{[^}]*-webkit-line-clamp:\s*1/s)
+  assert.match(narrow, /\.child-meta-inline,[\s\S]*?\.child-updated\s*\{[^}]*display:\s*block/s)
+  assert.match(narrow, /\.child-identity-(?:title|status)[^}]*flex-wrap:\s*nowrap/s)
+})
+
+test('formal diagnosis heading is absent when a child has no diagnosis', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+  const gatedDiagnosis = /<block\s+wx:if="{{child\.latestDiagnosis}}">[\s\S]*?<view class="child-panel-label">最新正式诊断<\/view>[\s\S]*?<view class="child-diagnosis-row"/
+
+  assert.match(wxml, gatedDiagnosis)
+  assert.equal((wxml.match(/最新正式诊断/g) || []).length, 1)
 })
 
 test('family page renders all three subjects and four quick actions exactly once', () => {
