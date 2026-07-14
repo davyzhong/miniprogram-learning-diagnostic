@@ -132,6 +132,7 @@
 }
 
 .child-identity-row {
+  min-height: 88rpx;
   display: flex;
   align-items: center;
   gap: 12rpx;
@@ -224,15 +225,11 @@
 }
 
 .child-profile-link {
-  min-height: 88rpx;
   color: #245f8c;
   font-size: 19rpx;
   font-weight: 750;
   white-space: nowrap;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
 }
 
 .family-metric-strip {
@@ -250,7 +247,7 @@
 }
 
 .child-metric-cell {
-  min-height: 64rpx;
+  min-height: 88rpx;
   padding: 8rpx 6rpx;
   border-right: 1rpx solid #e3ebef;
   box-sizing: border-box;
@@ -560,7 +557,9 @@
   box-shadow: 0 3rpx 12rpx rgba(27, 57, 78, .06);
 }
 
-.family-workbench-hero:active,
+.family-summary-row:active,
+.child-identity-row:active,
+.child-metric-cell:active,
 .personal-hero-card:active,
 .personal-primary-action:active,
 .personal-report-card:active,
