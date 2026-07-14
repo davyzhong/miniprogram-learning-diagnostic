@@ -1,5 +1,6 @@
 // AI 用量账单页 presenter —— 纯逻辑，不依赖 wx/cloud，可直接单测。
 const { beijingParts } = require('../../utils/util')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
 
 const GLOBAL_EMPTY_STATE = {
   emptyTitle: '本月暂无 AI 用量',
@@ -124,7 +125,7 @@ function buildEventItem(item) {
     isEstimate: Boolean(item.isEstimate),
     status: item.status || '',
     statusText,
-    errorMessage: item.errorMessage || ''
+    errorMessage: sanitizeUserText(item.errorMessage || '', { treatAsId: true })
   }
 }
 

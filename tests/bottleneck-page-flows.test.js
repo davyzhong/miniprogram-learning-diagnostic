@@ -122,6 +122,59 @@ test('learning progress compacts ID-only improved bottlenecks into readable text
   assert.equal(page.data.timeline[0].improvedBottlenecksText, '计算基础等 2 个学习卡点')
 })
 
+test('learning progress sanitizes timeline summaries while preserving report route IDs', async () => {
+  const cloud = {
+    getLearningProgress: async () => ({
+      success: true,
+      data: {
+        timeline: [{
+          reportId: '665f8c1a2b3c4d5e6f708192',
+          summary: '复测 BN-LEAK-01 与 cloud://env/file'
+        }],
+        bottleneckMatrix: []
+      }
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/learning-progress/learning-progress.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.studentId = 'student-1'
+  page.subject = 'math'
+  await page.loadData()
+
+  assert.equal(page.data.timeline[0].reportId, '665f8c1a2b3c4d5e6f708192')
+  assert.doesNotMatch(page.data.timeline[0].summary, /BN-|cloud:\/\//)
+  assert.match(page.data.timeline[0].summary, /学习卡点/)
+})
+
+test('learning progress maps ID-only matrix labels without changing status route data', async () => {
+  const cloud = {
+    getLearningProgress: async () => ({
+      success: true,
+      data: {
+        timeline: [{ reportId: 'report-route-id' }],
+        bottleneckMatrix: [{
+          lpCode: 'LP-LEAK-01',
+          lpName: 'LP-LEAK-01',
+          statuses: [{ reportId: 'report-route-id', status: 'persisting' }]
+        }]
+      }
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/learning-progress/learning-progress.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.studentId = 'student-1'
+  page.subject = 'math'
+  await page.loadData()
+
+  assert.equal(page.data.bottleneckMatrix[0].lpCode, 'LP-LEAK-01')
+  assert.equal(page.data.bottleneckMatrix[0].lpName, '待确认学习卡点')
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.bottleneckMatrix[0].statusIcons)), ['!'])
+})
+
 
 test('bottleneck center opens learning resources for the tapped fine bottleneck', async () => {
   let requestedTarget = null

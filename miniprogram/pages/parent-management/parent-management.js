@@ -1,5 +1,10 @@
 const cloud = require('../../utils/cloud')
 const { RELATION_OPTIONS } = require('../../utils/constants')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
+
+function safeVisibleText(value, fallback = '') {
+  return sanitizeUserText(value || fallback, { treatAsId: true }) || fallback
+}
 
 function formatMember(member) {
   const role = member.role === 'owner' ? '档案创建者' : '共同家长'
@@ -8,7 +13,8 @@ function formatMember(member) {
     ...member,
     roleText: role,
     relationText,
-    displayText: member.displayName || relationText || role,
+    displayName: safeVisibleText(member.displayName),
+    displayText: safeVisibleText(member.displayName, relationText || role),
     avatarText: relationText.slice(0, 1) || (member.role === 'owner' ? '主' : '家'),
   }
 }
@@ -53,7 +59,10 @@ Page({
       const result = await cloud.listStudentMembers(this.data.studentId)
       const permissions = result.permissions || {}
       this.setData({
-        student: result.student || null,
+        student: result.student ? {
+          ...result.student,
+          name: safeVisibleText(result.student.name, '孩子档案')
+        } : null,
         role: result.role || '',
         permissions,
         canInvite: Boolean(permissions.canManageParents),

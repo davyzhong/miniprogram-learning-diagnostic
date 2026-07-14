@@ -1,4 +1,5 @@
 const cloud = require('../../utils/cloud')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
 const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
 
 const RECOGNITION_WAIT_TIMEOUT_MS = 12000
@@ -172,7 +173,10 @@ Page({
       this.setData({
         loading: false,
         errorTitle: '生成失败',
-        error: error && error.message ? error.message : '单词熟悉度生成失败'
+        error: sanitizeUserText(
+          error && error.message ? error.message : '单词熟悉度生成失败',
+          { treatAsId: true }
+        )
       })
     } finally {
       wx.hideLoading()

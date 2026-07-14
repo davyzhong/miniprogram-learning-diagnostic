@@ -1,4 +1,5 @@
 const cloud = require('../../utils/cloud')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
 const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
 
 function withDisplayFields(item) {
@@ -134,7 +135,10 @@ Page({
     } catch (error) {
       this.setData({
         loading: false,
-        error: error && error.message ? error.message : '纸面听写生成失败'
+        error: sanitizeUserText(
+          error && error.message ? error.message : '纸面听写生成失败',
+          { treatAsId: true }
+        )
       })
     } finally {
       wx.hideLoading()

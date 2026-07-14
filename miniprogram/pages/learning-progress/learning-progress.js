@@ -1,6 +1,6 @@
 const cloud = require('../../utils/cloud')
 const { beijingParts } = require('../../utils/util')
-const { compactReadableTargets, sanitizeUserText } = require('../../utils/user-facing-text')
+const { compactReadableTargets, readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
 
 function formatDate(iso) {
   const p = beijingParts(iso)
@@ -54,6 +54,7 @@ Page({
       const timeline = (data.timeline || []).map(t => ({
         ...t,
         dateText: formatDate(t.createdAt),
+        summary: sanitizeUserText(t.summary || '', { treatAsId: true }),
         improvedBottlenecksText: compactReadableTargets(t.improvedBottlenecks || []),
         shortLabel: t.isVerification ? '验证' : '诊断',
       }))
@@ -73,7 +74,12 @@ Page({
             statusIcons.push('')
           }
         }
-        return { ...bn, statusByRound, statusIcons }
+        return {
+          ...bn,
+          lpName: readableNameOf(bn) || '待确认学习卡点',
+          statusByRound,
+          statusIcons
+        }
       })
 
       this.setData({
