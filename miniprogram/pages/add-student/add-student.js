@@ -1,5 +1,6 @@
 // pages/add-student/add-student.js
 const cloud = require('../../utils/cloud')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
 
 Page({
   data: {
@@ -69,7 +70,10 @@ Page({
     } catch (err) {
       console.error('保存学生失败', err)
       wx.hideLoading()
-      wx.showToast({ title: '保存失败：' + (err.message || '未知错误'), icon: 'none' })
+      wx.showToast({
+        title: sanitizeUserText('保存失败：' + (err.message || '未知错误'), { treatAsId: true }),
+        icon: 'none'
+      })
     } finally {
       this.setData({ saving: false })
     }

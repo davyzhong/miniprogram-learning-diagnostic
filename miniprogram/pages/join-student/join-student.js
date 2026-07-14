@@ -1,5 +1,14 @@
 const cloud = require('../../utils/cloud')
 const { RELATION_OPTIONS } = require('../../utils/constants')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
+
+function safeStudent(student) {
+  if (!student) return null
+  return {
+    ...student,
+    name: sanitizeUserText(student.name || '孩子档案', { treatAsId: true }) || '孩子档案'
+  }
+}
 
 Page({
   data: {
@@ -45,11 +54,14 @@ Page({
       const relationIndex = this.findRelationIndex(relation)
       this.setData({
         status: result.alreadyJoined ? 'joined' : 'ready',
-        student: result.student || null,
+        student: safeStudent(result.student),
         role: result.role || 'viewer',
         relation: this.data.relationOptions[relationIndex].key,
         relationIndex,
-        displayName: this.buildDefaultDisplayName(result.student, result.presetRelationText),
+        displayName: sanitizeUserText(
+          this.buildDefaultDisplayName(result.student, result.presetRelationText),
+          { treatAsId: true }
+        ),
       })
     } catch (error) {
       this.setData({
@@ -103,11 +115,14 @@ Page({
         mode: 'code',
         lookingUp: false,
         status: result.alreadyJoined ? 'joined' : 'ready',
-        student: result.student || null,
+        student: safeStudent(result.student),
         role: result.role || 'viewer',
         relation: this.data.relationOptions[relationIndex].key,
         relationIndex,
-        displayName: this.buildDefaultDisplayName(result.student, result.presetRelationText),
+        displayName: sanitizeUserText(
+          this.buildDefaultDisplayName(result.student, result.presetRelationText),
+          { treatAsId: true }
+        ),
       })
     } catch (error) {
       this.setData({

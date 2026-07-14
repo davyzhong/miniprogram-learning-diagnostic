@@ -11,6 +11,7 @@ const {
   sanitizeUserText,
   compactReadableTargets
 } = require('../miniprogram/utils/user-facing-text')
+const { PAGE_AUDIT_REGISTRY } = require('./helpers/user-facing-page-audit')
 
 function read(relativePath) {
   return fs.readFileSync(path.join(ROOT, relativePath), 'utf8')
@@ -26,48 +27,14 @@ function registeredPages() {
   ]
 }
 
-function standardStates(normal = {}) {
-  return [
-    { state: 'normal', model: normal },
-    { state: 'loading', model: { loadingText: '正在加载...' } },
-    { state: 'error', model: { errorMessage: '暂时无法加载，请稍后重试' } },
-    { state: 'empty', model: { emptyTitle: '暂无内容', emptyText: '完成一次学习记录后，这里会自动更新' } },
-    { state: 'legacy-id-only', model: { title: '待确认内容', summary: '相关学习内容等待确认' } }
-  ]
-}
-
-// Every registered page owns an explicit visible-output adapter. The exact-key
-// manifest assertion below makes additions fail closed until their states are audited.
-const PAGE_AUDIT_REGISTRY = {
-  'pages/index/index': () => standardStates({ title: '家庭学习台', summary: '查看孩子最近的学习情况' }),
-  'pages/student-profile/student-profile': () => standardStates({ title: '学习档案', summary: '查看诊断和验证记录' }),
-  'pages/add-student/add-student': () => standardStates({ title: '添加孩子档案', label: '学生姓名' }),
-  'pages/subject-home/subject-home': () => standardStates({ title: '数学工作台', summary: '2 个学习卡点等待验证' }),
-  'pages/upload/upload': () => standardStates({ title: '上传试卷', message: '请拍摄清晰完整的试卷' }),
-  'pages/upload-history/upload-history': () => standardStates({ title: '学习记录', paperCodeText: '数学-20260712-06' }),
-  'pages/report/report': () => standardStates({ title: '诊断报告', summary: '计算基础需要继续验证' }),
-  'pages/learning-progress/learning-progress': () => standardStates({ title: '学习进展', improvedBottlenecksText: '计算基础、单位换算' }),
-  'pages/bottleneck-center/bottleneck-center': () => standardStates({ title: '学习卡点中心', displayName: '计算基础' }),
-  'pages/bottleneck-detail/bottleneck-detail': () => standardStates({ title: '计算基础', nodeTitle: '小数除法中的小数点移动' }),
-  'pages/knowledge-map/knowledge-map': () => standardStates({ title: '学习地图', displayName: '小数除法中的小数点移动' }),
-  'pages/english-practice/english-practice': () => standardStates({ title: '认词练习', message: '准备好后开始练习' }),
-  'pages/english-dictation/english-dictation': () => standardStates({ title: '纸面听写', message: '完成后拍照上传' }),
-  'pages/english-wrong-words/english-wrong-words': () => standardStates({ title: '错词本', emptyText: '暂无需要复习的单词' }),
-  'pages/learning-resource/learning-resource': () => standardStates({ title: '学习任务包', resourceTitle: '小数除法讲解' }),
-  'pages/generate-verification/generate-verification': () => standardStates({ title: '生成验证卷', scopeText: '计算基础、单位换算' }),
-  'pages/default-paper/default-paper': () => standardStates({ title: '默认试卷', summary: '适合继续观察基础掌握情况' }),
-  'pages/paper-preview/paper-preview': () => standardStates({ title: '数学验证试卷', paperCodeText: 'MATH-20260613-01' }),
-  'pages/parent-management/parent-management': () => standardStates({ title: '家庭成员', displayText: '妈妈' }),
-  'pages/join-student/join-student': () => standardStates({ title: '加入孩子档案', message: '确认后即可查看学习资料' }),
-  'pages/ai-usage/ai-usage': () => standardStates({ title: 'AI 用量与成本估算', estimateNotice: '当前为内测成本估算，不代表应付款项' })
-}
-
-const VISIBLE_FIELD = /(?:title|label|summary|message|name|text|description|content|notice|hint|caption|heading|toast|accessibility|aria|pdf|scope|targetNames|display)/i
-const INTERNAL_FIELD = /(?:^|\.)(?:_?id|.*Id|.*Ids|.*Code|code|key|status|type|url|path|route|dataset|data)(?:\.|\[|$)/i
+const VISIBLE_FIELD = /(?:title|label|summary|message|name|text|description|content|notice|hint|caption|heading|toast|error|empty|loading|accessibility|aria|pdf|scope|targetNames|display)/i
+const INTERNAL_FIELD = /(?:^|\.)(?:_?id|.*Id|.*Ids|.*Code|.*Url|code|key|status|type|url|path|route|dataset|data)(?:\.|\[|$)/i
+const INTERNAL_CONTAINER = /(?:^|\.)(?:relatedReports|relatedPapers|allEvents|allStatusItems)(?:\.|\[|$)/
 
 function visibleModelFailures(page, state, model) {
   const failures = []
   function visit(value, field, visibleParent = false) {
+    if (INTERNAL_CONTAINER.test(field)) return
     const isVisible = visibleParent || VISIBLE_FIELD.test(field)
     if (typeof value === 'string') {
       if (!isVisible || INTERNAL_FIELD.test(field)) return
@@ -116,27 +83,36 @@ test('registered page sources do not use internal IDs as visible fallbacks', () 
       }
     }
 
-    const js = read(`miniprogram/${page}.js`)
+    const pageDir = path.dirname(path.join(ROOT, `miniprogram/${page}.js`))
+    const pageBase = path.basename(page)
+    const sourceFiles = [
+      path.join(pageDir, `${pageBase}.js`),
+      ...fs.readdirSync(pageDir)
+        .filter(file => file.endsWith('-presenter.js'))
+        .map(file => path.join(pageDir, file))
+    ]
     const visibleFallback = new RegExp(
       `(?:title|label|summary|message|name|text|description|scopeText|targetNames)\\s*:\\s*[^\\n]*(?:\\|\\||\\.join\\()[^\\n]*\\b${idField}\\b`,
       'g'
     )
-    for (const match of js.matchAll(visibleFallback)) {
-      failures.push(`${page} / js / visible fallback: ${match[0].trim()}`)
+    for (const sourceFile of sourceFiles) {
+      const js = fs.readFileSync(sourceFile, 'utf8')
+      for (const match of js.matchAll(visibleFallback)) {
+        failures.push(`${page} / ${path.basename(sourceFile)} / visible fallback: ${match[0].trim()}`)
+      }
     }
   }
 
   assert.deepEqual(failures, [], `visible ID source leaks:\n${failures.join('\n')}`)
 })
 
-test('all registered page audit states keep internal codes out of visible models', () => {
+test('all registered page adapters execute real modules and keep legacy IDs out of visible models', async () => {
   const failures = []
-  for (const [page, buildStates] of Object.entries(PAGE_AUDIT_REGISTRY)) {
-    const states = buildStates()
-    assert.ok(states.some(item => item.state === 'normal'), `${page} missing normal state`)
-    assert.ok(states.some(item => item.state === 'loading'), `${page} missing loading state`)
-    assert.ok(states.some(item => item.state === 'error'), `${page} missing error state`)
-    assert.ok(states.some(item => item.state === 'empty'), `${page} missing empty state`)
+  for (const [page, adapter] of Object.entries(PAGE_AUDIT_REGISTRY)) {
+    assert.match(adapter.modulePath, /miniprogram\/pages\//, `${page} missing real module path`)
+    assert.ok(['presenter', 'controller'].includes(adapter.kind), `${page} missing real adapter kind`)
+    const states = await adapter.buildStates()
+    assert.ok(states.some(item => ['normal', 'loading', 'empty'].includes(item.state)), `${page} missing supported base state`)
     assert.ok(states.some(item => item.state === 'legacy-id-only'), `${page} missing legacy ID-only state`)
     for (const fixture of states) {
       failures.push(...visibleModelFailures(page, fixture.state, fixture.model))
