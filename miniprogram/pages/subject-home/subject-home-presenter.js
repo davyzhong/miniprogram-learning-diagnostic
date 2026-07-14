@@ -139,7 +139,7 @@ function buildLatestDiagnosis(report, subject, subjectName, formatRelativeTime) 
     dateText: formatRelativeTime(report.createdAt),
     summary: sanitizeUserText(
       report.changeSummary || report.comparisonSummary || report.summary || '查看本次正式诊断结论',
-      { treatAsId: true, count: bottlenecks.length }
+      { treatAsId: true, count: bottlenecks.length, noun: '学习卡点' }
     ),
     evidenceCount: Number(report.totalErrors) || 0,
     persistingCount: bottlenecks.filter(item => ['persisting', 'worsened'].includes(item.status)).length,
@@ -154,7 +154,7 @@ function buildRecentChanges(reports, formatRelativeTime) {
       _id: report._id,
       title: sanitizeUserText(
         report.changeSummary || report.comparisonSummary || report.summary || '查看本次诊断报告',
-        { treatAsId: true, count: (report.bottlenecks || []).length }
+        { treatAsId: true, count: (report.bottlenecks || []).length, noun: '学习卡点' }
       ),
       dateText: formatRelativeTime(report.createdAt),
       type: report.type || 'diagnosis'

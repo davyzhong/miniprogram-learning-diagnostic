@@ -27,17 +27,10 @@ function registeredPages() {
   ]
 }
 
-const VISIBLE_FIELD = /(?:title|label|summary|message|name|text|description|detail|desc|reason|feedback|content|notice|hint|caption|heading|toast|error|empty|loading|accessibility|aria|pdf|scope|targetNames|display)/i
-const INTERNAL_FIELD = /(?:^|\.)(?:_?id|.*Id|.*Ids|.*Code|.*Url|code|key|status|type|url|path|route|dataset|data)(?:\.|\[|$)/i
-const INTERNAL_CONTAINER = /(?:^|\.)(?:relatedReports|relatedPapers|allEvents|allStatusItems)(?:\.|\[|$)/
-
-function visibleModelFailures(page, state, model) {
+function visibleModelFailures(page, state, projection) {
   const failures = []
-  function visit(value, field, visibleParent = false) {
-    if (INTERNAL_CONTAINER.test(field)) return
-    const isVisible = visibleParent || VISIBLE_FIELD.test(field)
+  function visit(value, field) {
     if (typeof value === 'string') {
-      if (!isVisible || INTERNAL_FIELD.test(field)) return
       const sanitized = sanitizeUserText(value, { treatAsId: true })
       if (sanitized !== value || isInternalIdentifier(value, { treatAsId: true })) {
         failures.push(`${page} / ${state} / ${field}: ${JSON.stringify(value)}`)
@@ -45,15 +38,15 @@ function visibleModelFailures(page, state, model) {
       return
     }
     if (Array.isArray(value)) {
-      value.forEach((item, index) => visit(item, `${field}[${index}]`, isVisible))
+      value.forEach((item, index) => visit(item, `${field}[${index}]`))
       return
     }
     if (!value || typeof value !== 'object') return
     for (const [key, item] of Object.entries(value)) {
-      visit(item, field ? `${field}.${key}` : key, isVisible && !INTERNAL_FIELD.test(key))
+      visit(item, field ? `${field}.${key}` : key)
     }
   }
-  visit(model, 'model')
+  visit(projection, 'visible')
   return failures
 }
 
@@ -112,6 +105,8 @@ test('all registered page adapters execute real modules and keep legacy IDs out 
     assert.match(adapter.modulePath, /miniprogram\/pages\//, `${page} missing real module path`)
     assert.ok(['presenter', 'controller'].includes(adapter.kind), `${page} missing real adapter kind`)
     assert.equal(typeof adapter.supportsError, 'boolean', `${page} missing supportsError declaration`)
+    assert.ok(Array.isArray(adapter.visiblePaths) && adapter.visiblePaths.length > 0, `${page} missing WXML-derived visible paths`)
+    assert.equal(typeof adapter.projectVisible, 'function', `${page} missing visible projection`)
     const states = await adapter.buildStates()
     assert.ok(states.some(item => ['normal', 'loading', 'empty'].includes(item.state)), `${page} missing supported base state`)
     if (adapter.supportsError) {
@@ -119,7 +114,9 @@ test('all registered page adapters execute real modules and keep legacy IDs out 
     }
     assert.ok(states.some(item => item.state === 'legacy-id-only'), `${page} missing legacy ID-only state`)
     for (const fixture of states) {
-      failures.push(...visibleModelFailures(page, fixture.state, fixture.model))
+      const projection = adapter.projectVisible(fixture.model)
+      assert.ok(Object.keys(projection).length > 0, `${page} / ${fixture.state} has no rendered values`)
+      failures.push(...visibleModelFailures(page, fixture.state, projection))
     }
   }
   assert.deepEqual(failures, [], `visible model leaks:\n${failures.join('\n')}`)
@@ -127,17 +124,29 @@ test('all registered page adapters execute real modules and keep legacy IDs out 
 
 test('runtime visible-model gate reports every leak with page, state, and field context', () => {
   const failures = visibleModelFailures('pages/example/example', 'error', {
-    title: 'BN-UNKNOWN-A',
-    errorMessage: '加载失败 cloud://env/file',
-    reason: '判断失败 BN-REASON-LEAK',
-    routeId: 'BN-ROUTE-ALLOWED',
-    dataset: { bottleneckId: 'BN-DATASET-ALLOWED' },
-    paperCodeText: 'MATH-20260613-01'
+    'model.title': 'BN-UNKNOWN-A',
+    'model.errorMessage': '加载失败 cloud://env/file',
+    'model.reason': '判断失败 BN-REASON-LEAK',
+    'model.status': 'ERR-STATUS-LEAK',
+    'model.url': 'cloud://env/rendered-file',
+    'model.paperCodeText': 'MATH-20260613-01'
   })
-  assert.equal(failures.length, 3)
-  assert.match(failures[0], /pages\/example\/example \/ error \/ model\.title/)
-  assert.match(failures[1], /model\.errorMessage/)
-  assert.match(failures[2], /model\.reason/)
+  assert.equal(failures.length, 5)
+  assert.match(failures[0], /pages\/example\/example \/ error \/ visible\.model\.title/)
+  assert.match(failures[3], /model\.status/)
+  assert.match(failures[4], /model\.url/)
+})
+
+test('page projections include WXML-rendered paths and exclude unrelated fields with the same name', () => {
+  const projection = PAGE_AUDIT_REGISTRY['pages/bottleneck-detail/bottleneck-detail'].projectVisible({
+    visibleEvidenceChain: [{ summary: 'rendered summary' }],
+    relatedReports: [{ summary: 'not rendered here' }],
+    routeId: 'BN-ROUTE-INTERNAL'
+  })
+
+  assert.deepEqual(projection, {
+    'model.visibleEvidenceChain[0].summary': 'rendered summary'
+  })
 })
 
 test('detects internal identifiers without treating readable labels as IDs', () => {
@@ -221,7 +230,7 @@ test('preserves human paper codes in user-facing prose', () => {
 
 test('removes dangling list punctuation after sanitizing identifier runs', () => {
   assert.equal(
-    sanitizeUserText('复测 BN-A、BN-B、。', { count: 2 }),
+    sanitizeUserText('复测 BN-A、BN-B、。', { count: 2, noun: '学习卡点' }),
     '复测 2 个学习卡点。'
   )
 })
@@ -229,7 +238,14 @@ test('removes dangling list punctuation after sanitizing identifier runs', () =>
 test('preserves closing delimiters around sanitized cloud identifiers', () => {
   assert.equal(
     sanitizeUserText('查看（cloud://env/file）。'),
-    '查看（1 个学习卡点）。'
+    '查看。'
+  )
+})
+
+test('removes backend identifiers from generic prose without inventing bottleneck meaning', () => {
+  assert.equal(
+    sanitizeUserText('文件上传失败：cloud://env/file。'),
+    '文件上传失败。'
   )
 })
 
@@ -240,14 +256,14 @@ test('requires an ASCII left boundary without blocking Chinese-adjacent identifi
   )
   assert.equal(
     sanitizeUserText('复测BN-A。'),
-    '复测1 个学习卡点。'
+    '复测。'
   )
 })
 
 test('sanitizes opaque document IDs when explicitly treated as IDs', () => {
   assert.equal(
     sanitizeUserText('文档665f8c1a2b3c4d5e6f708192。', { treatAsId: true }),
-    '文档1 个学习卡点。'
+    '文档。'
   )
 })
 
@@ -255,12 +271,12 @@ const explicitIdConsistencyCases = [
   {
     value: '665f8c1a2b3c4d5e6f708192a',
     internal: true,
-    expected: '文档1 个学习卡点。'
+    expected: '文档。'
   },
   {
     value: '123e4567-e89b-12d3-a456-426614174000x',
     internal: true,
-    expected: '文档1 个学习卡点。'
+    expected: '文档。'
   },
   {
     value: '1234567890123456789012345',

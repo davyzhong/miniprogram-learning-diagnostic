@@ -145,7 +145,7 @@ test('learning progress sanitizes timeline summaries while preserving report rou
 
   assert.equal(page.data.timeline[0].reportId, '665f8c1a2b3c4d5e6f708192')
   assert.doesNotMatch(page.data.timeline[0].summary, /BN-|cloud:\/\//)
-  assert.match(page.data.timeline[0].summary, /学习卡点/)
+  assert.equal(page.data.timeline[0].summary, '复测')
 })
 
 test('learning progress maps ID-only matrix labels without changing status route data', async () => {

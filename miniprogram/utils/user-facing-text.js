@@ -143,7 +143,9 @@ function semanticCountText(count, noun) {
 function sanitizeUserText(value, options = {}) {
   const text = String(value || '')
   if (!text) return ''
-  const noun = String(options.noun || '学习卡点').trim() || '学习卡点'
+  const noun = String(options.noun || '').trim()
+  const explicitCount = positiveCount(options.count)
+  const hasSemanticReplacement = Boolean(noun && explicitCount)
   const tokenSource = tokenSourceFor(options)
 
   return text
@@ -153,12 +155,19 @@ function sanitizeUserText(value, options = {}) {
       const names = unique(resolvedNames)
       if (resolvedNames.every(Boolean)) return prefix + names.join('、')
 
-      const count = positiveCount(options.count) || unique(identifiers).length
-      if (names.length > 0) return `${prefix}${names.slice(0, 3).join('、')}等 ${count} 个${noun}`
-      return prefix + semanticCountText(count, noun)
+      if (names.length > 0 && hasSemanticReplacement) {
+        return `${prefix}${names.slice(0, 3).join('、')}等 ${explicitCount} 个${noun}`
+      }
+      if (names.length > 0) return prefix + names.join('、')
+      return hasSemanticReplacement ? prefix + semanticCountText(explicitCount, noun) : prefix
     })
     .replace(/\s+([，。；！？、])/g, '$1')
     .replace(/[、，,]+\s*(?=[。；！？])/g, '')
+    .replace(/（\s*）/g, '')
+    .replace(/[：:]\s*(?=[。；！？]|$)/g, '')
+    .replace(/\s+(?:与|和)\s*(?=[。；！？]|$)/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim()
 }
 
 function targetKey(target) {

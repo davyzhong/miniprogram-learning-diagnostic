@@ -1,4 +1,8 @@
+const fs = require('node:fs')
+const path = require('node:path')
 const { loadPage, createWxMock } = require('./page-harness')
+
+const ROOT = path.resolve(__dirname, '../..')
 
 const INTERNAL_SUMMARY = '复测 BN-AUDIT-LEAK-01 与 cloud://env/file'
 const BACKEND_ERROR = '失败 BN-ERROR-01 cloud://env/file'
@@ -24,6 +28,114 @@ function visibleControllerModel(page, wx) {
   return { ...page.data, toastMessages }
 }
 
+function resolveVisiblePath(candidate, aliases) {
+  let normalized = candidate.replace(/\.(?:length|join)$/, '')
+  const [head, ...tail] = normalized.split('.')
+  if (aliases.has(head)) {
+    const base = aliases.get(head)
+    if (!base) return ''
+    normalized = tail.length > 0 ? `${base}.${tail.join('.')}` : base
+  }
+  return normalized
+}
+
+function bindingPaths(binding, aliases) {
+  const withoutLiterals = binding.replace(/(['"])(?:\\.|(?!\1).)*\1/g, '')
+  const paths = []
+  for (const match of withoutLiterals.matchAll(/\b[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*/g)) {
+    const candidate = match[0]
+    if (['true', 'false', 'null', 'undefined'].includes(candidate)) continue
+    const resolved = resolveVisiblePath(candidate, aliases)
+    if (resolved) paths.push(resolved)
+  }
+  return paths
+}
+
+function visiblePathsForPage(pagePath) {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram', `${pagePath}.wxml`), 'utf8')
+  const paths = new Set(['toastMessages[]'])
+  const scopes = [new Map()]
+  const tokens = source.match(/<!--[\s\S]*?-->|<\/?[^>]+>|[^<]+/g) || []
+
+  for (const token of tokens) {
+    if (token.startsWith('<!--')) continue
+    if (token.startsWith('</')) {
+      if (scopes.length > 1) scopes.pop()
+      continue
+    }
+    if (token.startsWith('<')) {
+      const parentAliases = scopes[scopes.length - 1]
+      const aliases = new Map(parentAliases)
+      const loopMatch = token.match(/\bwx:for="\{\{\s*([^}]+?)\s*\}\}"/)
+      if (loopMatch) {
+        const sourceCandidate = bindingPaths(loopMatch[1], parentAliases)[0] || ''
+        const itemMatch = token.match(/\bwx:for-item="([^"]+)"/)
+        const indexMatch = token.match(/\bwx:for-index="([^"]+)"/)
+        aliases.set(itemMatch ? itemMatch[1] : 'item', sourceCandidate ? `${sourceCandidate}[]` : '')
+        aliases.set(indexMatch ? indexMatch[1] : 'index', '')
+      }
+
+      const visibleAttributes = /\b(?:aria-label|title|placeholder|alt)="([^"]*\{\{[^}]+\}\}[^"]*)"/g
+      for (const match of token.matchAll(visibleAttributes)) {
+        bindingPaths(match[1], aliases).forEach(item => paths.add(item))
+      }
+      if (!token.endsWith('/>')) scopes.push(aliases)
+      continue
+    }
+
+    const aliases = scopes[scopes.length - 1]
+    for (const match of token.matchAll(/\{\{([^}]+)\}\}/g)) {
+      bindingPaths(match[1], aliases).forEach(item => paths.add(item))
+    }
+  }
+  return [...paths].sort()
+}
+
+function visibleProjection(model, visiblePaths) {
+  const projection = {}
+
+  function collect(value, segments, modelPath) {
+    if (value === null || value === undefined || segments.length === 0) return
+    const [segment, ...rest] = segments
+    const isArray = segment.endsWith('[]')
+    const key = isArray ? segment.slice(0, -2) : segment
+    const child = value && typeof value === 'object' ? value[key] : undefined
+    const childPath = `${modelPath}.${key}`
+
+    if (isArray) {
+      if (!Array.isArray(child)) return
+      child.forEach((item, index) => {
+        const itemPath = `${childPath}[${index}]`
+        if (rest.length === 0) {
+          if (typeof item !== 'object' && item !== undefined) projection[itemPath] = item
+        } else {
+          collect(item, rest, itemPath)
+        }
+      })
+      return
+    }
+    if (rest.length === 0) {
+      if (typeof child !== 'object' && child !== undefined) projection[childPath] = child
+      return
+    }
+    collect(child, rest, childPath)
+  }
+
+  visiblePaths.forEach(visiblePath => collect(model, visiblePath.split('.'), 'model'))
+  return projection
+}
+
+function attachVisibleProjection(pagePath, adapter) {
+  const visiblePaths = visiblePathsForPage(pagePath)
+  return {
+    ...adapter,
+    visiblePaths,
+    projectVisible(model) {
+      return visibleProjection(model, visiblePaths)
+    }
+  }
+}
+
 async function runController(modulePath, cloud = {}, execute = async () => {}) {
   const wx = createWxMock()
   const { page } = loadPage(modulePath, { wx, modules: { '../../utils/cloud': cloud } })
@@ -33,7 +145,7 @@ async function runController(modulePath, cloud = {}, execute = async () => {}) {
 
 function homePresenterStates() {
   const { buildLearningProfileHomeView } = require('../../miniprogram/pages/index/index-presenter')
-  const build = input => buildLearningProfileHomeView(input, () => '今天')
+  const build = input => ({ home: buildLearningProfileHomeView(input, () => '今天') })
   return [
     state('normal', build({ student: { _id: 'student-1', name: '小明' }, profiles: [], reports: [], papers: [] })),
     state('empty', build({ student: { _id: 'student-1', name: '小明' }, profiles: [], reports: [], papers: [] })),
@@ -131,10 +243,11 @@ async function uploadHistoryStates() {
 
 async function knowledgeMapStates() {
   const { buildKnowledgeMapPageView } = require('../../miniprogram/pages/knowledge-map/knowledge-map-presenter')
+  const build = (profile, subject) => ({ view: buildKnowledgeMapPageView(profile, subject) })
   return [
-    state('normal', buildKnowledgeMapPageView({ currentBottlenecks: [{ lpCode: 'LP-001' }] }, 'math')),
-    state('empty', buildKnowledgeMapPageView({}, 'math')),
-    state('legacy-id-only', buildKnowledgeMapPageView({ currentBottlenecks: [{ lpCode: 'LP-AUDIT-LEAK-01', bottleneckId: 'BN-AUDIT-LEAK-01' }] }, 'math')),
+    state('normal', build({ currentBottlenecks: [{ lpCode: 'LP-001' }] }, 'math')),
+    state('empty', build({}, 'math')),
+    state('legacy-id-only', build({ currentBottlenecks: [{ lpCode: 'LP-AUDIT-LEAK-01', bottleneckId: 'BN-AUDIT-LEAK-01' }] }, 'math')),
     state('error', await runController('miniprogram/pages/knowledge-map/knowledge-map.js', {
       getSubjectProfile: async () => { throw new Error(BACKEND_ERROR) }
     }, async page => {
@@ -146,10 +259,11 @@ async function knowledgeMapStates() {
 
 async function learningResourceStates() {
   const { buildLearningResourceView } = require('../../miniprogram/pages/learning-resource/learning-resource-presenter')
+  const build = pack => ({ view: buildLearningResourceView(pack) })
   return [
-    state('normal', buildLearningResourceView({ title: '小数除法学习任务' })),
-    state('empty', buildLearningResourceView({})),
-    state('legacy-id-only', buildLearningResourceView({
+    state('normal', build({ title: '小数除法学习任务' })),
+    state('empty', build({})),
+    state('legacy-id-only', build({
       _id: OPAQUE_ID,
       title: INTERNAL_SUMMARY,
       externalResources: [{ resourceId: 'RES-AUDIT-LEAK-01', platform: 'B站' }]
@@ -417,7 +531,7 @@ async function joinStudentStates() {
   ]
 }
 
-const PAGE_AUDIT_REGISTRY = {
+const RAW_PAGE_AUDIT_REGISTRY = {
   'pages/index/index': presenterAdapter('miniprogram/pages/index/index-presenter.js', indexStates, true),
   'pages/student-profile/student-profile': presenterAdapter('miniprogram/pages/index/index-presenter.js', studentProfileStates, true),
   'pages/add-student/add-student': controllerAdapter('miniprogram/pages/add-student/add-student.js', addStudentStates),
@@ -441,4 +555,10 @@ const PAGE_AUDIT_REGISTRY = {
   'pages/ai-usage/ai-usage': presenterAdapter('miniprogram/pages/ai-usage/ai-usage-presenter.js', aiUsageStates, true)
 }
 
-module.exports = { PAGE_AUDIT_REGISTRY }
+const PAGE_AUDIT_REGISTRY = Object.fromEntries(
+  Object.entries(RAW_PAGE_AUDIT_REGISTRY).map(([pagePath, adapter]) => (
+    [pagePath, attachVisibleProjection(pagePath, adapter)]
+  ))
+)
+
+module.exports = { PAGE_AUDIT_REGISTRY, visibleProjection, visiblePathsForPage }
