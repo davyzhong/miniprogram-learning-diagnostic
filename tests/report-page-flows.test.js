@@ -480,8 +480,8 @@ test('report page submits parent feedback and marks the target as submitted', as
   await page.loadReport('report-1')
   page.onOpenFeedback({ currentTarget: { dataset: { targetType: 'bottleneck', targetId: 'LP-001' } } })
   page.onFeedbackTypeTap({ currentTarget: { dataset: { type: 'wrong_bottleneck' } } })
-  page.onFeedbackReasonInput({ detail: { value: '这个卡点不准确' } })
-  page.onFeedbackNoteInput({ detail: { value: '孩子只是抄错了数字' } })
+  page.onFeedbackReasonInput({ detail: { value: '  这个 BN-REF-01 对应 cloud://env/evidence 不准确  ' } })
+  page.onFeedbackNoteInput({ detail: { value: '请核对 NODE-REF-02 与原始记录\n' } })
   await page.onSubmitFeedback()
 
   assert.deepEqual(JSON.parse(JSON.stringify(feedbackPayload)), {
@@ -489,8 +489,8 @@ test('report page submits parent feedback and marks the target as submitted', as
     type: 'wrong_bottleneck',
     targetType: 'bottleneck',
     targetId: 'LP-001',
-    reason: '这个卡点不准确',
-    note: '孩子只是抄错了数字'
+    reason: '  这个 BN-REF-01 对应 cloud://env/evidence 不准确  ',
+    note: '请核对 NODE-REF-02 与原始记录\n'
   })
   assert.equal(page.data.feedbackDialog.visible, false)
   assert.equal(page.data.feedbackByTarget['bottleneck:LP-001'].submitted, true)
@@ -564,7 +564,7 @@ test('report learning resource cards copy resource links for parent review', () 
   assert.equal(clipboardCall.payload.data, 'https://www.bilibili.com/video/BV1M6B3BuEFn/')
 })
 
-test('report sanitizes internal identifiers from bound feedback values', () => {
+test('report preserves user-authored internal references in bound feedback values', () => {
   const { page } = loadPage('miniprogram/pages/report/report.js', {
     modules: {
       '../../utils/cloud': {},
@@ -577,8 +577,32 @@ test('report sanitizes internal identifiers from bound feedback values', () => {
   page.onFeedbackReasonInput({ detail: { value: '复测 BN-FEEDBACK-01 与 cloud://env/file' } })
   page.onFeedbackNoteInput({ detail: { value: '失败 ERR-FEEDBACK-01 cloud://env/file' } })
 
-  assert.equal(page.data.feedbackDialog.reason, '复测')
-  assert.equal(page.data.feedbackDialog.note, '失败')
+  assert.equal(page.data.feedbackDialog.reason, '复测 BN-FEEDBACK-01 与 cloud://env/file')
+  assert.equal(page.data.feedbackDialog.note, '失败 ERR-FEEDBACK-01 cloud://env/file')
+})
+
+test('report feedback failure hides hostile backend error details', async () => {
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': {
+        createReportFeedback: async () => { throw new Error('失败 BN-BACKEND-01 cloud://env/file') }
+      },
+      '../../utils/util': { formatChineseDateTime: () => '' },
+      '../../utils/poller': { createPoller: () => ({ start() {}, stop() {} }) },
+      './report-presenter': { buildReportView: () => ({}) }
+    }
+  })
+  page.setData({ reportId: 'report-route-id' })
+  page.onOpenFeedback({ currentTarget: { dataset: { targetType: 'report', targetId: 'report-route-id' } } })
+  page.onFeedbackReasonInput({ detail: { value: '请检查 BN-USER-01' } })
+
+  await page.onSubmitFeedback()
+
+  const toast = wx.calls.filter(call => call.name === 'showToast').at(-1)
+  assert.equal(toast.payload.title, '反馈提交失败')
+  assert.equal(page.data.feedbackDialog.reason, '请检查 BN-USER-01')
 })
 
 test('report generates, downloads and opens its printable PDF', async () => {

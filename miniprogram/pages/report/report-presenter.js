@@ -433,7 +433,7 @@ function buildReportView(report, options = {}) {
     }
   })
   const bottleneckGroups = report.subject === 'math'
-    ? buildGroupedBottleneckViews(bottlenecks, { subject: report.subject, subjectName: report.subjectName })
+    ? buildGroupedBottleneckViews(bottleneckList, { subject: report.subject, subjectName: report.subjectName })
     : []
   const learningMapItems = buildLearningMapReportItems(rawBottlenecks)
   const allErrorDetailList = errorDetails.map((item, index) => {

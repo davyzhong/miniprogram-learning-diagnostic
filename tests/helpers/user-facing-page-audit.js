@@ -12,12 +12,12 @@ const OPAQUE_ID = '665f8c1a2b3c4d5e6f708192'
 const ALLOWED_UNRESOLVED_BINDING_REASONS = new Set(['conditional-absent', 'loop-alias-absent'])
 const LOOP_INDEX_ALIAS = Symbol('loop-index')
 
-function state(name, model) {
-  return { state: name, model }
+function state(name, model, options = {}) {
+  return { state: name, model, ...options }
 }
 
-function presenterAdapter(modulePath, build, supportsError = false) {
-  return { kind: 'presenter', modulePath, supportsError, buildStates: build }
+function presenterAdapter(modulePath, build, supportsError = false, options = {}) {
+  return { kind: 'presenter', modulePath, supportsError, buildStates: build, ...options }
 }
 
 function controllerAdapter(modulePath, build) {
@@ -61,11 +61,26 @@ function bindingPaths(binding, aliases) {
   )))
 }
 
-function visiblePathsForPage(pagePath) {
+function visibleBindingsForPage(pagePath) {
   const source = fs.readFileSync(path.join(ROOT, 'miniprogram', `${pagePath}.wxml`), 'utf8')
-  const paths = new Set(['toastMessages[]'])
-  const scopes = [new Map()]
-  const tokens = source.match(/<!--[\s\S]*?-->|<\/?[^>]+>|[^<]+/g) || []
+  const bindings = []
+  const scopes = [{ aliases: new Map(), conditions: [], loops: [], branchChain: [] }]
+  const tokens = source.match(/<!--[\s\S]*?-->|<(?:(?:"[^"]*")|(?:'[^']*')|[^'">])*>|[^<]+/g) || []
+
+  function addBindings(expression, scope) {
+    const embeddedExpressions = [...expression.matchAll(/\{\{([^}]+)\}\}/g)].map(match => match[1])
+    const renderExpressions = embeddedExpressions.length > 0 ? embeddedExpressions : [expression]
+    renderExpressions.forEach(renderExpression => {
+      bindingPaths(renderExpression, scope.aliases).forEach(bindingPath => {
+        bindings.push({
+          path: bindingPath,
+          renderExpression: renderExpression.trim(),
+          conditions: scope.conditions,
+          loops: scope.loops
+        })
+      })
+    })
+  }
 
   for (const token of tokens) {
     if (token.startsWith('<!--')) continue
@@ -74,35 +89,81 @@ function visiblePathsForPage(pagePath) {
       continue
     }
     if (token.startsWith('<')) {
-      const parentAliases = scopes[scopes.length - 1]
-      const aliases = new Map(parentAliases)
+      const parentScope = scopes[scopes.length - 1]
+      const aliases = new Map(parentScope.aliases)
+      const loops = [...parentScope.loops]
       const loopMatch = token.match(/\bwx:for="\{\{\s*([^}]+?)\s*\}\}"/)
       if (loopMatch) {
-        const sourceCandidate = bindingPaths(loopMatch[1], parentAliases)[0] || ''
+        const sourceCandidate = bindingPaths(loopMatch[1], parentScope.aliases)[0] || ''
         const itemMatch = token.match(/\bwx:for-item="([^"]+)"/)
         const indexMatch = token.match(/\bwx:for-index="([^"]+)"/)
         aliases.set(itemMatch ? itemMatch[1] : 'item', sourceCandidate ? `${sourceCandidate}[]` : '')
         aliases.set(indexMatch ? indexMatch[1] : 'index', LOOP_INDEX_ALIAS)
+        if (sourceCandidate) loops.push(sourceCandidate)
       }
 
+      const conditions = [...parentScope.conditions]
+      const conditionMatch = token.match(/\bwx:(if|elif)="\{\{\s*([^}]+?)\s*\}\}"/)
+      const hasElse = /\bwx:else(?:\s|>|\/)/.test(token)
+      let branchExpression = ''
+      if (conditionMatch && conditionMatch[1] === 'if') {
+        branchExpression = conditionMatch[2]
+        parentScope.branchChain = [conditionMatch[2]]
+      } else if (conditionMatch) {
+        branchExpression = [
+          ...parentScope.branchChain.map(expression => `!(${expression})`),
+          `(${conditionMatch[2]})`
+        ].join(' && ')
+        parentScope.branchChain.push(conditionMatch[2])
+      } else if (hasElse) {
+        branchExpression = parentScope.branchChain.map(expression => `!(${expression})`).join(' && ')
+        parentScope.branchChain = []
+      } else {
+        parentScope.branchChain = []
+      }
+      if (branchExpression) {
+        conditions.push({
+          expression: branchExpression,
+          paths: bindingPaths(branchExpression, aliases),
+          usesLoopAlias: [...aliases.entries()].some(([name, target]) => (
+            target && branchExpression.match(new RegExp(`\\b${name}\\b`))
+          ))
+        })
+      }
+      const scope = { aliases, conditions, loops, branchChain: [] }
       const visibleAttributes = /\b(?:aria-label|title|placeholder|alt|value|checked|label)="([^"]*\{\{[^}]+\}\}[^"]*)"/g
       for (const match of token.matchAll(visibleAttributes)) {
-        bindingPaths(match[1], aliases).forEach(item => paths.add(item))
+        addBindings(match[1], scope)
       }
-      if (!token.endsWith('/>')) scopes.push(aliases)
+      if (!token.endsWith('/>')) scopes.push(scope)
       continue
     }
 
-    const aliases = scopes[scopes.length - 1]
+    const scope = scopes[scopes.length - 1]
     for (const match of token.matchAll(/\{\{([^}]+)\}\}/g)) {
-      bindingPaths(match[1], aliases).forEach(item => paths.add(item))
+      addBindings(match[1], scope)
     }
   }
-  return [...paths].sort()
+
+  bindings.push({
+    path: 'toastMessages[]',
+    conditions: [{ expression: '__toastMessages_present__', paths: ['toastMessages'], usesLoopAlias: false }],
+    loops: []
+  })
+  const unique = new Map()
+  bindings.forEach(binding => {
+    const key = JSON.stringify(binding)
+    if (!unique.has(key)) unique.set(key, binding)
+  })
+  return [...unique.values()].sort((a, b) => a.path.localeCompare(b.path))
 }
 
-function visibleProjection(model, visiblePaths) {
-  return inspectVisibleBindings(model, visiblePaths).projection
+function visiblePathsForPage(pagePath) {
+  return [...new Set(visibleBindingsForPage(pagePath).map(binding => binding.path))]
+}
+
+function visibleProjection(model, visibleBindings) {
+  return inspectVisibleBindings(model, visibleBindings).projection
 }
 
 function pathAccessors(visiblePath) {
@@ -116,12 +177,73 @@ function pathAccessors(visiblePath) {
   return accessors
 }
 
-function inspectVisibleBindings(model, visiblePaths) {
+function valueAtVisiblePath(model, visiblePath, indexes = []) {
+  let value = model
+  let wildcardIndex = 0
+  for (const accessor of pathAccessors(visiblePath)) {
+    if (accessor.type === 'property') {
+      if (value === null || value === undefined || typeof value !== 'object' || !(accessor.key in value)) {
+        return { found: false, value: undefined }
+      }
+      value = value[accessor.key]
+      continue
+    }
+    if (!Array.isArray(value)) return { found: false, value: undefined }
+    const index = accessor.type === 'wildcard'
+      ? indexes[wildcardIndex++]
+      : accessor.type === 'index'
+        ? accessor.index
+        : Number(model[accessor.key])
+    if (!Number.isInteger(index) || index < 0 || index >= value.length) {
+      return { found: false, value: undefined }
+    }
+    value = value[index]
+  }
+  return { found: true, value }
+}
+
+function conditionIsInactive(condition, model, modelPath) {
+  if (condition.expression === '__toastMessages_present__') return !('toastMessages' in model)
+  if (!condition.usesLoopAlias) {
+    try {
+      const evaluate = new Function('model', `with (model) { return Boolean(${condition.expression}) }`)
+      return evaluate(model) === false
+    } catch (error) {
+      // Fall through to simple path evaluation for loop aliases and unsupported expressions.
+    }
+  }
+
+  const simpleExpression = condition.expression.trim().match(/^(!)?[A-Za-z_$][\w$]*(?:(?:\.[A-Za-z_$][\w$]*)|(?:\[[A-Za-z_$][\w$]*\]))*$/)
+  if (!simpleExpression || condition.paths.length !== 1) return false
+  const indexes = [...modelPath.matchAll(/\[(\d+)\]/g)].map(match => Number(match[1]))
+  const result = valueAtVisiblePath(model, condition.paths[0], indexes)
+  const truthy = result.found && Boolean(result.value)
+  return simpleExpression[1] ? truthy : !truthy
+}
+
+function inspectVisibleBindings(model, visibleBindings) {
   const projection = {}
   const unresolved = []
 
+  function expressionResolves(binding) {
+    if (!binding.renderExpression || binding.path.includes('[]')) return false
+    try {
+      const evaluate = new Function('model', `with (model) { return (${binding.renderExpression}) }`)
+      const value = evaluate(model)
+      return value !== undefined && value !== null && typeof value !== 'object'
+    } catch (error) {
+      const literalFallback = binding.renderExpression.match(/\|\|\s*(?:'[^']*'|"[^"]*"|\d+|true|false)\s*$/)
+      return Boolean(literalFallback)
+    }
+  }
+
   function miss(path, reason, binding) {
-    unresolved.push({ path, reason, binding })
+    if (reason === 'applicable-unresolved' && expressionResolves(binding)) return
+    const resolvedReason = reason === 'applicable-unresolved'
+      && binding.conditions.some(condition => conditionIsInactive(condition, model, path))
+      ? 'conditional-absent'
+      : reason
+    unresolved.push({ path, reason: resolvedReason, binding: binding.path })
   }
 
   function collect(value, accessors, modelPath, binding) {
@@ -134,7 +256,7 @@ function inspectVisibleBindings(model, visiblePaths) {
     const [accessor, ...rest] = accessors
     if (accessor.type === 'property') {
       if (value === null || value === undefined || typeof value !== 'object' || !(accessor.key in value)) {
-        miss(`${modelPath}.${accessor.key}`, 'conditional-absent', binding)
+        miss(`${modelPath}.${accessor.key}`, 'applicable-unresolved', binding)
         return
       }
       collect(value[accessor.key], rest, `${modelPath}.${accessor.key}`, binding)
@@ -162,20 +284,23 @@ function inspectVisibleBindings(model, visiblePaths) {
     collect(value[index], rest, `${modelPath}[${index}]`, binding)
   }
 
-  visiblePaths.forEach(visiblePath => collect(model, pathAccessors(visiblePath), 'model', visiblePath))
+  visibleBindings.forEach(binding => collect(model, pathAccessors(binding.path), 'model', binding))
   return { projection, unresolved }
 }
 
 function attachVisibleProjection(pagePath, adapter) {
-  const visiblePaths = visiblePathsForPage(pagePath)
+  const visibleBindings = visibleBindingsForPage(pagePath)
+  const visiblePaths = [...new Set(visibleBindings.map(binding => binding.path))]
   return {
     ...adapter,
+    trustedUserInputPaths: adapter.trustedUserInputPaths || [],
+    visibleBindings,
     visiblePaths,
     projectVisible(model) {
-      return visibleProjection(model, visiblePaths)
+      return visibleProjection(model, visibleBindings)
     },
     inspectVisibleBindings(model) {
-      return inspectVisibleBindings(model, visiblePaths)
+      return inspectVisibleBindings(model, visibleBindings)
     }
   }
 }
@@ -189,7 +314,13 @@ async function runController(modulePath, cloud = {}, execute = async () => {}, m
 
 function homePresenterStates() {
   const { buildLearningProfileHomeView } = require('../../miniprogram/pages/index/index-presenter')
-  const build = input => ({ home: buildLearningProfileHomeView(input, () => '今天') })
+  const build = input => ({
+    homeMode: 'personal-profile',
+    childCards: [],
+    familyHero: null,
+    errorText: '',
+    home: buildLearningProfileHomeView(input, () => '今天')
+  })
   return [
     state('normal', build({ student: { _id: 'student-1', name: '小明' }, profiles: [], reports: [], papers: [] })),
     state('empty', build({ student: { _id: 'student-1', name: '小明' }, profiles: [], reports: [], papers: [] })),
@@ -227,7 +358,11 @@ async function studentProfileStates() {
 
 async function subjectHomeStates() {
   const { buildSubjectHomeView } = require('../../miniprogram/pages/subject-home/subject-home-presenter')
-  const build = (profile, reports) => buildSubjectHomeView(profile, reports, () => '今天', { subject: 'math', subjectName: '数学' })
+  const build = (profile, reports) => ({
+    subject: 'math',
+    subjectInitial: '数',
+    ...buildSubjectHomeView(profile, reports, () => '今天', { subject: 'math', subjectName: '数学' })
+  })
   return [
     state('normal', build({ subject: 'math', currentBottlenecks: [{ lpCode: 'LP-001' }] }, [])),
     state('empty', build({}, [])),
@@ -238,7 +373,12 @@ async function subjectHomeStates() {
     state('error', await runController('miniprogram/pages/subject-home/subject-home.js', {
       seedEnglishPersonalVocabulary: async () => { throw new Error(BACKEND_ERROR) }
     }, async page => {
-      page.setData({ studentId: 'student-route-id', subject: 'english', canWriteActions: true })
+      page.setData({
+        ...build({}, []),
+        studentId: 'student-route-id',
+        subject: 'math',
+        canWriteActions: true
+      })
       await page.importEnglishVocabulary()
     }))
   ]
@@ -246,10 +386,18 @@ async function subjectHomeStates() {
 
 async function reportStates() {
   const { buildReportView } = require('../../miniprogram/pages/report/report-presenter')
+  const build = report => ({
+    report,
+    dateText: '',
+    analysisStatusText: '',
+    retryingAnalysis: false,
+    generatingPdf: false,
+    ...buildReportView(report)
+  })
   return [
-    state('normal', buildReportView({ subject: 'math', type: 'diagnosis', summary: '计算基础需要验证', bottlenecks: [{ lpCode: 'LP-001' }] })),
-    state('empty', buildReportView({ subject: 'math', type: 'diagnosis', bottlenecks: [] })),
-    state('legacy-id-only', buildReportView({
+    state('normal', build({ subject: 'math', type: 'diagnosis', summary: '计算基础需要验证', bottlenecks: [{ lpCode: 'LP-001' }] })),
+    state('empty', build({ subject: 'math', type: 'diagnosis', bottlenecks: [] })),
+    state('legacy-id-only', build({
       _id: OPAQUE_ID,
       subject: 'math',
       type: 'diagnosis',
@@ -259,14 +407,19 @@ async function reportStates() {
     state('error', await runController('miniprogram/pages/report/report.js', {
       generateLearningResourcePack: async () => { throw new Error(BACKEND_ERROR) }
     }, async page => {
-      page._fullReport = { _id: OPAQUE_ID, studentId: 'student-route-id', subject: 'math' }
+      const report = { _id: OPAQUE_ID, studentId: 'student-route-id', subject: 'math', type: 'diagnosis', bottlenecks: [] }
+      page._fullReport = report
+      page.setData(build(report))
       await page.onBottleneckSnapshotTap({ currentTarget: { dataset: { lpCode: 'LP-001', lpName: '计算基础' } } })
     })),
     state('form-value-hostile', await runController('miniprogram/pages/report/report.js', {}, async page => {
+      page.setData(build({ _id: OPAQUE_ID, subject: 'math', type: 'diagnosis', bottlenecks: [] }))
       page.onOpenFeedback({ currentTarget: { dataset: { targetType: 'report', targetId: OPAQUE_ID } } })
       page.onFeedbackReasonInput({ detail: { value: INTERNAL_SUMMARY } })
       page.onFeedbackNoteInput({ detail: { value: BACKEND_ERROR } })
-    }))
+    }), {
+      trustedUserInputPaths: ['model.feedbackDialog.reason', 'model.feedbackDialog.note']
+    })
   ]
 }
 
@@ -274,7 +427,11 @@ async function uploadHistoryStates() {
   const presenter = require('../../miniprogram/pages/upload-history/upload-history-presenter')
   const build = report => {
     const { events, statusItems } = presenter.buildTimelineEvents(report ? [report] : [], [], new Map(), 'math', '数学')
-    return presenter.buildHistoryState(events, 'math', statusItems)
+    return {
+      titleText: '学习记录',
+      loadingMoreRecords: false,
+      ...presenter.buildHistoryState(events, 'math', statusItems)
+    }
   }
   return [
     state('normal', build({ _id: 'report-1', subject: 'math', status: 'completed', summary: '计算基础需要验证', createdAt: '2026-07-01' })),
@@ -292,7 +449,11 @@ async function uploadHistoryStates() {
 
 async function knowledgeMapStates() {
   const { buildKnowledgeMapPageView } = require('../../miniprogram/pages/knowledge-map/knowledge-map-presenter')
-  const build = (profile, subject) => ({ view: buildKnowledgeMapPageView(profile, subject) })
+  const build = (profile, subject) => ({
+    loading: false,
+    errorText: '',
+    view: buildKnowledgeMapPageView(profile, subject)
+  })
   return [
     state('normal', build({ currentBottlenecks: [{ lpCode: 'LP-001' }] }, 'math')),
     state('empty', build({}, 'math')),
@@ -308,7 +469,11 @@ async function knowledgeMapStates() {
 
 async function learningResourceStates() {
   const { buildLearningResourceView } = require('../../miniprogram/pages/learning-resource/learning-resource-presenter')
-  const build = pack => ({ view: buildLearningResourceView(pack) })
+  const build = pack => ({
+    loading: false,
+    errorText: '',
+    view: buildLearningResourceView(pack)
+  })
   return [
     state('normal', build({ title: '小数除法学习任务' })),
     state('empty', build({})),
@@ -328,7 +493,10 @@ async function learningResourceStates() {
 
 async function paperPreviewStates() {
   const { buildPaperPreviewState } = require('../../miniprogram/pages/paper-preview/paper-preview-presenter')
-  const build = paper => buildPaperPreviewState({ paper, subjectName: '数学' })
+  const build = paper => ({
+    downloading: false,
+    ...buildPaperPreviewState({ paper, subjectName: '数学' })
+  })
   return [
     state('normal', build({ _id: 'paper-1', subject: 'math', type: 'verification', paperDisplayCode: '数学-20260712-06' })),
     state('empty', build({})),
@@ -350,10 +518,15 @@ async function paperPreviewStates() {
 
 async function aiUsageStates() {
   const { buildUsageState } = require('../../miniprogram/pages/ai-usage/ai-usage-presenter')
+  const build = (...args) => ({
+    deletionSubmitting: false,
+    deletionSubmitted: false,
+    ...buildUsageState(...args)
+  })
   return [
-    state('normal', buildUsageState([], null, '2026-07', '')),
-    state('empty', buildUsageState([], null, '2026-07', '')),
-    state('legacy-id-only', buildUsageState([{
+    state('normal', build([], null, '2026-07', '')),
+    state('empty', build([], null, '2026-07', '')),
+    state('legacy-id-only', build([{
       _id: OPAQUE_ID,
       eventType: 'photo_analysis',
       status: 'failed',
@@ -409,7 +582,14 @@ async function learningProgressStates() {
   const modulePath = 'miniprogram/pages/learning-progress/learning-progress.js'
   const cloud = {
     getLearningProgress: async () => ({ success: true, data: {
-      timeline: [{ reportId: OPAQUE_ID, summary: INTERNAL_SUMMARY, improvedBottlenecks: ['BN-AUDIT-LEAK-01'] }],
+      timeline: [{
+        reportId: OPAQUE_ID,
+        summary: INTERNAL_SUMMARY,
+        isVerification: false,
+        totalErrors: 0,
+        bottleneckCount: 1,
+        improvedBottlenecks: ['BN-AUDIT-LEAK-01']
+      }],
       bottleneckMatrix: [{ lpCode: 'LP-AUDIT-LEAK-01', lpName: 'LP-AUDIT-LEAK-01', statuses: [{ reportId: OPAQUE_ID, status: 'persisting' }] }]
     } })
   }
@@ -459,7 +639,13 @@ async function bottleneckDetailStates() {
 
 async function englishSessionStates(modulePath, method, cloudMethod) {
   return [
-    state('loading', await runController(modulePath)),
+    state('loading', await runController(modulePath, {
+      [cloudMethod]: () => new Promise(() => {})
+    }, async page => {
+      page.setData({ studentId: 'student-route-id' })
+      page[method]()
+      await Promise.resolve()
+    })),
     state('error', await runController(modulePath, {
       [cloudMethod]: async () => { throw new Error(BACKEND_ERROR) }
     }, async page => {
@@ -478,7 +664,18 @@ async function englishSessionStates(modulePath, method, cloudMethod) {
 async function englishPracticeStates() {
   const modulePath = 'miniprogram/pages/english-practice/english-practice.js'
   const sessionStates = await englishSessionStates(modulePath, 'generateSession', 'generateEnglishRecognitionSession')
-  const answerItem = { queueKey: 'word-1:0', wordId: 'word-route-id', word: 'science', promptType: 'chinese' }
+  const answerItem = {
+    queueKey: 'word-1:0',
+    wordId: 'word-route-id',
+    word: 'science',
+    promptType: 'chinese',
+    promptModeText: '看中文',
+    promptMainText: '科学',
+    answerInstruction: '请说出英文',
+    answerHintText: '看到中文意思后，直接说出对应的英文单词。',
+    canPlayPrompt: false,
+    retryCount: 0
+  }
   const runAnswer = (cloud, recognizedText) => runController(modulePath, cloud, async page => {
     page.setData({
       studentId: 'student-route-id',
@@ -541,7 +738,19 @@ async function defaultPaperStates() {
     state('error', await runController(modulePath, {
       callGeneratePaper: async () => { throw new Error(BACKEND_ERROR) }
     }, async page => {
-      page.setData({ studentId: 'student-route-id', subject: 'math', grade: 6, papers: [{ key: 'grade6_a', questionCount: 20 }] })
+      page.setData({
+        studentId: 'student-route-id',
+        subject: 'math',
+        grade: 6,
+        papers: [{
+          key: 'grade6_a',
+          name: '六年级数学练习',
+          pages: 4,
+          questionCount: 20,
+          estimatedMinutes: 30,
+          bottleneckCount: 3
+        }]
+      })
       await page.onPreview({ currentTarget: { dataset: { key: 'grade6_a' } } })
     })),
     state('legacy-id-only', await runController(modulePath, {
@@ -553,7 +762,13 @@ async function defaultPaperStates() {
 async function parentManagementStates() {
   const modulePath = 'miniprogram/pages/parent-management/parent-management.js'
   return [
-    state('empty', await runController(modulePath)),
+    state('empty', await runController(modulePath, {
+      listStudentMembers: async () => ({
+        student: { _id: 'student-1', name: '小明' },
+        permissions: {},
+        members: []
+      })
+    }, async page => { page.setData({ studentId: 'student-1' }); await page.loadMembers() })),
     state('error', await runController(modulePath, {
       listStudentMembers: async () => { throw new Error(BACKEND_ERROR) }
     }, async page => { page.setData({ studentId: 'student-route-id' }); await page.loadMembers() })),
@@ -608,7 +823,9 @@ const RAW_PAGE_AUDIT_REGISTRY = {
   'pages/subject-home/subject-home': presenterAdapter('miniprogram/pages/subject-home/subject-home-presenter.js', subjectHomeStates, true),
   'pages/upload/upload': controllerAdapter('miniprogram/pages/upload/upload.js', uploadStates),
   'pages/upload-history/upload-history': presenterAdapter('miniprogram/pages/upload-history/upload-history-presenter.js', uploadHistoryStates, true),
-  'pages/report/report': presenterAdapter('miniprogram/pages/report/report-presenter.js', reportStates, true),
+  'pages/report/report': presenterAdapter('miniprogram/pages/report/report-presenter.js', reportStates, true, {
+    trustedUserInputPaths: ['model.feedbackDialog.reason', 'model.feedbackDialog.note']
+  }),
   'pages/learning-progress/learning-progress': controllerAdapter('miniprogram/pages/learning-progress/learning-progress.js', learningProgressStates),
   'pages/bottleneck-center/bottleneck-center': controllerAdapter('miniprogram/pages/bottleneck-center/bottleneck-center.js', bottleneckCenterStates),
   'pages/bottleneck-detail/bottleneck-detail': controllerAdapter('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', bottleneckDetailStates),
