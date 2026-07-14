@@ -1,5 +1,5 @@
 const { formatBottleneckDisplayName, formatBottleneckDisplayList } = require('./util')
-const { buildPaperDisplay } = require('./paper-display')
+const { buildPaperDisplay, paperDateCode } = require('./paper-display')
 const { profileBottlenecks } = require('./bottleneck-view')
 const {
   SUBJECTS,
@@ -12,6 +12,16 @@ const { sanitizeUserText, compactReadableTargets } = require('./user-facing-text
 
 function visibleText(value, options = {}) {
   return sanitizeUserText(value, { ...options, treatAsId: true }).trim()
+}
+
+function visiblePaperCode(paper = {}, subjectName = '') {
+  const savedCode = paper.paperDisplayCode || paper.paperCode || paper.displayCode || ''
+  if (savedCode) return visibleText(savedCode)
+
+  const dateCode = paperDateCode(paper.paperDate || paper.generatedAt || paper.createdAt)
+  if (!dateCode) return ''
+  const readableSubject = visibleText(subjectName || SUBJECT_NAMES[paper.subject] || paper.subjectName) || '学习'
+  return `${readableSubject}-${dateCode}`
 }
 
 function listFor(mapOrObject, id) {
@@ -116,7 +126,7 @@ function paperShortSummary(paper, subjectName = '') {
   if (!paper) return ''
   const display = buildPaperDisplay(paper, subjectName || SUBJECT_NAMES[paper.subject] || paper.subjectName || '学习')
   return [
-    visibleText(display.paperCode),
+    visiblePaperCode(paper, subjectName),
     display.totalPages ? `${display.totalPages}页` : '',
     display.questionCount ? `${display.questionCount}题` : ''
   ].filter(Boolean).join(' · ')
@@ -200,7 +210,7 @@ function buildLatestValue(student, reports, papers, subjectByKey) {
   if (paper && (!report || new Date(paper.generatedAt || paper.createdAt || 0) >= new Date(report.createdAt || 0))) {
     const subjectName = visibleText(SUBJECT_NAMES[paper.subject] || paper.subjectName) || '学习'
     const display = buildPaperDisplay(paper, subjectName)
-    const paperCode = visibleText(display.paperCode)
+    const paperCode = visiblePaperCode(paper, subjectName)
     const coverageText = compactPaperCoverageText(display)
     return {
       kind: 'paper',
@@ -237,7 +247,7 @@ function buildNextAction(student, profiles, papers) {
   if (paper) {
     const subjectName = visibleText(SUBJECT_NAMES[paper.subject] || paper.subjectName) || '数学'
     const display = buildPaperDisplay(paper, subjectName)
-    const paperCode = visibleText(display.paperCode)
+    const paperCode = visiblePaperCode(paper, subjectName)
     return {
       title: '下一步',
       summary: paperCode

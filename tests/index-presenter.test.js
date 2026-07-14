@@ -348,6 +348,49 @@ test('family workbench exposes a compact icon contract without leaking internal 
   assert.ok(hero.stats.every(item => item.icon && item.shortLabel && item.value !== undefined))
 })
 
+test('child workbench never displays an opaque-only paper fallback code', () => {
+  const opaquePaperId = 'paper-route-opaque-abcdef'
+  const [card] = buildChildWorkbenchCards({
+    students: [{ _id: 'student-route-id', name: '钟青羽', grade: 6 }],
+    papersByStudentId: {
+      'student-route-id': [{
+        _id: opaquePaperId,
+        subject: 'math',
+        type: 'verification',
+        totalPages: 3,
+        questions: [{}, {}]
+      }]
+    }
+  }, relative)
+
+  const currentPaper = card.quickLinks.find(item => item.key === 'currentPaper')
+  for (const summary of [card.latestValue.summary, card.priorityAction.summary, currentPaper.summary]) {
+    assert.doesNotMatch(summary, /试卷-abcdef|abcdef/)
+  }
+  assert.equal(card.latestValue.code, '')
+  assert.match(card.latestValue.summary, /2 题/)
+  assert.match(card.priorityAction.summary, /3页/)
+  assert.match(currentPaper.summary, /3页 · 2题/)
+  assert.match(card.latestValue.url, /paper-route-opaque-abcdef/)
+  assert.match(card.priorityAction.url, /paper-route-opaque-abcdef/)
+  assert.match(currentPaper.url, /paper-route-opaque-abcdef/)
+
+  const [datedCard] = buildChildWorkbenchCards({
+    students: [{ _id: 'student-route-id', name: '钟青羽', grade: 6 }],
+    papersByStudentId: {
+      'student-route-id': [{
+        _id: opaquePaperId,
+        subject: 'math',
+        type: 'verification',
+        generatedAt: '2026-07-13T10:00:00+08:00'
+      }]
+    }
+  }, relative)
+  assert.match(datedCard.latestValue.summary, /数学-20260713/)
+  assert.match(datedCard.priorityAction.summary, /数学-20260713/)
+  assert.match(datedCard.quickLinks.find(item => item.key === 'currentPaper').summary, /数学-20260713/)
+})
+
 test('child workbench cards put sixth-grade Qingyu before Xiaoyu regardless source order', () => {
   const cards = buildChildWorkbenchCards({
     students: [{
