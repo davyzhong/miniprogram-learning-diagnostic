@@ -213,6 +213,51 @@ test('paper preview keeps bottleneckText fragment-only and omits unresolved hier
   )
 })
 
+test('paper preview sanitizes final question and task-pack labels without changing internal identifiers', () => {
+  const opaqueQuestion = 'PRIVATEQUESTIONTOKEN123456789'
+  const opaqueTarget = 'PRIVATETARGETTOKEN123456789'
+  const paper = {
+    ...basePaper(),
+    paperDisplayCode: 'MATH-20260613-01',
+    questions: [{
+      index: 1,
+      content: '1/2 + 1/3 =',
+      bottleneckId: 'BN-ROUTE-KEEP',
+      title: `分数复习 BN-UNKNOWN-QUESTION ${opaqueQuestion}`
+    }],
+    verificationPack: {
+      pages: [{
+        pageCode: 'MATH-V-20260616-01-P01',
+        targets: [
+          { targetId: 'BN-TARGET-KEEP', displayName: '重点 BN-UNKNOWN-TARGET' },
+          { targetId: opaqueTarget, displayName: opaqueTarget }
+        ]
+      }]
+    }
+  }
+  const state = buildPaperPreviewState({
+    paper,
+    detail: {
+      latestVerificationReport: {
+        _id: 'report-pack-sanitized',
+        status: 'completed',
+        verificationPageCodes: ['MATH-V-20260616-01-P01']
+      }
+    },
+    subjectName: '数学'
+  })
+
+  assert.equal(state.paperCodeText, 'MATH-20260613-01')
+  assert.match(state.questionPreview[0].bottleneckName, /^分数复习/)
+  assert.match(state.questionPreview[0].bottleneckName, /学习卡点/)
+  assert.doesNotMatch(state.questionPreview[0].bottleneckName, /BN-|PRIVATEQUESTIONTOKEN/)
+  assert.match(state.questionPreview[0].bottleneckUrl, /BN-ROUTE-KEEP/)
+  assert.match(state.taskPackPages[0].targetText, /^重点/)
+  assert.match(state.taskPackPages[0].targetText, /2 个学习卡点/)
+  assert.doesNotMatch(state.taskPackPages[0].targetText, /BN-|PRIVATETARGETTOKEN/)
+  assert.equal(state.taskPackPages[0].pageCode, 'MATH-V-20260616-01-P01')
+})
+
 // ── Page-level helper (migrated from page-flows.test.js) ──
 
 test('paper preview formats default paper names without repeating the grade key', () => {

@@ -11,6 +11,7 @@ const {
 } = require('../../utils/learning-records')
 const { getSubjectName } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
+const { sanitizeUserText } = require('../../utils/user-facing-text')
 
 function subjectNameOf(subject) {
   return getSubjectName(subject, subject || '')
@@ -43,7 +44,11 @@ function buildQuestionPreview(questions = [], expanded = false, context = {}) {
   return visible.map((question, index) => ({
     number: question.index || index + 1,
     content: question.content || '题目内容待加载',
-    bottleneckName: bottleneckLabelOf(question),
+    bottleneckName: sanitizeUserText(bottleneckLabelOf(question), {
+      treatAsId: true,
+      count: 1,
+      noun: '学习卡点'
+    }).trim(),
     bottleneckUrl: buildTraceableUrl({
       type: 'bottleneck-detail',
       studentId: context.studentId,
@@ -235,10 +240,16 @@ function pageCodeSetFromReport(report) {
 }
 
 function targetTextOf(targets = []) {
-  return (targets || [])
+  const source = Array.isArray(targets) ? targets : []
+  const text = source
     .map(target => target.displayName || target.title || target.targetText || target.lpName || target.name)
     .filter(Boolean)
     .join('、')
+  return sanitizeUserText(text, {
+    treatAsId: true,
+    count: source.length,
+    noun: '学习卡点'
+  }).trim()
 }
 
 function buildTaskPackView(paper = {}, report = null) {

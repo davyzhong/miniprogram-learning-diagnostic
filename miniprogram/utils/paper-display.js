@@ -153,7 +153,7 @@ function targetNameOf(target = {}) {
   return visibleNameOf(target, { count: 1 })
 }
 
-function collectPaperTargets(paper = {}) {
+function collectPaperTargets(paper = {}, includeSummaryFallback = true) {
   const byId = new Map()
 
   function addTarget(raw = {}) {
@@ -184,7 +184,7 @@ function collectPaperTargets(paper = {}) {
   questions.forEach(question => addTarget(question))
   ;(Array.isArray(paper.bottleneckTargets) ? paper.bottleneckTargets : []).forEach(addTarget)
 
-  if (byId.size === 0) {
+  if (includeSummaryFallback && byId.size === 0) {
     paperBottleneckSummaries(paper).forEach(summary => addTarget({ displayName: summary, title: summary }))
   }
 
@@ -336,8 +336,11 @@ function paperBottleneckHierarchy(paper = {}) {
 }
 
 function paperCoverageText(paper = {}, subjectName = '') {
-  const readableNames = paperReadableTargetNames(paper)
   const targets = collectPaperTargets(paper)
+  const concreteTargets = collectPaperTargets(paper, false)
+  const readableNames = concreteTargets.length > 0
+    ? uniqueReadableNames(concreteTargets.map(targetNameOf))
+    : paperReadableTargetNames(paper)
   const totalCount = authoritativePaperTargetCount(paper, targets, readableNames)
 
   if (readableNames.length > 0) {

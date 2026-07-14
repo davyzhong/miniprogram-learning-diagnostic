@@ -207,6 +207,7 @@ test('paper display uses metadata count consistently when no concrete targets ex
 test('paper display counts canonical math targets after alias normalization', () => {
   const display = buildPaperDisplay({
     subject: 'math',
+    bottleneckSummaries: ['旧摘要一', '旧摘要二'],
     bottleneckTargets: [
       'BN-FRACTION-ADD-COMMON',
       'BN-FRACTION-ADD-UNLIKE'
