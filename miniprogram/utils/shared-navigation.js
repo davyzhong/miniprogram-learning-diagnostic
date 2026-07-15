@@ -271,6 +271,30 @@ async function navigateToVerificationPaper(cloudModule, { studentId, subject, re
     return { status, paperId }
   }
 
+  // 兼容历史诊断：早期语文报告可能已有具体错项，但当时未创建自动验证卷。
+  // 入口在确认无卷后补建一次，随后仍沿用同一套后台轮询，不在前端拼题或生成 PDF。
+  if (status === 'none' && typeof cloudModule.regenerateVerificationPaper === 'function') {
+    wx.showLoading({ title: '准备验证卷…' })
+    try {
+      const started = await cloudModule.regenerateVerificationPaper({
+        action: 'start', studentId, subject, reportId
+      })
+      if (started && started.success && started.paperId) {
+        wx.hideLoading()
+        wx.showToast({ title: '正在准备验证卷，完成后自动跳转', icon: 'none', duration: 2500 })
+        appStatus.registerOperation({
+          studentId, subject, opType: OP_TYPES.VERIFICATION_PAPER,
+          status: OP_STATUS.GENERATING, progress: 0, label: '验证卷生成'
+        })
+        startVerificationPoller(cloudModule, studentId, subject, reportId)
+        return { status: 'generating', paperId: started.paperId }
+      }
+    } catch (e) {
+      // 继续显示统一的空态提示，避免把云函数内部错误直接暴露给家长。
+    }
+    wx.hideLoading()
+  }
+
   wx.showToast({ title: '暂无验证卷，请先完成一次诊断', icon: 'none', duration: 2500 })
   return { status: 'none', paperId: '' }
 }
