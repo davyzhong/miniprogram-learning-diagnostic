@@ -331,7 +331,7 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     subject,
     kind: 'verification-paper',
     displayLevel: 'main',
-    icon: '验',
+    icon: '🧪',
     url: paperUrl,
     title: sanitizeVisibleText(`${subjectName}纸面验证卷`),
     timeText: timeText(eventTime),

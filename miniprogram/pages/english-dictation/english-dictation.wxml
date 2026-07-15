@@ -2,13 +2,13 @@
   <view class="hero bplus-section">
     <view class="hero-copy">
       <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
-      <text class="title">写 纸面听写</text>
+      <text class="title">✍️ 纸面听写</text>
       <text class="subtitle">看提示在纸上写英文，完成后拍照上传识别。</text>
     </view>
   </view>
 
   <view class="state-card" wx:if="{{loading}}">
-    <text class="state-title">正在准备听写词</text>
+    <text class="state-title">⏳ 正在准备听写词</text>
     <text class="state-desc">优先抽取拼写薄弱、待复测和未听写的单词。</text>
   </view>
 
@@ -19,9 +19,9 @@
 
   <view wx:else class="dictation-wrap">
     <view class="ready-card" wx:if="{{dictationPhase === 'ready'}}">
-      <text class="ready-title">本轮词单</text>
+      <text class="ready-title">📝 本轮词单</text>
       <text class="ready-desc">共 {{queue.length}} 个词。准备一张纸，按题号一行一个词写英文。</text>
-      <button class="primary-btn" bindtap="onStartTap">开始听写</button>
+      <button class="primary-btn" bindtap="onStartTap">▶️ 开始听写</button>
       <button class="secondary-btn voice-start-btn" bindtap="onVoiceNextTap">{{recordingCommand ? '停止语音' : '语音开始'}}</button>
       <text class="voice-hint" wx:if="{{voiceUnavailableText}}">{{voiceUnavailableText}}</text>
       <text class="command-hint">{{commandHint}}</text>
@@ -39,7 +39,7 @@
 
     <block wx:elif="{{dictationPhase === 'running' || dictationPhase === 'paused'}}">
       <view class="progress-card">
-        <text class="progress-label">写 纸面听写进行中</text>
+        <text class="progress-label">✍️ 纸面听写进行中</text>
         <text class="progress-value">第 {{currentIndex + 1}} / {{queue.length}} 题</text>
       </view>
 
@@ -56,8 +56,8 @@
       </view>
 
       <view class="nav-row">
-        <button class="secondary-btn" bindtap="onPlayPromptTap">听 重读</button>
-        <button class="secondary-btn" bindtap="onNextTap">下一个</button>
+        <button class="secondary-btn" bindtap="onPlayPromptTap">🔊 重读</button>
+        <button class="secondary-btn" bindtap="onNextTap">⏭️ 下一个</button>
         <button class="secondary-btn voice-next-btn" bindtap="onVoiceNextTap">{{recordingCommand ? '停止语音' : '说“好了”'}}</button>
       </view>
 
@@ -86,9 +86,9 @@
     </view>
 
     <view class="upload-card" wx:if="{{dictationPhase === 'finished' || dictationPhase === 'reviewed' || uploadedPhotoCount > 0}}">
-      <text class="upload-title">传 完成后上传听写纸</text>
+      <text class="upload-title">📤 完成后上传听写纸</text>
       <text class="upload-desc">上传后会进行 AI 批改，并把逐词拼写结果写入本次听写记录。</text>
-      <button class="primary-btn" loading="{{uploading}}" bindtap="onChoosePhotoTap">拍 拍照上传</button>
+      <button class="primary-btn" loading="{{uploading}}" bindtap="onChoosePhotoTap">📷 拍照上传</button>
       <text class="upload-progress" wx:if="{{uploadProgress}}">{{uploadProgress}}</text>
       <text class="upload-status" wx:if="{{uploadedPhotoCount > 0}}">
         <block wx:if="{{analysisStatus === 'completed'}}">已批改</block>
@@ -99,19 +99,19 @@
     </view>
 
     <view class="result-card" wx:if="{{dictationResults.length > 0}}">
-      <text class="upload-title">AI 批改结果</text>
+      <text class="upload-title">🤖 AI 批改结果</text>
       <view class="result-summary" wx:if="{{resultSummary}}">
         <view class="result-summary-item">
           <text class="summary-num">{{resultSummary.correct}}</text>
-          <text class="summary-label">已 写对</text>
+          <text class="summary-label">✅ 写对</text>
         </view>
         <view class="result-summary-item">
           <text class="summary-num">{{resultSummary.incorrect}}</text>
-          <text class="summary-label">再 待加强</text>
+          <text class="summary-label">🔁 待加强</text>
         </view>
         <view class="result-summary-item">
           <text class="summary-num">{{resultSummary.unclear}}</text>
-          <text class="summary-label">看不清</text>
+          <text class="summary-label">👁️ 看不清</text>
         </view>
       </view>
       <view class="result-row" wx:for="{{dictationResults}}" wx:key="wordId">

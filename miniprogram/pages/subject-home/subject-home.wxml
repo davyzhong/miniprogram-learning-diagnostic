@@ -24,7 +24,7 @@
       <view class="latest-diagnosis-icon">{{latestDiagnosis.icon}}</view>
       <view class="latest-diagnosis-title-copy">
         <text class="latest-diagnosis-title">{{latestDiagnosis.title}}</text>
-        <text class="latest-diagnosis-date">日 {{latestDiagnosis.dateText}} · 正式诊断</text>
+        <text class="latest-diagnosis-date">📅 {{latestDiagnosis.dateText}} · 正式诊断</text>
       </view>
       <text class="latest-diagnosis-link">{{latestDiagnosis.reportIcon}} 完整报告 ›</text>
     </view>
@@ -32,8 +32,8 @@
     <view class="latest-diagnosis-footer">
       <view class="bplus-state-strip">
         <text class="bplus-state-item"><text>{{latestDiagnosis.evidenceIcon}}</text><text class="bplus-state-value">{{latestDiagnosis.evidenceCount}}</text>证据</text>
-        <text class="bplus-state-item" wx:if="{{latestDiagnosis.persistingCount > 0}}"><text>再</text><text class="bplus-state-value">{{latestDiagnosis.persistingCount}}</text>持续</text>
-        <text class="bplus-state-item" wx:if="{{latestDiagnosis.improvedCount > 0}}"><text>已</text><text class="bplus-state-value">{{latestDiagnosis.improvedCount}}</text>改善</text>
+        <text class="bplus-state-item" wx:if="{{latestDiagnosis.persistingCount > 0}}"><text>🔁</text><text class="bplus-state-value">{{latestDiagnosis.persistingCount}}</text>持续</text>
+        <text class="bplus-state-item" wx:if="{{latestDiagnosis.improvedCount > 0}}"><text>✅</text><text class="bplus-state-value">{{latestDiagnosis.improvedCount}}</text>改善</text>
       </view>
       <text class="latest-diagnosis-action">{{latestDiagnosis.actionIcon}} 按诊断继续行动 ›</text>
     </view>
@@ -60,7 +60,7 @@
   </view>
 
   <view class="map-entry" wx:if="{{subject !== 'english'}}" bindtap="onKnowledgeMapTap">
-    <text class="map-entry-icon">图</text>
+    <text class="map-entry-icon">🗺️</text>
     <view class="map-entry-text">
       <text class="map-entry-title">知识地图</text>
       <text class="map-entry-desc">{{pendingTaskCount > 0 ? pendingTaskCount + ' 个待修复卡点' : '查看知识结构'}}</text>

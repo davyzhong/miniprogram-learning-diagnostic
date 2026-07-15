@@ -1,17 +1,17 @@
 <view class="page bplus-page">
   <view class="state-card bplus-state" wx:if="{{loading}}">
-    <text class="state-title">正在准备认词练习</text>
+    <text class="state-title">⏳ 正在准备认词练习</text>
     <text class="state-desc">优先抽取薄弱词、待复测词和未测词。</text>
   </view>
 
   <view class="state-card error" wx:elif="{{error}}">
     <text class="state-title">{{errorTitle || '生成失败'}}</text>
     <text class="state-desc">{{error}}</text>
-    <button class="retry-btn" bindtap="onRegenerateTap">更 重新生成</button>
+    <button class="retry-btn" bindtap="onRegenerateTap">🔄 重新生成</button>
   </view>
 
   <view wx:elif="{{finished}}" class="finish-card">
-    <text class="finish-mark">已</text>
+    <text class="finish-mark">✅</text>
     <text class="finish-title">本轮认词练习完成</text>
     <text class="finish-desc">不熟悉和听不清的单词已经记录，后续会提高出现频率。</text>
     <button class="primary-btn" bindtap="onFinishTap">完成并返回</button>
@@ -21,7 +21,7 @@
     <view class="practice-topbar">
       <view class="practice-title-wrap">
         <text class="practice-kicker">{{studentName || '钟青羽'}} · 英语</text>
-        <text class="practice-title">英 认词练习</text>
+        <text class="practice-title">🔤 认词练习</text>
       </view>
       <view class="progress-pill">
         <text class="progress-now">{{currentIndex + 1}}</text>
@@ -41,7 +41,7 @@
       <text class="primary-prompt">{{currentItem.promptMainText}}</text>
       <text class="answer-instruction">{{currentItem.answerInstruction}}</text>
       <text class="answer-hint">{{currentItem.answerHintText}}</text>
-      <button class="play-chip" wx:if="{{currentItem.canPlayPrompt}}" bindtap="onPlayPromptTap">听 播放发音</button>
+      <button class="play-chip" wx:if="{{currentItem.canPlayPrompt}}" bindtap="onPlayPromptTap">🔊 播放发音</button>
     </view>
 
     <view class="voice-dock">
@@ -55,9 +55,9 @@
 
     <view class="result-sheet result-{{lastResult.status}}" wx:if="{{lastResult}}">
       <text class="result-title">
-        <block wx:if="{{lastResult.status === 'correct'}}">已经熟悉</block>
-        <block wx:elif="{{lastResult.status === 'incorrect'}}">再 稍后再见一次</block>
-        <block wx:else>听 刚才没听清</block>
+        <block wx:if="{{lastResult.status === 'correct'}}">✅ 已经熟悉</block>
+        <block wx:elif="{{lastResult.status === 'incorrect'}}">🔁 稍后再见一次</block>
+        <block wx:else>🎧 刚才没听清</block>
       </text>
       <text class="result-desc">{{lastResult.reason}}</text>
       <text class="answer-line">目标单词：{{lastAnsweredItem ? lastAnsweredItem.word : ''}}</text>

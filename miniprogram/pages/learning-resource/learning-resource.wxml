@@ -8,7 +8,7 @@
   <view wx:else>
     <view class="hero">
       <view class="hero-copy">
-        <text class="kicker">学习任务包</text>
+        <text class="kicker">📚 学习任务包</text>
         <text class="title">{{view.title}}</text>
         <text class="meta">{{view.timeText}} · {{view.practiceCount}} 道练习</text>
       </view>
@@ -16,19 +16,19 @@
 
     <!-- 概述板块 -->
     <view class="block block-summary" wx:if="{{view.summaryBlock}}">
-      <text class="block-title">向 {{view.summaryBlock.title}}</text>
+      <text class="block-title">🧭 {{view.summaryBlock.title}}</text>
       <text class="block-body">{{view.summaryBlock.body}}</text>
     </view>
 
     <!-- 错因分析板块（症状 + 根因 + 真实错例）-->
     <view class="block block-concept" wx:if="{{view.conceptBlock}}">
-      <text class="block-title">查 {{view.conceptBlock.title}}</text>
+      <text class="block-title">🔎 {{view.conceptBlock.title}}</text>
       <text class="block-body">{{view.conceptBlock.body}}</text>
     </view>
 
     <!-- 正确解题路径（例题 + 分步）-->
     <view class="block block-worked_example" wx:if="{{view.workedExampleBlock}}">
-      <text class="block-title">步 {{view.workedExampleBlock.title}}</text>
+      <text class="block-title">🪜 {{view.workedExampleBlock.title}}</text>
       <view class="example-question" wx:if="{{view.workedExampleBlock.question}}">
         <text class="example-q-label">例题</text>
         <text class="example-q-text">{{view.workedExampleBlock.question}}</text>
@@ -43,9 +43,9 @@
 
     <!-- 易错对比（错误做法 vs 正确做法 + 判断方法）-->
     <view class="block block-common_mistake" wx:if="{{view.commonMistakeBlock}}">
-      <text class="block-title">辨 {{view.commonMistakeBlock.title}}</text>
+      <text class="block-title">⚖️ {{view.commonMistakeBlock.title}}</text>
       <view class="mistake-row mistake-wrong" wx:if="{{view.commonMistakeBlock.mistake}}">
-        <text class="mistake-icon">×</text>
+        <text class="mistake-icon">✗</text>
         <view class="mistake-copy">
           <text class="mistake-label">常见错误</text>
           <text class="mistake-text">{{view.commonMistakeBlock.mistake}}</text>
@@ -59,14 +59,14 @@
         </view>
       </view>
       <view class="mistake-hint" wx:if="{{view.commonMistakeBlock.explanation}}">
-        <text class="mistake-hint-icon">提</text>
+        <text class="mistake-hint-icon">💡</text>
         <text class="mistake-hint-text">{{view.commonMistakeBlock.explanation}}</text>
       </view>
     </view>
 
     <!-- 练三道（题目 + 折叠答案/解题关键）-->
     <view class="block block-practice" wx:if="{{view.practiceBlock}}">
-      <text class="block-title">写 {{view.practiceBlock.title}}</text>
+      <text class="block-title">✍️ {{view.practiceBlock.title}}</text>
       <view class="practice-list">
         <view class="practice-row" wx:for="{{view.practiceBlock.questions}}" wx:key="questionId">
           <view class="practice-q-line">
@@ -98,14 +98,14 @@
 
     <!-- 怎么算学会了（达标标准）-->
     <view class="block block-mastery_check" wx:if="{{view.masteryBlock}}">
-      <text class="block-title">成 {{view.masteryBlock.title}}</text>
+      <text class="block-title">🏁 {{view.masteryBlock.title}}</text>
       <text class="block-body">{{view.masteryBlock.body}}</text>
     </view>
 
     <!-- 外部参考资源 -->
     <view class="external-resources" wx:if="{{view.hasExternalResources}}">
       <view class="section-header">
-        <text class="section-title">链 外部参考</text>
+        <text class="section-title">🔗 外部参考</text>
         <text class="section-hint">由家长打开，不建议孩子直接浏览</text>
       </view>
       <view class="resource-card" wx:for="{{view.resourceCards}}" wx:key="resourceId"
@@ -122,9 +122,9 @@
     </view>
 
     <view class="actions">
-      <button class="secondary" bindtap="onScheduleTap">验 加入下次验证</button>
+      <button class="secondary" bindtap="onScheduleTap">🧪 加入下次验证</button>
       <button class="primary" bindtap="onCompleteTap" disabled="{{view.completed}}">
-        {{view.completed ? '已完成' : '完成学习'}}
+        {{view.completed ? '✅ 已完成' : '✅ 完成学习'}}
       </button>
     </view>
   </view>
