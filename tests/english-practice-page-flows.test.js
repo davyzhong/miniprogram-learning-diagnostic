@@ -56,6 +56,19 @@ test('English practice page generates a 20 word familiarity session without patt
   assert.equal(page.data.patternItems.length, 0)
 })
 
+test('English practice page honors the compact task size from the workbench', async () => {
+  const generated = []
+  const { page } = loadPage('miniprogram/pages/english-practice/english-practice.js', {
+    modules: { '../../utils/cloud': { generateEnglishRecognitionSession: async payload => {
+      generated.push(payload)
+      return { sessionId: 'compact-1', wordItems: [{ wordId: 'word-1', word: 'there', meanings: ['那里'], promptType: 'chinese' }] }
+    } } }
+  })
+  page.onLoad({ studentId: 'student-1', wordLimit: '5' })
+  await waitForPageLoad(page)
+  assert.equal(generated[0].wordLimit, 5)
+})
+
 test('English practice page uses a minimal word-card interaction instead of lecture copy', () => {
   const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-practice/english-practice.wxml'), 'utf8')
 

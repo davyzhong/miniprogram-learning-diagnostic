@@ -130,8 +130,23 @@ Page({
       if (typeof cloud.getHomeDashboard === 'function') {
         try {
           const homeDashboard = await cloud.getHomeDashboard()
-          const students = homeDashboard.students || []
-          const perStudent = homeDashboard.perStudent || {}
+          const legacyChildren = Array.isArray(homeDashboard.children) ? homeDashboard.children : []
+          const students = homeDashboard.students || legacyChildren.map(child => ({
+            ...(child.student || {}),
+            role: child.role,
+            permissions: child.permissions || (child.student && child.student.permissions)
+          }))
+          const perStudent = homeDashboard.perStudent || legacyChildren.reduce((result, child) => {
+            const studentId = child.student && child.student._id
+            if (!studentId) return result
+            result[studentId] = {
+              subjectProfiles: child.subjectProfiles || [],
+              latestReportSummary: (child.recentReports || [])[0] || null,
+              latestDiagnosisReports: child.latestDiagnosisReports || [],
+              latestPaperSummary: (child.recentPapers || [])[0] || null
+            }
+            return result
+          }, {})
           if (students.length === 0) {
             this.setData({
               students: [],

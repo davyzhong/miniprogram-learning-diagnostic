@@ -24,6 +24,7 @@ const {
   sessionVerdictCounts,
 } = require('./timeline-dto');
 const { loadLatestFormalDiagnoses } = require('./formal-diagnosis');
+const { taskFor, verdict } = require('./chinese-skill-tasks');
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
@@ -38,6 +39,8 @@ const ACTIONS = new Set([
   'getActiveVerificationPaper',
   'getLearningProgress',
   'cleanupStaleLearningRecords',
+  'getChineseSkillTask',
+  'submitChineseSkillTask',
 ]);
 
 const STATUS_REPORT_STATES = new Set(['pending', 'uploading', 'analyzing', 'failed', 'timeout']);
@@ -266,6 +269,27 @@ async function getSubjectDashboard(openId, studentId, subjectValue, options = {}
     reports,
     papers,
   });
+}
+
+async function getChineseSkillTask(openId, studentId) {
+  const access = await getAccess(studentId, openId);
+  if (!access.allowed) return failure('无权访问该学生');
+  const profiles = await getSubjectProfiles(studentId);
+  const profile = profiles.find(item => item.subject === 'chinese') || {};
+  return withAccess(access, { task: taskFor(profile) });
+}
+
+async function submitChineseSkillTask(openId, event = {}) {
+  const access = await getAccess(event.studentId, openId);
+  if (!access.allowed) return failure('无权操作该学生');
+  const profiles = await getSubjectProfiles(event.studentId);
+  const profile = profiles.find(item => item.subject === 'chinese') || {};
+  const task = taskFor(profile);
+  if (event.taskId && event.taskId !== task.id) return failure('任务已更新，请重新进入');
+  const answer = String(event.answer || '').trim().slice(0, 500);
+  const evidenceStatus = verdict(answer, task);
+  await db.collection('chineseSkillAttempts').add({ data: { studentId: event.studentId, taskId: task.id, taskType: task.type, answer, evidenceStatus, createdAt: db.serverDate(), updatedAt: db.serverDate() } });
+  return withAccess(access, { evidenceStatus, task });
 }
 
 async function getLearningTimeline(openId, studentId, subjectValue, options = {}) {
@@ -739,6 +763,8 @@ exports.main = async (event = {}) => {
         cursor: event.cursor,
       });
     }
+    if (action === 'getChineseSkillTask') return getChineseSkillTask(openId, event.studentId)
+    if (action === 'submitChineseSkillTask') return submitChineseSkillTask(openId, event)
     if (action === 'getReportDetail') {
       return getReportDetail(openId, event.reportId);
     }

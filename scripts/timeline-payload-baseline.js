@@ -133,7 +133,12 @@ async function runTimeline(seed, ignoreProjection) {
   return {
     databaseReadBytes,
     responseBytes: Buffer.byteLength(JSON.stringify(response)),
-    visibleIds: response.items.map(item => item.id)
+    visibleIds: [
+      ...(response.reports || []),
+      ...(response.papers || []),
+      ...(response.englishSessions || []),
+      ...(response.learningResourcePacks || [])
+    ].map(item => item._id || item.id)
   }
 }
 

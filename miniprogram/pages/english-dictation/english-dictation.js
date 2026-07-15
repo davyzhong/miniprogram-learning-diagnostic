@@ -25,6 +25,7 @@ Page({
     studentId: '',
     studentName: '',
     grade: '',
+    wordLimit: 20,
     loading: false,
     uploading: false,
     error: '',
@@ -55,7 +56,8 @@ Page({
     this.setData({
       studentId: options.studentId || '',
       studentName: decodeURIComponent(options.studentName || ''),
-      grade: options.grade || ''
+      grade: options.grade || '',
+      wordLimit: Math.min(20, Math.max(5, Number(options.wordLimit) || 20))
     })
     this.initVoice()
     this._loadPromise = this.generateSession().catch(error => {
@@ -112,7 +114,7 @@ Page({
     try {
       const result = await cloud.generateEnglishPaperDictationSession({
         studentId: this.data.studentId,
-        wordLimit: 20
+        wordLimit: this.data.wordLimit
       })
       const queue = (result.wordItems || []).map(withDisplayFields)
       this.setData({

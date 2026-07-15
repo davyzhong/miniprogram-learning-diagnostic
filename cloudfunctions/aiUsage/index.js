@@ -131,9 +131,21 @@ async function getSummary(event, openId) {
   const month = event.month || currentMonth()
   const PAGE_SIZE = 500
   const allEvents = []
-  const snapshotAt = new Date()
+  let snapshotAt = new Date()
   let offset = 0
   try {
+    // Read an initial page to establish a stable, data-backed snapshot boundary.
+    // A wall-clock time can include records written while later pages are loading.
+    const firstPage = await db.collection('aiUsageEvents')
+      .where(monthFilter(openId, month))
+      .orderBy('createdAt', 'desc')
+      .limit(PAGE_SIZE)
+      .get()
+    const firstBatch = firstPage.data || []
+    if (firstBatch.length > 0 && firstBatch[0].createdAt) {
+      snapshotAt = new Date(firstBatch[0].createdAt)
+    }
+
     while (true) {
       const res = await db.collection('aiUsageEvents')
         .where(monthFilter(openId, month, snapshotAt))

@@ -29,6 +29,22 @@ function loadEnglishVocabulary(db, openId = 'owner-1', extraMocks = {}) {
 const seed = require('../data/english/zhong-qingyu-pep-vocabulary.seed.json')
 const cloudSeed = require('../cloudfunctions/englishVocabulary/zhong-qingyu-pep-vocabulary.json')
 
+test('English confusion practice only returns relations for weak words and never writes mastery', async () => {
+  const db = createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '学生示例' }],
+    studentEnglishWords: [
+      { _id: 'there', studentId: 'student-1', word: 'there', meanings: ['那里'], familiarity: { status: 'needs_practice' }, spelling: { status: 'mastered' } },
+      { _id: 'their', studentId: 'student-1', word: 'their', meanings: ['他们的'], familiarity: { status: 'mastered' }, spelling: { status: 'mastered' } }
+    ]
+  })
+  const handler = loadEnglishVocabulary(db)
+  const result = await handler.main({ action: 'getConfusionPractice', studentId: 'student-1' })
+  assert.equal(result.success, true)
+  assert.equal(result.items.length, 1)
+  assert.equal(result.items[0].relationId, 'there-their')
+  assert.equal(db.dump('studentEnglishWords')[0].familiarity.status, 'needs_practice')
+})
+
 function keyOf(word) {
   return [word.word, word.grade, word.volume, word.unit].join('|')
 }

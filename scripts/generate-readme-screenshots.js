@@ -57,7 +57,18 @@ const screenshots = [
     route: '/pages/parent-management/parent-management?studentId=student-demo',
     wait: 1800,
   },
+  { id: '09-chinese-workbench', route: '/pages/subject-home/subject-home?studentId=student-demo&subject=chinese&subjectName=%E8%AF%AD%E6%96%87&studentName=%E5%AD%A6%E7%94%9F%E7%A4%BA%E4%BE%8B&grade=6', wait: 1800 },
+  { id: '10-chinese-review-detail', route: '/pages/chinese-review-detail/chinese-review-detail?studentId=student-demo&reviewItemId=demo-bianlun', wait: 1500 },
+  { id: '11-chinese-skill-task', route: '/pages/chinese-skill-task/chinese-skill-task?studentId=student-demo', wait: 1500 },
+  { id: '12-english-workbench', route: '/pages/subject-home/subject-home?studentId=student-demo&subject=english&subjectName=%E8%8B%B1%E8%AF%AD&studentName=%E5%AD%A6%E7%94%9F%E7%A4%BA%E4%BE%8B&grade=6', wait: 1800 },
+  { id: '13-english-confusion', route: '/pages/english-confusion/english-confusion?studentId=student-demo', wait: 1500 },
+  { id: '14-english-wrong-words', route: '/pages/english-wrong-words/english-wrong-words?studentId=student-demo', wait: 1500 },
 ]
+
+const selectedScreenshotIds = new Set(String(process.env.README_SCREENSHOT_IDS || '')
+  .split(',')
+  .map(value => value.trim())
+  .filter(Boolean))
 
 async function optimizeScreenshot(filePath) {
   try {
@@ -158,10 +169,11 @@ async function installCloudMocks(miniProgram) {
         studentId: student._id,
         subject: 'chinese',
         subjectName: '语文',
-        totalReports: 0,
-        updatedAt: '',
-        currentBottlenecks: [],
-        pendingBottlenecks: [],
+        totalReports: 1,
+        updatedAt: now,
+        chineseReviewItems: [{ itemId: 'demo-bianlun', itemType: 'word', targetText: '辩论', lastWrongAnswer: '辨论', mistakeType: '形近字混淆', sourceContext: '看拼音写词语', status: 'needs_review', reviewPassCount: 0, evidenceCount: 1, suggestion: '记住“辩”与说话、争论有关。' }],
+        currentBottlenecks: [{ lpCode: 'LP-201', lpName: '回原文找依据', status: 'needs_verification', errorCount: 1 }],
+        pendingBottlenecks: [{ lpCode: 'LP-201', lpName: '回原文找依据', severity: 'medium' }],
         improvedBottlenecks: [],
       },
       {
@@ -359,6 +371,8 @@ async function installCloudMocks(miniProgram) {
       }
 
       if (name === 'studentData') {
+        if (data.action === 'getChineseSkillTask') return { result: { success: true, task: { id: 'find-evidence', title: '回原文找依据', method: '先圈出原文里支持答案的句子，再写一句理由。', prompt: '小明把雨伞借给同学。你从哪句话看出他乐于帮助别人？' } } }
+        if (data.action === 'submitChineseSkillTask') return { result: { success: true, evidenceStatus: 'passed' } }
         if (data.action === 'getStudentDashboard') {
           if (data.studentId === secondStudent._id) {
             return {
@@ -393,7 +407,7 @@ async function installCloudMocks(miniProgram) {
               student,
               role: 'owner',
               permissions: ownerPermissions,
-              profile: subjectProfiles[0],
+              profile: subjectProfiles.find(item => item.subject === data.subject) || subjectProfiles[0],
               reports,
               papers,
             },
@@ -437,6 +451,12 @@ async function installCloudMocks(miniProgram) {
             },
           }
         }
+      }
+
+      if (name === 'englishVocabulary') {
+        if (data.action === 'getVocabularySummary') return { result: { success: true, summary: { totalWords: 120, familiarity: { needsPracticeCount: 4, dueReviewCount: 2, masteredCount: 50 }, spelling: { needsPracticeCount: 3, dueReviewCount: 1 }, overall: { masteredCount: 38 } }, weakWords: [{ wordId: 'there', word: 'there', meanings: ['那里'], wrongCount: 2 }], patternCount: 1 } }
+        if (data.action === 'getTodayPlan') return { result: { success: true, primaryAction: { kind: 'dictation', taskSize: 6, title: '先听写 6 个会认不会写的单词', estimatedMinutes: 8 } } }
+        if (data.action === 'getConfusionPractice') return { result: { success: true, items: [{ relationId: 'there-their', words: ['there', 'their'], explanation: 'there 表示“那里”；their 表示“他们的”。', prompt: 'This is ___ classroom.', answer: 'their' }] } }
       }
 
       return { result: { success: false, error: `unhandled mock call ${name}:${data.action}` } }
@@ -528,7 +548,7 @@ async function main() {
     await installCloudMocks(miniProgram)
 
     const outputs = []
-    for (const item of screenshots) {
+    for (const item of screenshots.filter(item => selectedScreenshotIds.size === 0 || selectedScreenshotIds.has(item.id))) {
       const page = await relaunch(miniProgram, item.route, item.wait)
       await assertNoSensitiveText(page, item.id)
       const outputPath = path.join(outputDir, `${item.id}.png`)

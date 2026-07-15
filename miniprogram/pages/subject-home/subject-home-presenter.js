@@ -247,6 +247,7 @@ function toSafeCount(value) {
 function buildEnglishPrimaryTask(options = {}, permissions = {}) {
   const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
   const summary = options.englishVocabulary && options.englishVocabulary.summary || {}
+  const todayPlan = options.englishTodayPlan || {}
   const familiarity = summary.familiarity || {}
   const spelling = summary.spelling || {}
   const totalWords = toSafeCount(summary.totalWords)
@@ -287,11 +288,14 @@ function buildEnglishPrimaryTask(options = {}, permissions = {}) {
   const actionType = recommendSpelling ? 'englishDictation' : 'englishPractice'
   const modeText = recommendSpelling ? '纸面听写' : '认词练习'
   return {
-    title: '今日建议',
-    summary: `从 ${totalWords} 个个人词库单词中安排 ${todayCount || 20} 个，今天建议先做${modeText}。`,
+    title: '今日英语',
+    summary: todayPlan.primaryAction && todayPlan.primaryAction.title
+      ? `${todayPlan.primaryAction.title} · 约 ${todayPlan.primaryAction.estimatedMinutes || 5} 分钟`
+      : `从 ${totalWords} 个个人词库单词中安排 ${todayCount || 20} 个，今天建议先做${modeText}。`,
     actionText: recommendSpelling ? '开始纸面听写' : '开始认词练习',
     actionType,
-    recommendedMode
+    recommendedMode,
+    taskSize: todayPlan.primaryAction && todayPlan.primaryAction.taskSize || Math.min(10, todayCount || 5)
   }
 }
 
@@ -386,7 +390,7 @@ function buildEnglishQuickStats(stats) {
   ]
 }
 
-function buildTools(latestReport, permissions = {}, options = {}) {
+function buildTools(latestReport, permissions = {}, options = {}, stats = {}) {
   const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
   if (options.subject === 'english') {
     const hasVocabularyReady = hasEnglishVocabulary(options)
@@ -398,6 +402,9 @@ function buildTools(latestReport, permissions = {}, options = {}) {
         icon: '!',
         actionType: 'englishWrongWords'
       },
+      stats.patternCount > 0 ? {
+        key: 'englishConfusion', title: '易混词巩固', desc: '用短题区分容易混淆的单词', icon: '🔎', actionType: 'englishConfusion'
+      } : null,
       {
         key: 'history',
         title: '学习记录',
@@ -470,6 +477,12 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
       subject: options.subject,
       chineseReviewQueue
     })
+  if (options.subject === 'chinese' && chineseReviewQueue.length === 0 && taskQueue.length > 0) {
+    primaryTask.title = '今日语文'
+    primaryTask.summary = '完成一个阅读表达小任务，把方法练得更稳。'
+    primaryTask.actionText = '开始语文小任务'
+    primaryTask.actionType = 'chineseSkillTask'
+  }
   const englishActionCards = options.subject === 'english'
     ? buildEnglishActionCards(englishVocabularyStats, primaryTask, options, permissions)
     : []
@@ -487,7 +500,7 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
       : (options.subject === 'english' ? 0 : taskQueue.length),
     chineseReviewQueue,
     hasChineseReviewQueue: chineseReviewQueue.length > 0,
-    tools: buildTools(latestReport, permissions, options),
+    tools: buildTools(latestReport, permissions, options, englishVocabularyStats),
     permissions,
     canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
     latestReportId: latestReport ? latestReport._id : '',

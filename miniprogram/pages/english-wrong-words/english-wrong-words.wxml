@@ -53,6 +53,11 @@
       </view>
     </view>
 
+    <view class="section" wx:if="{{confusionCount > 0}}">
+      <text class="section-title">🔎 易混词巩固</text>
+      <view class="group-row" bindtap="onConfusionTap"><view class="group-count">{{confusionCount}}</view><view class="group-copy"><text class="group-title">做几道辨析小题</text><text class="group-desc">帮助区分容易混淆的单词，不改变正式掌握状态。</text></view></view>
+    </view>
+
     <view class="action-row">
       <button class="secondary-btn" bindtap="onPracticeTap">🔤 去认词练习</button>
       <button class="primary-btn" bindtap="onDictationTap">✍️ 去纸面听写</button>

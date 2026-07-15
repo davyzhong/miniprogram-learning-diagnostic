@@ -32,6 +32,14 @@
 |---|---|
 | 一屏先看全家待办、改善、诊断和孩子的优先行动。 | 诊断、验证卷和验证反馈按时间串联，证据保持紧凑。 |
 
+<p align="center">
+  <img src="docs/user-guide/images/09-chinese-workbench.png" alt="语文工作台脱敏截图，展示字词原项复测" width="220" />
+  <img src="docs/user-guide/images/12-english-workbench.png" alt="英语工作台脱敏截图，展示今日词汇任务" width="220" />
+  <img src="docs/user-guide/images/13-english-confusion.png" alt="英语易混词巩固脱敏截图" width="220" />
+</p>
+
+语文以具体错项的原项复测为主，英语以“会认/会拼”双维词汇任务为主；两者都会在工作台清楚显示今天最值得完成的一件事。
+
 更多脱敏界面与完整操作说明见 [图文用户导览](docs/user-guide/README.md)。
 
 ---
@@ -164,6 +172,26 @@
 | 档案创建者 | 管理家庭成员、上传、出卷、查看报告 |
 | 共同家长 | 上传、出卷、查看报告、重试分析 |
 | 未加入家长 | 无法查看孩子学习资料 |
+
+#### 语文：先复测具体错项，再练阅读表达
+
+<p align="center">
+  <img src="docs/user-guide/images/09-chinese-workbench.png" alt="语文工作台脱敏截图" width="210" />
+  <img src="docs/user-guide/images/10-chinese-review-detail.png" alt="语文错项详情脱敏截图" width="210" />
+  <img src="docs/user-guide/images/11-chinese-skill-task.png" alt="语文阅读表达微任务脱敏截图" width="210" />
+</p>
+
+字词、拼音和古诗文等具体错项会先回到原字、原词或原句复测；只有通过后，才会进入易混字词的举一反三。没有待复测错项时，工作台才会推荐“找依据、概括、写具体”等短小的阅读表达任务。
+
+#### 英语：先完成今天的词汇任务
+
+<p align="center">
+  <img src="docs/user-guide/images/12-english-workbench.png" alt="英语工作台脱敏截图" width="210" />
+  <img src="docs/user-guide/images/13-english-confusion.png" alt="英语易混词巩固脱敏截图" width="210" />
+  <img src="docs/user-guide/images/14-english-wrong-words.png" alt="英语错词本脱敏截图" width="210" />
+</p>
+
+英语工作台会优先安排 5 或 10 个“会认不会写”、到期复测或不熟的单词。易混词小题只帮助理解区别，不替代认词或纸面听写的正式掌握证据。
 
 ### 1. 一句话理解这个工具
 

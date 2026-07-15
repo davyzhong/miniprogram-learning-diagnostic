@@ -136,16 +136,13 @@ function createHomeDashboard({ db, permissionsForRole, isMissingCollectionError,
     }
 
     const students = Array.from(byId.values()).sort((a, b) => toTime(b.createdAt) - toTime(a.createdAt));
-    if (students.length === 0) return { success: true, students: [], perStudent: {} };
+    if (students.length === 0) return { success: true, students: [], perStudent: {}, children: [] };
     const allStudentIds = students.map(student => student._id);
     const homeBatchLimit = Math.min(100, Math.max(10, 10 * allStudentIds.length));
-    const [profileRows, reportRows, paperRows, ...diagnosisRowsBySubject] = await Promise.all([
+    const [profileRows, reportRows, paperRows] = await Promise.all([
       safeQueryLimited('subjectProfiles', { studentId: _.in(allStudentIds) }, 'updatedAt', 'desc', 100, HOME_PROFILE_FIELDS),
       safeQueryLimited('reports', { studentId: _.in(allStudentIds) }, 'createdAt', 'desc', homeBatchLimit, HOME_REPORT_FIELDS),
       safeQueryLimited('papers', { studentId: _.in(allStudentIds) }, 'createdAt', 'desc', homeBatchLimit, HOME_PAPER_FIELDS),
-      ...FORMAL_DIAGNOSIS_SUBJECTS.map(subject => (
-        safeQueryLimited('reports', { studentId: _.in(allStudentIds), subject }, 'createdAt', 'desc', homeBatchLimit, HOME_REPORT_FIELDS)
-      )),
     ]);
     const allProfiles = [...profileRows];
     const allReports = [...reportRows];
@@ -164,14 +161,13 @@ function createHomeDashboard({ db, permissionsForRole, isMissingCollectionError,
     allReports.push(...reportFallbacks.filter(Boolean));
     allPapers.push(...paperFallbacks.filter(Boolean));
 
-    const diagnosisRows = diagnosisRowsBySubject.flat();
+    const diagnosisRows = reportRows.filter(isFormalDiagnosis);
     const diagnosisByStudent = new Map(students.map(student => [
       student._id,
       latestFormalDiagnoses(diagnosisRows.filter(report => report.studentId === student._id)),
     ]));
     const missingDiagnosisPairs = [];
-    FORMAL_DIAGNOSIS_SUBJECTS.forEach((subject, subjectIndex) => {
-      if ((diagnosisRowsBySubject[subjectIndex] || []).length < homeBatchLimit) return;
+    if (reportRows.length >= homeBatchLimit) FORMAL_DIAGNOSIS_SUBJECTS.forEach(subject => {
       students.forEach(student => {
         const hasSubject = (diagnosisByStudent.get(student._id) || []).some(report => report.subject === subject);
         if (!hasSubject) missingDiagnosisPairs.push({ studentId: student._id, subject });
@@ -197,7 +193,19 @@ function createHomeDashboard({ db, permissionsForRole, isMissingCollectionError,
         latestPaperSummary: papers.length > 0 ? paperSummary(papers[0]) : null,
       };
     }
-    return { success: true, students, perStudent };
+    const children = students.map(student => {
+      const detail = perStudent[student._id] || {};
+      return {
+        student,
+        role: student.role,
+        permissions: student.permissions,
+        subjectProfiles: detail.subjectProfiles || [],
+        recentReports: detail.latestReportSummary ? [detail.latestReportSummary] : [],
+        recentPapers: detail.latestPaperSummary ? [detail.latestPaperSummary] : [],
+        latestDiagnosisReports: detail.latestDiagnosisReports || [],
+      };
+    });
+    return { success: true, students, perStudent, children };
   };
 }
 

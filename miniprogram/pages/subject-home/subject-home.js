@@ -40,6 +40,7 @@ Page({
     englishVocabularyStats: null,
     englishQuickStats: [],
     englishActionCards: [],
+    englishTodayPlan: null,
     hasEnglishVocabulary: false,
     hasDiagnosis: false,
     isFirstUse: true,
@@ -172,10 +173,14 @@ Page({
 
   async loadEnglishVocabulary(permissions = {}) {
     this._englishVocabulary = null
+    this._englishTodayPlan = null
     const { studentId, subject } = this.data
     if (subject !== 'english' || typeof cloud.getEnglishVocabularySummary !== 'function') return
     try {
       this._englishVocabulary = await cloud.getEnglishVocabularySummary(studentId)
+      if (typeof cloud.getEnglishTodayPlan === 'function') {
+        this._englishTodayPlan = await cloud.getEnglishTodayPlan(studentId)
+      }
       this.autoSeedEnglishVocabularyIfNeeded(permissions)
     } catch (error) {
       console.warn('英语词库摘要读取失败，继续展示学科工作台', error && error.message ? error.message : error)
@@ -223,6 +228,7 @@ Page({
       subjectName: this.data.subjectName,
       subject: this.data.subject,
       englishVocabulary: this._englishVocabulary,
+      englishTodayPlan: this._englishTodayPlan,
       permissions: this.data.permissions || {}
     })
     this.setData({ ...view, records: view.recentChanges })
@@ -356,13 +362,19 @@ Page({
   },
 
   onPrimaryAction() {
-    const actionType = this.data.primaryTask && this.data.primaryTask.actionType
-    this.navigateByAction(actionType || (this.data.isFirstUse ? 'diagnosis' : 'verification'))
+    const task = this.data.primaryTask || {}
+    this.navigateByAction(task.actionType || (this.data.isFirstUse ? 'diagnosis' : 'verification'), task)
   },
 
   onTaskTap(e) {
     const { code, bottleneckId = '', viewId = '' } = e.currentTarget.dataset
     this.navigateToBottleneckDetail(code || '', bottleneckId, viewId)
+  },
+
+  onChineseReviewTap(e) {
+    const reviewItemId = e.currentTarget.dataset.reviewItemId || ''
+    if (!reviewItemId) return
+    wx.navigateTo({ url: `/pages/chinese-review-detail/chinese-review-detail?studentId=${this.data.studentId}&studentName=${encodeURIComponent(this.data.studentName || '')}&reviewItemId=${encodeURIComponent(reviewItemId)}` })
   },
 
   onToolTap(e) {
@@ -414,15 +426,23 @@ Page({
       return
     }
     if (actionType === 'englishPractice') {
-      this.navigateToEnglishPractice()
+      this.navigateToEnglishPractice(payload.taskSize)
       return
     }
     if (actionType === 'englishDictation') {
-      this.navigateToEnglishDictation()
+      this.navigateToEnglishDictation(payload.taskSize)
       return
     }
     if (actionType === 'englishWrongWords') {
       this.navigateToEnglishWrongWords()
+      return
+    }
+    if (actionType === 'englishConfusion') {
+      wx.navigateTo({ url: `/pages/english-confusion/english-confusion?studentId=${this.data.studentId}` })
+      return
+    }
+    if (actionType === 'chineseSkillTask') {
+      wx.navigateTo({ url: `/pages/chinese-skill-task/chinese-skill-task?studentId=${this.data.studentId}` })
       return
     }
     if (actionType === 'importVocabulary') {
@@ -461,19 +481,19 @@ Page({
     }
   },
 
-  navigateToEnglishPractice() {
+  navigateToEnglishPractice(taskSize = 0) {
     if (!this.data.canWriteActions) return
     const { studentId, studentName, grade } = this.data
     wx.navigateTo({
-      url: `/pages/english-practice/english-practice?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&grade=${grade || ''}`
+      url: `/pages/english-practice/english-practice?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&grade=${grade || ''}&wordLimit=${taskSize || ''}`
     })
   },
 
-  navigateToEnglishDictation() {
+  navigateToEnglishDictation(taskSize = 0) {
     if (!this.data.canWriteActions) return
     const { studentId, studentName, grade } = this.data
     wx.navigateTo({
-      url: `/pages/english-dictation/english-dictation?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&grade=${grade || ''}`
+      url: `/pages/english-dictation/english-dictation?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&grade=${grade || ''}&wordLimit=${taskSize || ''}`
     })
   },
 

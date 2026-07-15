@@ -125,7 +125,7 @@ wx.cloud.callFunction({
 
 ### 功能描述
 
-访问感知的学习数据读取云函数。用于共享家长查看同一个孩子的首页摘要、学科主页、学习记录、报告详情和试卷详情。所有 action 都会先校验当前 OPENID 是否为档案 owner 或 active viewer。
+访问感知的学习数据读取云函数。用于共享家长查看同一个孩子的首页摘要、学科主页、学习记录、报告详情和试卷详情。所有 action 都会先校验当前 OPENID 是否为档案 owner 或 active viewer。语文微任务的作答证据单独写入 `chineseSkillAttempts`，不改变字词错项或数学卡点状态。
 
 ### 调用方式
 
@@ -377,6 +377,8 @@ wx.cloud.callFunction({
 ### 功能描述
 
 钟青羽个人英语词库与 20 词语音听写云函数。当前阶段只服务单词掌握：导入 PEP 个人词库、生成听写队列、接收语音识别文本并由云函数自动判定 `correct / incorrect / unclear`。
+
+新增的 `getTodayPlan` 会根据认词、拼写的到期和薄弱状态返回 5 或 10 词的今日主任务；`getConfusionPractice` 只返回受维护的易混词辨析题，不会更新任何单词掌握状态。
 
 ### 调用方式
 
