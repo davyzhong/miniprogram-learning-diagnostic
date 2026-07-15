@@ -19,7 +19,8 @@
       "ignore": [],
       "disablePlugins": [],
       "outputPath": ""
-    }
+    },
+    "minifyWXML": true
   },
   "cloudfunctionTemplateRoot": "",
   "cloudbaseRoot": "cloud1-d6gneg68m5a7a3876",
