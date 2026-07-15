@@ -246,7 +246,7 @@
 
     <view id="report-section-action" class="report-section-anchor"></view>
     <view class="knowledge-map-snapshot" wx:if="{{hasKnowledgeMapSnapshot && !isVerification}}">
-      <view class="map-snapshot-header">图 知识地图更新</view>
+      <view class="map-snapshot-header">🗺️ 知识地图更新</view>
       <view class="map-snapshot-list">
         <view class="map-snapshot-item {{item.statusClass}}" wx:for="{{knowledgeMapSnapshot}}" wx:key="lpCode"
               catchtap="onBottleneckSnapshotTap" data-lp-code="{{item.lpCode}}" data-lp-name="{{item.displayName}}">

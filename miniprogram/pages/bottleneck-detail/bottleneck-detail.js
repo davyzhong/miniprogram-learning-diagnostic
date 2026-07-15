@@ -18,7 +18,7 @@ const knowledgeSeed = require('../../data/math/knowledge-nodes.seed')
 const nodeMap = new Map((knowledgeSeed.nodes || []).map(n => [n.nodeId, n]))
 
 const DOMAIN_ICONS = {
-  '数与代数': '数', '图形与几何': '数', '统计与概率': '析', '综合与实践': '用',
+  '数与代数': '🔢', '图形与几何': '📐', '统计与概率': '📊', '综合与实践': '🔧',
 }
 
 function buildKnowledgePosition(bottleneck = {}) {
@@ -27,7 +27,7 @@ function buildKnowledgePosition(bottleneck = {}) {
   if (!node) return { visible: false }
 
   const domain = node.domain || '数与代数'
-  const domainIcon = DOMAIN_ICONS[domain] || '学'
+  const domainIcon = DOMAIN_ICONS[domain] || '📚'
   const prerequisites = (node.prerequisites || [])
     .map(pid => {
       const preNode = nodeMap.get(pid)

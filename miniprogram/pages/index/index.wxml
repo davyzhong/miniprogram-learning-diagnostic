@@ -20,8 +20,8 @@
       </view>
       <view class="manage-actions">
         <block wx:if="{{homeMode === 'family-workbench'}}">
-          <view class="manage-link family-manage-link" bindtap="onTraceableUrlTap" data-url="/pages/ai-usage/ai-usage" aria-role="button" aria-label="查看 AI 用量"><text class="manage-icon" aria-hidden="true">AI</text><text>AI 用量</text></view>
-          <view class="manage-link family-manage-link" bindtap="onManageStudents" aria-role="button" aria-label="添加孩子"><text class="manage-icon" aria-hidden="true">+</text><text>添加孩子</text></view>
+          <view class="manage-link family-manage-link" bindtap="onTraceableUrlTap" data-url="/pages/ai-usage/ai-usage" aria-role="button" aria-label="查看 AI 用量"><text class="manage-icon" aria-hidden="true">🤖</text><text>AI 用量</text></view>
+          <view class="manage-link family-manage-link" bindtap="onManageStudents" aria-role="button" aria-label="添加孩子"><text class="manage-icon" aria-hidden="true">➕</text><text>添加孩子</text></view>
         </block>
         <block wx:else>
           <view class="manage-link" wx:if="{{permissions.canManageParents}}" bindtap="onParentManagement">家长管理</view>
@@ -193,13 +193,13 @@
     <block wx:if="{{homeMode === 'single-profile'}}">
       <view class="diagnosis-workbench-section bplus-section" wx:if="{{home.diagnosisWorkbenches.length > 0}}">
         <view class="diagnosis-section-head bplus-row">
-          <text class="diagnosis-section-title">诊 最新学科诊断</text>
+          <text class="diagnosis-section-title">🩺 最新学科诊断</text>
           <text class="diagnosis-section-meta">{{home.diagnosisWorkbenches.length}} 份正式报告</text>
         </view>
         <view class="diagnosis-workbench diagnosis-{{item.subject}}" wx:for="{{home.diagnosisWorkbenches}}" wx:key="key">
           <view class="diagnosis-head bplus-row">
             <view class="diagnosis-subject-icon">{{item.subjectIcon}}</view>
-            <view class="diagnosis-title-copy"><text class="diagnosis-title">{{item.title}}</text><text class="diagnosis-date">日 {{item.generatedAtText}} · 正式诊断</text></view>
+            <view class="diagnosis-title-copy"><text class="diagnosis-title">{{item.title}}</text><text class="diagnosis-date">📅 {{item.generatedAtText}} · 正式诊断</text></view>
             <text class="diagnosis-report-link" catchtap="onTraceableUrlTap" data-url="{{item.reportUrl}}">{{item.reportIcon}} 完整报告 ›</text>
           </view>
           <view class="diagnosis-insight"><text>{{item.insightIcon}}</text><text>{{item.judgment}}</text></view>
@@ -222,13 +222,13 @@
       </view>
 
       <view class="diagnosis-load-state bplus-state" wx:elif="{{home.diagnosisDataUnavailable}}">
-        <text>注 学科诊断暂时没有加载出来</text>
+        <text>⚠️ 学科诊断暂时没有加载出来</text>
         <text>请稍后重试，页面不会用不完整的最近记录代替。</text>
       </view>
 
       <view class="section-block personal-action-section">
         <view class="section-heading between">
-          <text>工 学习工具</text>
+          <text>🧰 学习工具</text>
           <text class="section-subtitle-inline">每块都可点击</text>
         </view>
         <view class="personal-action-queue">

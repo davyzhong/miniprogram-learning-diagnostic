@@ -24,7 +24,7 @@
 
     <view class="confidence-card" wx:if="{{confidence}}">
       <view class="confidence-header">
-        <text class="confidence-title">重 置信度</text>
+        <text class="confidence-title">🎯 置信度</text>
         <text class="confidence-level {{confidence.level}}">{{confidence.dots}} {{confidence.label}}（{{confidence.score}}分）</text>
       </view>
       <text class="confidence-detail">{{confidence.detail}}</text>
@@ -34,19 +34,19 @@
     <view class="metrics">
       <view class="metric" bindtap="onMetricTap" data-target="reports">
         <text class="metric-value">{{bottleneck.evidenceCount}}</text>
-        <text class="metric-label">查 证据</text>
+        <text class="metric-label">🔎 证据</text>
       </view>
       <view class="metric" bindtap="onMetricTap" data-target="reports">
         <text class="metric-value">{{bottleneck.recentErrorCount}}</text>
-        <text class="metric-label">题 相关错题</text>
+        <text class="metric-label">📝 相关错题</text>
       </view>
       <view class="metric" bindtap="onMetricTap" data-target="papers">
         <text class="metric-value">{{bottleneck.verificationPassCount}}</text>
-        <text class="metric-label">已 通过</text>
+        <text class="metric-label">✅ 通过</text>
       </view>
       <view class="metric" bindtap="onMetricTap" data-target="papers">
         <text class="metric-value">{{bottleneck.verificationFailCount}}</text>
-        <text class="metric-label">再 未通过</text>
+        <text class="metric-label">🔁 未通过</text>
       </view>
     </view>
 
@@ -72,7 +72,7 @@
     </view>
 
     <view class="section knowledge-position" wx:if="{{knowledgePosition.visible}}">
-      <view class="section-heading">标 知识位置</view>
+      <view class="section-heading">📍 知识位置</view>
       <view class="position-domain">
         <text class="position-icon">{{knowledgePosition.domainIcon}}</text>
         <text class="position-text">{{knowledgePosition.domain}} · {{knowledgePosition.nodeTitle}}</text>

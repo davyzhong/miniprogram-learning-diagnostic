@@ -1,20 +1,20 @@
 <view class="page bplus-page">
-  <view wx:if="{{loading}}" class="loading bplus-state">加载知识地图...</view>
+  <view wx:if="{{loading}}" class="loading bplus-state">⏳ 加载知识地图...</view>
 
   <view wx:elif="{{errorText}}" class="empty">
     <text>{{errorText}}</text>
   </view>
 
   <view wx:elif="{{!view.hasData}}" class="empty">
-    <text class="empty-title">图 还没有学习卡点数据</text>
+    <text class="empty-title">🗺️ 还没有学习卡点数据</text>
     <text class="empty-hint">上传一份试卷后，系统会自动识别卡点并生成学习地图。</text>
-    <view class="empty-cta" bindtap="onUploadTap">传 去上传试卷</view>
+    <view class="empty-cta" bindtap="onUploadTap">📤 去上传试卷</view>
   </view>
 
   <view wx:else>
     <view class="hero">
       <view class="hero-copy">
-        <text class="hero-title">图 {{view.title}}</text>
+        <text class="hero-title">🗺️ {{view.title}}</text>
         <text class="hero-summary">{{view.summary}}</text>
         <text class="hero-hint">点击任意卡点直接开始学习，约 5-10 分钟讲清楚一个卡点</text>
       </view>
@@ -27,13 +27,13 @@
           data-lp-name="{{view.priorityBottleneck.displayName}}"
           data-bottleneck-id="{{view.priorityBottleneck.bottleneckId}}"
           data-node-id="{{view.priorityBottleneck.nodeId}}">
-      <view class="priority-badge">重 最该先处理</view>
+      <view class="priority-badge">🎯 最该先处理</view>
       <view class="priority-body">
         <text class="priority-name">{{view.priorityBottleneck.displayName}}</text>
         <text class="priority-symptom">{{view.priorityBottleneck.symptomText}}</text>
       </view>
       <view class="priority-action">
-        <text class="priority-action-text">学一下</text>
+        <text class="priority-action-text">📚 学一下</text>
         <text class="priority-action-arrow">›</text>
       </view>
     </view>
@@ -68,7 +68,7 @@
               <text class="bn-symptom">{{b.confidenceDetail}} · {{b.symptomText}}</text>
             </view>
             <view class="bn-cta">
-              <text class="bn-cta-text">学一下</text>
+              <text class="bn-cta-text">📚 学一下</text>
               <text class="bn-arrow">›</text>
             </view>
           </view>
