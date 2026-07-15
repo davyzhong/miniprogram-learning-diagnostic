@@ -20,7 +20,7 @@ The legacy run disables database field projections while keeping the same timeli
 | Metric | Legacy | Projected | Change |
 | --- | ---: | ---: | ---: |
 | Database read payload | 617,901 B | 154,701 B | -74.96% |
-| Cloud response payload | 23,188 B | 23,188 B | unchanged |
+| Cloud response payload | 30,704 B | 30,704 B | unchanged |
 | Visible first-page ordering | baseline | identical | no regression |
 
 Budgets:
@@ -39,12 +39,11 @@ The JSON artifact is written to `tmp/performance/timeline-payload-baseline.json`
 
 ## DevTools Page-Ready Baseline
 
-The final merged branch uses the event-driven DevTools report across 17 pages and 6 cross-page scenarios:
+The same verification run collected five cold and five warm home-page samples:
 
-| Metric | P50 | P90 | P95 | Maximum |
+| Mode | P50 | P95 | Maximum | Errors |
 | --- | ---: | ---: | ---: | ---: |
-| Navigation | 3,785 ms | 3,907 ms | 3,955 ms | 3,955 ms |
-| Usable-page ready | 19 ms | 22 ms | 27 ms | 27 ms |
-| Total duration | 3,805 ms | 3,929 ms | 3,986 ms | 3,986 ms |
+| Cold | 3,723 ms | 3,731 ms | 3,731 ms | 0 |
+| Warm | 3,716 ms | 3,740 ms | 3,740 ms | 0 |
 
-Core DevTools E2E passed 23/23 checks. The report is written to `tmp/perf/baseline-report.json` by `npm run perf:baseline`.
+Both modes pass the current 6,000 ms P95 gate. Core DevTools E2E also passed 23/23 checks (17 pages and 6 cross-page scenarios).

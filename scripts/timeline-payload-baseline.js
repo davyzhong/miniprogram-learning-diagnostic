@@ -130,18 +130,10 @@ async function runTimeline(seed, ignoreProjection) {
     'wx-server-sdk': createCloudMock({ db, openId: 'owner-1' })
   })
   const response = await handler.main({ action: 'getLearningTimeline', studentId: 'student-1', limit: 20 })
-  const visibleIds = Array.isArray(response.items)
-    ? response.items.map(item => item.id)
-    : [
-        ...(response.reports || []).map(item => `report-${item._id}`),
-        ...(response.papers || []).map(item => `paper-${item._id}`),
-        ...(response.englishSessions || []).map(item => `english-session-${item._id}`),
-        ...(response.learningResourcePacks || []).map(item => `learning-resource-${item._id}`)
-      ]
   return {
     databaseReadBytes,
     responseBytes: Buffer.byteLength(JSON.stringify(response)),
-    visibleIds
+    visibleIds: response.items.map(item => item.id)
   }
 }
 

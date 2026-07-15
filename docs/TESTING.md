@@ -52,6 +52,7 @@ E2E 套件：
 | 命令 | 学科/范围 | 覆盖重点 | 输出目录 |
 |---|---|---|---|
 | `npm run test:e2e:core` | 通用核心页面 | 核心页面 + 基础跨页流程 | `tmp/e2e/core/` |
+| `npm run perf:baseline` | 性能汇总 | 5 次清缓存重入 + 5 次暖重入的 P50/P90/P95 和阈值判断 | `tmp/e2e/performance-baseline/report.json` |
 | `npm run test:e2e:math` | 数学 | 数据驱动诊断、细卡点、知识地图、学习资源 | `tmp/e2e/math-data/`、`tmp/e2e/math-knowledge-map/` |
 | `npm run test:e2e:chinese` | 语文 | 语文工作台、诊断报告、错项复测出卷页 | `tmp/e2e/chinese/` |
 | `npm run test:e2e:english` | 英语 | 工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 | `tmp/e2e/english/` |
@@ -60,6 +61,8 @@ E2E 套件：
 | `npm run test:e2e:real-data` | 真实数据烟测 | 指定真实学生页面打开和截图 | `tmp/e2e/real-data/` |
 | `npm run test:e2e:real-image` | 真实图片链路 | mock、单图或 manifest 图片诊断 | `tmp/e2e-real-image-report.json` |
 | `npm run test:e2e:real-cloud` | 真实云函数 | 真实云端 analyzeBatch 结构校验 | 需要 `RUN_REAL_CLOUD=1` |
+
+核心 E2E 对首页设置 `cloudCallCount <= 1` 的回归预算。`perf:baseline` 每个样本先切换到无云请求的中性页面，再重新进入首页，避免开发者工具启动时旧页面的异步请求污染调用数和载荷统计。
 
 兼容旧命令：
 

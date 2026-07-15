@@ -1,108 +1,151 @@
 #!/usr/bin/env node
-/**
- * 事件驱动性能基线报告生成器
- *
- * 读取 tmp/e2e/core/report.json，提取事件驱动指标（navigationMs, readyMs, durationMs），
- * 计算冷热启动的 P50/P90/P95，输出结构化基线报告。
- *
- * 用法：
- *   npm run perf:baseline
- *
- * 退出码：0 成功；1 报告不存在或数据不足
- */
-
 const fs = require('node:fs')
 const path = require('node:path')
 
-const projectRoot = path.resolve(__dirname, '..')
-const reportPath = path.join(projectRoot, 'tmp', 'e2e', 'core', 'report.json')
-const outputDir = path.join(projectRoot, 'tmp', 'perf')
-const outputPath = path.join(outputDir, 'baseline-report.json')
+const PERF_SAMPLE_COUNT = Math.max(5, Number(process.env.PERF_SAMPLE_COUNT) || 5)
 
-function percentile(sortedValues, p) {
-  if (sortedValues.length === 0) return 0
-  const index = Math.ceil(sortedValues.length * p) - 1
-  return sortedValues[Math.max(0, Math.min(index, sortedValues.length - 1))]
+function percentile(sortedValues, ratio) {
+  if (!sortedValues.length) return 0
+  const index = Math.min(sortedValues.length - 1, Math.ceil(ratio * sortedValues.length) - 1)
+  return sortedValues[Math.max(0, index)]
 }
 
-function stats(values) {
-  if (values.length === 0) return { count: 0, min: 0, p50: 0, p90: 0, p95: 0, max: 0 }
-  const sorted = [...values].sort((a, b) => a - b)
+function summarize(values = []) {
+  const sorted = values.filter(Number.isFinite).slice().sort((a, b) => a - b)
+  if (!sorted.length) return { count: 0, min: 0, avg: 0, p50: 0, p90: 0, p95: 0, max: 0 }
   return {
     count: sorted.length,
     min: sorted[0],
-    p50: percentile(sorted, 0.50),
-    p90: percentile(sorted, 0.90),
+    avg: Math.round(sorted.reduce((sum, value) => sum + value, 0) / sorted.length),
+    p50: percentile(sorted, 0.5),
+    p90: percentile(sorted, 0.9),
     p95: percentile(sorted, 0.95),
     max: sorted[sorted.length - 1]
   }
 }
 
-function main() {
-  if (!fs.existsSync(reportPath)) {
-    console.error(`✗ 报告不存在: ${reportPath}`)
-    console.error('  请先运行 npm run test:e2e:core 生成 E2E 报告')
-    process.exit(1)
+function buildPerformanceSummary(report = {}) {
+  const results = Array.isArray(report.results) ? report.results : []
+  const pages = results.filter(item => !String(item.name || '').startsWith('scenario:'))
+  const scenarios = results.filter(item => String(item.name || '').startsWith('scenario:'))
+  const errorCount = results.reduce((count, item) => (
+    count + (item.pageErrors || []).length + (item.realConsoleErrors || []).length
+  ), 0)
+  const pageReady = summarize(pages.map(item => Number(item.readyMs || item.durationMs)))
+  const scenarioDuration = summarize(scenarios.map(item => Number(item.durationMs)))
+
+  return {
+    timestamp: report.timestamp || new Date().toISOString(),
+    measurement: 'event-driven page ready',
+    passRate: results.length ? results.filter(item => item.status === 'PASS').length / results.length : 0,
+    errorCount,
+    pageReady,
+    scenarioDuration,
+    thresholds: {
+      pageP95Ms: 6000,
+      scenarioP95Ms: 14500,
+      passed: pageReady.p95 <= 6000 && scenarioDuration.p95 <= 14500 && errorCount === 0
+    }
   }
-
-  const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
-  const results = report.results || []
-
-  // 区分页面结果和场景结果
-  const allPageResults = results.filter(r => r.route)
-  const pageResults = allPageResults.filter(r => typeof r.navigationMs === 'number')
-  const scenarioResults = results.filter(r => r.steps && !r.route)
-
-  const navigationMsValues = pageResults.map(r => r.navigationMs).filter(v => typeof v === 'number')
-  const readyMsValues = pageResults.map(r => r.readyMs).filter(v => typeof v === 'number')
-  const durationMsValues = pageResults.map(r => r.durationMs).filter(v => typeof v === 'number')
-
-  const baseline = {
-    generatedAt: new Date().toISOString(),
-    source: 'tmp/e2e/core/report.json',
-    summary: {
-      totalPages: pageResults.length,
-      totalScenarios: scenarioResults.length,
-      allPassed: report.summary && report.summary.failed === 0
-    },
-    metrics: {
-      navigationMs: stats(navigationMsValues),
-      readyMs: stats(readyMsValues),
-      durationMs: stats(durationMsValues)
-    },
-    perPage: pageResults.map(r => ({
-      name: r.name,
-      route: r.route,
-      status: r.status,
-      navigationMs: r.navigationMs,
-      readyMs: r.readyMs,
-      durationMs: r.durationMs
-    }))
-  }
-
-  fs.mkdirSync(outputDir, { recursive: true })
-  fs.writeFileSync(outputPath, JSON.stringify(baseline, null, 2))
-
-  // 控制台摘要
-  console.log('========== 事件驱动性能基线 ==========')
-  console.log(`页面数: ${baseline.summary.totalPages} | 场景数: ${baseline.summary.totalScenarios} | 全部通过: ${baseline.summary.allPassed}`)
-  console.log('')
-  console.log('指标          |   P50   |   P90   |   P95   |   Max')
-  console.log('--------------|---------|---------|---------|---------')
-  for (const [metric, s] of Object.entries(baseline.metrics)) {
-    console.log(`${metric.padEnd(13)} | ${String(s.p50).padStart(5)}ms | ${String(s.p90).padStart(5)}ms | ${String(s.p95).padStart(5)}ms | ${String(s.max).padStart(5)}ms`)
-  }
-  console.log('')
-  console.log(`报告: ${outputPath}`)
-
-  // 如果 readyMs 全部缺失（旧格式报告），警告
-  if (readyMsValues.length === 0 && allPageResults.length > 0) {
-    console.warn('')
-    console.warn('⚠ 报告中没有 readyMs/navigationMs 数据（旧格式报告）。')
-    console.warn('  请重新运行 npm run test:e2e:core 以获取事件驱动指标。')
-  }
-
-  process.exit(0)
 }
 
-main()
+function summarizeCoreReport(reportPath) {
+  if (!fs.existsSync(reportPath)) {
+    console.error(`性能原始报告不存在: ${reportPath}`)
+    return 2
+  }
+  const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
+  const summary = buildPerformanceSummary(report)
+  const outputPath = path.join(path.dirname(reportPath), 'performance-summary.json')
+  fs.writeFileSync(outputPath, JSON.stringify(summary, null, 2))
+  console.log(JSON.stringify(summary, null, 2))
+  console.log(`性能汇总: ${outputPath}`)
+  return summary.thresholds.passed ? 0 : 1
+}
+
+async function collectBaselineSamples() {
+  const {
+    cliPath,
+    projectPath,
+    pages,
+    loadAutomator,
+    installCloudMocks,
+    runPageAssertion,
+    settleBeforeHomeMeasurement,
+  } = require('./devtools-e2e-fullpage')
+  const automator = loadAutomator()
+  const indexSpec = pages.find(item => item.route === '/pages/index/index') || pages[0]
+  const coldSamples = []
+  const warmSamples = []
+
+  const miniProgram = await automator.launch({ cliPath, projectPath, trustProject: true, timeout: 60000 })
+  try {
+    for (let index = 0; index < PERF_SAMPLE_COUNT; index += 1) {
+      await miniProgram.callWxMethod('clearStorageSync')
+      await installCloudMocks(miniProgram)
+      await settleBeforeHomeMeasurement(miniProgram)
+      coldSamples.push(await runPageAssertion(indexSpec, miniProgram))
+    }
+    for (let index = 0; index < PERF_SAMPLE_COUNT; index += 1) {
+      await settleBeforeHomeMeasurement(miniProgram)
+      warmSamples.push(await runPageAssertion(indexSpec, miniProgram))
+    }
+  } finally {
+    try { await miniProgram.close() } catch {}
+  }
+
+  const errorCount = [...coldSamples, ...warmSamples].filter(item => item.status !== 'PASS').length
+  const report = {
+    timestamp: new Date().toISOString(),
+    measurement: 'event-driven home ready',
+    coldDefinition: 'storage-cleared, neutral-route-isolated relaunch in one DevTools process',
+    warmDefinition: 'neutral-route-isolated relaunch with retained storage and DevTools process',
+    sampleCount: PERF_SAMPLE_COUNT,
+    coldSamples,
+    warmSamples,
+    coldReady: summarize(coldSamples.map(item => Number(item.readyMs || item.durationMs))),
+    warmReady: summarize(warmSamples.map(item => Number(item.readyMs || item.durationMs))),
+    errorCount,
+  }
+  report.thresholds = {
+    readyP95Ms: 6000,
+    passed: report.coldReady.p95 <= 6000 && report.warmReady.p95 <= 6000 && errorCount === 0,
+  }
+
+  const outputPath = path.resolve('tmp/e2e/performance-baseline/report.json')
+  fs.mkdirSync(path.dirname(outputPath), { recursive: true })
+  fs.writeFileSync(outputPath, JSON.stringify(report, null, 2))
+  console.log(JSON.stringify({
+    timestamp: report.timestamp,
+    sampleCount: report.sampleCount,
+    coldReady: report.coldReady,
+    warmReady: report.warmReady,
+    errorCount,
+    thresholds: report.thresholds,
+  }, null, 2))
+  console.log(`性能采样报告: ${outputPath}`)
+  return report.thresholds.passed ? 0 : 1
+}
+
+async function main() {
+  if (process.argv[2]) return summarizeCoreReport(path.resolve(process.argv[2]))
+  return collectBaselineSamples()
+}
+
+if (require.main === module) {
+  main()
+    .then(code => { process.exitCode = code })
+    .catch(error => {
+      console.error('性能基线采样失败:', error && (error.stack || error.message || String(error)))
+      process.exitCode = 2
+    })
+}
+
+module.exports = {
+  PERF_SAMPLE_COUNT,
+  percentile,
+  summarize,
+  buildPerformanceSummary,
+  summarizeCoreReport,
+  collectBaselineSamples,
+}

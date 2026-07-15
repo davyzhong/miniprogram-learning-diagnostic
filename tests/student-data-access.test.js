@@ -82,6 +82,119 @@ test('student dashboard can skip recent reports and papers for lightweight pages
   assert.deepEqual(JSON.parse(JSON.stringify(result.latestDiagnosisReports)), [])
 })
 
+test('home dashboard batches owned and shared children into lightweight summaries', async () => {
+  const students = [
+    { _id: 'owned-1', _openid: 'viewer-1', name: '自有一', grade: 6, createdAt: '2026-06-04T00:00:00Z' },
+    { _id: 'owned-2', _openid: 'viewer-1', name: '自有二', grade: 5, createdAt: '2026-06-03T00:00:00Z' },
+    { _id: 'shared-1', _openid: 'owner-2', name: '共享一', grade: 4, createdAt: '2026-06-02T00:00:00Z' },
+    { _id: 'shared-2', _openid: 'owner-3', name: '共享二', grade: 3, createdAt: '2026-06-01T00:00:00Z' }
+  ]
+  const db = createDatabase({
+    students,
+    studentMembers: [
+      { _id: 'member-1', studentId: 'shared-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' },
+      { _id: 'member-2', studentId: 'shared-2', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }
+    ],
+    subjectProfiles: students.flatMap(student => ['math', 'chinese', 'english'].map(subject => ({
+      _id: `${student._id}-${subject}`,
+      studentId: student._id,
+      subject,
+      totalReports: 1,
+      currentSummary: `${subject} summary`,
+      currentBottlenecks: []
+    }))),
+    reports: students.map((student, index) => ({
+      _id: `report-${index}`,
+      studentId: student._id,
+      subject: 'math',
+      status: 'completed',
+      summary: '轻量报告',
+      bottlenecks: [],
+      questions: Array.from({ length: 100 }, () => ({ raw: 'must not leak' })),
+      errorDetails: [{ raw: 'must not leak' }],
+      pageResults: [{ raw: 'must not leak' }],
+      imageFiles: [{ fileID: 'cloud://must-not-leak' }],
+      createdAt: `2026-06-${String(index + 10).padStart(2, '0')}T00:00:00Z`
+    })),
+    papers: students.map((student, index) => ({
+      _id: `paper-${index}`,
+      studentId: student._id,
+      subject: 'math',
+      type: 'verification',
+      paperDisplayCode: `MATH-${index}`,
+      questionCount: 6,
+      questions: Array.from({ length: 100 }, () => ({ raw: 'must not leak' })),
+      createdAt: `2026-06-${String(index + 10).padStart(2, '0')}T01:00:00Z`
+    }))
+  })
+  let queryCount = 0
+  const originalCollection = db.collection
+  db.collection = name => {
+    const collection = originalCollection(name)
+    const originalWhere = collection.where
+    collection.where = filter => {
+      queryCount += 1
+      return originalWhere(filter)
+    }
+    return collection
+  }
+  const handler = loadStudentData(db, 'viewer-1')
+
+  const result = await handler.main({ action: 'getHomeDashboard' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.children.length, 4)
+  assert.equal(result.children.filter(child => child.role === 'owner').length, 2)
+  assert.equal(result.children.filter(child => child.role === 'viewer').length, 2)
+  assert.equal(result.children.every(child => child.subjectProfiles.length === 3), true)
+  assert.equal(queryCount <= 6, true, `expected at most 6 batched queries, got ${queryCount}`)
+  const json = JSON.stringify(result)
+  assert.doesNotMatch(json, /questions|errorDetails|pageResults|imageFiles|must not leak/)
+  assert.equal(Buffer.byteLength(json) < 64 * 1024, true)
+})
+
+test('home dashboard does not let one child consume the family-wide history limit', async () => {
+  const dominantReports = Array.from({ length: 101 }, (_, index) => ({
+    _id: `dominant-report-${index}`,
+    studentId: 'student-a',
+    subject: 'math',
+    status: 'completed',
+    summary: `A-${index}`,
+    createdAt: `2026-07-12T${String(Math.floor(index / 60)).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}:00Z`
+  }))
+  const dominantPapers = Array.from({ length: 101 }, (_, index) => ({
+    _id: `dominant-paper-${index}`,
+    studentId: 'student-a',
+    subject: 'math',
+    type: 'verification',
+    paperDisplayCode: `A-${index}`,
+    createdAt: `2026-07-12T${String(Math.floor(index / 60)).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}:30Z`
+  }))
+  const db = createDatabase({
+    students: [
+      { _id: 'student-a', _openid: 'owner-1', name: 'A', createdAt: '2026-01-02T00:00:00Z' },
+      { _id: 'student-b', _openid: 'owner-1', name: 'B', createdAt: '2026-01-01T00:00:00Z' }
+    ],
+    studentMembers: [],
+    subjectProfiles: [],
+    reports: [...dominantReports, {
+      _id: 'student-b-report', studentId: 'student-b', subject: 'math', status: 'completed',
+      summary: 'B latest', createdAt: '2026-06-01T00:00:00Z'
+    }],
+    papers: [...dominantPapers, {
+      _id: 'student-b-paper', studentId: 'student-b', subject: 'math', type: 'verification',
+      paperDisplayCode: 'B-LATEST', createdAt: '2026-06-01T00:00:00Z'
+    }]
+  })
+  const handler = loadStudentData(db, 'owner-1')
+
+  const result = await handler.main({ action: 'getHomeDashboard' })
+  const childB = result.children.find(child => child.student._id === 'student-b')
+
+  assert.equal(childB.recentReports[0]._id, 'student-b-report')
+  assert.equal(childB.recentPapers[0]._id, 'student-b-paper')
+})
+
 test('viewer can read subject dashboard, report detail, paper detail and timeline', async () => {
   const db = seedDatabase()
   const handler = loadStudentData(db, 'viewer-1')
@@ -121,6 +234,15 @@ test('viewer can read subject dashboard, report detail, paper detail and timelin
   assert.equal(timeline.reports.find(item => item._id === 'report-1').imageFileCount, 1)
   assert.equal(timeline.papers.find(item => item._id === 'paper-1').bottleneckSummaries.join('、'), '审题理解')
   assert.equal(timeline.papers.find(item => item._id === 'paper-1').paperDisplayCode, '数学-20260613-01')
+})
+
+test('representative timeline baseline reduces database reads without changing visible ordering', async () => {
+  const metrics = await measureTimelinePayload()
+
+  assert.equal(metrics.visibleOrderingUnchanged, true)
+  assert.equal(metrics.databaseReadReduction >= 0.6, true)
+  assert.equal(metrics.projected.databaseReadBytes < metrics.thresholds.databaseReadBytes, true)
+  assert.equal(metrics.projected.responseBytes < metrics.thresholds.responseBytes, true)
 })
 
 test('timeline sorts papers by generated time while preserving paper date', async () => {
