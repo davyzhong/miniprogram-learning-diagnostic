@@ -813,17 +813,11 @@ test('generatePaper uses chinese concrete review items before generic bottleneck
   assert.match(prompt, /targetText=辩论/)
   assert.match(prompt, /每个 itemId 必须至少有 1 道原项复测题/)
   assert.match(prompt, /questionRole=direct_review/)
-  assert.deepEqual(paper.chineseReviewTargets, [{
-    itemId: 'CHI-WORD-BIANLUN',
-    itemType: 'word',
-    targetText: '辩论',
-    expectedAnswer: '辩论',
-    lastWrongAnswer: '辨论',
-    sourceContext: '看拼音写词语：biàn lùn',
-    mistakeType: '形近字混淆',
-    relatedLpCode: 'LP-101',
-    verificationMethods: ['pinyin_to_word', 'dictation']
-  }])
+  assert.equal(paper.chineseReviewTargets.length, 1)
+  assert.equal(paper.chineseReviewTargets[0].itemId, 'CHI-WORD-BIANLUN')
+  assert.equal(paper.chineseReviewTargets[0].reviewStageText, '原项复测')
+  assert.equal(paper.chineseReviewTargets[0].directMethod, 'pinyin_to_word')
+  assert.equal(paper.chineseReviewTargets[0].allowTransfer, false)
   assert.equal(paper.questions[0].reviewItemId, 'CHI-WORD-BIANLUN')
   assert.equal(paper.questions[0].targetText, '辩论')
   assert.equal(paper.questions[0].verificationMethod, 'pinyin_to_word')

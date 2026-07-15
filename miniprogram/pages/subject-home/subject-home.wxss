@@ -474,6 +474,16 @@
   padding: 4rpx 9rpx;
 }
 
+.review-stage {
+  background: #e0f2fe;
+  border-radius: 999rpx;
+  color: #075985;
+  flex-shrink: 0;
+  font-size: 19rpx;
+  font-weight: 750;
+  padding: 4rpx 9rpx;
+}
+
 .status-icon {
   width: 54rpx;
   height: 54rpx;

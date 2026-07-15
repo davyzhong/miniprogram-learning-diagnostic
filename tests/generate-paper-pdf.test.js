@@ -109,6 +109,24 @@ test('verification PDF renders bottleneck names without raw codes', async () => 
   assert.equal(texts.includes('LP-003'), false)
 })
 
+test('Chinese verification PDF labels original review and similarity transfer questions', async () => {
+  const { PdfMock, operations } = createRecordingPdfKit()
+  const { generatePDF } = require('../cloudfunctions/generatePaper/pdf-renderer')
+  await generatePDF({
+    questions: [
+      { index: 1, content: '看拼音写词语：biàn lùn', answer: '辩论', lpCode: 'LP-101', lpName: '识字词语', questionRole: 'direct_review' },
+      { index: 2, content: '辨析形近字', answer: '辩', lpCode: 'LP-101', lpName: '识字词语', questionRole: 'similarity_transfer' }
+    ]
+  }, 'chinese', 'verification', {
+    pdfkit: PdfMock,
+    fontPath: path.resolve(__dirname, '../cloudfunctions/generatePaper/NotoSansCJKsc-Regular.otf')
+  })
+
+  const texts = operations.filter(item => item[0] === 'text').map(item => item[1])
+  assert.ok(texts.some(text => text.includes('【原项复测】看拼音写词语')))
+  assert.ok(texts.some(text => text.includes('【举一反三】辨析形近字')))
+})
+
 test('verification PDF has a dedicated answer page after student pages', async () => {
   const { PdfMock, operations } = createRecordingPdfKit()
   const { generatePDF } = require('../cloudfunctions/generatePaper/pdf-renderer')

@@ -215,6 +215,7 @@ function normalizeQuestionsData(data, expectedCount) {
 function questionDirectlyRetestsChineseTarget(question = {}, target = {}) {
   if (question.reviewItemId !== target.itemId) return false;
   if (question.questionRole !== 'direct_review') return false;
+  if (target.directMethod && question.verificationMethod !== target.directMethod) return false;
   const expected = String(target.expectedAnswer || target.targetText || '').trim();
   const content = `${question.targetText || ''}\n${question.content || ''}\n${question.answer || ''}`;
   return Boolean(expected && content.includes(expected));
@@ -227,6 +228,19 @@ function assertChineseDirectReviewCoverage(questions = [], targets = []) {
     .filter(Boolean);
   if (missing.length > 0) {
     throw new Error(`语文原错项未被直接复测：${missing.join('、')}`);
+  }
+}
+
+function assertChineseReviewQuestionPlan(questions = [], targets = []) {
+  assertChineseDirectReviewCoverage(questions, targets);
+  for (const target of targets) {
+    const transferCount = questions.filter(question => (
+      question.reviewItemId === target.itemId && question.questionRole === 'similarity_transfer'
+    )).length;
+    if (transferCount > 1) throw new Error(`语文错项迁移题过多：${target.targetText}`);
+    if (!target.allowTransfer && transferCount > 0) {
+      throw new Error(`语文错项当前阶段不应生成迁移题：${target.targetText}`);
+    }
   }
 }
 
@@ -468,7 +482,10 @@ async function generateQuestionsWithAI(student, subject, type, targets, paperKey
       // 语文验证卷必须覆盖每个仍需复测的原错项，题量不能因粗卡点的置信度配额而截断。
       expectedCount = Math.min(
         MAX_TOTAL_VERIFICATION_QUESTIONS,
-        Math.max(expectedCount, chineseReviewTargets.length)
+        Math.max(expectedCount, chineseReviewTargets.reduce(
+          (total, target) => total + (target.plannedQuestionCount || 1),
+          0
+        ))
       );
     }
   }
@@ -541,7 +558,7 @@ ${chineseReviewPromptBlock}
     const cleaned = content.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
     const normalized = normalizeQuestionsData(JSON.parse(cleaned), expectedCount);
     if (subject === 'chinese' && chineseReviewTargets.length > 0) {
-      assertChineseDirectReviewCoverage(normalized.questions, chineseReviewTargets);
+      assertChineseReviewQuestionPlan(normalized.questions, chineseReviewTargets);
     }
     return { ...normalized, chineseReviewTargets };
   } catch (err) {

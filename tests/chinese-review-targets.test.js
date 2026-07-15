@@ -41,17 +41,13 @@ test('selects chinese concrete review targets by related bottleneck code', () =>
     ]
   }, ['LP-101'], 5)
 
-  assert.deepEqual(targets, [{
-    itemId: 'CHI-WORD-BIANLUN',
-    itemType: 'word',
-    targetText: '辩论',
-    expectedAnswer: '辩论',
-    lastWrongAnswer: '辨论',
-    sourceContext: '看拼音写词语：biàn lùn',
-    mistakeType: '形近字混淆',
-    relatedLpCode: 'LP-101',
-    verificationMethods: ['pinyin_to_word', 'dictation']
-  }])
+  assert.equal(targets.length, 1)
+  assert.equal(targets[0].itemId, 'CHI-WORD-BIANLUN')
+  assert.equal(targets[0].targetText, '辩论')
+  assert.equal(targets[0].reviewStageText, '原项复测')
+  assert.equal(targets[0].directMethod, 'pinyin_to_word')
+  assert.equal(targets[0].extensionFamily, '形近辨析')
+  assert.equal(targets[0].allowTransfer, false)
 })
 
 test('builds a prompt block that requires direct retesting of original chinese items', () => {

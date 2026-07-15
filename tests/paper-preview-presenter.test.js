@@ -40,6 +40,53 @@ test('paper preview lifecycle starts with generated paper and download as the ne
   assert.deepEqual(state.lifecycleSteps.map(step => step.status), ['active', 'waiting', 'waiting'])
 })
 
+test('Chinese paper preview separates original review from similarity transfer without exposing IDs', () => {
+  const paper = {
+    ...basePaper(),
+    subject: 'chinese',
+    chineseReviewTargets: [{
+      itemId: 'CHI-WORD-BIANLUN',
+      targetText: '辩论',
+      reviewStage: 'reinforce',
+      directMethod: 'dictation',
+      allowTransfer: true,
+      extensionFamily: '形近辨析'
+    }],
+    questions: [
+      { index: 1, content: '请听写：辩论', answer: '辩论', reviewItemId: 'CHI-WORD-BIANLUN', questionRole: 'direct_review' },
+      { index: 2, content: '辨析形近字', answer: '辩', reviewItemId: 'CHI-WORD-BIANLUN', questionRole: 'similarity_transfer' }
+    ]
+  }
+  const state = buildPaperPreviewState({
+    paper,
+    detail: {
+      student: { name: '学生示例' },
+      latestVerificationReport: {
+        _id: 'report-chinese',
+        status: 'completed',
+        chineseReviewEvidence: [{ itemId: 'CHI-WORD-BIANLUN', evidenceStatus: 'passed' }]
+      }
+    },
+    subjectName: '语文'
+  })
+
+  assert.equal(state.hasChineseReviewCoverage, true)
+  assert.equal(state.chineseReviewCoverage[0].title, '辩论')
+  assert.equal(state.chineseReviewCoverage[0].stageText, '巩固复测')
+  assert.equal(state.chineseReviewCoverage[0].directText, '原项复测 1 题')
+  assert.equal(state.chineseReviewCoverage[0].transferText, '举一反三 1 题')
+  assert.equal(state.chineseReviewCoverage[0].feedbackText, '本轮已通过')
+  assert.doesNotMatch([
+    state.chineseReviewCoverage[0].title,
+    state.chineseReviewCoverage[0].stageText,
+    state.chineseReviewCoverage[0].methodText,
+    state.chineseReviewCoverage[0].extensionText,
+    state.chineseReviewCoverage[0].directText,
+    state.chineseReviewCoverage[0].transferText,
+    state.chineseReviewCoverage[0].feedbackText
+  ].join(' '), /CHI-WORD/)
+})
+
 test('paper preview lifecycle keeps downloaded paper downloadable and exposes upload separately', () => {
   const state = buildPaperPreviewState({
     paper: basePaper(),

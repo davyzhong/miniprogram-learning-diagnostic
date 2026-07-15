@@ -37,6 +37,13 @@ function uniqueStrings(values = []) {
   return Array.from(new Set((values || []).filter(Boolean)))
 }
 
+function nextChineseReviewAt(now, reviewPassCount) {
+  const days = reviewPassCount >= 2 ? 7 : (reviewPassCount >= 1 ? 3 : 1)
+  const next = new Date(now)
+  next.setDate(next.getDate() + days)
+  return next
+}
+
 function reviewItemKey(item = {}) {
   return item.itemId
     || [
@@ -131,6 +138,7 @@ function applyChineseReviewEvidence(reviewItems = [], evidenceItems = [], now = 
         status: reviewPassCount >= 3 ? 'mastered' : 'reviewing',
         reviewPassCount,
         intervalLevel: Math.min(3, (Number(previous.intervalLevel) || 0) + 1),
+        nextReviewAt: reviewPassCount >= 3 ? '' : nextChineseReviewAt(now, reviewPassCount),
         lastVerifiedAt: now,
         lastPassedAt: now,
         sourceReportId: report._id || previous.sourceReportId || ''
@@ -143,6 +151,7 @@ function applyChineseReviewEvidence(reviewItems = [], evidenceItems = [], now = 
         status: 'recurring',
         reviewFailCount: (Number(previous.reviewFailCount) || 0) + 1,
         intervalLevel: 0,
+        nextReviewAt: nextChineseReviewAt(now, 0),
         lastVerifiedAt: now,
         lastFailedAt: now,
         sourceReportId: report._id || previous.sourceReportId || ''
