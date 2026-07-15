@@ -193,6 +193,8 @@ function normalizeQuestionsData(data, expectedCount) {
       itemType: cleanPromptText(question?.itemType, 40),
       targetText: cleanPromptText(question?.targetText, 160),
       verificationMethod: cleanPromptText(question?.verificationMethod, 80),
+      questionRole: cleanPromptText(question?.questionRole, 40),
+      targetId: cleanPromptText(question?.targetId, 100),
     }))
     .filter(question => question.content && question.answer);
 
@@ -208,6 +210,24 @@ function normalizeQuestionsData(data, expectedCount) {
     title: cleanPromptText(data.title, 80) || '学习卡点验证试卷',
     questions,
   };
+}
+
+function questionDirectlyRetestsChineseTarget(question = {}, target = {}) {
+  if (question.reviewItemId !== target.itemId) return false;
+  if (question.questionRole !== 'direct_review') return false;
+  const expected = String(target.expectedAnswer || target.targetText || '').trim();
+  const content = `${question.targetText || ''}\n${question.content || ''}\n${question.answer || ''}`;
+  return Boolean(expected && content.includes(expected));
+}
+
+function assertChineseDirectReviewCoverage(questions = [], targets = []) {
+  const missing = (targets || [])
+    .filter(target => !questions.some(question => questionDirectlyRetestsChineseTarget(question, target)))
+    .map(target => target.targetText || target.expectedAnswer || target.itemId)
+    .filter(Boolean);
+  if (missing.length > 0) {
+    throw new Error(`语文原错项未被直接复测：${missing.join('、')}`);
+  }
 }
 
 function buildBottleneckSummaries(questions, targets = []) {
@@ -444,7 +464,12 @@ async function generateQuestionsWithAI(student, subject, type, targets, paperKey
     // 构建含 taxonomy 微验证规则的卡点描述
     targetDesc = buildTargetDescWithRules(targets, targetMap, subject, profile);
     if (subject === 'chinese') {
-      chineseReviewTargets = selectChineseReviewTargets(profile, targets, expectedCount);
+      chineseReviewTargets = selectChineseReviewTargets(profile, targets, MAX_TOTAL_VERIFICATION_QUESTIONS);
+      // 语文验证卷必须覆盖每个仍需复测的原错项，题量不能因粗卡点的置信度配额而截断。
+      expectedCount = Math.min(
+        MAX_TOTAL_VERIFICATION_QUESTIONS,
+        Math.max(expectedCount, chineseReviewTargets.length)
+      );
     }
   }
   const chineseReviewPromptBlock = buildChineseReviewPromptBlock(chineseReviewTargets);
@@ -456,10 +481,10 @@ ${targetDesc ? `本次验证覆盖以下学习卡点，共约 ${expectedCount} �
 ${chineseReviewPromptBlock}
 
 要求：
-1. 每个卡点的出题数严格按上面的置信度标签（[高置信·出3题]就出3题，[中置信·出2题]就出2题，[低置信·出1题]就出1题）
-2. 出3题的卡点：2道核心题（直接复现典型错误场景，不同数字）+ 1道迁移题（变换情境）
-3. 出2题的卡点：1道核心题 + 1道迁移题
-4. 出1题的卡点：1道核心题
+1. 每个卡点的出题数严格按上面的置信度标签（[高置信·出3题]就出3题，[中置信·出2题]就出2题，[低置信·出1题]就出1题）；语文原错项复测目标优先满足，每项至少 1 题。
+2. 数学出3题的卡点：2道核心题（直接复现典型错误场景，不同数字）+ 1道迁移题（变换情境）
+3. 数学出2题的卡点：1道核心题 + 1道迁移题；出1题的卡点：1道核心题
+4. 语文的 direct_review 题必须直接考察孩子曾写错的原字、原词或原句；similarity_transfer 题才允许使用同音、同形、形近或多义的扩展材料。
 5. 核心题直接复现该卡点的典型错误场景
 6. 迁移题变换情境（不同数字/不同表述），观察是否稳定
 7. 难度匹配${grade || '该'}年级
@@ -473,7 +498,7 @@ ${chineseReviewPromptBlock}
 11. 直接返回JSON，不要\`\`\`json包裹
 
 输出：
-{"title":"标题","questions":[{"index":1,"content":"题目","answer":"答案","explanation":"本题专属解题步骤：写出具体数字的计算过程和关键判断，不要通用模板话","points":5,"lpCode":"BN-...","lpName":"卡点名","questionRole":"core或transfer"}]}
+{"title":"标题","questions":[{"index":1,"content":"题目","answer":"答案","explanation":"本题专属解题步骤","points":5,"lpCode":"BN-...","lpName":"卡点名","questionRole":"core或transfer或direct_review或similarity_transfer","reviewItemId":"语文错项ID（语文必填）","targetText":"原错项文本（语文必填）","verificationMethod":"复测方式（语文必填）"}]}
 
 开始生成：`;
 
@@ -514,10 +539,11 @@ ${chineseReviewPromptBlock}
 
     const content = result.text || '';
     const cleaned = content.replace(/^```json\s*/i, '').replace(/\s*```$/, '').trim();
-    return {
-      ...normalizeQuestionsData(JSON.parse(cleaned), expectedCount),
-      chineseReviewTargets,
-    };
+    const normalized = normalizeQuestionsData(JSON.parse(cleaned), expectedCount);
+    if (subject === 'chinese' && chineseReviewTargets.length > 0) {
+      assertChineseDirectReviewCoverage(normalized.questions, chineseReviewTargets);
+    }
+    return { ...normalized, chineseReviewTargets };
   } catch (err) {
     if (eventId) {
       await recordUsageFailure({ db, eventId, errorMessage: err && err.message, model: 'deepseek-v4-flash' })
@@ -844,14 +870,20 @@ exports.main = async (event) => {
       const oldQuestions = Array.isArray(oldData.questions) ? oldData.questions : [];
       const oldTargets = Array.isArray(oldData.bottleneckTargets) ? oldData.bottleneckTargets : [];
       const oldSummaries = Array.isArray(oldData.bottleneckSummaries) ? oldData.bottleneckSummaries : [];
+      const oldChineseReviewTargets = Array.isArray(oldData.chineseReviewTargets) ? oldData.chineseReviewTargets : [];
       const mergedQuestions = [...oldQuestions, ...(questionsData.questions || [])];
       const mergedTargets = Array.from(new Set([...oldTargets, ...targetCodes]));
       const mergedSummaries = [...oldSummaries, ...(bottleneckSummaries || [])];
+      const mergedChineseReviewTargets = Array.from(new Map([
+        ...oldChineseReviewTargets,
+        ...(questionsData.chineseReviewTargets || [])
+      ].filter(item => item && item.itemId).map(item => [item.itemId, item])).values());
       await db.collection('papers').doc(_appendToPaperId).update({
         data: {
           questions: mergedQuestions,
           bottleneckTargets: mergedTargets,
           bottleneckSummaries: mergedSummaries,
+          chineseReviewTargets: mergedChineseReviewTargets,
           updatedAt: new Date(),
           generationStatus: 'appending',
         },

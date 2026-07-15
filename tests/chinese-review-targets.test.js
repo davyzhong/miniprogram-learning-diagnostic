@@ -70,5 +70,6 @@ test('builds a prompt block that requires direct retesting of original chinese i
   assert.match(block, /语文错项复测目标/)
   assert.match(block, /春风又绿江南岸/)
   assert.match(block, /春风又到江南岸/)
-  assert.match(block, /每个 targetText 至少直接考察一次/)
+  assert.match(block, /每个 itemId 必须至少有 1 道原项复测题/)
+  assert.match(block, /同音字、形近字、同形字或多义字/)
 })

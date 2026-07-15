@@ -20,6 +20,22 @@ const SEVERITY_RANK = { high: 3, medium: 2, low: 1 };
 // 由 generatePaper 的分批追加模式处理题量，而不是在这里截断。
 const MAX_FINE_BOTTLENECKS = Infinity;
 
+function isActiveChineseReviewItem(item = {}) {
+  return !['mastered', 'archived', 'ignored'].includes(item.status);
+}
+
+function extractChineseReviewTargets(profile = {}) {
+  const seen = new Set();
+  return (profile.chineseReviewItems || [])
+    .filter(isActiveChineseReviewItem)
+    .map(item => item && (item.itemId || item.id))
+    .filter(itemId => {
+      if (!itemId || seen.has(itemId)) return false;
+      seen.add(itemId);
+      return true;
+    });
+}
+
 /**
  * 从 profile 展开细卡点（BN-*），按 severity 排序后截取。
  *
@@ -394,8 +410,9 @@ async function generateInBatches(db, cloud, { paperId, studentId, subject, targe
  * @param {object} params - { reportId, studentId, subject, profile, openId }
  */
 async function triggerAutoVerificationPaper(cloud, db, { reportId, studentId, subject, profile, openId }) {
-  const fineBottlenecks = extractFineBottlenecks(profile);
-  const targetIds = fineBottlenecks.map(item => item.bottleneckId);
+  const targetIds = subject === 'chinese'
+    ? extractChineseReviewTargets(profile)
+    : extractFineBottlenecks(profile).map(item => item.bottleneckId);
   if (targetIds.length === 0) {
     console.log('[auto-verification] 无 pendingBottlenecks，跳过');
     return { triggered: false, reason: 'no_pending_bottlenecks' };
@@ -447,6 +464,7 @@ async function triggerAutoVerificationPaper(cloud, db, { reportId, studentId, su
 module.exports = {
   triggerAutoVerificationPaper,
   extractFineBottlenecks,
+  extractChineseReviewTargets,
   extractPendingTargets,
   supersedeOldPapers,
   generateInBatches,

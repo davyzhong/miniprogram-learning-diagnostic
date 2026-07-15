@@ -759,7 +759,8 @@ test('generatePaper uses chinese concrete review items before generic bottleneck
     lpName: '识字词语',
     reviewItemId: 'CHI-WORD-BIANLUN',
     targetText: '辩论',
-    verificationMethod: 'pinyin_to_word'
+    verificationMethod: 'pinyin_to_word',
+    questionRole: index === 0 ? 'direct_review' : 'similarity_transfer'
   }))
   const aiApp = {
     ai: () => ({
@@ -810,7 +811,8 @@ test('generatePaper uses chinese concrete review items before generic bottleneck
   assert.equal(result.success, true)
   assert.match(prompt, /语文错项复测目标/)
   assert.match(prompt, /targetText=辩论/)
-  assert.match(prompt, /每个 targetText 至少直接考察一次/)
+  assert.match(prompt, /每个 itemId 必须至少有 1 道原项复测题/)
+  assert.match(prompt, /questionRole=direct_review/)
   assert.deepEqual(paper.chineseReviewTargets, [{
     itemId: 'CHI-WORD-BIANLUN',
     itemType: 'word',

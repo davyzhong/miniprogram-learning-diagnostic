@@ -17,6 +17,18 @@ const MAX_CONTINUE_ATTEMPTS = 3;
 
 const SEVERITY_RANK = { high: 3, medium: 2, low: 1 };
 
+function extractChineseReviewTargets(profile = {}) {
+  const seen = new Set();
+  return (profile.chineseReviewItems || [])
+    .filter(item => item && !['mastered', 'archived', 'ignored'].includes(item.status))
+    .map(item => item.itemId || item.id)
+    .filter(itemId => {
+      if (!itemId || seen.has(itemId)) return false;
+      seen.add(itemId);
+      return true;
+    });
+}
+
 /**
  * 从 profile 展开细卡点（BN-*），按 weight 降序。
  * 与 auto-verification.js 的 extractFineBottlenecks 保持一致。
@@ -101,7 +113,7 @@ function chunkTargets(targets, size = BATCH_SIZE) {
 function generatedTargetSet(paper = {}) {
   const set = new Set();
   for (const question of (paper.questions || [])) {
-    const code = question.lpCode || question.targetCode || question.bottleneckId || question.targetId;
+    const code = question.reviewItemId || question.lpCode || question.targetCode || question.bottleneckId || question.targetId;
     if (code) set.add(code);
   }
   return set;
@@ -376,8 +388,9 @@ exports.main = async (event = {}) => {
         .get();
       const profile = (profileRes.data || []).find(item => item.subject === subject) || {};
 
-      const fineBottlenecks = extractFineBottlenecks(profile);
-      const targetIds = fineBottlenecks.map(item => item.bottleneckId);
+      const targetIds = subject === 'chinese'
+        ? extractChineseReviewTargets(profile)
+        : extractFineBottlenecks(profile).map(item => item.bottleneckId);
       if (targetIds.length === 0) {
         return { success: false, error: '暂无待验证卡点' };
       }
