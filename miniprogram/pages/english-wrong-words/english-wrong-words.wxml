@@ -2,13 +2,13 @@
   <view class="hero bplus-section">
     <view class="hero-copy">
       <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
-      <text class="title">📕 错词本</text>
+      <text class="title">词 错词本</text>
       <text class="subtitle">把不熟、写错和到期复测的单词集中处理。</text>
     </view>
   </view>
 
   <view class="state-card" wx:if="{{loading}}">
-    <text class="state-title">⏳ 正在整理错词</text>
+    <text class="state-title">正在整理错词</text>
     <text class="state-desc">从认词和纸面听写记录中汇总薄弱词。</text>
   </view>
 
@@ -26,7 +26,7 @@
     </view>
 
     <view class="section">
-      <text class="section-title">🧭 分组处理</text>
+      <text class="section-title">向 分组处理</text>
       <view class="group-list">
         <view class="group-row" wx:for="{{groups}}" wx:key="key">
           <view class="group-count">{{item.count}}</view>
@@ -39,7 +39,7 @@
     </view>
 
     <view class="section">
-      <text class="section-title">🔁 最近需要多见几次</text>
+      <text class="section-title">再 最近需要多见几次</text>
       <view class="empty-card" wx:if="{{weakWords.length === 0}}">
         <text class="empty-title">暂时没有高频错词</text>
         <text class="empty-desc">完成认词练习或纸面听写后，这里会自动出现需要加强的词。</text>
@@ -54,13 +54,13 @@
     </view>
 
     <view class="section" wx:if="{{confusionCount > 0}}">
-      <text class="section-title">🔎 易混词巩固</text>
+      <text class="section-title">查 易混词巩固</text>
       <view class="group-row" bindtap="onConfusionTap"><view class="group-count">{{confusionCount}}</view><view class="group-copy"><text class="group-title">做几道辨析小题</text><text class="group-desc">帮助区分容易混淆的单词，不改变正式掌握状态。</text></view></view>
     </view>
 
     <view class="action-row">
-      <button class="secondary-btn" bindtap="onPracticeTap">🔤 去认词练习</button>
-      <button class="primary-btn" bindtap="onDictationTap">✍️ 去纸面听写</button>
+      <button class="secondary-btn" bindtap="onPracticeTap">英 去认词练习</button>
+      <button class="primary-btn" bindtap="onDictationTap">写 去纸面听写</button>
     </view>
   </view>
 </view>

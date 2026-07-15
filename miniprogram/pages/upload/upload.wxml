@@ -3,23 +3,23 @@
   <!-- 顶部说明 -->
   <view class="tip-bar bplus-section">
     <view class="tip-content">
-      <text class="tip-title">📤 {{pageTitle}}</text>
+      <text class="tip-title">传 {{pageTitle}}</text>
       <text class="tip-desc">{{pageDesc}}</text>
     </view>
   </view>
 
   <view class="paper-context" wx:if="{{paperId}}">
-    <text class="context-label">🎯 正在上传到</text>
+    <text class="context-label">重 正在上传到</text>
     <text class="context-code">{{paperCodeText || '当前验证试卷'}}</text>
     <text class="context-meta">{{paperName}}<text wx:if="{{paperQuestionCount > 0}}"> · {{paperQuestionCount}} 题</text></text>
   </view>
 
   <!-- 拍照提示 -->
   <view class="photo-tips">
-    <text class="tip-item">📸 光线充足</text>
-    <text class="tip-item">📄 试卷铺平</text>
-    <text class="tip-item">✍️ 字迹清晰</text>
-    <text class="tip-item">🔴 红笔可见</text>
+    <text class="tip-item">拍 光线充足</text>
+    <text class="tip-item">卷 试卷铺平</text>
+    <text class="tip-item">写 字迹清晰</text>
+    <text class="tip-item">重 红笔可见</text>
   </view>
 
   <!-- 照片网格 -->
@@ -33,7 +33,7 @@
       <image class="preview-img" src="{{item.tempPath}}" mode="aspectFill" binderror="onImageLoadError" data-index="{{index}}" />
       <view class="name-warning" wx:if="{{item.nameDuplicate}}">同名</view>
       <view class="format-badge" wx:if="{{item.convertedFromHeif}}">已转JPG</view>
-      <view class="delete-btn" catchtap="onDeleteImage" data-index="{{index}}">✕</view>
+      <view class="delete-btn" catchtap="onDeleteImage" data-index="{{index}}" aria-role="button" aria-label="删除这张照片">删除</view>
     </view>
 
     <!-- 添加按钮 -->
@@ -42,17 +42,17 @@
       wx:if="{{images.length < 20}}"
       bindtap="onChooseImage"
     >
-      <text class="add-icon">📷</text>
+      <text class="add-icon">拍</text>
       <text class="add-text">拍照/相册</text>
     </view>
   </view>
 
-  <view class="image-count">🖼️ 已选 {{images.length}}/20 张</view>
+  <view class="image-count">图 已选 {{images.length}}/20 张</view>
 
   <!-- 上传进度 -->
   <view class="upload-progress" wx:if="{{uploading}}">
     <view class="progress-info">
-      <text>☁️ 上传中 {{uploadedCount}}/{{images.length}}</text>
+      <text>传️ 上传中 {{uploadedCount}}/{{images.length}}</text>
       <text>{{uploadProgress}}%</text>
     </view>
     <view class="progress-bar">
@@ -62,7 +62,7 @@
 
   <!-- 异步提示 -->
   <view class="async-tip">
-    <text class="async-icon">⏳</text>
+    <text class="async-icon">...</text>
     <text class="async-text">上传完成后即可返回，AI 将在后台分析，完成后可在学习记录查看</text>
   </view>
 

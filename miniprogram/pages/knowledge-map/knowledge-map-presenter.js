@@ -2,16 +2,16 @@ const { profileBottlenecks, expandFineBottleneckItems, buildConfidence } = requi
 const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
 
 const DOMAIN_META = [
-  { key: '数与代数', icon: '🔢', short: '数与代数' },
-  { key: '图形与几何', icon: '📐', short: '图形几何' },
-  { key: '统计与概率', icon: '📊', short: '统计概率' },
-  { key: '综合与实践', icon: '🔧', short: '综合实践' },
+  { key: '数与代数', icon: '数', short: '数与代数' },
+  { key: '图形与几何', icon: '数', short: '图形几何' },
+  { key: '统计与概率', icon: '析', short: '统计概率' },
+  { key: '综合与实践', icon: '用', short: '综合实践' },
 ]
 
 function statusMeta(status) {
-  if (status === 'improved') return { icon: '✅', text: '已改善', cls: 'mastered' }
-  if (status === 'persisting' || status === 'worsened') return { icon: '🔴', text: '持续出现', cls: 'active' }
-  return { icon: '🟡', text: '待验证', cls: 'pending' }
+  if (status === 'improved') return { icon: '已', text: '已改善', cls: 'mastered' }
+  if (status === 'persisting' || status === 'worsened') return { icon: '重', text: '持续出现', cls: 'active' }
+  return { icon: '待', text: '待验证', cls: 'pending' }
 }
 
 function buildSymptomText(bn = {}) {

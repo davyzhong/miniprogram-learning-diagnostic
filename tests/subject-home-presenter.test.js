@@ -91,7 +91,7 @@ test('subject workbench keeps the latest formal diagnosis ahead of newer verific
   assert.equal(view.latestDiagnosis.persistingCount, 1)
   assert.equal(view.latestDiagnosis.improvedCount, 1)
   assert.match(view.latestDiagnosis.summary, /分数运算/)
-  assert.equal(view.latestDiagnosis.icon, '📐')
+  assert.equal(view.latestDiagnosis.icon, '数')
 })
 
 test('math workbench expands coarse bottlenecks into fine-grained candidate bottlenecks', () => {

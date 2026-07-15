@@ -130,12 +130,12 @@
   position: absolute;
   top: 4rpx;
   right: 4rpx;
-  width: 40rpx;
+  width: 64rpx;
   height: 40rpx;
   background: rgba(0, 0, 0, 0.55);
   color: #ffffff;
-  font-size: 24rpx;
-  border-radius: 50%;
+  font-size: 20rpx;
+  border-radius: 20rpx;
   display: flex;
   align-items: center;
   justify-content: center;

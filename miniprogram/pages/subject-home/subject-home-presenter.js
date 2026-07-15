@@ -152,15 +152,15 @@ function getFormalDiagnosisReports(reports = []) {
 function buildLatestDiagnosis(report, subject, subjectName, formatRelativeTime) {
   if (!report) return null
   const bottlenecks = Array.isArray(report.bottlenecks) ? report.bottlenecks : []
-  const iconMap = { math: '📐', chinese: '📖', english: '🔤' }
+  const iconMap = { math: '数', chinese: '读', english: '英' }
   return {
     reportId: report._id,
-    icon: iconMap[subject] || '🩺',
-    reportIcon: '📋',
-    insightIcon: '💡',
-    evidenceIcon: '🔎',
-    changeIcon: '📈',
-    actionIcon: '🎯',
+    icon: iconMap[subject] || '诊',
+    reportIcon: '报',
+    insightIcon: '提',
+    evidenceIcon: '查',
+    changeIcon: '升',
+    actionIcon: '重',
     title: `最新${subjectName}诊断`,
     dateText: formatRelativeTime(report.createdAt),
     summary: sanitizeUserText(
@@ -355,7 +355,7 @@ function buildEnglishActionCards(stats, primaryTask = {}, options = {}, permissi
       meta: stats.spellingNeedsPracticeCount > 0
         ? `${stats.spellingNeedsPracticeCount} 个拼写薄弱词优先出现`
         : '默认 20 词，验证是否真正写得出',
-      icon: '✎',
+      icon: '写',
       actionText: '开始听写',
       recommended: primaryTask.actionType === 'englishDictation',
       disabled: !canWrite || !hasVocabularyReady,
@@ -403,7 +403,7 @@ function buildTools(latestReport, permissions = {}, options = {}, stats = {}) {
         actionType: 'englishWrongWords'
       },
       stats.patternCount > 0 ? {
-        key: 'englishConfusion', title: '易混词巩固', desc: '用短题区分容易混淆的单词', icon: '🔎', actionType: 'englishConfusion'
+        key: 'englishConfusion', title: '易混词巩固', desc: '用短题区分容易混淆的单词', icon: '查', actionType: 'englishConfusion'
       } : null,
       {
         key: 'history',

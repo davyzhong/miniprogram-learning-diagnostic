@@ -3,13 +3,13 @@
   <!-- 说明 -->
   <view class="tip-bar bplus-section">
     <view class="tip-content">
-      <text class="tip-title">🧾 默认诊断试卷</text>
+      <text class="tip-title">单 默认诊断试卷</text>
       <text class="tip-desc">没有现成试卷？选一套标准题来做诊断</text>
     </view>
   </view>
 
   <!-- 年级选择 -->
-  <view class="section-title">🎒 选择年级</view>
+  <view class="section-title">年 选择年级</view>
   <view class="grade-row">
     <view
       class="grade-btn {{grade === item ? 'active' : ''}}"
@@ -22,7 +22,7 @@
 
   <!-- 试卷列表（A/B 卷） -->
   <view class="paper-list" wx:if="{{grade}}">
-    <view class="section-title">📚 选择试卷</view>
+    <view class="section-title">学 选择试卷</view>
 
     <view class="paper-card" wx:for="{{papers}}" wx:key="key">
       <view class="paper-header">
@@ -42,23 +42,23 @@
 
       <view class="paper-actions">
         <button class="btn-secondary paper-btn" bindtap="onPreview" data-key="{{item.key}}" disabled="{{previewingKey}}">
-          {{previewingKey === item.key ? '⏳ 预览生成中...' : '👁️ 预览 PDF'}}
+          {{previewingKey === item.key ? '预览生成中...' : '预览 PDF'}}
         </button>
         <button class="btn-primary paper-btn" bindtap="onUsePaper" data-key="{{item.key}}" disabled="{{generating}}">
-          {{generating && generatingKey === item.key ? '⏳ 生成中...' : '✅ 使用这套试卷'}}
+          {{generating && generatingKey === item.key ? '生成中...' : '使用这套试卷'}}
         </button>
       </view>
     </view>
   </view>
 
   <view class="empty-tip" wx:if="{{!grade}}">
-    <text class="empty-icon">📋</text>
+    <text class="empty-icon">报</text>
     <text class="empty-text">请先选择年级</text>
   </view>
 
   <!-- 底部提示 -->
   <view class="bottom-tip">
-    <text class="bottom-icon">💡</text>
+    <text class="bottom-icon">提</text>
     <text class="bottom-text">建议先打印让孩子在纸上作答，完成后拍照上传</text>
   </view>
 </view>

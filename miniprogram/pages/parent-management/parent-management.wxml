@@ -1,7 +1,7 @@
 <view class="page bplus-page">
   <view class="header bplus-section">
     <view class="header-copy">
-      <view class="eyebrow">👪 家庭成员</view>
+      <view class="eyebrow">家庭成员</view>
       <view class="title">{{student.name || '孩子档案'}}</view>
       <view class="subtitle" wx:if="{{student.grade}}">{{student.grade}} 年级 · {{role === 'owner' ? '创建者' : '共同家长'}}</view>
     </view>
@@ -11,7 +11,7 @@
   <view class="error" wx:if="{{error}}">{{error}}</view>
 
   <view class="card">
-    <view class="section-title">✅ 已加入家长</view>
+    <view class="section-title">已加入家长</view>
     <view class="member" wx:for="{{members}}" wx:key="memberOpenId" wx:for-index="index">
       <view class="avatar">{{item.avatarText}}</view>
       <view class="member-main">
@@ -24,7 +24,7 @@
   </view>
 
   <view class="card edit-card" wx:if="{{editingMemberIndex >= 0}}">
-    <view class="section-title">✏️ 编辑家长信息</view>
+    <view class="section-title">写️ 编辑家长信息</view>
     <view class="form-row">
       <view class="form-label">显示名称</view>
       <input class="text-input" value="{{editingDisplayName}}" placeholder="例如：青羽妈妈" bindinput="onDisplayNameInput" />
@@ -37,23 +37,23 @@
     </view>
     <view class="inline-actions">
       <button class="secondary inline-btn" bindtap="onCancelEditMember">取消</button>
-      <button class="primary inline-btn" loading="{{saving}}" bindtap="onSaveMemberProfile">✅ 保存</button>
+      <button class="primary inline-btn" loading="{{saving}}" bindtap="onSaveMemberProfile">已 保存</button>
     </view>
   </view>
 
   <view class="card invite-setup" wx:if="{{canInvite}}">
-    <view class="section-title">➕ 邀请家长</view>
+    <view class="section-title">+ 邀请家长</view>
     <view class="form-row">
       <view class="form-label">邀请身份</view>
       <picker mode="selector" range="{{relationOptions}}" range-key="name" value="{{inviteRelationIndex}}" bindchange="onInviteRelationChange">
         <view class="picker-value">{{relationOptions[inviteRelationIndex].name}}</view>
       </picker>
     </view>
-    <button class="primary" loading="{{creating}}" bindtap="onCreateInvite">🔑 生成邀请</button>
+    <button class="primary" loading="{{creating}}" bindtap="onCreateInvite">码 生成邀请</button>
   </view>
 
   <view class="card invite-card" wx:if="{{invite}}">
-    <view class="section-title">✅ 邀请已生成</view>
+    <view class="section-title">已 邀请已生成</view>
     <view class="invite-code" wx:if="{{invite.inviteCode}}">{{invite.inviteCode}}</view>
     <view class="hint" wx:if="{{invite.presetRelationText}}">建议身份：{{invite.presetRelationText}}</view>
     <view class="invite-path">{{invite.path}}</view>

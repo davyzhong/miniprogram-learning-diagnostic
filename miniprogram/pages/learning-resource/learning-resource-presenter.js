@@ -16,20 +16,20 @@ const PLATFORM_PRIORITY = {
 
 // 平台图标和跳转方式
 const PLATFORM_META = {
-  'B站': { icon: '📺', canJump: true, appType: 'bilibili' },
-  '哔哩哔哩': { icon: '📺', canJump: true, appType: 'bilibili' },
-  '小红书': { icon: '📕', canJump: true, appType: 'xhs' },
-  '国家中小学智慧教育平台': { icon: '🏫', canJump: false },
-  '国家智慧教育平台': { icon: '🏫', canJump: false },
-  'Khan Academy': { icon: '🎓', canJump: false },
-  'Khan Academy 中文版': { icon: '🎓', canJump: false },
-  '可汗学院': { icon: '🎓', canJump: false },
-  '可汗学院中文版': { icon: '🎓', canJump: false },
-  '均一教育平台': { icon: '📚', canJump: false },
+  'B站': { icon: '视', canJump: true, appType: 'bilibili' },
+  '哔哩哔哩': { icon: '视', canJump: true, appType: 'bilibili' },
+  '小红书': { icon: '词', canJump: true, appType: 'xhs' },
+  '国家中小学智慧教育平台': { icon: '校', canJump: false },
+  '国家智慧教育平台': { icon: '校', canJump: false },
+  'Khan Academy': { icon: '学', canJump: false },
+  'Khan Academy 中文版': { icon: '学', canJump: false },
+  '可汗学院': { icon: '学', canJump: false },
+  '可汗学院中文版': { icon: '学', canJump: false },
+  '均一教育平台': { icon: '学', canJump: false },
 }
 
 function getPlatformMeta(platform) {
-  return PLATFORM_META[platform] || { icon: '🔗', canJump: false }
+  return PLATFORM_META[platform] || { icon: '链', canJump: false }
 }
 
 function getPlatformPriority(platform) {
