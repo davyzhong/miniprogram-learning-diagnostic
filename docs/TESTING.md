@@ -1,6 +1,6 @@
 # 测试指南（TESTING）
 
-> 更新日期：2026-07-02
+> 更新日期：2026-07-15
 > 适用对象：本项目的开发者与后续维护 agent
 > 配套文档：`docs/TEST_FRAMEWORK_DESIGN.md`、`docs/TEST_STRATEGY_V2.md`、`docs/TEST_MATRIX.md`
 
@@ -57,12 +57,16 @@ E2E 套件：
 | `npm run test:e2e:chinese` | 语文 | 语文工作台、诊断报告、错项复测出卷页 | `tmp/e2e/chinese/` |
 | `npm run test:e2e:english` | 英语 | 工作台、自动导入、认词练习、纸面听写、学习记录、错词本、空态 | `tmp/e2e/english/` |
 | `npm run test:e2e:ai-usage` | AI 用量 | 账单页、首页入口、上传授权检查、`aiUsage` 云函数结构 | `tmp/e2e/ai-usage/` |
+| `npm run test:e2e:family-density` | 家庭首页 | 两个孩子的首屏密度、操作区边界、内部编码和脱敏截图 | `tmp/e2e/family-density/` |
+| `npm run test:e2e:upload-history-layout` | 学习记录 | 紧凑时间线、验证卷编号、证据预览上限、窄屏布局截图 | `tmp/e2e/upload-history-layout/` |
 | `npm run test:e2e:all` | 聚合套件 | core + math + chinese + english + 聚合报告 | `tmp/e2e/aggregate/` |
 | `npm run test:e2e:real-data` | 真实数据烟测 | 指定真实学生页面打开和截图 | `tmp/e2e/real-data/` |
 | `npm run test:e2e:real-image` | 真实图片链路 | mock、单图或 manifest 图片诊断 | `tmp/e2e-real-image-report.json` |
 | `npm run test:e2e:real-cloud` | 真实云函数 | 真实云端 analyzeBatch 结构校验 | 需要 `RUN_REAL_CLOUD=1` |
 
 核心 E2E 对首页设置 `cloudCallCount <= 1` 的回归预算。`perf:baseline` 每个样本先切换到无云请求的中性页面，再重新进入首页，避免开发者工具启动时旧页面的异步请求污染调用数和载荷统计。
+
+截图型 E2E 使用匿名 mock 数据，输出仅用于本地核对和更新图文文档。`test:e2e:family-density` 会校验开发者工具模拟器是否为 `390x844` 或 `430x932`；若当前模拟器尺寸不匹配，会给出明确失败信息，并在尺寸断言前保留诊断截图，便于调整模拟器后复跑。
 
 兼容旧命令：
 

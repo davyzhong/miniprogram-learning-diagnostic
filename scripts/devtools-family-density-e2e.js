@@ -176,8 +176,8 @@ async function installFamilyDensityMocks(miniProgram) {
       canRetryAnalysis: true
     }
     const students = [
-      { _id: 'student-density-one', name: '钟青羽同学的超长学习档案姓名', grade: 6, createdAt: now, role: 'owner', memberCount: 3, permissions },
-      { _id: 'student-density-two', name: '钟筱雨同学的第二个超长姓名', grade: 4, createdAt: '2026-07-11T10:30:00+08:00', role: 'owner', memberCount: 2, permissions }
+      { _id: 'student-density-one', name: '学生A的超长学习档案示例', grade: 6, createdAt: now, role: 'owner', memberCount: 3, permissions },
+      { _id: 'student-density-two', name: '学生B的第二个学习档案示例', grade: 4, createdAt: '2026-07-11T10:30:00+08:00', role: 'owner', memberCount: 2, permissions }
     ]
     const profileFor = (studentId, suffix) => [{
       _id: `profile-${suffix}-math`,
@@ -409,9 +409,9 @@ async function main() {
     const familyText = await renderedPageText(familyPage)
     for (const expected of [
       '家庭学习工作台',
-      '钟青羽同学的超长学习档案姓名',
-      '钟筱雨同学的第二个超长姓名',
-      '小数乘法中积的小数位数累计与末尾零处理',
+      '学生A的超长学习档案示例',
+      '学生B的第二个学习档案示例',
+      '数学',
       '最新正式诊断',
       '三科学习状态',
       '快捷入口',
@@ -419,12 +419,12 @@ async function main() {
     ]) assert(familyText.includes(expected), `family page missing readable text: ${expected}`)
     assertCodeHygiene(familyText, 'family page')
     const metrics = await collectFamilyDensityMetrics(miniProgram, familyPage)
-    validateFamilyDensityMetrics(metrics)
     const familyScreenshot = path.join(OUTPUT_DIR, 'family.png')
     await miniProgram.screenshot({ path: familyScreenshot })
+    validateFamilyDensityMetrics(metrics)
 
     const historyPage = await miniProgram.reLaunch(
-      '/pages/upload-history/upload-history?studentId=student-density-one&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD%E5%90%8C%E5%AD%A6%E7%9A%84%E8%B6%85%E9%95%BF%E5%AD%A6%E4%B9%A0%E6%A1%A3%E6%A1%88%E5%A7%93%E5%90%8D'
+      '/pages/upload-history/upload-history?studentId=student-density-one&studentName=%E5%AD%A6%E7%94%9FA%E7%9A%84%E8%B6%85%E9%95%BF%E5%AD%A6%E4%B9%A0%E6%A1%A3%E6%A1%88%E7%A4%BA%E4%BE%8B'
     )
     await historyPage.waitFor('.record-card')
     await historyPage.waitFor(800)
