@@ -6,7 +6,12 @@ const {
   loadModule
 } = require('./helpers/cloud-function-harness')
 
-const { extractFineBottlenecks, extractPendingTargets, supersedeOldPapers } = require('../cloudfunctions/analyzePhotos/auto-verification')
+const {
+  extractFineBottlenecks,
+  extractPendingTargets,
+  extractChineseReviewTargets,
+  supersedeOldPapers
+} = require('../cloudfunctions/analyzePhotos/auto-verification')
 
 // ========== extractFineBottlenecks 单元测试 ==========
 
@@ -84,6 +89,20 @@ test('extractPendingTargets 返回 bottleneckId 数组', () => {
   }
   const targets = extractPendingTargets(profile)
   assert.deepEqual(targets, ['BN-1'])
+})
+
+test('extractChineseReviewTargets 保留每个未掌握的具体错项作为独立验证目标', () => {
+  const targets = extractChineseReviewTargets({
+    subject: 'chinese',
+    chineseReviewItems: [
+      { itemId: 'CHI-WORD-BIANLUN', targetText: '辩论', status: 'needs_review' },
+      { itemId: 'CHI-WORD-ZHENGLI', targetText: '整理', status: 'recurring' },
+      { itemId: 'CHI-WORD-TAOZUI', targetText: '陶醉', status: 'mastered' },
+      { itemId: 'CHI-WORD-BIANLUN', targetText: '辩论', status: 'needs_review' }
+    ]
+  })
+
+  assert.deepEqual(targets, ['CHI-WORD-BIANLUN', 'CHI-WORD-ZHENGLI'])
 })
 
 test('chunkTargets batches bottlenecks at BATCH_SIZE=5 to balance latency and timeout safety', () => {
