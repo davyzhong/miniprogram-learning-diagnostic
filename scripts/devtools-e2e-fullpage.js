@@ -19,6 +19,7 @@
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
+const { findRenderedInternalCodes } = require('./devtools-family-density-e2e')
 
 function loadAutomator() {
   try { return require('miniprogram-automator') }
@@ -449,6 +450,17 @@ async function runPageAssertion(spec, miniProgram) {
         entry.assertions.push({ name: 'notText', fail: `不应出现: ${found.join(', ')}` })
       } else {
         entry.assertions.push({ name: 'notText', ok: `${spec.expect.notText.length} 项全部未出现` })
+      }
+    }
+
+    // 首页与学习记录是内部标识最容易随聚合数据回流的两个核心入口。
+    if (spec.route === '/pages/index/index' || spec.route.startsWith('/pages/upload-history/upload-history')) {
+      const text = await pageText(page)
+      const leaks = findRenderedInternalCodes(text)
+      if (leaks.length) {
+        entry.assertions.push({ name: 'internalCodeHygiene', fail: `渲染了内部标识: ${leaks.join(', ')}` })
+      } else {
+        entry.assertions.push({ name: 'internalCodeHygiene', ok: true })
       }
     }
 
