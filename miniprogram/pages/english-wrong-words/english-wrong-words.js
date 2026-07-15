@@ -91,7 +91,8 @@ Page({
     totalWords: 0,
     summaryCards: [],
     groups: [],
-    weakWords: []
+    weakWords: [],
+    confusionCount: 0
   },
 
   onLoad(options = {}) {
@@ -112,12 +113,16 @@ Page({
     try {
       const result = await cloud.getEnglishVocabularySummary(this.data.studentId)
       const summary = result.summary || {}
+      const confusion = typeof cloud.getEnglishConfusionPractice === 'function'
+        ? await cloud.getEnglishConfusionPractice(this.data.studentId)
+        : { items: [] }
       this.setData({
         loading: false,
         totalWords: countOf(summary.totalWords),
         summaryCards: buildSummaryCards(summary),
         groups: buildGroups(summary),
-        weakWords: (result.weakWords || []).map(normalizeWeakWord)
+        weakWords: (result.weakWords || []).map(normalizeWeakWord),
+        confusionCount: (confusion.items || []).length
       })
     } catch (error) {
       console.error('错词本加载失败', error)
@@ -142,6 +147,11 @@ Page({
     wx.navigateTo({
       url: `/pages/english-dictation/english-dictation?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&grade=${grade || ''}`
     })
+  },
+
+  onConfusionTap() {
+    if (!this.data.confusionCount) return
+    wx.navigateTo({ url: `/pages/english-confusion/english-confusion?studentId=${this.data.studentId}` })
   },
 
   onBack() {

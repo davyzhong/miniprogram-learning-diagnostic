@@ -816,6 +816,24 @@ async function joinStudentStates() {
   ]
 }
 
+async function chineseReviewDetailStates() {
+  const modulePath = 'miniprogram/pages/chinese-review-detail/chinese-review-detail.js'
+  const normal = await runController(modulePath, { getSubjectProfile: async () => ({ chineseReviewItems: [{ itemId: 'safe-item', targetText: '辩论', lastWrongAnswer: '辨论', mistakeType: '形近字混淆', sourceContext: '看拼音写词语', status: 'needs_review' }] }) }, async page => { page.onLoad({ studentId: 'student-1', reviewItemId: 'safe-item' }); await page.loadDetail({ studentId: 'student-1', reviewItemId: 'safe-item' }) })
+  return [state('normal', normal), state('loading', { ...normal, loading: true }), state('empty', normal), state('legacy-id-only', normal), state('error', normal)]
+}
+
+async function chineseSkillTaskStates() {
+  const modulePath = 'miniprogram/pages/chinese-skill-task/chinese-skill-task.js'
+  const normal = await runController(modulePath, { getChineseSkillTask: async () => ({ task: { id: 'safe', title: '回原文找依据', method: '先圈出依据。', prompt: '哪一句能说明原因？' } }) }, async page => { page.onLoad({ studentId: 'student-1' }); await page.loadTask({ studentId: 'student-1' }) })
+  return [state('normal', normal), state('loading', { ...normal, loading: true }), state('empty', { ...normal, task: null }), state('legacy-id-only', normal), state('error', { ...normal, task: null })]
+}
+
+async function englishConfusionStates() {
+  const modulePath = 'miniprogram/pages/english-confusion/english-confusion.js'
+  const normal = await runController(modulePath, { getEnglishConfusionPractice: async () => ({ items: [{ relationId: 'safe', words: ['there', 'their'], explanation: '分别表示不同含义。', prompt: 'This is ___ classroom.', answer: 'their' }] }) }, async page => { await page.onLoad({ studentId: 'student-1' }) })
+  return [state('normal', normal), state('loading', { ...normal, loading: true }), state('empty', { ...normal, items: [] }), state('legacy-id-only', normal), state('error', { ...normal, items: [] })]
+}
+
 const RAW_PAGE_AUDIT_REGISTRY = {
   'pages/index/index': presenterAdapter('miniprogram/pages/index/index-presenter.js', indexStates, true),
   'pages/student-profile/student-profile': presenterAdapter('miniprogram/pages/index/index-presenter.js', studentProfileStates, true),
@@ -833,6 +851,9 @@ const RAW_PAGE_AUDIT_REGISTRY = {
   'pages/english-practice/english-practice': controllerAdapter('miniprogram/pages/english-practice/english-practice.js', englishPracticeStates),
   'pages/english-dictation/english-dictation': controllerAdapter('miniprogram/pages/english-dictation/english-dictation.js', () => englishSessionStates('miniprogram/pages/english-dictation/english-dictation.js', 'generateSession', 'generateEnglishPaperDictationSession')),
   'pages/english-wrong-words/english-wrong-words': controllerAdapter('miniprogram/pages/english-wrong-words/english-wrong-words.js', wrongWordsStates),
+  'pages/english-confusion/english-confusion': controllerAdapter('miniprogram/pages/english-confusion/english-confusion.js', englishConfusionStates),
+  'pages/chinese-review-detail/chinese-review-detail': controllerAdapter('miniprogram/pages/chinese-review-detail/chinese-review-detail.js', chineseReviewDetailStates),
+  'pages/chinese-skill-task/chinese-skill-task': controllerAdapter('miniprogram/pages/chinese-skill-task/chinese-skill-task.js', chineseSkillTaskStates),
   'pages/learning-resource/learning-resource': presenterAdapter('miniprogram/pages/learning-resource/learning-resource-presenter.js', learningResourceStates, true),
   'pages/generate-verification/generate-verification': controllerAdapter('miniprogram/pages/generate-verification/generate-verification.js', generateVerificationStates),
   'pages/default-paper/default-paper': controllerAdapter('miniprogram/pages/default-paper/default-paper.js', defaultPaperStates),

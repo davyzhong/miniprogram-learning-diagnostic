@@ -20,7 +20,7 @@ function registeredPages() {
 
 test('all registered pages adopt the shared B+ page and content primitives', () => {
   const pages = registeredPages()
-  assert.equal(pages.length, 21)
+  assert.equal(pages.length, 24)
 
   for (const page of pages) {
     const wxml = read(`${page}.wxml`)

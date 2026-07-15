@@ -35,6 +35,18 @@
       "pages": ["english-wrong-words"]
     },
     {
+      "root": "pages/chinese-review-detail",
+      "pages": ["chinese-review-detail"]
+    },
+    {
+      "root": "pages/english-confusion",
+      "pages": ["english-confusion"]
+    },
+    {
+      "root": "pages/chinese-skill-task",
+      "pages": ["chinese-skill-task"]
+    },
+    {
       "root": "pages/learning-resource",
       "pages": ["learning-resource"]
     },

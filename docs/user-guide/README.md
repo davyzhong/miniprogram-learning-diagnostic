@@ -38,3 +38,16 @@
 | 家长管理 | 想邀请另一位家长共同查看学习资料。 |
 
 完整操作说明请回到项目 [README](../../README.md) 的“图文使用说明书”。
+
+## 语文和英语的今日任务
+
+<p align="center">
+  <img src="images/09-chinese-workbench.png" alt="语文工作台脱敏截图" width="180" />
+  <img src="images/10-chinese-review-detail.png" alt="语文错项详情脱敏截图" width="180" />
+  <img src="images/11-chinese-skill-task.png" alt="语文微任务脱敏截图" width="180" />
+  <img src="images/12-english-workbench.png" alt="英语工作台脱敏截图" width="180" />
+  <img src="images/13-english-confusion.png" alt="英语易混词巩固脱敏截图" width="180" />
+  <img src="images/14-english-wrong-words.png" alt="英语错词本脱敏截图" width="180" />
+</p>
+
+语文先复测真实写错的字词，再在没有待复测错项时完成短小的阅读表达任务。英语把“会认”和“会拼”分开安排，易混词辨析只是辅助巩固，不会替代听写或认词记录。

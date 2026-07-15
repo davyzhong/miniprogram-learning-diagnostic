@@ -4,7 +4,7 @@ const { findRenderedInternalCodes } = require('./devtools-family-density-e2e')
 
 const PROJECT_PATH = path.resolve(__dirname, '..')
 const CLI_PATH = process.env.WECHAT_DEVTOOLS_CLI || '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
-const SCREENSHOT_PATH = path.join(PROJECT_PATH, 'tmp', 'e2e', 'upload-history-layout', 'learning-record-timeline-narrow.png')
+const SCREENSHOT_PATH = '/tmp/learning-record-timeline-narrow.png'
 const MAX_NARROW_WIDTH = 430
 const MAX_CARD_HEIGHT = 420
 const MAX_EVIDENCE_HEIGHT = 80
@@ -80,7 +80,7 @@ function loadAutomator() {
 
 async function installTimelineMocks(miniProgram) {
   await miniProgram.evaluate(() => {
-    const paperCode = '数学-20260712-999'
+    const paperCode = '超长学科学习验证试卷号-20260712-999'
     const imageFiles = Array.from({ length: 5 }, (_, index) => ({
       fileID: `cloud://layout/evidence-${index + 1}.jpg`,
       fileName: `第${index + 1}页数学验证作答.jpg`,
@@ -174,7 +174,7 @@ async function main() {
     await page.waitFor('.record-verification-paper')
     await page.waitFor(800)
     const text = await (await page.$('.page')).text()
-    if (!text.includes('数学-20260712-999')) {
+    if (!text.includes('超长学科学习验证试卷号-20260712-999')) {
       throw new Error('long readable paper code did not render')
     }
     if (!text.includes('还有 2 张证据')) throw new Error('remaining evidence count did not render')

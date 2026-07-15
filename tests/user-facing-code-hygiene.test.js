@@ -64,7 +64,7 @@ function visibleWxmlBindings(source) {
 
 test('page audit registry exactly matches every main and subpackage manifest page', () => {
   assert.deepEqual(Object.keys(PAGE_AUDIT_REGISTRY).sort(), registeredPages().sort())
-  assert.equal(registeredPages().length, 21)
+  assert.equal(registeredPages().length, 24)
 })
 
 test('registered page sources do not use internal IDs as visible fallbacks', () => {

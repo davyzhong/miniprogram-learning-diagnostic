@@ -261,7 +261,7 @@ const scenarios = [
 // === 事件驱动等待 ===
 
 /**
- * waitUntilReady：轮询页面就绪谓词，而非固定等待。
+ * waitUntilPageReady：轮询页面就绪谓词，而非固定等待。
  *
  * 就绪条件（全部满足）：
  *   1. .page 根节点存在（DOM 已挂载）
@@ -271,7 +271,7 @@ const scenarios = [
  *
  * 返回 { ok, elapsedMs, failureReason }
  */
-async function waitUntilReady(page, spec, options = {}) {
+async function waitUntilPageReady(page, spec, options = {}) {
   const timeout = options.timeout || 15000
   const interval = options.interval || 200
   const deadline = Date.now() + timeout
@@ -304,6 +304,11 @@ async function waitUntilReady(page, spec, options = {}) {
   }
 
   return { ok: false, elapsedMs: timeout, failureReason: lastReason }
+}
+
+// Keep the focused timing helper name available for older performance checks.
+async function waitUntilReady(page, spec, options = {}) {
+  return waitUntilPageReady(page, spec, options)
 }
 
 // === 工具 ===
@@ -361,6 +366,9 @@ async function installCloudMocks(miniProgram) {
     try { wx.onError && wx.onError(e => globalThis.__pageErrors.push(String(e))) } catch {}
 
     wx.cloud.callFunction = async ({ name, data }) => {
+      const stats = globalThis.__e2eCloudStats || (globalThis.__e2eCloudStats = { count: 0, payloadBytes: 0 })
+      stats.count += 1
+      stats.payloadBytes += JSON.stringify(data || {}).length
       try {
         if (name === 'studentAccess') {
           if (data.action === 'getAccessibleStudents') return { result: { success: true, students: [{ ...student, role: 'owner', permissions }, { ...student2, role: 'owner', permissions }] } }
@@ -416,23 +424,31 @@ async function runPageAssertion(spec, miniProgram) {
   const t0 = Date.now()
   let tNavigation = 0
   try {
+    await miniProgram.evaluate(() => { globalThis.__e2eCloudStats = { count: 0, payloadBytes: 0 } })
     const page = await miniProgram.reLaunch(spec.route)
     tNavigation = Date.now() - t0
 
     // 事件驱动等待：轮询就绪条件，而非固定 1500ms
-    const ready = await waitUntilReady(page, spec)
+    const ready = await waitUntilPageReady(page, spec)
     const tReady = Date.now() - t0
     entry.navigationMs = tNavigation
     entry.readyMs = tReady - tNavigation
+    const cloudStats = await miniProgram.evaluate(() => globalThis.__e2eCloudStats || { count: 0, payloadBytes: 0 })
+    entry.cloudCallCount = cloudStats.count
+    entry.cloudPayloadBytes = cloudStats.payloadBytes
+    entry.maxCloudCalls = spec.maxCloudCalls || 8
+    if (entry.cloudCallCount > entry.maxCloudCalls) {
+      entry.assertions.push({ name: 'cloudCalls', fail: `${entry.cloudCallCount} 次调用超过 ${entry.maxCloudCalls}` })
+    }
 
-    // 1. 根节点存在（waitUntilReady 已验证，但保留断言记录）
+    // 1. 根节点存在（waitUntilPageReady 已验证，但保留断言记录）
     if (!ready.ok && ready.failureReason && ready.failureReason.startsWith('root missing')) {
       entry.assertions.push({ name: 'rootCheck', fail: ready.failureReason })
     } else {
       entry.assertions.push({ name: 'rootCheck', ok: true })
     }
 
-    // 2. 期望文本（waitUntilReady 已验证）
+    // 2. 期望文本（waitUntilPageReady 已验证）
     if (spec.expect.text && spec.expect.text.length) {
       if (!ready.ok && ready.failureReason && ready.failureReason.startsWith('missing text')) {
         const text = await pageText(page)

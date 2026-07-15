@@ -6,6 +6,8 @@ function cleanText(value, maxLength = 120) {
     .slice(0, maxLength);
 }
 
+const { familyFor } = require('./chinese-confusion-families');
+
 function unique(values = []) {
   return Array.from(new Set((values || []).filter(Boolean)));
 }
@@ -54,6 +56,7 @@ function normalizeReviewItem(item = {}) {
   const targetText = cleanText(item.targetText || item.expectedAnswer, 120);
   const expectedAnswer = cleanText(item.expectedAnswer || item.targetText, 160);
   if (!targetText && !expectedAnswer) return null;
+  const family = familyFor(targetText);
   return {
     itemId: cleanText(item.itemId || item.id, 100),
     itemType: cleanText(item.itemType || item.type || 'word', 40),
@@ -67,6 +70,7 @@ function normalizeReviewItem(item = {}) {
     reviewPassCount: Math.max(0, Number(item.reviewPassCount) || 0),
     reviewFailCount: Math.max(0, Number(item.reviewFailCount) || 0),
     status: cleanText(item.status || 'needs_review', 40),
+    familyHint: family && family.hint || '',
     ...chineseReviewPolicy(item)
   };
 }
@@ -109,7 +113,9 @@ function buildChineseReviewPromptBlock(targets = []) {
     const methods = item.verificationMethods && item.verificationMethods.length > 0
       ? item.verificationMethods.join('、')
       : '听写、看拼音写词语、语境填空';
-    const extension = item.allowTransfer ? `允许扩展=${item.extensionFamily}` : '本轮只做原项复测';
+    const extension = item.allowTransfer
+      ? `允许扩展=${item.extensionFamily}${item.familyHint ? `；辨析提示=${item.familyHint}` : ''}`
+      : '本轮只做原项复测';
     return `${index + 1}. itemId=${item.itemId || ''}；类型=${item.itemType}；targetText=${item.targetText}；正确答案=${item.expectedAnswer}；上次错答=${item.lastWrongAnswer || '未记录'}；原题语境=${item.sourceContext || '未记录'}；错误类型=${item.mistakeType || '待判断'}；当前阶段=${item.reviewStageText}；原项方式=${item.directMethod}；${extension}；建议复测=${methods}`;
   }).join('\n');
 

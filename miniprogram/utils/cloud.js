@@ -333,6 +333,9 @@ async function getSubjectDashboard(studentId, subject, options = {}) {
   return callFunction('studentData', { action: 'getSubjectDashboard', studentId, subject, ...options })
 }
 
+async function getChineseSkillTask(studentId) { return callFunction('studentData', { action: 'getChineseSkillTask', studentId }) }
+async function submitChineseSkillTask(payload = {}) { return callFunction('studentData', { action: 'submitChineseSkillTask', ...payload }) }
+
 async function getLearningTimeline({ studentId, subject, limit, cursor } = {}) {
   return callFunction('studentData', { action: 'getLearningTimeline', studentId, subject, limit, cursor })
 }
@@ -414,6 +417,14 @@ async function setBetaAuth(consented) {
 
 async function getEnglishVocabularySummary(studentId, today = '') {
   return callFunction('englishVocabulary', { action: 'getVocabularySummary', studentId, today })
+}
+
+async function getEnglishTodayPlan(studentId, today = '') {
+  return callFunction('englishVocabulary', { action: 'getTodayPlan', studentId, today })
+}
+
+async function getEnglishConfusionPractice(studentId) {
+  return callFunction('englishVocabulary', { action: 'getConfusionPractice', studentId })
 }
 
 async function createEnglishImportBatch(payload = {}) {
@@ -498,6 +509,8 @@ module.exports = {
   getStudentDashboard,
   getHomeDashboard,
   getSubjectDashboard,
+  getChineseSkillTask,
+  submitChineseSkillTask,
   getLearningTimeline,
   cleanupStaleLearningRecords,
   getReportDetail,
@@ -517,6 +530,8 @@ module.exports = {
   getBetaAuth,
   setBetaAuth,
   getEnglishVocabularySummary,
+  getEnglishTodayPlan,
+  getEnglishConfusionPractice,
   createEnglishImportBatch,
   confirmEnglishImportBatch,
   seedEnglishPersonalVocabulary,

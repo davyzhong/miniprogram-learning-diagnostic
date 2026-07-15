@@ -1,0 +1,1 @@
+.page{padding:32rpx;background:#f7f9fd;min-height:100vh}.title,.hint,.prompt{display:block;margin:20rpx 0}.title{font-size:42rpx;font-weight:700}.hint{color:#51627d;line-height:1.6}.prompt{font-size:32rpx}.choices button{margin:12rpx 0}.selected{border:2rpx solid #2166d1}

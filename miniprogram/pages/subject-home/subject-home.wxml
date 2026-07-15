@@ -11,7 +11,7 @@
           </view>
         </view>
         <text class="workbench-summary">{{primaryTask.summary}}</text>
-        <view class="primary-action" wx:if="{{subject !== 'english'}}" bindtap="onPrimaryAction">
+        <view class="primary-action" bindtap="onPrimaryAction">
           <text>{{primaryTask.actionText}}</text>
           <text class="primary-arrow">›</text>
         </view>
@@ -119,7 +119,7 @@
       <text>待复测错项</text>
     </view>
     <view class="surface">
-      <view class="task-row chinese-review-row" wx:for="{{chineseReviewQueue}}" wx:key="viewId">
+      <view class="task-row chinese-review-row" wx:for="{{chineseReviewQueue}}" wx:key="viewId" bindtap="onChineseReviewTap" data-review-item-id="{{item.reviewItemId}}">
         <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
         <view class="row-copy">
           <view class="row-title-line">

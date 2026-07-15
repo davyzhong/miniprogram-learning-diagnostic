@@ -20,6 +20,7 @@ const {
   dateOnly
 } = require('./english-vocabulary')
 const { createEnglishVisionActions } = require('./vision-analysis')
+const { createLearningViews } = require('./learning-views')
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
@@ -31,6 +32,7 @@ const VISION_MODEL_ID = 'qwen3.5-plus';
 
 const ACTIONS = new Set([
   'createImportBatch', 'confirmImportBatch', 'seedPersonalVocabulary', 'getVocabularySummary', 'listWords',
+  'getTodayPlan', 'getConfusionPractice',
   'generateRecognitionSession', 'submitRecognitionAttempt', 'generatePaperDictationSession',
   'submitDictationPhoto', 'analyzeDictationPhoto', 'generatePracticeSession',
   'submitDictationAttempt', 'submitPracticeResult'
@@ -43,6 +45,8 @@ function ok(data = {}) {
 function fail(error) {
   return { success: false, error }
 }
+
+const { getTodayPlan, getConfusionPractice, listWords } = createLearningViews({ getCollectionData, ok })
 
 function nowDate() {
   return db.serverDate ? db.serverDate() : new Date()
@@ -461,16 +465,6 @@ async function getVocabularySummaryAction(event) {
   return ok(payload)
 }
 
-async function listWords(event) {
-  const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
-  const status = cleanText(event.masteryStatus, 40)
-  const unit = cleanText(event.unit, 40)
-  const filtered = words
-    .filter(item => !status || (item.masteryStatus || 'untested') === status)
-    .filter(item => !unit || item.unit === unit)
-  return ok({ words: filtered })
-}
-
 async function generatePracticeSession(event, openId) {
   const words = await getCollectionData('studentEnglishWords', { studentId: event.studentId })
   const wordItems = buildDictationItems(words, {
@@ -772,11 +766,13 @@ exports.main = async (event = {}) => {
   if (!studentId) return fail('缺少 studentId')
 
   try {
-    const write = !['getVocabularySummary', 'listWords'].includes(action)
+    const write = !['getVocabularySummary', 'listWords', 'getTodayPlan', 'getConfusionPractice'].includes(action)
     const auth = await authorize(studentId, write)
     if (!auth.allowed) return fail('无权执行该操作')
 
     if (action === 'createImportBatch') return createImportBatch(event, auth.openId)
+    if (action === 'getTodayPlan') return getTodayPlan(event)
+    if (action === 'getConfusionPractice') return getConfusionPractice(event)
     if (action === 'confirmImportBatch') return confirmImportBatch(event, auth.openId)
     if (action === 'seedPersonalVocabulary') return seedPersonalVocabulary(event, auth.openId)
     if (action === 'getVocabularySummary') return getVocabularySummaryAction(event)

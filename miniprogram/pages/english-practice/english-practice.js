@@ -73,6 +73,7 @@ Page({
     studentId: '',
     studentName: '',
     grade: '',
+    wordLimit: 20,
     loading: false,
     submitting: false,
     error: '',
@@ -98,7 +99,8 @@ Page({
     this.setData({
       studentId: options.studentId || '',
       studentName: decodeURIComponent(options.studentName || ''),
-      grade: options.grade || ''
+      grade: options.grade || '',
+      wordLimit: Math.min(20, Math.max(5, Number(options.wordLimit) || 20))
     })
     this.initVoice()
     this._loadPromise = this.generateSession().catch(error => {
@@ -152,7 +154,7 @@ Page({
     try {
       const result = await cloud.generateEnglishRecognitionSession({
         studentId: this.data.studentId,
-        wordLimit: 20,
+        wordLimit: this.data.wordLimit,
         dimension: 'familiarity'
       })
       const queue = (result.wordItems || []).map(withDisplayFields)
