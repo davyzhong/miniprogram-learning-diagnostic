@@ -96,7 +96,7 @@ function severityBadgeClass(severity) {
  * 趋势图标
  */
 function trendIcon(trend) {
-  const map = { 'up': '↑', 'stable': '→', 'down': '↓', 'new': '★' }
+  const map = { 'up': '↑', 'stable': '→', 'down': '↓', 'new': '新' }
   return map[trend] || '→'
 }
 

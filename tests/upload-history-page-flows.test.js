@@ -743,7 +743,7 @@ test('learning record screenshot fixture keeps a dense verification paper readab
   }
   const visibleText = JSON.stringify([paperVisibleModel, reportVisibleModel])
 
-  assert.equal(paperEvent.icon, '🧪')
+  assert.equal(paperEvent.icon, '验')
   assert.equal(paperEvent.paperCode, '数学-20260712-06')
   assert.equal(paperEvent.showPaperCode, true)
   assert.match(paperEvent.summary, /覆盖 36 个数学学习卡点/)

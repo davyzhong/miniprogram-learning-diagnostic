@@ -80,10 +80,10 @@ function subjectLabelList(subjects) {
 
 // 知识地图卡片：4 领域 + 进度可视化
 const DOMAIN_META = [
-  { key: '数与代数', icon: '🔢', short: '数与代数' },
-  { key: '图形与几何', icon: '📐', short: '图形几何' },
-  { key: '统计与概率', icon: '📊', short: '统计概率' },
-  { key: '综合与实践', icon: '🔧', short: '综合实践' },
+  { key: '数与代数', icon: '数', short: '数与代数' },
+  { key: '图形与几何', icon: '数', short: '图形几何' },
+  { key: '统计与概率', icon: '析', short: '统计概率' },
+  { key: '综合与实践', icon: '用', short: '综合实践' },
 ]
 
 function buildKnowledgeMapCard(subjects = [], bottleneckStats = {}) {
@@ -335,7 +335,7 @@ function buildDiagnosisWorkbenches(input, profileBySubject, subjectByKey, format
         persistingCount,
         waitingCount,
         trendText,
-        trendIcon: improvedCount > 0 ? '📉' : (persistingCount > 0 ? '📍' : '📊'),
+        trendIcon: improvedCount > 0 ? '降' : (persistingCount > 0 ? '标' : '析'),
         reportId: report._id,
         reportUrl: buildTraceableUrl({ type: 'report-detail', id: report._id }),
         primaryAction: buildDiagnosisPrimaryAction(student, subject, report, profile, input.papers || []),

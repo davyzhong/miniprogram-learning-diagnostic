@@ -52,6 +52,20 @@ test('global B+ primitives and semantic icon map stay asset-free', () => {
   assert.match(icons, /NEXT_ACTION/)
 })
 
+test('mini program UI does not depend on system emoji glyphs', () => {
+  const files = fs.readdirSync(path.join(ROOT, 'miniprogram'), { recursive: true })
+    .filter(file => /\.(?:js|wxml|wxss)$/.test(file))
+
+  for (const relativePath of files) {
+    const source = read(path.join('miniprogram', relativePath))
+    assert.doesNotMatch(
+      source,
+      /[\u{1F000}-\u{1FAFF}\u{1FC00}-\u{1FFFD}]/u,
+      `${relativePath} should use compatible text or CSS visuals instead of emoji`
+    )
+  }
+})
+
 test('critical compact icon controls keep a text label', () => {
   for (const page of registeredPages()) {
     const wxml = read(`${page}.wxml`)

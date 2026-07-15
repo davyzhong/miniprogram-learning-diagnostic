@@ -101,7 +101,7 @@ test('trendIcon picks the matching arrow and defaults to stable', () => {
   assert.equal(trendIcon('up'), '↑')
   assert.equal(trendIcon('stable'), '→')
   assert.equal(trendIcon('down'), '↓')
-  assert.equal(trendIcon('new'), '★')
+  assert.equal(trendIcon('new'), '新')
   assert.equal(trendIcon('unknown'), '→')
   assert.equal(trendIcon(undefined), '→')
 })
