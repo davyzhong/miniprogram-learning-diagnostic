@@ -1,7 +1,7 @@
 # Product Documentation
 
 > Scope: product and implementation-facing documents for the Learning Diagnostic WeChat Mini Program.  
-> Updated: 2026-06-20
+> Updated: 2026-07-15
 
 This directory contains the curated product documents that are directly useful for building, maintaining, testing, and extending the mini program.
 
@@ -15,6 +15,17 @@ This directory contains the curated product documents that are directly useful f
 6. [Architecture](../ARCHITECTURE.md)
 7. [Data Dictionary](../DATA_DICTIONARY.md)
 8. [Subject Design Index](../subject-design/README.md)
+9. [Visual User Guide](../user-guide/README.md)
+
+## Product Screens
+
+<p align="center">
+  <img src="../user-guide/images/01-family-workbench.png" alt="脱敏家庭学习工作台" width="220" />
+  <img src="../user-guide/images/04-report.png" alt="脱敏诊断报告" width="220" />
+  <img src="../user-guide/images/07-learning-records.png" alt="脱敏学习记录" width="220" />
+</p>
+
+当前产品以“正式诊断报告 → 验证试卷 → 作答反馈 → 学习记录”为主线。家庭工作台优先显示每个孩子的最新正式诊断和行动，验证卷编号使用可读的“学科 + 日期 + 序号”，内部数据编码不面向家长展示。
 
 ## Document Boundary
 
