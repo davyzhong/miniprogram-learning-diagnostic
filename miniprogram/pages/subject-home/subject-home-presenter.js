@@ -23,6 +23,20 @@ const CHINESE_REVIEW_STATUS_WEIGHT = {
   reviewing: 60,
   pending: 50
 }
+const CHINESE_REVIEW_STAGE_TEXT = {
+  initial: '原项复测',
+  reinforce: '巩固复测',
+  consolidate: '迁移观察'
+}
+const CHINESE_DIRECT_METHOD_TEXT = {
+  dictation: '听写',
+  pinyin_to_word: '看拼音写词语',
+  context_fill: '语境填空',
+  character_to_pinyin: '给汉字注音',
+  pronunciation_choice: '读音辨析',
+  poem_fill: '补写原句',
+  idiom_fill: '补全成语'
+}
 
 function normalizeWeight(item = {}) {
   if (item.weight !== undefined && item.weight !== null) return item.weight
@@ -45,7 +59,14 @@ function chineseReviewTitleOf(item = {}) {
 }
 
 function buildChineseReviewDetail(item = {}) {
+  const passed = Math.max(0, Number(item.reviewPassCount) || 0)
+  const stage = item.status === 'recurring' || Number(item.reviewFailCount) > 0
+    ? 'initial'
+    : (passed >= 2 ? 'consolidate' : (passed >= 1 ? 'reinforce' : 'initial'))
+  const directMethod = CHINESE_DIRECT_METHOD_TEXT[item.directMethod]
+    || (stage === 'initial' ? '原项听写' : '原项复测')
   const parts = [
+    `${CHINESE_REVIEW_STAGE_TEXT[stage]} · ${directMethod}`,
     item.lastWrongAnswer || item.studentAnswer ? `上次写成：${item.lastWrongAnswer || item.studentAnswer}` : '',
     item.sourceContext ? `语境：${item.sourceContext}` : '',
     item.evidenceCount ? `${item.evidenceCount} 次证据` : ''
@@ -66,6 +87,11 @@ function buildChineseReviewQueue(profile = {}) {
         displayName,
         typeText: CHINESE_REVIEW_TYPE_LABELS[item.itemType] || cleanText(item.itemType) || '语文错项',
         detailText: buildChineseReviewDetail(item),
+        reviewStageText: CHINESE_REVIEW_STAGE_TEXT[
+          item.status === 'recurring' || Number(item.reviewFailCount) > 0
+            ? 'initial'
+            : (Number(item.reviewPassCount) >= 2 ? 'consolidate' : (Number(item.reviewPassCount) >= 1 ? 'reinforce' : 'initial'))
+        ],
         statusText: status === 'recurring' ? '反复出现' : (status === 'reviewing' ? '复测中' : '待复测'),
         statusClass: status === 'recurring' ? 'persisting' : 'pending',
         statusIcon: status === 'recurring' ? '!' : '?',

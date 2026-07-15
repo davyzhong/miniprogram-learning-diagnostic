@@ -45,6 +45,24 @@
     </view>
   </view>
 
+  <view class="chinese-review-card card" wx:if="{{hasChineseReviewCoverage}}">
+    <view class="section-title-row">
+      <text class="section-title">🈶 语文原项复测</text>
+      <text class="section-action">先原项，后举一反三</text>
+    </view>
+    <view class="chinese-review-paper-row" wx:for="{{chineseReviewCoverage}}" wx:key="viewId">
+      <view class="chinese-review-paper-main">
+        <view class="chinese-review-paper-title">
+          <text class="chinese-target-name">{{item.title}}</text>
+          <text class="chinese-stage-tag">{{item.stageText}}</text>
+        </view>
+        <text class="chinese-review-paper-desc">{{item.methodText}} · {{item.directText}}<text wx:if="{{item.transferText}}"> · {{item.transferText}}</text></text>
+        <text class="chinese-extension-text" wx:if="{{item.extensionText}}">{{item.extensionText}}</text>
+      </view>
+      <text class="chinese-feedback chinese-feedback-{{item.feedbackClass}}">{{item.feedbackText}}</text>
+    </view>
+  </view>
+
   <view class="coverage-card card traceable-block" wx:if="{{bottleneckHierarchy.hasHierarchy}}" bindtap="onTraceableUrlTap" data-url="{{bottleneckCenterUrl}}">
     <view class="section-title-row">
       <text class="section-title">🧩 覆盖卡点</text>

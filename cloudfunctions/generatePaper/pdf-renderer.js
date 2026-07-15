@@ -196,10 +196,17 @@ function drawColumnGroupLabel(doc, groupName, qCount, confidenceLabel, y, x, col
 const COLUMN_GAP = 16;
 const COLUMN_WIDTH = (PAGE.contentWidth - COLUMN_GAP) / 2; // 每栏宽度 ≈ 253pt
 
+function questionText(question = {}) {
+  const roleLabel = question.questionRole === 'direct_review'
+    ? '【原项复测】'
+    : (question.questionRole === 'similarity_transfer' ? '【举一反三】' : '');
+  return `${question.index || ''}. ${roleLabel}${question.content || ''}`;
+}
+
 function questionHeight(doc, question, colWidth) {
   doc.fontSize(11);
   const w = colWidth || COLUMN_WIDTH;
-  const fullText = `${question.index || ''}. ${question.content || ''}`;
+  const fullText = questionText(question);
   const contentHeight = doc.heightOfString(fullText, {
     width: w - 6,
     lineGap: 2,
@@ -214,7 +221,7 @@ function questionHeight(doc, question, colWidth) {
 function questionContentHeight(doc, question, colWidth) {
   doc.fontSize(11);
   const w = colWidth || COLUMN_WIDTH;
-  const fullText = `${question.index || ''}. ${question.content || ''}`;
+  const fullText = questionText(question);
   return doc.heightOfString(fullText, { width: w - 6, lineGap: 2 });
 }
 
@@ -223,7 +230,7 @@ function drawQuestion(doc, question, y, x, colWidth, alignContentHeight) {
   const left = x || PAGE.left;
 
   // 题号 + 题目内容合并一行：1. 计算 0.25 × 0.4 = ？
-  const fullText = `${question.index || ''}. ${question.content || ''}`;
+  const fullText = questionText(question);
   doc.fillColor(COLORS.text).fontSize(11)
     .text(fullText, left, y, {
       width: w - 4,

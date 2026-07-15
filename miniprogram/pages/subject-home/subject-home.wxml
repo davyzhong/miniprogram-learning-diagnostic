@@ -125,6 +125,7 @@
           <view class="row-title-line">
             <text class="row-title">{{item.displayName}}</text>
             <text class="review-type">{{item.typeText}}</text>
+            <text class="review-stage">{{item.reviewStageText}}</text>
           </view>
           <text class="row-desc">{{item.detailText}}</text>
         </view>

@@ -59,6 +59,58 @@ function buildQuestionPreview(questions = [], expanded = false, context = {}) {
   }))
 }
 
+const CHINESE_STAGE_TEXT = {
+  initial: '原项复测',
+  reinforce: '巩固复测',
+  consolidate: '迁移观察'
+}
+const CHINESE_METHOD_TEXT = {
+  dictation: '听写',
+  pinyin_to_word: '看拼音写词语',
+  context_fill: '语境填空',
+  character_to_pinyin: '给汉字注音',
+  pronunciation_choice: '读音辨析',
+  poem_fill: '补写原句',
+  idiom_fill: '补全成语'
+}
+
+function chineseFeedbackText(evidence = {}) {
+  if (!evidence || !evidence.evidenceStatus) return '等待作答反馈'
+  if (evidence.evidenceStatus === 'passed') return '本轮已通过'
+  if (evidence.evidenceStatus === 'failed') return '仍需复测'
+  if (evidence.evidenceStatus === 'unclear') return '图片不清晰，待确认'
+  return '作答证据不完整'
+}
+
+function buildChineseReviewCoverage(paper = {}, report = null) {
+  const targets = Array.isArray(paper.chineseReviewTargets) ? paper.chineseReviewTargets : []
+  if (targets.length === 0) return { hasChineseReviewCoverage: false, chineseReviewCoverage: [] }
+  const evidenceById = new Map((report && report.chineseReviewEvidence || [])
+    .filter(item => item && item.itemId)
+    .map(item => [item.itemId, item]))
+  const questions = Array.isArray(paper.questions) ? paper.questions : []
+  return {
+    hasChineseReviewCoverage: true,
+    chineseReviewCoverage: targets.map((target, index) => {
+      const targetQuestions = questions.filter(question => question.reviewItemId === target.itemId)
+      const directCount = targetQuestions.filter(question => question.questionRole === 'direct_review').length
+      const transferCount = targetQuestions.filter(question => question.questionRole === 'similarity_transfer').length
+      const evidence = evidenceById.get(target.itemId)
+      return {
+        viewId: target.itemId || `chinese-target-${index + 1}`,
+        title: sanitizeUserText(target.targetText || target.expectedAnswer || '语文错项', { noun: '语文错项' }),
+        stageText: target.reviewStageText || CHINESE_STAGE_TEXT[target.reviewStage] || '原项复测',
+        methodText: CHINESE_METHOD_TEXT[target.directMethod] || '原项复测',
+        extensionText: target.allowTransfer && target.extensionFamily ? `${target.extensionFamily}举一反三` : '',
+        directText: directCount > 0 ? `原项复测 ${directCount} 题` : '原项复测待生成',
+        transferText: transferCount > 0 ? `举一反三 ${transferCount} 题` : '',
+        feedbackText: chineseFeedbackText(evidence),
+        feedbackClass: evidence && evidence.evidenceStatus || 'waiting'
+      }
+    })
+  }
+}
+
 function buildWorkbenchStatus(report, options = {}) {
   if (!report) {
     if (options.pdfDownloaded) {
@@ -330,6 +382,7 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
   })
   const feedback = buildFeedback(latestReport, context)
   const taskPackView = buildTaskPackView(p, latestReport)
+  const chineseReviewCoverage = buildChineseReviewCoverage(p, latestReport)
   const reportUrl = latestReport && latestReport._id
     ? buildTraceableUrl({ type: 'report-detail', id: latestReport._id })
     : ''
@@ -380,6 +433,7 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
     ...primaryAction,
     ...secondaryAction,
     feedback,
+    ...chineseReviewCoverage,
     ...taskPackView,
     pdfReady: !!p.pdfFileId,
     pdfDownloaded,
@@ -394,6 +448,7 @@ module.exports = {
   buildBottleneckSummaries,
   buildPageSummary,
   buildQuestionPreview,
+  buildChineseReviewCoverage,
   buildWorkbenchStatus,
   buildLifecycleSteps,
   buildPrimaryAction,
