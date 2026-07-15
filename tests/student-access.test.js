@@ -46,6 +46,41 @@ test('getAccessibleStudents returns owned and joined active child profiles', asy
   assert.equal(joinedPermissions.canManageParents, false)
 })
 
+test('getAccessibleStudents batches multiple shared child reads', async () => {
+  const db = createDatabase({
+    students: [
+      { _id: 'owned-1', _openid: 'owner-1', name: '自有一', createdAt: '2026-06-04T00:00:00Z' },
+      { _id: 'owned-2', _openid: 'owner-1', name: '自有二', createdAt: '2026-06-03T00:00:00Z' },
+      { _id: 'shared-1', _openid: 'owner-2', name: '共享一', createdAt: '2026-06-02T00:00:00Z' },
+      { _id: 'shared-2', _openid: 'owner-3', name: '共享二', createdAt: '2026-06-01T00:00:00Z' }
+    ],
+    studentMembers: [
+      { _id: 'member-1', studentId: 'shared-1', memberOpenId: 'owner-1', role: 'viewer', status: 'active' },
+      { _id: 'member-2', studentId: 'shared-2', memberOpenId: 'owner-1', role: 'viewer', status: 'active' }
+    ]
+  })
+  let studentDocReads = 0
+  const originalCollection = db.collection
+  db.collection = name => {
+    const collection = originalCollection(name)
+    if (name === 'students') {
+      const originalDoc = collection.doc
+      collection.doc = id => {
+        studentDocReads += 1
+        return originalDoc(id)
+      }
+    }
+    return collection
+  }
+  const handler = loadStudentAccess(db, 'owner-1')
+
+  const result = await handler.main({ action: 'getAccessibleStudents' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.students.length, 4)
+  assert.equal(studentDocReads, 0)
+})
+
 test('owner can list members and create an invite, viewer cannot', async () => {
   const db = createDatabase({
     students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],

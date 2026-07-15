@@ -144,6 +144,7 @@ wx.cloud.callFunction({
 
 | action | 必填参数 | 返回重点 |
 | --- | --- | --- |
+| `getHomeDashboard` | 无 | `children[]`；每个孩子仅含基础档案、role/permissions、三科摘要、最新有效报告摘要和最新试卷摘要，不返回题目、图片或原始 AI 明细 |
 | `getStudentDashboard` | `studentId` | student、subjectProfiles、latestReport、latestPaper、recentReports、recentPapers |
 | `getSubjectDashboard` | `studentId`, `subject` | student、profile、reports、papers |
 | `getLearningTimeline` | `studentId`；`subject` 可选 | reports、papers、englishSessions、learningResourcePacks（投影轻量字段，不含 items） |
@@ -1329,7 +1330,7 @@ AI 用量与成本估算账本、数据删除请求和内测授权。读操作�
 | action | 输入 | 输出 | 说明 |
 | --- | --- | --- | --- |
 | `listEvents` | `month?` (YYYY-MM) | `{ success, items, hasMore }` | 列出当前用户本月用量事件（最多 50 条，按 createdAt 倒序，按北京时间自然月过滤） |
-| `getSummary` | `month?` | `{ success, month, totalTokens, totalCostCny, callCount, studentCount, byEventType[], byModel[] }` | 聚合本月用量（按北京时间自然月过滤） |
+| `getSummary` | `month?` | `{ success, month, totalTokens, totalCostCny, callCount, eventCount, studentCount, byEventType[], byModel[], isComplete, aggregatedAt }` | 分页聚合本月全部用量（按北京时间自然月过滤） |
 | `createDeletionRequest` | `studentId?, scope, reason?` | `{ success, requestId }` | 发起数据删除请求（scope ∈ student_all/photos_only/usage_only） |
 | `getDeletionRequests` | — | `{ success, items[] }` | 查看自己的删除请求 |
 | `getBetaAuth` | — | `{ success, consented, consentedAt }` | 读取内测授权状态 |

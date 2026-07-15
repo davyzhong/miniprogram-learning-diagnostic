@@ -70,14 +70,14 @@ The current CLI timings contain fixed waits and are suitable for coarse regressi
 - Test: `tests/contracts.test.js`
 - Document: `docs/TESTING.md`
 
-- [ ] Add a test asserting that page timing waits for a page-specific ready predicate rather than an unconditional 1,500 ms delay.
-- [ ] Run `node --test tests/contracts.test.js` and verify the new assertion fails.
-- [ ] Add `waitUntilReady(page, spec)` that polls route identity, loading-state disappearance, expected text, and collected page errors with a bounded timeout.
-- [ ] Record separate `navigationMs`, `readyMs`, assertion time, cloud call count, cloud duration, and payload bytes.
-- [ ] Add `npm run perf:baseline` to run at least five cold and five warm samples and calculate P50/P90/P95.
-- [ ] Keep the existing 23 functional assertions unchanged.
-- [ ] Run `npm run test:e2e:core` and `npm run perf:baseline`; expect 23/23 functional passes and a new event-driven report.
-- [ ] Commit: `test: establish event-driven mini program performance baseline`.
+- [x] Add a test asserting that page timing waits for a page-specific ready predicate rather than an unconditional 1,500 ms delay.
+- [x] Run `node --test tests/contracts.test.js` and verify the new assertion fails.
+- [x] Add `waitUntilReady(page, spec)` that polls route identity, loading-state disappearance, expected text, and collected page errors with a bounded timeout.
+- [x] Record separate `navigationMs`, `readyMs`, assertion time, cloud call count, cloud duration, and payload bytes.
+- [x] Add `npm run perf:baseline` to run at least five cold and five warm samples and calculate P50/P90/P95.
+- [x] Keep the existing 23 functional assertions unchanged.
+- [x] Run `npm run test:e2e:core` and `npm run perf:baseline`; expect 23/23 functional passes and a new event-driven report.
+- [x] Commit: `test: establish event-driven mini program performance baseline`.
 
 ### Task 2: Fix AI Usage Aggregation Correctness
 
@@ -87,14 +87,14 @@ The current CLI timings contain fixed waits and are suitable for coarse regressi
 - Test: `tests/ai-usage-ledger.test.js`
 - Modify: `docs/CLOUD_FUNCTIONS.md`
 
-- [ ] Add a test with more than 500 monthly events and assert totals include every event.
-- [ ] Add a boundary test proving events outside the Beijing month are excluded.
-- [ ] Run `node --test tests/ai-usage-ledger.test.js`; expect the >500 test to fail.
-- [ ] Replace the single `.limit(500)` query with cursor pagination, or maintain a transactionally updated monthly aggregate document.
-- [ ] Return aggregation metadata: `isComplete`, `eventCount`, and `aggregatedAt`.
-- [ ] Add a reconciliation helper test comparing aggregate output with raw events.
-- [ ] Run `npm test`; expect 638 existing tests plus the new tests to pass.
-- [ ] Commit: `fix: make monthly AI usage totals complete`.
+- [x] Add a test with more than 500 monthly events and assert totals include every event.
+- [x] Add a boundary test proving events outside the Beijing month are excluded.
+- [x] Run `node --test tests/ai-usage-ledger.test.js`; expect the >500 test to fail.
+- [x] Replace the single `.limit(500)` query with cursor pagination, or maintain a transactionally updated monthly aggregate document.
+- [x] Return aggregation metadata: `isComplete`, `eventCount`, and `aggregatedAt`.
+- [x] Add a reconciliation helper test comparing aggregate output with raw events.
+- [x] Run `npm test`; expect 638 existing tests plus the new tests to pass.
+- [x] Commit: `fix: make monthly AI usage totals complete`.
 
 ### Task 3: Make English Attempt Writes Bounded and Atomic
 
@@ -105,15 +105,15 @@ The current CLI timings contain fixed waits and are suitable for coarse regressi
 - Test: `tests/english-vocabulary.test.js`
 - Modify: `docs/DATA_DICTIONARY.md`
 
-- [ ] Add a test proving recognition/dictation reads `studentEnglishWords.doc(wordId)` rather than the full student vocabulary.
-- [ ] Add a concurrent-attempt test that submits two attempts and preserves both.
-- [ ] Run the focused tests and verify they fail with the current implementation.
-- [ ] Load the word by document ID and reject it unless `word.studentId === session.studentId`.
-- [ ] Append attempts with an atomic database command or store attempts as separate `englishPracticeAttempts` documents keyed by session.
-- [ ] Keep mastery updates idempotent by adding an attempt ID and rejecting duplicates.
-- [ ] Rebuild session summaries from attempts without returning full attempt history on first paint.
-- [ ] Run `node --test tests/english-vocabulary*.test.js` and the English DevTools suite.
-- [ ] Commit: `perf: bound and atomically persist English attempts`.
+- [x] Add a test proving recognition/dictation reads `studentEnglishWords.doc(wordId)` rather than the full student vocabulary.
+- [x] Add a concurrent-attempt test that submits two attempts and preserves both.
+- [x] Run the focused tests and verify they fail with the current implementation.
+- [x] Load the word by document ID and reject it unless `word.studentId === session.studentId`.
+- [x] Append attempts with an atomic database command or store attempts as separate `englishPracticeAttempts` documents keyed by session.
+- [x] Keep mastery updates idempotent by adding an attempt ID and rejecting duplicates.
+- [x] Rebuild session summaries from attempts without returning full attempt history on first paint.
+- [x] Run `node --test tests/english-vocabulary*.test.js` and the English DevTools suite.
+- [x] Commit: `perf: bound and atomically persist English attempts`.
 
 ### Task 4: Add a Single Lightweight Home Dashboard Endpoint
 
@@ -127,17 +127,17 @@ The current CLI timings contain fixed waits and are suitable for coarse regressi
 - Test: `tests/student-data-access.test.js`
 - Test: `tests/index-page-flows.test.js`
 
-- [ ] Define `getHomeDashboard` returning accessible students, role/permissions, three subject summaries, latest actionable report summary, and latest paper summary.
-- [ ] Add contract tests that forbid full `questions`, `errorDetails`, `pageResults`, and `imageFiles` fields in this response.
-- [ ] Add a two-owned/two-shared-child test and assert a bounded number of DB queries with no serial member loop.
-- [ ] Run focused tests and verify the endpoint is missing.
-- [ ] Batch joined student reads with `command.in` or a bounded `Promise.all` fallback.
-- [ ] Query lightweight report/paper projections for all accessible student IDs.
-- [ ] Switch the home page to one cloud call and retain its 30-second in-page cache.
-- [ ] Keep the legacy path behind a temporary feature flag for one release, then remove it in Task 10.
-- [ ] Run `npm test`, `npm run test:e2e:core`, and the new performance baseline.
-- [ ] Acceptance: one home cloud call for any tested child count; response payload budget passes.
-- [ ] Commit: `perf: aggregate lightweight family home data`.
+- [x] Define `getHomeDashboard` returning accessible students, role/permissions, three subject summaries, latest actionable report summary, and latest paper summary.
+- [x] Add contract tests that forbid full `questions`, `errorDetails`, `pageResults`, and `imageFiles` fields in this response.
+- [x] Add a two-owned/two-shared-child test and assert a bounded number of DB queries with no serial member loop.
+- [x] Run focused tests and verify the endpoint is missing.
+- [x] Batch joined student reads with `command.in` or a bounded `Promise.all` fallback.
+- [x] Query lightweight report/paper projections for all accessible student IDs.
+- [x] Switch the home page to one cloud call and retain its 30-second in-page cache.
+- [x] Keep the legacy path behind a temporary feature flag for one release, then remove it in Task 10.
+- [x] Run `npm test`, `npm run test:e2e:core`, and the new performance baseline.
+- [x] Acceptance: one home cloud call for any tested child count; response payload budget passes.
+- [x] Commit: `perf: aggregate lightweight family home data`.
 
 ### Task 5: Project Timeline Fields and Index the Hot Queries
 
@@ -338,4 +338,3 @@ Task 12 complete:
 - Do not parallelize AI calls beyond measured CloudBase timeout and rate-limit safety.
 - Do not weaken owner/viewer access checks for fewer database reads.
 - Do not introduce a materialized learning event collection unless projected queries still miss the payload/latency budget.
-

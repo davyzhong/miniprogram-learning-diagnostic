@@ -262,6 +262,84 @@ test('getSummary aggregates tokens, cost, and per-event-type breakdown', async (
   assert.equal(photo.totalTokens, 1100)
 })
 
+test('getSummary aggregates every event when a month exceeds 500 rows', async () => {
+  const events = Array.from({ length: 600 }, (_, index) => ({
+    _id: `event-${index}`,
+    _openid: 'owner-1',
+    eventType: index % 2 === 0 ? 'photo_analysis' : 'paper_generation',
+    model: index % 2 === 0 ? 'hy3-preview' : 'deepseek-v4-flash',
+    studentId: `student-${index % 3}`,
+    totalTokens: 10,
+    estimatedCostCny: 0.001,
+    status: 'succeeded',
+    createdAt: new Date(`2026-06-${String((index % 28) + 1).padStart(2, '0')}T10:00:00+08:00`)
+  }))
+  const db = createDatabase({ aiUsageEvents: events })
+  const { handler } = loadAiUsage(db)
+
+  const result = await handler.main({ action: 'getSummary', month: '2026-06' })
+
+  assert.equal(result.success, true)
+  assert.equal(result.callCount, 600)
+  assert.equal(result.eventCount, 600)
+  assert.equal(result.totalTokens, 6000)
+  assert.equal(result.totalCostCny, 0.6)
+  assert.equal(result.studentCount, 3)
+  assert.equal(result.isComplete, true)
+  assert.ok(result.aggregatedAt)
+})
+
+test('getSummary keeps a stable snapshot when a new event arrives between pages', async () => {
+  const events = Array.from({ length: 200 }, (_, index) => ({
+    _id: `snapshot-event-${index}`,
+    _openid: 'owner-1',
+    eventType: 'photo_analysis',
+    model: 'hy3-preview',
+    totalTokens: 10,
+    estimatedCostCny: 0.001,
+    status: 'succeeded',
+    createdAt: new Date(`2026-07-10T${String(index % 24).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}:00Z`)
+  }))
+  const db = createDatabase({ aiUsageEvents: events })
+  const originalCollection = db.collection
+  let usagePageReads = 0
+  db.collection = name => {
+    const collection = originalCollection(name)
+    if (name !== 'aiUsageEvents') return collection
+    const originalWhere = collection.where
+    collection.where = filter => {
+      const query = originalWhere(filter)
+      const originalGet = query.get
+      query.get = async () => {
+        const result = await originalGet()
+        usagePageReads += 1
+        if (usagePageReads === 1) {
+          await originalCollection('aiUsageEvents').add({ data: {
+            _id: 'arrived-during-summary',
+            _openid: 'owner-1',
+            eventType: 'photo_analysis',
+            model: 'hy3-preview',
+            totalTokens: 999,
+            estimatedCostCny: 1,
+            status: 'succeeded',
+            createdAt: new Date('2026-07-14T00:00:00Z')
+          } })
+        }
+        return result
+      }
+      return query
+    }
+    return collection
+  }
+  const { handler } = loadAiUsage(db)
+
+  const result = await handler.main({ action: 'getSummary', month: '2026-07' })
+
+  assert.equal(result.eventCount, 200)
+  assert.equal(result.totalTokens, 2000)
+  assert.equal(new Date(result.aggregatedAt).getTime() < new Date('2026-07-14T00:00:00Z').getTime(), true)
+})
+
 test('createDeletionRequest writes a requested record for an owned student', async () => {
   const db = createDatabase({
     students: [{ _id: 's1', _openid: 'owner-1', name: '钟青羽' }],
