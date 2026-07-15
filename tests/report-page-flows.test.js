@@ -100,7 +100,7 @@ test('report verification entry only polls a generating paper without front-end 
   assert.match(wx.calls.find(call => call.name === 'showToast').payload.title, /后台生成/)
 })
 
-test('report verification entry does not create a paper when no auto paper exists', async () => {
+test('report verification entry repairs a missing auto paper when the diagnosis already has targets', async () => {
   const wx = createWxMock()
   const regenerateCalls = []
   const cloud = {
@@ -138,9 +138,13 @@ test('report verification entry does not create a paper when no auto paper exist
 
   await page.onGenerateVerification()
 
-  assert.equal(regenerateCalls.length, 0)
+  assert.equal(regenerateCalls.length, 1)
+  assert.equal(regenerateCalls[0].action, 'start')
+  assert.equal(regenerateCalls[0].studentId, 'student-1')
+  assert.equal(regenerateCalls[0].subject, 'math')
+  assert.equal(regenerateCalls[0].reportId, 'report-1')
   assert.equal(wx.calls.some(call => call.name === 'navigateTo'), false)
-  assert.match(wx.calls.filter(call => call.name === 'showToast').at(-1).payload.title, /暂无验证卷/)
+  assert.match(wx.calls.filter(call => call.name === 'showToast').at(-1).payload.title, /正在准备验证卷/)
 })
 
 test('report retry treats a cloud timeout as background analysis and resumes polling', async () => {

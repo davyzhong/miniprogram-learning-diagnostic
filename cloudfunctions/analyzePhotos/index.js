@@ -737,7 +737,12 @@ exports.main = async (event) => {
     // 诊断报告完成后，自动触发验证卷生成；前端不再负责手动生成或分批推进。
     if (mode !== 'verification' && artifacts.profileSummary && artifacts.profileSummary.isEffective) {
       const pendingCount = (artifacts.profile && artifacts.profile.pendingBottlenecks || []).length;
-      if (pendingCount > 0) {
+      const chineseReviewCount = subject === 'chinese'
+        ? (artifacts.profile && artifacts.profile.chineseReviewItems || []).filter(item => (
+          item && !['mastered', 'archived', 'ignored'].includes(item.status)
+        )).length
+        : 0;
+      if (pendingCount > 0 || chineseReviewCount > 0) {
         const currentOpenId = cloud.getWXContext().OPENID;
         try {
           await triggerAutoVerificationPaper(cloud, db, {
