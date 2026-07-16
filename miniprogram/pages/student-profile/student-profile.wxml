@@ -14,7 +14,7 @@
       <view class="manage-actions">
         <view class="manage-link" wx:if="{{permissions.canManageParents}}" bindtap="onParentManagement">家长管理</view>
         <view class="switch-student-btn" bindtap="onBackHome">
-          <text class="switch-icon">⇄</text>
+          <text class="switch-icon">切换</text>
           <text class="switch-text">切换孩子</text>
         </view>
       </view>

@@ -52,13 +52,13 @@
   </view>
 
   <view class="empty-tip" wx:if="{{!grade}}">
-    <text class="empty-icon">📋</text>
+    <text class="empty-icon">试卷</text>
     <text class="empty-text">请先选择年级</text>
   </view>
 
   <!-- 底部提示 -->
   <view class="bottom-tip">
-    <text class="bottom-icon">💡</text>
+    <text class="bottom-icon">提示</text>
     <text class="bottom-text">建议先打印让孩子在纸上作答，完成后拍照上传</text>
   </view>
 </view>

@@ -45,21 +45,21 @@
     <view class="block block-common_mistake" wx:if="{{view.commonMistakeBlock}}">
       <text class="block-title">{{view.commonMistakeBlock.title}}</text>
       <view class="mistake-row mistake-wrong" wx:if="{{view.commonMistakeBlock.mistake}}">
-        <text class="mistake-icon">✗</text>
+        <text class="mistake-icon">错误</text>
         <view class="mistake-copy">
           <text class="mistake-label">常见错误</text>
           <text class="mistake-text">{{view.commonMistakeBlock.mistake}}</text>
         </view>
       </view>
       <view class="mistake-row mistake-right" wx:if="{{view.commonMistakeBlock.correction}}">
-        <text class="mistake-icon">✓</text>
+        <text class="mistake-icon">正确</text>
         <view class="mistake-copy">
           <text class="mistake-label">正确做法</text>
           <text class="mistake-text">{{view.commonMistakeBlock.correction}}</text>
         </view>
       </view>
       <view class="mistake-hint" wx:if="{{view.commonMistakeBlock.explanation}}">
-        <text class="mistake-hint-icon">💡</text>
+        <text class="mistake-hint-icon">提示</text>
         <text class="mistake-hint-text">{{view.commonMistakeBlock.explanation}}</text>
       </view>
     </view>
@@ -111,7 +111,7 @@
       <view class="resource-card" wx:for="{{view.resourceCards}}" wx:key="resourceId"
             bindtap="onExternalResourceTap" data-url="{{item.url}}" data-platform="{{item.platform}}" data-can-jump="{{item.canJump}}">
         <view class="resource-info">
-          <text class="resource-icon">{{item.icon}}</text>
+          <text class="resource-icon">{{item.shortLabel}}</text>
           <view class="resource-text">
             <text class="resource-title">{{item.title}}</text>
             <text class="resource-platform">{{item.platform}} · {{item.role}}</text>

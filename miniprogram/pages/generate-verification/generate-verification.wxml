@@ -54,7 +54,7 @@
       data-index="{{index}}"
     >
       <view class="checkbox {{item.selected ? 'checked' : ''}}">
-        <text wx:if="{{item.selected}}">✓</text>
+        <text wx:if="{{item.selected}}">已选</text>
       </view>
       <view class="bottleneck-info">
         <view class="bottleneck-header">
@@ -69,7 +69,7 @@
     </view>
 
     <view class="empty-tip" wx:if="{{bottlenecks.length === 0 && !loading}}">
-      <text class="empty-icon">✓</text>
+      <text class="empty-icon">完成</text>
       <text class="empty-text">暂无待验证卡点</text>
       <text class="empty-hint">请先通过拍照诊断发现卡点</text>
     </view>

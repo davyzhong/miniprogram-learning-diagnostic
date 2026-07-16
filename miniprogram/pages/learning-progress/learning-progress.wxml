@@ -6,7 +6,7 @@
   </view>
 
   <view class="card advice-card" wx:if="{{overallAdvice}}">
-    <view class="section-heading"><view class="heading-icon">→</view><text>综合建议</text></view>
+    <view class="section-heading"><view class="heading-icon">建议</view><text>综合建议</text></view>
     <text class="advice-text">{{overallAdvice}}</text>
     <view class="advice-stats">
       <view class="advice-stat"><text class="advice-stat-num advice-stat-improved">{{summary.improvedCount}}</text><text class="advice-stat-label">已改善</text></view>
@@ -16,7 +16,7 @@
   </view>
 
   <view class="card timeline-card" wx:if="{{timeline.length > 0}}">
-    <view class="section-heading"><view class="heading-icon">↻</view><text>迭代时间线</text></view>
+    <view class="section-heading"><view class="heading-icon">时间</view><text>迭代时间线</text></view>
     <view class="timeline">
       <view class="timeline-node {{item.isVerification ? 'node-verify' : 'node-diagnosis'}}" wx:for="{{timeline}}" wx:key="reportId">
         <view class="timeline-dot {{item.isVerification ? 'dot-verify' : 'dot-diagnosis'}}"></view>
@@ -41,7 +41,7 @@
   </view>
 
   <view class="card matrix-card" wx:if="{{bottleneckMatrix.length > 0}}">
-    <view class="section-heading"><view class="heading-icon">▦</view><text>卡点变化</text></view>
+    <view class="section-heading"><view class="heading-icon">卡点</view><text>卡点变化</text></view>
     <view class="matrix-row matrix-header-row">
       <text class="matrix-cell matrix-cell-name">卡点</text>
       <text class="matrix-cell matrix-cell-round" wx:for="{{timeline}}" wx:key="reportId">{{item.shortLabel}}</text>

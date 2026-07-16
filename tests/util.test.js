@@ -97,13 +97,13 @@ test('formatBottleneckDisplayList joins readable names without exposing LP codes
   assert.doesNotMatch(text, /LP-\d+/)
 })
 
-test('trendIcon picks the matching arrow and defaults to stable', () => {
-  assert.equal(trendIcon('up'), '↑')
-  assert.equal(trendIcon('stable'), '→')
-  assert.equal(trendIcon('down'), '↓')
-  assert.equal(trendIcon('new'), '★')
-  assert.equal(trendIcon('unknown'), '→')
-  assert.equal(trendIcon(undefined), '→')
+test('trendIcon returns stable text labels without platform-dependent symbols', () => {
+  assert.equal(trendIcon('up'), '上升')
+  assert.equal(trendIcon('stable'), '稳定')
+  assert.equal(trendIcon('down'), '下降')
+  assert.equal(trendIcon('new'), '新发现')
+  assert.equal(trendIcon('unknown'), '稳定')
+  assert.equal(trendIcon(undefined), '稳定')
 })
 
 test('formatRelativeTime returns empty string for falsy input and formats older dates as month-day', () => {

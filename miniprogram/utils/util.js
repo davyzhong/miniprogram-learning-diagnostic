@@ -93,11 +93,11 @@ function severityBadgeClass(severity) {
 }
 
 /**
- * 趋势图标
+ * 趋势短标签
  */
 function trendIcon(trend) {
-  const map = { 'up': '↑', 'stable': '→', 'down': '↓', 'new': '★' }
-  return map[trend] || '→'
+  const map = { 'up': '上升', 'stable': '稳定', 'down': '下降', 'new': '新发现' }
+  return map[trend] || '稳定'
 }
 
 /**

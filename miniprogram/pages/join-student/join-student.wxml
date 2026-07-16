@@ -14,7 +14,7 @@
   </view>
 
   <view class="card" wx:if="{{status === 'ready' || status === 'joined' || status === 'success'}}">
-    <view class="state-icon">{{status === 'success' ? '✓' : '＋'}}</view>
+    <view class="state-icon">{{status === 'success' ? '成功' : '加入'}}</view>
     <view class="title">{{student.name || '孩子档案'}}</view>
     <view class="subtitle" wx:if="{{student.grade}}">{{student.grade}} 年级 · {{role === 'owner' ? '创建者' : '共同家长'}}</view>
     <view class="hint" wx:if="{{status === 'ready'}}">加入后，你可以查看这个孩子的诊断报告、验证试卷和学习记录。</view>

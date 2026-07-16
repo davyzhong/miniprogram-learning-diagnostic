@@ -9,10 +9,10 @@ function formatDate(iso) {
 }
 
 function buildStatusIcon(status) {
-  if (status === 'improved') return '✓'
-  if (status === 'persisting' || status === 'worsened') return '!'
-  if (status === 'needs_verification' || status === 'found') return '?'
-  return '·'
+  if (status === 'improved') return '改善'
+  if (status === 'persisting' || status === 'worsened') return '持续'
+  if (status === 'needs_verification' || status === 'found') return '待验证'
+  return '暂无'
 }
 
 function buildStatusClass(status) {

@@ -403,10 +403,10 @@ function buildReportView(report, options = {}) {
 
   const bottleneckList = bottlenecks.map(item => {
     const status = item.status === 'improved'
-      ? { statusText: '已有改善', statusClass: 'improved', statusIcon: '✓' }
+      ? { statusText: '已有改善', statusClass: 'improved', statusIcon: '改善' }
       : (item.status === 'persisting' || item.status === 'worsened')
-        ? { statusText: '持续出现', statusClass: 'persisting', statusIcon: '!' }
-        : { statusText: '需要验证', statusClass: 'pending', statusIcon: '?' }
+        ? { statusText: '持续出现', statusClass: 'persisting', statusIcon: '持续' }
+        : { statusText: '需要验证', statusClass: 'pending', statusIcon: '待验证' }
     const displayName = bottleneckLabelOf(item)
     const confidence = buildConfidence(item)
     return {
@@ -475,24 +475,24 @@ function buildReportView(report, options = {}) {
     qualityView
   })
   const reportLayers = [
-    { key: 'summary', icon: '🩺', label: '结论', count: 1, available: true },
+    { key: 'summary', marker: '结论', label: '结论', count: 1, available: true },
     {
       key: 'evidence',
-      icon: '🔎',
+      marker: '证据',
       label: '证据',
       count: sourcePhotos.length + allErrorDetailList.length + verificationEvidenceItems.length,
       available: sourcePhotos.length + allErrorDetailList.length + verificationEvidenceItems.length > 0
     },
     {
       key: 'change',
-      icon: '📈',
+      marker: '变化',
       label: '变化',
       count: bottlenecks.length,
       available: bottlenecks.length > 0 || Boolean(report.linkedVerificationReport)
     },
     {
       key: 'action',
-      icon: '🎯',
+      marker: '行动',
       label: '行动',
       count: bottlenecks.length + chineseErrorItems.length,
       available: bottlenecks.length > 0 || chineseErrorItems.length > 0 || Boolean(explanation.explanationActionText)
@@ -550,7 +550,7 @@ function buildReportView(report, options = {}) {
       lpCode: item.lpCode || '',
       displayName: item.displayName || item.lpName || '',
       statusText: item.statusText || '',
-      statusIcon: item.statusIcon || '?',
+      statusIcon: item.statusIcon || '待验证',
       statusClass: item.statusClass || 'pending',
       metaText: item.metaText || '',
     })),

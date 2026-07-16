@@ -72,9 +72,9 @@
     </view>
 
     <view class="section knowledge-position" wx:if="{{knowledgePosition.visible}}">
-      <view class="section-heading">📍 知识位置</view>
+      <view class="section-heading">知识位置</view>
       <view class="position-domain">
-        <text class="position-icon">{{knowledgePosition.domainIcon}}</text>
+        <text class="position-icon">{{knowledgePosition.domainMarker}}</text>
         <text class="position-text">{{knowledgePosition.domain}} · {{knowledgePosition.nodeTitle}}</text>
       </view>
       <view class="position-chain" wx:if="{{knowledgePosition.hasPrerequisites}}">
