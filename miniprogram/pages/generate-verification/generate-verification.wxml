@@ -1,8 +1,11 @@
 <!--pages/generate-verification/generate-verification.wxml-->
 <view class="page b1-page">
-  <view class="config-hero">
+  <view class="config-hero b1-paper-header b1-subject-{{subject}}">
     <view class="config-hero-copy">
-      <text class="config-kicker">验证卷状态</text>
+      <view class="paper-header-band">
+        <text class="config-kicker">验证卷</text>
+        <text class="paper-state b1-state-waiting">自动准备</text>
+      </view>
       <text class="config-title">{{subjectName}}纸面验证卷</text>
       <text class="config-desc">系统会根据最新诊断报告自动准备 A4 PDF。准备好后，只需要下载打印；完成纸面作答后再拍照上传。</text>
     </view>

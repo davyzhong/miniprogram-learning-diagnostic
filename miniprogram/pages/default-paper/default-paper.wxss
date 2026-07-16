@@ -187,3 +187,54 @@
   color: #975a16;
   line-height: 1.4;
 }
+
+/* B1 paper identity and semantic state layer. */
+.tip-bar.b1-paper-header {
+  background: var(--b1-surface);
+  border: 1rpx solid var(--b1-border);
+  border-left: 8rpx solid var(--b1-subject-math-fg);
+  border-radius: 10rpx;
+  margin: 20rpx 28rpx;
+  padding: 20rpx;
+}
+
+.tip-bar.b1-subject-chinese { border-left-color: var(--b1-subject-chinese-fg); }
+.tip-bar.b1-subject-english { border-left-color: var(--b1-subject-english-fg); }
+
+.paper-header-band {
+  align-items: center;
+  display: flex;
+  gap: 12rpx;
+  justify-content: space-between;
+}
+
+.paper-state,
+.paper-badge.b1-state-ready {
+  border-radius: 7rpx;
+  flex-shrink: 0;
+  font-size: 20rpx;
+  font-weight: 600;
+  padding: 5rpx 10rpx;
+}
+
+.b1-state-waiting {
+  background: var(--b1-waiting-bg);
+  color: var(--b1-waiting-fg);
+}
+
+.paper-badge.b1-state-ready {
+  background: var(--b1-improved-bg);
+  color: var(--b1-improved-fg);
+}
+
+.paper-card {
+  border: 1rpx solid var(--b1-border);
+  border-radius: 10rpx;
+  box-shadow: none;
+  padding: 20rpx;
+}
+
+.paper-actions .paper-btn {
+  border-radius: 9rpx;
+  padding: 14rpx 0;
+}

@@ -1,6 +1,6 @@
 <!--pages/paper-preview/paper-preview.wxml-->
 <view class="page b1-page">
-  <view class="paper-tags">
+  <view class="paper-tags b1-paper-header b1-subject-{{subject}}">
     <view class="tag tag-{{paperType}}">{{typeText}}</view>
     <view class="tag tag-subject">{{subjectName}}</view>
     <view class="tag tag-student">{{studentName}}</view>
@@ -14,7 +14,7 @@
             <text class="code-label">验证试卷编号</text>
             <text class="paper-code">{{paperCodeText || '待生成编号'}}</text>
           </view>
-          <view class="status-pill status-{{workbenchStatus}}" bindtap="onTraceableUrlTap" data-url="{{statusUrl}}">{{workbenchStatusText}}</view>
+          <view class="status-pill status-{{workbenchStatus}} b1-state-{{workbenchStatus}}" bindtap="onTraceableUrlTap" data-url="{{statusUrl}}">{{workbenchStatusText}}</view>
         </view>
         <text class="status-desc">{{workbenchStatusDesc}}</text>
       </view>

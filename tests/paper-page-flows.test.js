@@ -252,3 +252,14 @@ test('paper preview does not share temporary preview file ids', () => {
 
   assert.doesNotMatch(share.path || '', /fileId=/)
 })
+
+test('default paper surface identifies its subject and offers preview and print', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/default-paper/default-paper.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/default-paper/default-paper.wxss'), 'utf8')
+
+  assert.match(wxml, /b1-paper-header/)
+  assert.match(wxml, /b1-subject-\{\{subject\}\}/)
+  assert.match(wxml, /预览\s*\/\s*打印 PDF/)
+  assert.match(wxss, /var\(--b1-subject-math-fg\)/)
+  assert.match(wxss, /var\(--b1-improved-bg\)/)
+})
