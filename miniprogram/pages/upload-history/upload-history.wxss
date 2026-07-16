@@ -366,7 +366,7 @@
   font-weight: 800;
   height: 54rpx;
   justify-content: center;
-  margin-right: 14rpx;
+  margin-right: 18rpx;
   width: 54rpx;
 }
 
@@ -395,32 +395,6 @@
   font-size: 21rpx;
 }
 
-.event-meta {
-  align-items: flex-end;
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  gap: 2rpx;
-}
-
-.record-verification-paper .event-topline {
-  flex-wrap: wrap;
-  gap: 4rpx 10rpx;
-}
-
-.record-verification-paper .event-title {
-  width: 100%;
-}
-
-.record-verification-paper .event-meta {
-  align-items: center;
-  flex-basis: 100%;
-  flex-direction: row;
-  gap: 8rpx;
-  justify-content: space-between;
-  min-width: 0;
-}
-
 .event-summary {
   color: #5f6f83;
   display: block;
@@ -428,23 +402,17 @@
   line-height: 1.48;
 }
 
-.paper-code {
+.event-meta {
   align-items: center;
-  background: #eef6ff;
-  border-radius: 6rpx;
-  color: #2459a5;
-  box-sizing: border-box;
   display: flex;
-  font-size: 17rpx;
-  font-weight: 760;
-  line-height: 1;
-  max-width: calc(100% - 60rpx);
-  min-height: 40rpx;
-  overflow: hidden;
-  padding: 0 8rpx;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 3rpx;
 }
+
+.record-verification-paper .event-topline { flex-wrap: wrap; gap: 4rpx 10rpx; }
+.record-verification-paper .event-title { width: 100%; }
+.record-verification-paper .event-meta { align-items: center; flex-basis: 100%; flex-direction: row; justify-content: space-between; min-width: 0; }
 
 .paper-code:active,
 .event-status:active,
@@ -455,12 +423,30 @@
   opacity: 0.74;
 }
 
+.paper-code {
+  align-items: center;
+  background: #eef6ff;
+  border-radius: 6rpx;
+  color: #2459a5;
+  box-sizing: border-box;
+  display: flex;
+  font-size: 18rpx;
+  font-weight: 760;
+  line-height: 1;
+  max-width: calc(100% - 60rpx);
+  min-height: 38rpx;
+  overflow: hidden;
+  padding: 0 8rpx;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .event-status {
   color: #2d6cdf;
   display: block;
   font-size: 21rpx;
   font-weight: 680;
-  margin-top: 6rpx;
+  margin-top: 8rpx;
 }
 
 .chips {
@@ -491,6 +477,14 @@
   padding-top: 8rpx;
 }
 
+.fold-remaining {
+  color: #718096;
+  display: block;
+  font-size: 20rpx;
+  line-height: 1.35;
+  margin-top: 6rpx;
+}
+
 .fold-row {
   align-items: center;
   border-bottom: 1rpx solid #edf2f7;
@@ -502,14 +496,6 @@
 .fold-row:last-child {
   border-bottom: none;
   padding-bottom: 0;
-}
-
-.fold-remaining {
-  color: #718096;
-  display: block;
-  font-size: 20rpx;
-  line-height: 1.35;
-  margin-top: 6rpx;
 }
 
 .fold-icon {
@@ -637,7 +623,7 @@
   display: block;
   font-size: 23rpx;
   font-weight: 650;
-  margin-top: 10rpx;
+  margin-top: 14rpx;
 }
 
 .load-more-btn {

@@ -13,6 +13,27 @@
   padding: 20rpx 28rpx 12rpx;
 }
 
+.chinese-review-paper-row {
+  align-items: center;
+  border-top: 1rpx solid #edf2f7;
+  display: flex;
+  gap: 16rpx;
+  padding: 17rpx 22rpx;
+}
+.chinese-review-paper-row:first-of-type { border-top: 0; }
+.chinese-review-paper-main { flex: 1; min-width: 0; }
+.chinese-review-paper-title { align-items: center; display: flex; gap: 10rpx; }
+.chinese-target-name { color: #25364a; font-size: 27rpx; font-weight: 800; }
+.chinese-stage-tag { background: #e8f2fb; border-radius: 6rpx; color: #245b89; font-size: 19rpx; font-weight: 700; padding: 4rpx 9rpx; }
+.chinese-review-paper-desc,
+.chinese-extension-text { color: #64748b; display: block; font-size: 21rpx; line-height: 1.45; margin-top: 7rpx; }
+.chinese-extension-text { color: #7c3f00; }
+.chinese-feedback { color: #64748b; flex-shrink: 0; font-size: 20rpx; font-weight: 750; }
+.chinese-feedback-passed { color: #26704a; }
+.chinese-feedback-failed { color: #b45309; }
+.chinese-feedback-unclear,
+.chinese-feedback-incomplete { color: #9a5b00; }
+
 .tag {
   border-radius: 8rpx;
   font-size: 22rpx;
@@ -48,62 +69,6 @@
   box-shadow: 0 4rpx 18rpx rgba(19, 43, 72, 0.05);
   margin: 0 28rpx 20rpx;
 }
-
-.chinese-review-paper-row {
-  align-items: center;
-  border-top: 1rpx solid #edf2f7;
-  display: flex;
-  gap: 16rpx;
-  padding: 18rpx 24rpx;
-}
-
-.chinese-review-paper-row:first-of-type { border-top: 0; }
-
-.chinese-review-paper-main { flex: 1; min-width: 0; }
-
-.chinese-review-paper-title {
-  align-items: center;
-  display: flex;
-  gap: 10rpx;
-}
-
-.chinese-target-name {
-  color: #25364a;
-  font-size: 27rpx;
-  font-weight: 800;
-}
-
-.chinese-stage-tag {
-  background: #e0f2fe;
-  border-radius: 999rpx;
-  color: #075985;
-  font-size: 19rpx;
-  font-weight: 750;
-  padding: 4rpx 9rpx;
-}
-
-.chinese-review-paper-desc,
-.chinese-extension-text {
-  color: #64748b;
-  display: block;
-  font-size: 21rpx;
-  line-height: 1.45;
-  margin-top: 7rpx;
-}
-
-.chinese-extension-text { color: #7c3f00; }
-
-.chinese-feedback {
-  color: #64748b;
-  flex-shrink: 0;
-  font-size: 20rpx;
-  font-weight: 750;
-}
-
-.chinese-feedback-passed { color: #26704a; }
-.chinese-feedback-failed { color: #b45309; }
-.chinese-feedback-unclear,
-.chinese-feedback-incomplete { color: #9a5b00; }
 
 .workbench-card {
   padding: 28rpx;

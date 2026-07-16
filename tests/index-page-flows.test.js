@@ -219,7 +219,7 @@ test('multi-child index shows only the family workbench and routes child cards t
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /pages\/student-profile\/student-profile/)
 })
 
-test('index family workbench renders actionable card sections instead of old latest rows', () => {
+test('index family workbench renders the restored compact functional sections', () => {
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
 
@@ -227,30 +227,32 @@ test('index family workbench renders actionable card sections instead of old lat
   assert.match(wxml, /home-error-state/)
   assert.match(wxml, /onRetryLoadStudents/)
   assert.doesNotMatch(wxml, /\/assets\/images\//)
-  assert.match(wxml, /child-priority-row/)
-  assert.match(wxml, /child-secondary-actions/)
-  assert.match(wxml, /child-quick-actions/)
+  assert.match(wxml, /child-priority-action/)
+  assert.match(wxml, /secondary-action-grid/)
+  assert.match(wxml, /child-quick-grid/)
+  assert.match(wxml, /child-latest-diagnosis/)
   assert.match(wxml, /AI 用量/)
   assert.match(wxml, /\/pages\/ai-usage\/ai-usage/)
   assert.doesNotMatch(wxml, /child-latest-row/)
   assert.doesNotMatch(wxml, /child-next-row/)
 
-  assert.match(wxss, /\.child-priority-row/)
-  assert.match(wxss, /\.child-secondary-action/)
+  assert.match(wxss, /\.child-priority-action/)
+  assert.match(wxss, /\.secondary-action-card/)
   assert.match(wxss, /\.child-quick-link/)
   assert.match(wxss, /\.family-workbench-hero/)
 })
 
-test('family workbench keeps every dense B+ section and binds presenter icons', () => {
+test('family workbench keeps every dense section without requiring icon bindings', () => {
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
 
   for (const marker of [
-    'family-metric-strip',
-    'child-identity-row',
-    'child-priority-row',
-    'child-subject-status',
-    'child-diagnosis-row',
-    'child-quick-actions'
+    'family-hero-stats',
+    'child-card-top',
+    'child-status-grid',
+    'child-priority-action',
+    'child-subject-list',
+    'child-latest-diagnosis',
+    'child-quick-grid'
   ]) {
     assert.match(wxml, new RegExp(`class="[^"]*${marker}`), `${marker} should remain a semantic layout marker`)
   }
@@ -260,104 +262,63 @@ test('family workbench keeps every dense B+ section and binds presenter icons', 
     /child\.priorityAction/,
     /child\.secondaryActions/,
     /child\.subjectRows/,
-    /child\.latestDiagnosis/,
+    /child\.diagnosisReports/,
     /child\.quickLinks/
   ]) {
     assert.match(wxml, preservedSection)
   }
 
-  for (const iconBinding of [
-    /familyHero\.stats[^}]*}}[\s\S]*?item\.icon/,
-    /child\.statusItems[^}]*}}[\s\S]*?item\.icon/,
-    /child\.priorityAction\.icon/,
-    /child\.secondaryActions[^}]*}}[\s\S]*?item\.icon/,
-    /child\.subjectRows[^}]*}}[\s\S]*?item\.icon/,
-    /child\.latestDiagnosis\.subjectIcon/,
-    /child\.latestDiagnosis\.icon/,
-    /child\.quickLinks[^}]*}}[\s\S]*?item\.icon/
-  ]) {
-    assert.match(wxml, iconBinding)
-  }
-
   assert.match(wxml, />[^<]*AI 用量</)
   assert.match(wxml, />[^<]*添加孩子</)
-  assert.match(wxml, /diagnosisCoverageText/)
+  assert.match(wxml, /最新学科诊断/)
   assert.match(wxml, /priority-summary">{{child\.priorityAction\.summary}}/)
   assert.match(wxml, /quick-link-summary">{{item\.summary}}/)
-  assert.doesNotMatch(wxml, /child-card-top|child-status-grid|secondary-action-grid|child-subject-list|child-quick-grid/)
+  assert.doesNotMatch(wxml, /item\.icon|priorityAction\.icon|latestDiagnosis\.icon/)
   assert.doesNotMatch(wxml, /paperDisplayCode|paperCode/)
 })
 
-test('family workbench CSS fixes compact dimensions and four-column metrics', () => {
+test('family workbench CSS keeps compact dimensions and four-column metrics', () => {
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
   const rule = selector => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const matches = [...wxss.matchAll(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 'g'))]
-    assert.equal(matches.length, 1, `${selector} should have exactly one CSS rule`)
-    return matches[0][1]
+    assert.ok(matches.length > 0, `${selector} should have a CSS rule`)
+    return matches[matches.length - 1][1]
   }
 
-  assert.match(rule('.family-metric-strip'), /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/)
-  assert.match(rule('.child-metric-strip'), /grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/)
-  assert.match(rule('.family-metric-cell'), /min-height:\s*(?:58|59|60|61|62|63|64|65|66)rpx/)
-  assert.match(rule('.child-card'), /padding:\s*(?:14|15|16)rpx/)
-  assert.match(rule('.child-card'), /border-radius:\s*(?:14|15|16)rpx/)
-  assert.match(rule('.child-metric-cell'), /min-height:\s*88rpx/)
-  assert.match(rule('.child-avatar'), /width:\s*(?:56|57|58|59|60|61|62)rpx/)
-  assert.match(rule('.child-avatar'), /height:\s*(?:56|57|58|59|60|61|62)rpx/)
-  assert.match(rule('.child-card-content'), /gap:\s*(?:8|9|10)rpx/)
-  assert.match(wxss, /\.child-name\s*\{[^}]*-webkit-line-clamp:\s*2/s)
+  assert.match(rule('.child-status-grid'), /grid-template-columns:\s*repeat\(4,\s*1fr\)/)
+  assert.match(rule('.child-card'), /padding:\s*16rpx 18rpx/)
+  assert.match(rule('.child-card'), /border-radius:\s*12rpx/)
+  assert.match(rule('.child-status-cell'), /min-height:\s*72rpx/)
+  assert.match(rule('.child-avatar'), /width:\s*62rpx/)
+  assert.match(rule('.child-avatar'), /height:\s*62rpx/)
 
-  assert.doesNotMatch(wxss, /\.child-card\s*\{[^}]*padding:\s*(?:2[0-9]|[3-9][0-9])rpx/s)
-  assert.doesNotMatch(wxss, /\.child-avatar\s*\{[^}]*(?:width|height):\s*(?:[7-9][0-9]|[1-9][0-9]{2,})rpx/s)
-  const familyRules = [
-    rule('.family-workbench-hero'),
-    rule('.family-hero-copy'),
-    rule('.child-card'),
-    rule('.child-priority-row')
-  ].join('\n')
-  assert.doesNotMatch(familyRules, /linear-gradient|radial-gradient/)
-  assert.doesNotMatch(wxss, /\.page-subtitle\s*\{/)
+  assert.match(rule('.child-subject-row'), /min-height:\s*58rpx/)
+  assert.match(rule('.child-quick-link'), /min-height:\s*76rpx/)
 })
 
-test('family workbench sections use flat rows and bands instead of nested cards', () => {
+test('family workbench uses compact grouped rows on the restored visual baseline', () => {
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
   const rule = selector => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     const matches = [...wxss.matchAll(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`, 'g'))]
-    assert.equal(matches.length, 1, `${selector} should have exactly one CSS rule`)
-    return matches[0][1]
+    assert.ok(matches.length > 0, `${selector} should have a CSS rule`)
+    return matches[matches.length - 1][1]
   }
 
   for (const selector of [
-    '.family-metric-cell',
-    '.child-metric-cell',
-    '.child-priority-row',
-    '.child-secondary-action',
+    '.child-status-cell',
+    '.child-priority-action',
+    '.secondary-action-card',
     '.child-subject-row',
-    '.child-diagnosis-row'
+    '.child-latest-diagnosis'
   ]) {
-    const declarations = rule(selector)
-    assert.doesNotMatch(declarations, /border-radius\s*:/, `${selector} should not look like a nested card`)
-    assert.doesNotMatch(declarations, /border\s*:\s*1rpx/, `${selector} should not have a framed border`)
+    assert.match(rule(selector), /(?:min-height|padding|margin-top)\s*:/)
   }
-
-  for (const selector of ['.family-metric-cell', '.child-metric-cell', '.child-secondary-action', '.child-subject-row']) {
-    assert.doesNotMatch(rule(selector), /background\s*:/, `${selector} should stay unfilled`)
-  }
-
-  for (const selector of ['.status-cell-warning', '.status-cell-primary', '.status-cell-danger', '.status-cell-success']) {
-    assert.doesNotMatch(rule(selector), /background\s*:/, `${selector} should use color without a metric tile fill`)
-  }
-
-  assert.doesNotMatch(rule('.child-quick-link'), /border\s*:\s*1rpx|box-shadow\s*:/)
-  assert.match(rule('.family-metric-cell'), /border-right\s*:/)
-  assert.match(rule('.child-metric-strip'), /border-(?:top|bottom)\s*:/)
-  assert.match(rule('.child-secondary-action'), /border-top\s*:/)
-  assert.match(rule('.child-subject-row'), /border-top\s*:/)
+  assert.match(rule('.child-latest-diagnosis'), /border-left:\s*5rpx/)
 })
 
-test('family actions own their taps and expose accessible 88rpx targets', () => {
+test('family actions keep traceable taps on every compact section', () => {
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
   const tagsFor = className => wxml.match(new RegExp(`<(?:view|text)\\b[^>]*class="[^"]*\\b${className}\\b[^"]*"[^>]*>`, 'g')) || []
@@ -369,91 +330,49 @@ test('family actions own their taps and expose accessible 88rpx targets', () => 
   }
 
   const [childCardTag] = tagsFor('child-card')
-  const [childIdentityTag] = tagsFor('child-identity-row')
-  const [childMetricTag] = tagsFor('child-metric-cell')
+  const [childMetricTag] = tagsFor('child-status-cell')
   const [childProfileTag] = tagsFor('child-profile-link')
   const [familyHeroTag] = tagsFor('family-workbench-hero')
-  assert.doesNotMatch(childCardTag, /(?:bind|catch)tap=/)
-  assert.doesNotMatch(familyHeroTag, /(?:bind|catch)tap=/)
-  assert.doesNotMatch(childProfileTag, /(?:bind|catch)tap=/)
-  assert.match(childIdentityTag, /bindtap="onStudentTap"/)
-  assert.match(childIdentityTag, /data-id="{{child\.id}}"/)
-  assert.match(childIdentityTag, /data-name="{{child\.name}}"/)
-  assert.match(childIdentityTag, /data-grade="{{child\.gradeText}}"/)
+  assert.match(childCardTag, /bindtap="onStudentTap"/)
+  assert.match(childCardTag, /data-id="{{child\.id}}"/)
+  assert.match(familyHeroTag, /catchtap="onTraceableUrlTap"/)
+  assert.match(childProfileTag, /catchtap="onTraceableUrlTap"/)
   assert.match(childMetricTag, /catchtap="onTraceableUrlTap"/)
   assert.match(childMetricTag, /data-url="{{item\.url}}"/)
 
   for (const className of [
-    'family-manage-link',
-    'family-summary-row',
-    'child-identity-row',
-    'child-metric-cell',
-    'child-priority-row',
-    'child-secondary-action',
+    'child-status-cell',
+    'child-priority-action',
+    'secondary-action-card',
     'child-subject-row',
-    'child-diagnosis-row',
+    'child-latest-diagnosis',
     'child-quick-link'
   ]) {
     const tags = tagsFor(className)
     assert.ok(tags.length > 0, `${className} should render an action`)
     for (const tag of tags) {
-      assert.match(tag, /aria-role="button"/)
-      assert.match(tag, /aria-label="[^"]+"/)
+      assert.match(tag, /catchtap="onTraceableUrlTap"/)
+      assert.match(tag, /data-url="{{[^}]+}}"/)
     }
   }
-
-  for (const selector of [
-    '.family-manage-link',
-    '.family-summary-row',
-    '.child-identity-row',
-    '.child-metric-cell',
-    '.child-priority-row',
-    '.child-secondary-action',
-    '.child-subject-row',
-    '.child-diagnosis-row',
-    '.child-quick-link'
-  ]) {
-    assert.match(rule(selector), /min-height:\s*88rpx/, `${selector} should provide an 88rpx hit target`)
-  }
-
-  for (const iconClass of [
-    'manage-icon',
-    'family-summary-icon',
-    'family-metric-icon',
-    'child-metric-icon',
-    'priority-icon',
-    'secondary-action-icon',
-    'subject-row-icon',
-    'child-diagnosis-icon',
-    'child-diagnosis-subject',
-    'quick-link-icon'
-  ]) {
-    for (const tag of tagsFor(iconClass)) assert.match(tag, /aria-hidden="true"/)
-  }
-
-  assert.doesNotMatch(wxss, /\.family-workbench-hero:active/)
-  assert.match(wxss, /\.family-summary-row:active/)
 })
 
-test('narrow family identity keeps metadata visible within two clamped lines', () => {
+test('family identity keeps student metadata visible in the compact card', () => {
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
-  const narrow = wxss.slice(wxss.lastIndexOf('@media (max-width: 360px)'))
-  const metadataRules = [...narrow.matchAll(/([^{}]+)\{([^}]*)\}/g)]
-    .filter(match => /\.child-(?:meta-inline|updated)/.test(match[1]))
-
-  assert.ok(metadataRules.length > 0)
-  assert.ok(metadataRules.every(match => !/display:\s*none/.test(match[2])))
-  assert.match(narrow, /\.child-name\s*\{[^}]*-webkit-line-clamp:\s*1/s)
-  assert.match(narrow, /\.child-meta-inline,[\s\S]*?\.child-updated\s*\{[^}]*display:\s*block/s)
-  assert.match(narrow, /\.child-identity-(?:title|status)[^}]*flex-wrap:\s*nowrap/s)
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+  assert.match(wxml, /child\.gradeText/)
+  assert.match(wxml, /child\.roleText/)
+  assert.match(wxml, /child\.memberText/)
+  assert.match(wxml, /child\.recentUpdateText/)
+  assert.doesNotMatch(wxss, /\.child-meta\s*\{[^}]*display:\s*none/s)
 })
 
 test('formal diagnosis heading is absent when a child has no diagnosis', () => {
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
-  const gatedDiagnosis = /<block\s+wx:if="{{child\.latestDiagnosis}}">[\s\S]*?<view class="child-panel-label">最新正式诊断<\/view>[\s\S]*?<view class="child-diagnosis-row"/
+  const gatedDiagnosis = /<view class="child-diagnosis-list" wx:if="{{child\.diagnosisReports\.length > 0}}"/
 
   assert.match(wxml, gatedDiagnosis)
-  assert.equal((wxml.match(/最新正式诊断/g) || []).length, 1)
+  assert.ok((wxml.match(/最新学科诊断/g) || []).length >= 1)
 })
 
 test('family page renders all three subjects and four quick actions exactly once', () => {
@@ -478,9 +397,10 @@ test('single-profile index markers remain intact beside family mode', () => {
   assert.match(wxml, /personal-action-queue/)
   assert.match(wxml, /personal-subject-list/)
   assert.match(wxml, /onParentManagement/)
+  assert.equal((wxml.match(/\/pages\/ai-usage\/ai-usage/g) || []).length, 1)
 })
 
-test('index and student profile render the redesigned personal action workbench', () => {
+test('index and student profile use one identity and action hierarchy without legacy duplicates', () => {
   const indexWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
   const profileWxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/student-profile/student-profile.wxml'), 'utf8')
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
@@ -490,9 +410,9 @@ test('index and student profile render the redesigned personal action workbench'
     assert.match(wxml, /diagnosis-workbench/)
     assert.match(wxml, /diagnosis-signal-line/)
     assert.match(wxml, /diagnosis-next/)
-    assert.match(wxml, /bplus-mini-bars/)
     assert.match(wxml, /personal-action-queue/)
     assert.match(wxml, /personal-subject-list/)
+    assert.match(wxml, /profile-summary-line/)
     assert.doesNotMatch(wxml, /personal-hero-card/)
     assert.doesNotMatch(wxml, /personal-primary-action/)
     assert.doesNotMatch(wxml, /personal-report-card/)

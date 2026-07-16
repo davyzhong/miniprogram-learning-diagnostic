@@ -475,12 +475,12 @@
 }
 
 .review-stage {
-  background: #e0f2fe;
-  border-radius: 999rpx;
-  color: #075985;
+  background: #e8f2fb;
+  border-radius: 6rpx;
+  color: #245b89;
   flex-shrink: 0;
   font-size: 19rpx;
-  font-weight: 750;
+  font-weight: 700;
   padding: 4rpx 9rpx;
 }
 
@@ -617,15 +617,23 @@
 .map-entry-title { display: block; font-size: 30rpx; font-weight: 600; color: #1a365d; }
 .map-entry-desc { display: block; font-size: 24rpx; color: #718096; margin-top: 4rpx; }
 .map-entry-arrow { font-size: 32rpx; color: #cbd5e0; }
-.latest-diagnosis-card { background: #fff; border: 1rpx solid #dce5ef; border-left: 7rpx solid #3974b8; border-radius: 12rpx; margin: 18rpx 24rpx; padding: 20rpx; }
-.latest-diagnosis-card.diagnosis-chinese { border-left-color: #d5684b; }
+
+.latest-diagnosis-card {
+  background: #fff;
+  border: 1rpx solid #dce5ef;
+  border-left: 7rpx solid #3974b8;
+  border-radius: 10rpx;
+  margin: 16rpx 24rpx;
+  padding: 18rpx 20rpx;
+}
+.latest-diagnosis-card.diagnosis-chinese { border-left-color: #c85d42; }
 .latest-diagnosis-card.diagnosis-english { border-left-color: #268469; }
-.latest-diagnosis-head { gap: 12rpx; }
-.latest-diagnosis-icon { align-items: center; background: #edf5ff; border-radius: 9rpx; display: flex; flex: 0 0 54rpx; font-size: 31rpx; height: 54rpx; justify-content: center; }
+.latest-diagnosis-head { align-items: center; display: flex; gap: 12rpx; }
 .latest-diagnosis-title-copy { flex: 1; min-width: 0; }
-.latest-diagnosis-title { color: #24364b; display: block; font-size: 27rpx; font-weight: 760; }
+.latest-diagnosis-title { color: #24364b; display: block; font-size: 28rpx; font-weight: 760; }
 .latest-diagnosis-date { color: #8391a1; display: block; font-size: 20rpx; margin-top: 3rpx; }
 .latest-diagnosis-link { color: #2865a8; flex-shrink: 0; font-size: 21rpx; font-weight: 700; }
-.latest-diagnosis-insight { align-items: flex-start; background: #f7f9fc; border-radius: 8rpx; color: #465b70; display: flex; font-size: 23rpx; gap: 8rpx; line-height: 1.45; margin-top: 13rpx; padding: 11rpx 13rpx; }
-.latest-diagnosis-footer { align-items: center; display: flex; gap: 12rpx; justify-content: space-between; margin-top: 13rpx; }
+.latest-diagnosis-summary { background: #f7f9fc; border-radius: 7rpx; color: #465b70; display: block; font-size: 23rpx; line-height: 1.45; margin-top: 12rpx; padding: 10rpx 12rpx; }
+.latest-diagnosis-footer { align-items: center; display: flex; gap: 12rpx; justify-content: space-between; margin-top: 12rpx; }
+.latest-diagnosis-stats { color: #64748b; display: flex; flex-wrap: wrap; font-size: 20rpx; gap: 12rpx; }
 .latest-diagnosis-action { color: #2865a8; flex-shrink: 0; font-size: 21rpx; font-weight: 700; }

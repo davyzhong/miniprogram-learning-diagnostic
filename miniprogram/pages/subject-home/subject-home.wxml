@@ -1,6 +1,6 @@
 <!--pages/subject-home/subject-home.wxml-->
-<view class="page page-{{subject}} bplus-page">
-  <view class="workbench-card bplus-section {{subject === 'english' ? 'english-hero-card' : ''}}">
+<view class="page page-{{subject}}">
+  <view class="workbench-card {{subject === 'english' ? 'english-hero-card' : ''}}">
     <view class="workbench-hero-layout">
       <view class="workbench-main">
         <view class="workbench-header">
@@ -20,22 +20,21 @@
   </view>
 
   <view class="latest-diagnosis-card diagnosis-{{subject}}" wx:if="{{latestDiagnosis}}" bindtap="onToolTap" data-key="latestReport">
-    <view class="latest-diagnosis-head bplus-row">
-      <view class="latest-diagnosis-icon">{{latestDiagnosis.icon}}</view>
+    <view class="latest-diagnosis-head">
       <view class="latest-diagnosis-title-copy">
         <text class="latest-diagnosis-title">{{latestDiagnosis.title}}</text>
-        <text class="latest-diagnosis-date">📅 {{latestDiagnosis.dateText}} · 正式诊断</text>
+        <text class="latest-diagnosis-date">{{latestDiagnosis.dateText}} · 正式诊断</text>
       </view>
-      <text class="latest-diagnosis-link">{{latestDiagnosis.reportIcon}} 完整报告 ›</text>
+      <text class="latest-diagnosis-link">完整报告 ›</text>
     </view>
-    <view class="latest-diagnosis-insight"><text>{{latestDiagnosis.insightIcon}}</text><text>{{latestDiagnosis.summary}}</text></view>
+    <text class="latest-diagnosis-summary">{{latestDiagnosis.summary}}</text>
     <view class="latest-diagnosis-footer">
-      <view class="bplus-state-strip">
-        <text class="bplus-state-item"><text>{{latestDiagnosis.evidenceIcon}}</text><text class="bplus-state-value">{{latestDiagnosis.evidenceCount}}</text>证据</text>
-        <text class="bplus-state-item" wx:if="{{latestDiagnosis.persistingCount > 0}}"><text>🔁</text><text class="bplus-state-value">{{latestDiagnosis.persistingCount}}</text>持续</text>
-        <text class="bplus-state-item" wx:if="{{latestDiagnosis.improvedCount > 0}}"><text>✅</text><text class="bplus-state-value">{{latestDiagnosis.improvedCount}}</text>改善</text>
+      <view class="latest-diagnosis-stats">
+        <text>{{latestDiagnosis.evidenceCount}} 条证据</text>
+        <text wx:if="{{latestDiagnosis.persistingCount > 0}}">{{latestDiagnosis.persistingCount}} 项持续</text>
+        <text wx:if="{{latestDiagnosis.improvedCount > 0}}">{{latestDiagnosis.improvedCount}} 项改善</text>
       </view>
-      <text class="latest-diagnosis-action">{{latestDiagnosis.actionIcon}} 按诊断继续行动 ›</text>
+      <text class="latest-diagnosis-action">按诊断继续行动 ›</text>
     </view>
   </view>
 

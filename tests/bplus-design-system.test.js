@@ -18,19 +18,14 @@ function registeredPages() {
   return [...mainPages, ...subPages]
 }
 
-test('all registered pages adopt the shared B+ page and content primitives', () => {
+test('all registered pages keep a stable page root on the restored visual baseline', () => {
   const pages = registeredPages()
   assert.equal(pages.length, 24)
 
   for (const page of pages) {
     const wxml = read(`${page}.wxml`)
     const wxss = read(`${page}.wxss`)
-    assert.match(wxml, /class="[^"]*bplus-page/, `${page}.wxml 缺少 bplus-page`)
-    assert.match(
-      wxml,
-      /bplus-(section|row|state|action|empty|loading)/,
-      `${page}.wxml 未使用共享 B+ 内容或状态类`
-    )
+    assert.match(wxml, /class="[^"]*page(?:\s|"|-)/, `${page}.wxml 缺少稳定页面根节点`)
     assert.doesNotMatch(
       wxss,
       /\.bplus-(page|section|row|state|action|empty|loading)\s*\{/,
@@ -52,10 +47,11 @@ test('global B+ primitives and semantic icon map stay asset-free', () => {
   assert.match(icons, /NEXT_ACTION/)
 })
 
-test('critical compact icon controls keep a text label', () => {
+test('critical compact symbol controls keep a text label or accessible label', () => {
   for (const page of registeredPages()) {
     const wxml = read(`${page}.wxml`)
-    const iconOnlyControls = wxml.match(/<(?:view|button)[^>]*(?:bindtap|catchtap)="[^"]+"[^>]*>\s*[›→+×]\s*<\/(?:view|button)>/g) || []
-    assert.deepEqual(iconOnlyControls, [], `${page}.wxml 存在没有文字标签的关键操作`)
+    const iconOnlyControls = wxml.match(/<(?:view|button)[^>]*(?:bindtap|catchtap)="[^"]+"[^>]*>\s*[›→+×‹]\s*<\/(?:view|button)>/g) || []
+    const unlabeled = iconOnlyControls.filter(control => !/aria-label="[^"]+"/.test(control))
+    assert.deepEqual(unlabeled, [], `${page}.wxml 存在没有文字或无障碍标签的关键操作`)
   }
 })

@@ -262,6 +262,7 @@ Page({
             students: viewModels,
             profilesByStudentId: profileLists,
             reportsByStudentId,
+            diagnosesByStudentId,
             papersByStudentId
           }, formatRelativeTime)
         : []
@@ -360,6 +361,7 @@ Page({
           students: viewModels,
           profilesByStudentId: profileLists,
           reportsByStudentId,
+          diagnosesByStudentId,
           papersByStudentId
         }, formatRelativeTime)
       : []

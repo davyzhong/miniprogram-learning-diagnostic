@@ -45,7 +45,8 @@ test('subject home loads a compact action workbench', async () => {
   assert.equal(page.data.subjectTitle, '数学工作台')
   assert.equal(page.data.primaryTask.actionType, 'verification')
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.taskQueue.map(item => item.displayName))), ['计算基础'])
-  assert.ok(page.data.tools.some(item => item.key === 'latestReport'))
+  assert.ok(page.data.latestDiagnosis)
+  assert.ok(page.data.tools.every(item => item.key !== 'latestReport'))
 })
 
 test('subject home requests the shared dashboard without paper records for first paint', async () => {
@@ -274,7 +275,7 @@ test('subject home shows learning workflow tools for co-parent access', async ()
 
   await page.loadProfile()
   assert.equal(page.data.canWriteActions, true)
-  assert.deepEqual(page.data.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history', 'latestReport'])
+  assert.deepEqual(page.data.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history'])
   assert.equal(page.data.primaryTask.actionType, 'verification')
 
   page.onTaskTap({ currentTarget: { dataset: { code: 'LP-001' } } })

@@ -116,12 +116,38 @@ test('child workbench cards combine pending actions and subject rows for multipl
   assert.match(cards[0].profileUrl, /pages\/student-profile\/student-profile/)
   assert.match(cards[0].profileUrl, /studentId=student-1/)
   assert.equal(cards[0].diagnosisCoverageText, '已有 1/3 科诊断')
+  assert.deepEqual(cards[0].diagnosisReports.map(item => item.subject), ['math'])
   assert.equal(cards[0].latestDiagnosis.title, '数学诊断报告')
   assert.match(cards[0].latestDiagnosis.url, /pages\/report\/report\?id=report-1/)
 
   assert.equal(cards[1].name, '弟弟')
   assert.equal(cards[1].roleText, '共同家长')
   assert.equal(cards[1].statusText, '无待办')
+})
+
+test('child workbench exposes every available subject diagnosis on the family home', () => {
+  const [card] = buildChildWorkbenchCards({
+    students: [{ _id: 'student-1', name: '钟青羽', grade: 6 }],
+    diagnosesByStudentId: {
+      'student-1': [{
+        _id: 'math-report',
+        subject: 'math',
+        createdAt: '2026-07-15T10:00:00+08:00',
+        summary: '数学诊断摘要'
+      }, {
+        _id: 'chinese-report',
+        subject: 'chinese',
+        createdAt: '2026-07-14T10:00:00+08:00',
+        summary: '语文诊断摘要'
+      }]
+    }
+  }, relative)
+
+  assert.equal(card.diagnosisCoverageText, '已有 2/3 科诊断')
+  assert.deepEqual(card.diagnosisReports.map(item => item.subject), ['math', 'chinese'])
+  assert.deepEqual(card.diagnosisReports.map(item => item.dateText), ['今天', '今天'])
+  assert.match(card.diagnosisReports[0].url, /math-report/)
+  assert.match(card.diagnosisReports[1].url, /chinese-report/)
 })
 
 test('child workbench latest paper summary stays compact when many targets are covered', () => {
@@ -690,8 +716,7 @@ test('learning profile home exposes an actionable personal workbench contract', 
     'bottleneckCenter',
     'uploadEvidence',
     'knowledgeMap',
-    'learningRecords',
-    'aiUsage'
+    'learningRecords'
   ])
   assert.ok(view.personalActionQueue.every(item => item.url))
 
@@ -791,6 +816,24 @@ test('learning profile builds dense diagnosis workbenches only for subjects with
   assert.equal(view.diagnosisWorkbenches[1].primaryAction.text, '进入语文跟进')
   assert.match(view.diagnosisWorkbenches[1].reportUrl, /report\?id=chinese-diagnosis/)
   assert.match(view.diagnosisWorkbenches[1].uploadUrl, /pages\/upload\/upload/)
+})
+
+test('learning profile accepts lightweight formal diagnosis summaries from the home endpoint', () => {
+  const view = buildLearningProfileHomeView({
+    student: { _id: 'student-1', name: '钟青羽', grade: 6 },
+    profiles: [{ subject: 'chinese', currentBottlenecks: [] }],
+    latestDiagnosisReports: [{
+      _id: 'chinese-summary',
+      subject: 'chinese',
+      createdAt: '2026-07-15T09:30:00+08:00',
+      summary: '字词辨析需要继续巩固。'
+    }],
+    reports: [],
+    papers: []
+  }, relative)
+
+  assert.deepEqual(view.diagnosisWorkbenches.map(item => item.subject), ['chinese'])
+  assert.match(view.diagnosisWorkbenches[0].reportUrl, /chinese-summary/)
 })
 
 test('learning profile home surfaces priority bottlenecks below the primary report', () => {

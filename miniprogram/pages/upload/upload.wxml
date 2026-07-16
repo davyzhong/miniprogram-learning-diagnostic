@@ -1,15 +1,15 @@
 <!--pages/upload/upload.wxml-->
-<view class="page bplus-page">
+<view class="page">
   <!-- 顶部说明 -->
-  <view class="tip-bar bplus-section">
+  <view class="tip-bar">
     <view class="tip-content">
-      <text class="tip-title">📤 {{pageTitle}}</text>
+      <text class="tip-title">{{pageTitle}}</text>
       <text class="tip-desc">{{pageDesc}}</text>
     </view>
   </view>
 
   <view class="paper-context" wx:if="{{paperId}}">
-    <text class="context-label">🎯 正在上传到</text>
+    <text class="context-label">正在上传到</text>
     <text class="context-code">{{paperCodeText || '当前验证试卷'}}</text>
     <text class="context-meta">{{paperName}}<text wx:if="{{paperQuestionCount > 0}}"> · {{paperQuestionCount}} 题</text></text>
   </view>
@@ -42,17 +42,17 @@
       wx:if="{{images.length < 20}}"
       bindtap="onChooseImage"
     >
-      <text class="add-icon">📷</text>
+      <text class="add-icon">+</text>
       <text class="add-text">拍照/相册</text>
     </view>
   </view>
 
-  <view class="image-count">🖼️ 已选 {{images.length}}/20 张</view>
+  <view class="image-count">已选 {{images.length}}/20 张</view>
 
   <!-- 上传进度 -->
   <view class="upload-progress" wx:if="{{uploading}}">
     <view class="progress-info">
-      <text>☁️ 上传中 {{uploadedCount}}/{{images.length}}</text>
+      <text>上传中 {{uploadedCount}}/{{images.length}}</text>
       <text>{{uploadProgress}}%</text>
     </view>
     <view class="progress-bar">

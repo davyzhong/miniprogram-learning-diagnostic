@@ -1,20 +1,20 @@
-<view class="page bplus-page">
-  <view class="card code-card bplus-section" wx:if="{{status === 'code'}}">
-    <view class="state-icon">🔑</view>
+<view class="page">
+  <view class="card code-card" wx:if="{{status === 'code'}}">
+    <view class="state-icon">码</view>
     <view class="title">输入家庭邀请码</view>
     <view class="hint">由档案创建者在家长管理中生成。</view>
     <input class="code-input" value="{{inviteCode}}" maxlength="8" placeholder="例如 QY8392AB" bindinput="onInviteCodeInput" />
     <view class="error-text" wx:if="{{error}}">{{error}}</view>
-    <button class="primary" loading="{{lookingUp}}" bindtap="onLookupCode">🔎 查看孩子档案</button>
+    <button class="primary" loading="{{lookingUp}}" bindtap="onLookupCode">查看孩子档案</button>
   </view>
 
   <view class="card" wx:if="{{status === 'loading'}}">
-    <view class="state-icon">⏳</view>
+    <view class="state-icon">…</view>
     <view class="title">正在读取邀请</view>
   </view>
 
   <view class="card" wx:if="{{status === 'ready' || status === 'joined' || status === 'success'}}">
-    <view class="state-icon">{{status === 'success' ? '✅' : '👪'}}</view>
+    <view class="state-icon">{{status === 'success' ? '✓' : '＋'}}</view>
     <view class="title">{{student.name || '孩子档案'}}</view>
     <view class="subtitle" wx:if="{{student.grade}}">{{student.grade}} 年级 · {{role === 'owner' ? '创建者' : '共同家长'}}</view>
     <view class="hint" wx:if="{{status === 'ready'}}">加入后，你可以查看这个孩子的诊断报告、验证试卷和学习记录。</view>
@@ -36,12 +36,12 @@
   </view>
 
   <view class="card error-card" wx:if="{{status === 'error'}}">
-    <view class="state-icon">⚠️</view>
+    <view class="state-icon">!</view>
     <view class="title">无法加入</view>
     <view class="hint">{{error}}</view>
     <button class="secondary" bindtap="onRetry">重新检查</button>
   </view>
 
-  <button wx:if="{{status === 'ready'}}" class="primary" loading="{{accepting}}" bindtap="onAccept">👪 加入孩子档案</button>
-  <button wx:if="{{status === 'joined' || status === 'success'}}" class="primary" bindtap="onGoHome">🏠 回到首页</button>
+  <button wx:if="{{status === 'ready'}}" class="primary" loading="{{accepting}}" bindtap="onAccept">加入孩子档案</button>
+  <button wx:if="{{status === 'joined' || status === 'success'}}" class="primary" bindtap="onGoHome">回到首页</button>
 </view>
