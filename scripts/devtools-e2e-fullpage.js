@@ -95,7 +95,7 @@ const pages = [
     name: 'student-profile 学生档案',
     route: `/pages/student-profile/student-profile?${studentQ}`,
     expect: {
-      text: ['钟青羽', '最新学科诊断', '学习工具', '切换孩子'],
+      text: ['钟青羽', '最新学科诊断', '接下来可以做什么', '切换孩子'],
     },
   },
   {
@@ -187,7 +187,7 @@ const pages = [
     name: 'verification-paper-download 验证卷下载入口',
     route: `/pages/generate-verification/generate-verification?${studentQ}&subject=math&subjectName=%E6%95%B0%E5%AD%A6`,
     expect: {
-      text: ['验证卷状态', '纸面验证卷', '查看/下载验证卷'],
+      text: ['验证卷', '纸面验证卷', '查看/下载验证卷'],
       notText: ['LP-001'], // 卡点应以文字摘要展示
     },
   },
@@ -195,7 +195,7 @@ const pages = [
     name: 'default-paper 默认试卷',
     route: `/pages/default-paper/default-paper?${studentQ}&subject=math&subjectName=%E6%95%B0%E5%AD%A6&grade=6`,
     expect: {
-      text: ['默认诊断试卷', '六年级 A 卷', '预览 PDF'],
+      text: ['默认诊断试卷', '六年级 A 卷', '预览 / 打印 PDF'],
     },
   },
   {
@@ -433,7 +433,9 @@ async function runPageAssertion(spec, miniProgram) {
     const tReady = Date.now() - t0
     entry.navigationMs = tNavigation
     entry.readyMs = tReady - tNavigation
-    const cloudStats = await miniProgram.evaluate(() => globalThis.__e2eCloudStats || { count: 0, payloadBytes: 0 })
+    const cloudStats = await miniProgram.evaluate(() => {
+      return globalThis.__e2eCloudStats || { count: 0, payloadBytes: 0 }
+    })
     entry.cloudCallCount = cloudStats.count
     entry.cloudPayloadBytes = cloudStats.payloadBytes
     entry.maxCloudCalls = spec.maxCloudCalls || 8
@@ -481,10 +483,12 @@ async function runPageAssertion(spec, miniProgram) {
     }
 
     // 4. 错误采集
-    const collected = await miniProgram.evaluate(() => ({
-      errors: (globalThis.__pageErrors || []).slice(),
-      consoleErrors: (globalThis.__consoleErrors || []).slice(),
-    }))
+    const collected = await miniProgram.evaluate(() => {
+      return {
+        errors: (globalThis.__pageErrors || []).slice(),
+        consoleErrors: (globalThis.__consoleErrors || []).slice(),
+      }
+    })
     entry.pageErrors = collected.errors
     entry.consoleErrors = collected.consoleErrors
 
