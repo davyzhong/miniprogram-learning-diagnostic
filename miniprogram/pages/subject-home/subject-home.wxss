@@ -637,3 +637,20 @@
 .latest-diagnosis-footer { align-items: center; display: flex; gap: 12rpx; justify-content: space-between; margin-top: 12rpx; }
 .latest-diagnosis-stats { color: #64748b; display: flex; flex-wrap: wrap; font-size: 20rpx; gap: 12rpx; }
 .latest-diagnosis-action { color: #2865a8; flex-shrink: 0; font-size: 21rpx; font-weight: 700; }
+
+/* B1 subject palettes: diagnosis remains the first actionable surface. */
+.subject-action { box-shadow: 0 10rpx 20rpx rgba(37, 99, 235, .20); }
+.page-chinese .workbench-card { background: linear-gradient(135deg, #fff8f7, #fff1f0); box-shadow: 0 10rpx 26rpx rgba(185, 28, 28, .10); }
+.page-chinese .subject-mark, .page-chinese .primary-action { background: #b42318; }
+.page-chinese .workbench-eyebrow, .page-chinese .latest-diagnosis-link, .page-chinese .latest-diagnosis-action { color: #a61b15; }
+.page-chinese .latest-diagnosis-card { border-left-color: #b42318; }
+.page-chinese .review-type { background: #fef2f2; color: #b42318; }
+.page-chinese .review-stage, .page-chinese .status-label-pending { background: #fff7e6; color: #9a6700; }
+.page-english .workbench-card, .page-english .english-vocab-card { border-color: #dbe4ff; background: linear-gradient(135deg, #f8faff, #eef2ff); }
+.page-english .workbench-eyebrow, .page-english .english-action-icon, .page-english .tool-icon, .page-english .latest-diagnosis-link, .page-english .latest-diagnosis-action { color: #4338ca; }
+.page-english .primary-action, .page-english .english-action-button { background: #4f46e5; }
+.page-english .english-action-card { border-color: #dbe4ff; box-shadow: 0 8rpx 22rpx rgba(79, 70, 229, .08); }
+.page-english .english-action-card.is-recommended { border-color: #4f46e5; box-shadow: 0 10rpx 28rpx rgba(79, 70, 229, .15); }
+.page-english .english-action-icon { background: #eef2ff; }
+.page-english .english-action-badge { background: #e0e7ff; color: #3730a3; }
+.page-english .latest-diagnosis-card { border-left-color: #4f46e5; }

@@ -1,4 +1,4 @@
-<view class="page bplus-page b1-page">
+<view class="page bplus-page b1-page b1-subject-chinese">
   <view class="card bplus-state" wx:if="{{loading}}">正在整理错项信息…</view>
   <view wx:elif="{{item}}">
     <view class="hero"><text class="eyebrow">语文字词成长</text><text class="title">{{item.title}}</text><text class="stage">{{item.stage}}</text></view>
