@@ -73,6 +73,10 @@
     {
       "root": "pages/ai-usage",
       "pages": ["ai-usage"]
+    },
+    {
+      "root": "pages/icon-compatibility",
+      "pages": ["icon-compatibility"]
     }
   ],
   "preloadRule": {

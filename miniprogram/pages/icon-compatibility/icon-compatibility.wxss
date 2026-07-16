@@ -1,0 +1,241 @@
+.page {
+  min-height: 100vh;
+  padding: 20rpx 24rpx 48rpx;
+  box-sizing: border-box;
+  background: var(--b1-canvas);
+}
+
+.test-summary {
+  padding: 18rpx 20rpx;
+}
+
+.test-summary-top,
+.active-category-head,
+.active-category-title-row,
+.category-navigation {
+  display: flex;
+  align-items: center;
+}
+
+.test-summary-top,
+.active-category-head,
+.category-navigation {
+  justify-content: space-between;
+}
+
+.test-title,
+.test-count,
+.environment-text,
+.active-category-meta {
+  display: block;
+}
+
+.test-title {
+  color: var(--b1-ink-strong);
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.test-count,
+.environment-text,
+.active-category-meta {
+  margin-top: 6rpx;
+  color: var(--b1-ink-muted);
+  font-size: 21rpx;
+  line-height: 1.4;
+}
+
+.environment-label,
+.verified-status {
+  padding: 6rpx 10rpx;
+  border-radius: 8rpx;
+  background: var(--b1-improved-bg);
+  color: var(--b1-improved-fg);
+  font-size: 19rpx;
+  font-weight: 600;
+}
+
+.category-scroll {
+  width: 100%;
+  margin-top: 16rpx;
+  white-space: nowrap;
+}
+
+.category-tabs {
+  display: inline-flex;
+  gap: 10rpx;
+  padding: 2rpx 0 8rpx;
+}
+
+.category-tab {
+  min-width: 138rpx;
+  height: 76rpx;
+  padding: 10rpx 14rpx;
+  box-sizing: border-box;
+  border: 1rpx solid var(--b1-border);
+  border-radius: 10rpx;
+  background: var(--b1-surface);
+  color: var(--b1-ink-muted);
+}
+
+.category-tab.is-active {
+  border-color: var(--b1-informational-fg);
+  background: var(--b1-informational-bg);
+  color: var(--b1-informational-fg);
+}
+
+.category-tab-id,
+.category-tab-name {
+  display: block;
+  font-size: 20rpx;
+  line-height: 1.25;
+}
+
+.category-tab-id {
+  font-weight: 700;
+}
+
+.category-tab-name {
+  margin-top: 4rpx;
+  font-size: 18rpx;
+}
+
+.active-category-head {
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+
+.active-category-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.active-category-title-row {
+  min-width: 0;
+  gap: 10rpx;
+}
+
+.active-category-id {
+  color: var(--b1-informational-fg);
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.active-category-name {
+  min-width: 0;
+  color: var(--b1-ink-strong);
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.copy-action {
+  flex-shrink: 0;
+  padding: 12rpx 14rpx;
+  border-radius: 8rpx;
+  background: var(--b1-informational-bg);
+  color: var(--b1-informational-fg);
+  font-size: 20rpx;
+  font-weight: 600;
+}
+
+.risk-note {
+  margin-top: 12rpx;
+  padding: 12rpx 16rpx;
+  border-left: 6rpx solid var(--b1-waiting-fg);
+  background: var(--b1-waiting-bg);
+  color: var(--b1-waiting-fg);
+  font-size: 21rpx;
+  line-height: 1.45;
+}
+
+.candidate-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10rpx;
+  margin-top: 14rpx;
+}
+
+.candidate-item {
+  min-width: 0;
+  height: 156rpx;
+  padding: 12rpx 6rpx 10rpx;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid var(--b1-border);
+  border-radius: 10rpx;
+  background: var(--b1-surface);
+}
+
+.candidate-item:active {
+  border-color: var(--b1-informational-fg);
+  background: var(--b1-informational-bg);
+}
+
+.candidate-glyph {
+  min-height: 54rpx;
+  font-size: 42rpx;
+  line-height: 1.2;
+}
+
+.candidate-id {
+  margin-top: 5rpx;
+  color: var(--b1-informational-fg);
+  font-size: 17rpx;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.candidate-label {
+  width: 100%;
+  margin-top: 4rpx;
+  overflow: hidden;
+  color: var(--b1-ink-muted);
+  font-size: 17rpx;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-navigation {
+  margin-top: 20rpx;
+}
+
+.category-nav-button {
+  width: 176rpx;
+  height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  box-sizing: border-box;
+  border: 1rpx solid var(--b1-border);
+  border-radius: 10rpx;
+  background: var(--b1-surface);
+  color: var(--b1-ink-strong);
+  font-size: 23rpx;
+  font-weight: 600;
+}
+
+.category-nav-button.is-next {
+  border-color: var(--b1-informational-fg);
+  background: var(--b1-informational-bg);
+  color: var(--b1-informational-fg);
+}
+
+.category-nav-button.is-disabled {
+  opacity: .38;
+}
+
+.category-nav-direction {
+  font-size: 34rpx;
+  line-height: 1;
+}
+
+.category-position {
+  color: var(--b1-ink-subtle);
+  font-size: 20rpx;
+}
