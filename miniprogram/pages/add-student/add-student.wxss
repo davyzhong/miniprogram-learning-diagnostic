@@ -2,18 +2,18 @@
 
 .page {
   min-height: 100vh;
-  background: #f7fafc;
+  background: var(--b1-canvas);
   padding-bottom: 160rpx;
 }
 
 .setup-hero {
   align-items: center;
-  background: linear-gradient(135deg, #ffffff 0%, #eaf4ff 100%);
-  border-bottom: 1rpx solid #dbe8f4;
+  background: var(--b1-canvas);
+  border-bottom: 1rpx solid var(--b1-border);
   display: flex;
   flex-direction: column;
   gap: 20rpx;
-  padding: 28rpx;
+  padding: 24rpx 28rpx;
 }
 
 .setup-copy {
@@ -22,14 +22,14 @@
 }
 
 .setup-title {
-  color: #17365d;
+  color: var(--b1-ink-strong);
   display: block;
   font-size: 36rpx;
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .setup-desc {
-  color: #53657a;
+  color: var(--b1-ink-muted);
   display: block;
   font-size: 23rpx;
   line-height: 1.5;
@@ -48,32 +48,33 @@
 
 /* ========== 表单 ========== */
 .form {
-  padding: 32rpx 28rpx;
+  margin: 20rpx 28rpx;
+  padding: 24rpx;
 }
 
 .form-item {
-  margin-bottom: 36rpx;
+  margin-bottom: 28rpx;
 }
 
 .label {
   display: block;
   font-size: 28rpx;
   font-weight: 600;
-  color: #4a5568;
-  margin-bottom: 16rpx;
+  color: var(--b1-ink-muted);
+  margin-bottom: 12rpx;
 }
 
 .input {
-  background: #ffffff;
-  border: 2rpx solid #e2e8f0;
-  border-radius: 12rpx;
-  padding: 20rpx 24rpx;
+  background: var(--b1-surface);
+  border: 2rpx solid var(--b1-border);
+  border-radius: 10rpx;
+  padding: 18rpx 20rpx;
   font-size: 30rpx;
-  color: #1a202c;
+  color: var(--b1-ink);
 }
 
 .input:focus {
-  border-color: #2b6cb0;
+  border-color: var(--b1-improved-fg);
 }
 
 /* ========== 年级选择 ========== */
@@ -87,14 +88,14 @@
   padding: 14rpx 28rpx;
   border-radius: 12rpx;
   font-size: 26rpx;
-  background: #edf2f7;
-  color: #4a5568;
+  background: var(--b1-neutral-bg);
+  color: var(--b1-ink-muted);
   font-weight: 500;
 }
 
 .grade-btn.active {
-  background: #2b6cb0;
-  color: #ffffff;
+  background: var(--b1-improved-bg);
+  color: var(--b1-improved-fg);
   font-weight: 600;
 }
 
@@ -117,7 +118,7 @@
 }
 
 .color-dot.active {
-  border-color: #1a202c;
+  border-color: var(--b1-improved-fg);
   transform: scale(1.1);
 }
 
@@ -135,26 +136,27 @@
   right: 0;
   padding: 20rpx 28rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
-  background: #ffffff;
-  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
+  background: var(--b1-surface);
+  border-top: 1rpx solid var(--b1-border);
+  box-shadow: none;
   z-index: 100;
 }
 
-.btn-save {
-  background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%);
-  color: #ffffff;
-  border-radius: 16rpx;
+.form-primary.btn-save {
+  background: var(--b1-improved-fg);
+  color: var(--b1-surface);
+  border-radius: 10rpx;
   font-size: 32rpx;
   font-weight: 600;
-  padding: 24rpx 0;
+  padding: 0 24rpx;
   border: none;
   width: 100%;
-  line-height: 1.4;
+  line-height: 88rpx;
 }
 
 .btn-save::after { border: none; }
 
 .btn-save[disabled] {
-  background: #a0aec0;
-  color: #ffffff;
+  background: var(--b1-neutral-bg);
+  color: var(--b1-ink-subtle);
 }

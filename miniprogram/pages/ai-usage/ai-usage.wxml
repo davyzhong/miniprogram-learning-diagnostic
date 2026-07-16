@@ -11,7 +11,7 @@
 
   <!-- 汇总卡片 -->
   <view class="summary-grid">
-    <view class="summary-card" wx:for="{{summaryCards}}" wx:key="label">
+    <view class="summary-card usage-summary-{{index}}" wx:for="{{summaryCards}}" wx:key="label">
       <view class="summary-value">{{item.value}}</view>
       <view class="summary-label">
         {{item.label}}<text wx:if="{{item.hint}}" class="summary-hint">{{item.hint}}</text>
@@ -22,7 +22,7 @@
   <!-- 功能拆分 -->
   <view class="section" wx:if="{{breakdownVisible}}">
     <view class="section-title">按功能拆分</view>
-    <view class="breakdown-row" wx:for="{{breakdown}}" wx:key="key">
+    <view class="breakdown-row usage-category-{{item.key}}" wx:for="{{breakdown}}" wx:key="key">
       <view class="breakdown-name">{{item.name}}</view>
       <view class="breakdown-meta">{{item.callCount}} 次 · {{item.tokens}} token</view>
       <view class="breakdown-cost">{{item.costText}}</view>
@@ -72,7 +72,7 @@
   <!-- 删除数据入口 -->
   <view class="footer">
     <view
-      class="deletion-btn {{deletionSubmitting ? 'submitting' : ''}} {{deletionSubmitted ? 'submitted' : ''}}"
+      class="deletion-btn b1-destructive {{deletionSubmitting ? 'submitting' : ''}} {{deletionSubmitted ? 'submitted' : ''}}"
       catchtap="onDeletionRequest"
     >
       {{deletionSubmitted ? '已提交删除申请' : (deletionSubmitting ? '提交中…' : '申请删除我的数据')}}
