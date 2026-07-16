@@ -153,3 +153,18 @@ test('verification upload page shows the paper code context', async () => {
   assert.equal(page.data.paperName, '验证试卷')
   assert.equal(page.data.paperQuestionCount, 6)
 })
+
+test('upload page keeps dense text-only guidance and accessible image controls', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload/upload.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload/upload.wxss'), 'utf8')
+
+  for (const label of ['光线', '铺平', '清晰', '红笔']) assert.match(wxml, new RegExp(`>${label}<`))
+  assert.match(wxml, /class="delete-btn" aria-label="删除图片" catchtap="onDeleteImage" data-index="\{\{index\}\}">删除<\/view>/)
+  assert.match(wxml, /class="async-state">后台分析<\/text>/)
+  assert.doesNotMatch(wxml, /⌛|⏳/)
+  assert.match(wxml, /bindtap="onChooseImage"/)
+  assert.match(wxml, /catchtap="onDeleteImage" data-index="\{\{index\}\}"/)
+  assert.match(wxml, /bindtap="onSubmit"/)
+  assert.match(wxss, /\.photo-tips\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*1fr\)/s)
+  assert.match(wxss, /\.async-state\s*\{/)
+})

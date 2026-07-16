@@ -6,6 +6,10 @@ const PROJECT_PATH = path.resolve(__dirname, '..')
 const CLI_PATH = process.env.WECHAT_DEVTOOLS_CLI || '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
 const SCREENSHOT_PATH = '/tmp/learning-record-timeline-narrow.png'
 const MAX_NARROW_WIDTH = 430
+const REQUIRED_VIEWPORT_WIDTH = 375
+const REQUIRED_VIEWPORT_HEIGHT = 812
+const MIN_FILTER_CONTROLS = 4
+const MIN_RECORD_CARDS = 2
 const MAX_CARD_HEIGHT = 420
 const MAX_EVIDENCE_HEIGHT = 80
 const MAX_CODE_HEIGHT = 32
@@ -35,9 +39,19 @@ function rectsOverlap(a, b) {
 
 function validateLayoutMetrics(metrics = {}) {
   const windowWidth = numberOf(metrics.windowWidth)
+  const windowHeight = numberOf(metrics.windowHeight)
   const pageWidth = numberOf(metrics.pageWidth)
   if (!windowWidth || windowWidth > MAX_NARROW_WIDTH) {
     throw new Error(`narrow viewport required, got ${windowWidth}px`)
+  }
+  if (windowWidth !== REQUIRED_VIEWPORT_WIDTH || windowHeight < REQUIRED_VIEWPORT_HEIGHT) {
+    throw new Error(`375 × 812 viewport required, got ${windowWidth} × ${windowHeight}px`)
+  }
+  if (Number(metrics.filterCount) < MIN_FILTER_CONTROLS) {
+    throw new Error(`expected at least ${MIN_FILTER_CONTROLS} filter controls, got ${metrics.filterCount || 0}`)
+  }
+  if (Number(metrics.recordCount) < MIN_RECORD_CARDS) {
+    throw new Error(`expected at least ${MIN_RECORD_CARDS} record cards, got ${metrics.recordCount || 0}`)
   }
   if (pageWidth > windowWidth + 1) {
     throw new Error(`horizontal overflow: page ${pageWidth}px exceeds viewport ${windowWidth}px`)
@@ -98,6 +112,15 @@ async function installTimelineMocks(miniProgram) {
       evidenceTime: '2026-07-12T10:30:00+08:00',
       comparisonSummary: '小数乘法计算已改善，应用题审题仍需巩固。',
       imageFiles
+    }, {
+      _id: 'report-layout-diagnosis',
+      studentId: 'student-layout',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      createdAt: '2026-07-12T09:20:00+08:00',
+      summary: '分数计算诊断已完成，可查看本次结果。',
+      imageFiles: imageFiles.slice(0, 1)
     }]
     const papers = [{
       _id: 'paper-layout',
@@ -137,6 +160,7 @@ async function collectLayoutMetrics(miniProgram, page) {
   const systemInfo = await miniProgram.systemInfo()
   const pageSize = await page.size()
   const cards = await page.$$('.record-card')
+  const filters = await page.$$('.filter-pill')
   const evidenceRows = await page.$$('.fold-row')
   const paperCard = await page.$('.record-verification-paper')
   const code = paperCard && await paperCard.$('.paper-code')
@@ -144,10 +168,15 @@ async function collectLayoutMetrics(miniProgram, page) {
   const meta = paperCard && await paperCard.$('.event-meta')
   if (!paperCard || !code || !title || !meta) throw new Error('paper card layout elements not found')
   if (evidenceRows.length !== 3) throw new Error(`expected 3 inline evidence rows, got ${evidenceRows.length}`)
+  if (filters.length < MIN_FILTER_CONTROLS) throw new Error(`expected at least ${MIN_FILTER_CONTROLS} filter controls, got ${filters.length}`)
+  if (cards.length < MIN_RECORD_CARDS) throw new Error(`expected at least ${MIN_RECORD_CARDS} record cards, got ${cards.length}`)
 
   return {
     windowWidth: systemInfo.windowWidth,
+    windowHeight: systemInfo.windowHeight,
     pageWidth: pageSize.width,
+    filterCount: filters.length,
+    recordCount: cards.length,
     codeHeight: (await code.size()).height,
     cardRects: await Promise.all(cards.map(elementRect)),
     evidenceRects: await Promise.all(evidenceRows.map(elementRect)),

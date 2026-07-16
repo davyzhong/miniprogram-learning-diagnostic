@@ -2,7 +2,7 @@
 
 .page {
   min-height: 100vh;
-  background: #f7fafc;
+  background: #f8f5ef;
   padding-bottom: 180rpx;
 }
 
@@ -12,8 +12,9 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 18rpx;
-  background: #ebf8ff;
-  border-radius: 0 0 20rpx 20rpx;
+  background: #e1e8fa;
+  border-bottom: 1rpx solid #cbd6ed;
+  border-radius: 0 0 12rpx 12rpx;
   padding: 24rpx 28rpx;
   margin-bottom: 20rpx;
 }
@@ -43,22 +44,23 @@
   display: block;
   font-size: 28rpx;
   font-weight: 600;
-  color: #2b6cb0;
+  color: #26383a;
   margin-bottom: 4rpx;
 }
 
 .tip-desc {
   display: block;
   font-size: 24rpx;
-  color: #4a5568;
+  color: #566568;
   line-height: 1.5;
 }
 
 .paper-context {
-  background: #ffffff;
-  border: 1rpx solid #dbe8f7;
-  border-radius: 14rpx;
-  box-shadow: 0 3rpx 14rpx rgba(19, 43, 72, 0.05);
+  background: #fffdfa;
+  border: 1rpx solid #dedbd2;
+  border-left: 6rpx solid #b37808;
+  border-radius: 10rpx;
+  box-shadow: none;
   margin: 0 28rpx 18rpx;
   padding: 20rpx 24rpx;
 }
@@ -71,10 +73,10 @@
 }
 
 .context-code {
-  color: #17365d;
+  color: #6d5000;
   display: block;
   font-size: 32rpx;
-  font-weight: 820;
+  font-weight: 700;
   line-height: 1.3;
   margin-bottom: 6rpx;
   word-break: break-all;
@@ -88,15 +90,21 @@
 
 /* ========== 拍照提示 ========== */
 .photo-tips {
-  display: flex;
-  justify-content: space-around;
-  padding: 16rpx 28rpx;
+  display: grid;
+  gap: 8rpx;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 0 28rpx;
   margin-bottom: 12rpx;
 }
 
 .tip-item {
-  font-size: 22rpx;
-  color: #718096;
+  background: #fffdfa;
+  border: 1rpx solid #dedbd2;
+  border-radius: 6rpx;
+  color: #566568;
+  font-size: 20rpx;
+  padding: 10rpx 0;
+  text-align: center;
 }
 
 /* ========== 照片网格 ========== */
@@ -117,7 +125,7 @@
 }
 
 .photo-slot.has-image {
-  border: 2rpx solid #e2e8f0;
+  border: 2rpx solid #dedbd2;
 }
 
 .preview-img {
@@ -157,7 +165,7 @@
   position: absolute;
   left: 4rpx;
   top: 4rpx;
-  background: rgba(43, 108, 176, 0.92);
+  background: rgba(65, 104, 183, 0.92);
   border-radius: 6rpx;
   color: #ffffff;
   font-size: 18rpx;
@@ -165,24 +173,24 @@
 }
 
 .add-slot {
-  border: 3rpx dashed #cbd5e0;
+  border: 2rpx dashed #b9b6ad;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f7fafc;
+  background: #fffdfa;
 }
 
 .add-icon {
   font-size: 48rpx;
-  color: #a0aec0;
+  color: #4168b7;
   line-height: 1;
   margin-bottom: 4rpx;
 }
 
 .add-text {
   font-size: 20rpx;
-  color: #a0aec0;
+  color: #566568;
 }
 
 .image-count {
@@ -229,19 +237,22 @@
   align-items: center;
   margin: 0 28rpx 28rpx;
   padding: 16rpx 20rpx;
-  background: #fffff0;
-  border-radius: 10rpx;
+  background: #fae9b7;
+  border: 1rpx solid #e4cc86;
+  border-radius: 8rpx;
 }
 
-.async-icon {
-  font-size: 28rpx;
+.async-state {
+  color: #6d5000;
+  font-size: 22rpx;
+  font-weight: 600;
   margin-right: 12rpx;
   flex-shrink: 0;
 }
 
 .async-text {
   font-size: 24rpx;
-  color: #975a16;
+  color: #6d5000;
   line-height: 1.4;
 }
 
@@ -253,15 +264,16 @@
   right: 0;
   padding: 20rpx 28rpx;
   padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
-  background: #ffffff;
-  box-shadow: 0 -2rpx 12rpx rgba(0, 0, 0, 0.05);
+  background: #fffdfa;
+  border-top: 1rpx solid #dedbd2;
+  box-shadow: none;
   z-index: 100;
 }
 
 .bottom-bar button {
-  background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%);
+  background: #16775e;
   color: #ffffff;
-  border-radius: 16rpx;
+  border-radius: 10rpx;
   font-size: 32rpx;
   font-weight: 600;
   padding: 24rpx 0;
@@ -273,12 +285,12 @@
 .bottom-bar button::after { border: none; }
 
 .bottom-bar button.btn-disabled {
-  background: #a0aec0;
+  background: #a5afaa;
   color: #ffffff;
 }
 
 .bottom-bar button[disabled] {
-  background: #a0aec0;
+  background: #a5afaa;
   color: #ffffff;
 }
 

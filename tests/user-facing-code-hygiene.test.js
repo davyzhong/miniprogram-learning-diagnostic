@@ -102,6 +102,13 @@ test('registered page sources do not use internal IDs as visible fallbacks', () 
   assert.deepEqual(failures, [], `visible ID source leaks:\n${failures.join('\n')}`)
 })
 
+test('learning record paper codes preserve parent-readable dates while internal identifiers stay hidden', () => {
+  const presenter = require('../miniprogram/pages/upload-history/upload-history-presenter')
+  assert.equal(presenter.readablePaperCode('数学-20260712-06'), '数学-20260712-06')
+  assert.equal(presenter.readablePaperCode('BN-20260712-06'), '')
+  assert.equal(presenter.readablePaperCode('665f8c1a2b3c4d5e6f708192'), '')
+})
+
 test('all registered page adapters execute real modules and keep legacy IDs out of visible models', async () => {
   const failures = []
   for (const [page, adapter] of Object.entries(PAGE_AUDIT_REGISTRY)) {
