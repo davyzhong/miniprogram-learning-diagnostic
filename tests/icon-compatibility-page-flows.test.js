@@ -1,0 +1,109 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+const { createWxMock, loadPage } = require('./helpers/page-harness')
+
+const ROOT = path.resolve(__dirname, '..')
+const PAGE_JS = 'miniprogram/pages/icon-compatibility/icon-compatibility.js'
+
+test('compatibility page keeps only category metadata and the active items in page data', () => {
+  const wx = createWxMock({
+    getDeviceInfo: () => ({ model: 'Pixel 9', system: 'Android 16', platform: 'android' }),
+    getAppBaseInfo: () => ({ version: '9.0.1', SDKVersion: '3.16.1' })
+  })
+  const { page } = loadPage(PAGE_JS, { wx })
+
+  page.onLoad()
+
+  assert.equal(page.data.activeCategory.id, 'C01')
+  assert.equal(page.data.activeItems.length, 7)
+  assert.equal(page.data.categoryTabs.length, 14)
+  page.data.categoryTabs.forEach(tab => assert.equal(Object.hasOwn(tab, 'items'), false))
+  assert.match(page.data.environmentText, /Pixel 9/)
+  assert.match(page.data.environmentText, /Android 16/)
+  assert.match(page.data.environmentText, /微信 9\.0\.1/)
+  assert.match(page.data.environmentText, /基础库 3\.16\.1/)
+  assert.equal(page.data.isFirstCategory, true)
+  assert.equal(page.data.isLastCategory, false)
+
+  page.onCategoryTap({ currentTarget: { dataset: { index: 1 } } })
+  assert.equal(page.data.activeCategory.id, 'C02')
+  assert.equal(page.data.activeItems.length, 15)
+  assert.equal(page.data.activeTabId, 'category-C02')
+  assert.doesNotMatch(JSON.stringify(page.data), /🗺️/)
+})
+
+test('compatibility page supports legacy and unavailable environment APIs', () => {
+  const legacyWx = createWxMock({
+    getSystemInfoSync: () => ({ model: 'Legacy Phone', system: 'Android 12', version: '8.0.50', SDKVersion: '2.32.3' })
+  })
+  const legacy = loadPage(PAGE_JS, { wx: legacyWx }).page
+  legacy.onLoad()
+  assert.equal(legacy.data.environmentText, 'Legacy Phone · Android 12 · 微信 8.0.50 · 基础库 2.32.3')
+
+  const absent = loadPage(PAGE_JS, { wx: createWxMock() }).page
+  absent.onLoad()
+  assert.equal(absent.data.environmentText, '环境信息不可用')
+
+  const throwing = loadPage(PAGE_JS, {
+    wx: createWxMock({
+      getDeviceInfo: () => { throw new Error('unsupported') },
+      getAppBaseInfo: () => { throw new Error('unsupported') },
+      getSystemInfoSync: () => { throw new Error('unsupported') }
+    })
+  }).page
+  throwing.onLoad()
+  assert.equal(throwing.data.environmentText, '环境信息不可用')
+})
+
+test('compatibility page navigates category boundaries without layout-state drift', () => {
+  const { page } = loadPage(PAGE_JS)
+  page.onLoad()
+
+  page.onPreviousCategory()
+  assert.equal(page.data.activeCategory.id, 'C01')
+  page.onNextCategory()
+  assert.equal(page.data.activeCategory.id, 'C02')
+
+  page.selectCategory(13)
+  assert.equal(page.data.activeCategory.id, 'C14')
+  assert.equal(page.data.isFirstCategory, false)
+  assert.equal(page.data.isLastCategory, true)
+  page.onNextCategory()
+  assert.equal(page.data.activeCategory.id, 'C14')
+})
+
+test('compatibility page copies exact public category and item IDs', async () => {
+  const wx = createWxMock()
+  const { page } = loadPage(PAGE_JS, { wx })
+  page.onLoad()
+
+  await page.onCopyCategoryId({ currentTarget: { dataset: { id: 'C01' } } })
+  await page.onCopyItemId({ currentTarget: { dataset: { id: 'C01-04' } } })
+
+  const copied = wx.calls.filter(call => call.name === 'setClipboardData').map(call => call.payload.data)
+  assert.deepEqual(copied, ['C01', 'C01-04'])
+})
+
+test('compatibility page template renders only active items and registers a subpackage route', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/icon-compatibility/icon-compatibility.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/icon-compatibility/icon-compatibility.wxss'), 'utf8')
+  const pageJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'miniprogram/pages/icon-compatibility/icon-compatibility.json'), 'utf8'))
+  const appJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'miniprogram/app.json'), 'utf8'))
+
+  assert.match(wxml, /class="page b1-page"/)
+  assert.match(wxml, /scroll-into-view="\{\{activeTabId\}\}"/)
+  assert.match(wxml, /wx:for="\{\{activeItems\}\}"/)
+  assert.doesNotMatch(wxml, /category\.items/)
+  assert.match(wxml, /\{\{activeItems\.length\}\} 项/)
+  assert.match(wxml, /\{\{activeCategory\.statusText\}\}/)
+  assert.match(wxml, /首批已验证/)
+  assert.match(wxml, /onCopyCategoryId/)
+  assert.match(wxml, /onCopyItemId/)
+  assert.match(wxss, /grid-template-columns:\s*repeat\(4,\s*1fr\)/)
+  assert.equal(pageJson.navigationBarTitleText, '图标兼容性测试')
+  assert.equal(appJson.pages.includes('pages/icon-compatibility/icon-compatibility'), false)
+  const pkg = appJson.subPackages.find(item => item.root === 'pages/icon-compatibility')
+  assert.deepEqual(pkg && pkg.pages, ['icon-compatibility'])
+})

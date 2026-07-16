@@ -1,0 +1,68 @@
+<view class="page b1-page">
+  <view class="test-summary b1-card">
+    <view class="test-summary-top">
+      <view>
+        <text class="test-title">实用图标测试</text>
+        <text class="test-count">{{candidateCount}} 项 · {{categoryTabs.length}} 类</text>
+      </view>
+      <text class="environment-label">测试环境</text>
+    </view>
+    <text class="environment-text">{{environmentText}}</text>
+  </view>
+
+  <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="{{activeTabId}}">
+    <view class="category-tabs">
+      <view
+        id="category-{{item.id}}"
+        class="category-tab {{activeCategory.id === item.id ? 'is-active' : ''}}"
+        wx:for="{{categoryTabs}}"
+        wx:key="id"
+        data-index="{{index}}"
+        bindtap="onCategoryTap"
+      >
+        <text class="category-tab-id">{{item.id}}</text>
+        <text class="category-tab-name">{{item.name}}</text>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view class="active-category-head">
+    <view class="active-category-copy" data-id="{{activeCategory.id}}" bindtap="onCopyCategoryId">
+      <view class="active-category-title-row">
+        <text class="active-category-id">{{activeCategory.id}}</text>
+        <text class="active-category-name">{{activeCategory.name}}</text>
+        <text class="verified-status" wx:if="{{activeCategory.statusText}}" aria-label="首批已验证">{{activeCategory.statusText}}</text>
+      </view>
+      <text class="active-category-meta">{{activeItems.length}} 项 · 点击分类编号可复制</text>
+    </view>
+    <text class="copy-action" data-id="{{activeCategory.id}}" bindtap="onCopyCategoryId">复制编号</text>
+  </view>
+
+  <view class="risk-note">{{activeCategory.riskNote}}</view>
+
+  <view class="candidate-grid">
+    <view
+      class="candidate-item"
+      wx:for="{{activeItems}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onCopyItemId"
+    >
+      <text class="candidate-glyph">{{item.glyph}}</text>
+      <text class="candidate-id">{{item.id}}</text>
+      <text class="candidate-label">{{item.label}}</text>
+    </view>
+  </view>
+
+  <view class="category-navigation">
+    <view class="category-nav-button {{isFirstCategory ? 'is-disabled' : ''}}" bindtap="onPreviousCategory" aria-role="button" aria-label="上一类">
+      <text class="category-nav-direction">‹</text>
+      <text>上一类</text>
+    </view>
+    <text class="category-position">{{activeCategoryIndex + 1}} / {{categoryTabs.length}}</text>
+    <view class="category-nav-button is-next {{isLastCategory ? 'is-disabled' : ''}}" bindtap="onNextCategory" aria-role="button" aria-label="下一类">
+      <text>下一类</text>
+      <text class="category-nav-direction">›</text>
+    </view>
+  </view>
+</view>
