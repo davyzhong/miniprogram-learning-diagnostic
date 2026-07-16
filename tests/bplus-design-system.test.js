@@ -20,6 +20,7 @@ function registeredPages() {
 
 const UI_SOURCE_ROOTS = ['miniprogram/pages', 'miniprogram/utils']
 const UI_EXTENSIONS = new Set(['.wxml', '.js'])
+const UI_LITERAL_EXEMPTIONS = ['miniprogram/pages/icon-compatibility/emoji-candidates.js']
 const PROHIBITED_UI_SYMBOL = /(?:\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u2190-\u21FF\u2600-\u27BF]|[✓✗✕★◎⌾□▧])/u
 const APPROVED_UI_SYMBOLS = ['🗺️', '📚', '📄', '📸', '📊', '🎯', '✅']
 
@@ -118,10 +119,10 @@ test('B1 shared primitives, subjects, and semantic classes are global and asset-
   assert.doesNotMatch(rules, /(?:url\s*\(|https?:|data:|\.png|\.jpe?g|\.svg|\.webp|\.gif|\.woff|iconfont)/i)
 })
 
-test('all 24 registered routes use the B1 page shell without redefining it locally', () => {
+test('all 25 registered routes use the B1 page shell without redefining it locally', () => {
   const pages = registeredPages()
   const globalPrimitive = /\.(?:b1-page|b1-card|b1-tag|b1-hit-target)\s*\{/
-  assert.equal(pages.length, 24)
+  assert.equal(pages.length, 25)
 
   for (const page of pages) {
     const wxml = read(`${page}.wxml`)
@@ -159,8 +160,10 @@ test('critical compact symbol controls keep a text label or accessible label', (
 })
 
 test('repository-authored UI sources contain no decorative emoji or unstable symbols', () => {
+  assert.deepEqual(UI_LITERAL_EXEMPTIONS, ['miniprogram/pages/icon-compatibility/emoji-candidates.js'])
   const violations = UI_SOURCE_ROOTS
     .flatMap(uiSourceFiles)
+    .filter(relativePath => !UI_LITERAL_EXEMPTIONS.includes(relativePath))
     .flatMap(relativePath => {
       const source = APPROVED_UI_SYMBOLS.reduce(
         (result, symbol) => result.split(symbol).join(''),
