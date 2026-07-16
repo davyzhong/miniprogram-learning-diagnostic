@@ -3,6 +3,11 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
+const {
+  BACKFILL_VERSION,
+  aggregateCumulativeErrors,
+  applyMetricsToProfile
+} = require('./cumulative-error-backfill')
 
 // 安全：历史重分析是破坏性维护操作（归档报告、重写 subjectProfiles），
 // 必须通过 MATH_REANALYSIS_TOKEN 校验，与 analyzePhotos 的 isTrustedReanalysisRequest 对齐。
@@ -971,6 +976,75 @@ async function finalize(event = {}) {
   }
 }
 
+async function backfillCumulativeErrors(event = {}) {
+  const reports = await fetchReports({
+    studentId: event.studentId || '',
+    limit: event.limit || 1000
+  })
+  const byStudent = new Map()
+  for (const report of reports) {
+    if (!report.studentId) continue
+    if (!byStudent.has(report.studentId)) byStudent.set(report.studentId, [])
+    byStudent.get(report.studentId).push(report)
+  }
+
+  const proposals = []
+  for (const [studentId, studentReports] of byStudent.entries()) {
+    const profileRes = await db.collection('subjectProfiles')
+      .where({ studentId, subject: SUBJECT })
+      .limit(1)
+      .get()
+    const profile = (profileRes.data || [])[0]
+    if (!profile) {
+      proposals.push({ studentId, status: 'skipped', reason: 'profile_not_found' })
+      continue
+    }
+    const metrics = aggregateCumulativeErrors(studentReports)
+    const patch = applyMetricsToProfile(profile, metrics, now())
+    proposals.push({
+      studentId,
+      profileId: profile._id,
+      status: patch.changed ? 'update' : 'unchanged',
+      metricCount: Object.keys(metrics).length,
+      currentBottlenecks: patch.currentBottlenecks,
+      metricBackfill: patch.metricBackfill
+    })
+  }
+
+  if (!event.apply) {
+    return {
+      success: true,
+      phase: 'backfillCumulativeErrors',
+      mode: 'dry-run',
+      version: BACKFILL_VERSION,
+      proposedChangeCount: proposals.filter(item => item.status === 'update').length,
+      proposals
+    }
+  }
+
+  let updatedProfileCount = 0
+  for (const proposal of proposals) {
+    if (proposal.status !== 'update') continue
+    await db.collection('subjectProfiles').doc(proposal.profileId).update({
+      data: {
+        currentBottlenecks: proposal.currentBottlenecks,
+        metricBackfill: proposal.metricBackfill,
+        updatedAt: now()
+      }
+    })
+    updatedProfileCount += 1
+  }
+  return {
+    success: true,
+    phase: 'backfillCumulativeErrors',
+    mode: 'apply',
+    version: BACKFILL_VERSION,
+    updatedProfileCount,
+    skippedProfileCount: proposals.filter(item => item.status === 'skipped').length,
+    unchangedProfileCount: proposals.filter(item => item.status === 'unchanged').length
+  }
+}
+
 exports.main = async (event = {}) => {
   // 安全：所有 phase 都必须通过 token 校验，防止外部直接调用触发破坏性历史重分析
   if (!isTrustedReanalysisRequest(event)) {
@@ -986,5 +1060,6 @@ exports.main = async (event = {}) => {
   if (phase === 'prepareAggregateRetry') return prepareAggregateRetry(event)
   if (phase === 'applyAggregateRetryResult') return applyAggregateRetryResult(event)
   if (phase === 'finalize') return finalize(event)
+  if (phase === 'backfillCumulativeErrors') return backfillCumulativeErrors(event)
   return { success: false, error: `未知 phase：${phase}` }
 }
