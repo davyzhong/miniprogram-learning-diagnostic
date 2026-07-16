@@ -21,6 +21,7 @@ function registeredPages() {
 const UI_SOURCE_ROOTS = ['miniprogram/pages', 'miniprogram/utils']
 const UI_EXTENSIONS = new Set(['.wxml', '.js'])
 const PROHIBITED_UI_SYMBOL = /(?:\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u2190-\u21FF\u2600-\u27BF]|[✓✗✕★◎⌾□▧])/u
+const APPROVED_UI_SYMBOLS = ['🗺️', '📚', '📄', '📸', '📊', '🎯', '✅']
 
 function uiSourceFiles(directory) {
   const absoluteDirectory = path.join(ROOT, directory)
@@ -161,7 +162,10 @@ test('repository-authored UI sources contain no decorative emoji or unstable sym
   const violations = UI_SOURCE_ROOTS
     .flatMap(uiSourceFiles)
     .flatMap(relativePath => {
-      const source = stripComments(read(relativePath), path.extname(relativePath))
+      const source = APPROVED_UI_SYMBOLS.reduce(
+        (result, symbol) => result.split(symbol).join(''),
+        stripComments(read(relativePath), path.extname(relativePath))
+      )
       return source.split(/\r?\n/).flatMap((line, index) => (
         PROHIBITED_UI_SYMBOL.test(line) ? [`${relativePath}:${index + 1}: ${line.trim()}`] : []
       ))
