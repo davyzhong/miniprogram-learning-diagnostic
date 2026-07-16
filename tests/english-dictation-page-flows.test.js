@@ -142,6 +142,16 @@ test('English dictation page starts in ready phase with a 20-word preview list',
   assert.equal(page.data.queue[0].meaningText, '词义1')
 })
 
+test('English dictation keeps B1 styling hooks and dictation state controls', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-dictation/english-dictation.wxml'), 'utf8')
+
+  assert.match(source, /class="page b1-page b1-subject-english"/)
+  assert.match(source, /bindtap="onStartTap">开始听写</)
+  assert.match(source, /bindtap="onPlayPromptTap">重读</)
+  assert.match(source, /bindtap="onNextTap">下一个</)
+  assert.match(source, /bindtap="onVoiceNextTap"/)
+})
+
 test('English dictation page auto-plays after start and advances on OK style commands', async () => {
   const spoken = []
   const timers = []

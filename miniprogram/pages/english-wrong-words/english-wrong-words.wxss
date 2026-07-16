@@ -225,6 +225,16 @@
   font-weight: 800;
 }
 
+/* English B1: indigo guides the vocabulary review flow. */
+.page { background: #f7f8ff; }
+.hero, .primary-btn { background: #4f46e5; }
+.state-card { background: #eef2ff; border-color: #c7d2fe; }
+.state-card.error { background: #fff1f2; border-color: #fecdd3; }
+.summary-value, .group-count { color: #4338ca; }
+.group-count { background: #eef2ff; }
+.word-tag { color: #4338ca; background: #e0e7ff; }
+.secondary-btn { color: #4338ca; border-color: #c7d2fe; }
+
 .primary-btn {
   background: #c05621;
   color: #fff;

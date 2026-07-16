@@ -82,6 +82,15 @@ test('English practice page uses a minimal word-card interaction instead of lect
   assert.doesNotMatch(source, /辅助播放提示/)
 })
 
+test('English practice keeps B1 styling hooks and voice controls', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-practice/english-practice.wxml'), 'utf8')
+
+  assert.match(source, /class="page b1-page b1-subject-english"/)
+  assert.match(source, /bindtap="onPlayPromptTap">播放发音</)
+  assert.match(source, /bindtap="onRecordTap"/)
+  assert.match(source, /\{\{recordButtonText\}\}/)
+})
+
 test('English practice pages avoid duplicate custom back controls', () => {
   const sources = [
     'miniprogram/pages/english-practice/english-practice.wxml',

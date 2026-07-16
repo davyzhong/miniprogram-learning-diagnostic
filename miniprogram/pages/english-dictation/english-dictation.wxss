@@ -372,3 +372,16 @@
   background: #e2e8f0;
   color: #475569;
 }
+
+/* English B1 uses an indigo learning surface; red is kept for error states. */
+.page { background: #f7f8ff; }
+.hero, .primary-btn { background: #4f46e5; }
+.state-card { background: #eef2ff; border-color: #c7d2fe; }
+.state-card.error { background: #fff1f2; border-color: #fecdd3; }
+.progress-value, .prompt-pill, .voice-next-btn, .fold-action, .word-order, .summary-num { color: #4338ca; }
+.prompt-pill, .voice-next-btn, .word-order { background: #eef2ff; border-color: #c7d2fe; }
+.state-speaking { background: #e0e7ff; color: #4338ca; }
+.state-writing { background: #fff7e6; color: #9a6700; }
+.state-waitingCommand { background: #fff7e6; color: #9a6700; }
+.voice-next-btn { border-color: #c7d2fe; }
+.result-verdict.verdict-incorrect { background: #fff7e6; color: #9a6700; }

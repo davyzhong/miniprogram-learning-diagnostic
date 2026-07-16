@@ -7,6 +7,19 @@ const { loadPageAndWait, flushAsync, waitForPageLoad, isThenable } = require('./
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 const util = require('../miniprogram/utils/util')
 
+test('subject home keeps the B1 subject surface, diagnosis route, and Chinese review identity hooks', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/subject-home/subject-home.wxml'), 'utf8')
+
+  assert.match(source, /class="page page-\{\{subject\}\} b1-page b1-subject-\{\{subject\}\}"/)
+  assert.match(source, /class="primary-action subject-action" bindtap="onPrimaryAction"/)
+  assert.match(source, /class="latest-diagnosis-card diagnosis-\{\{subject\}\}" wx:if="\{\{latestDiagnosis\}\}"/)
+  assert.match(source, /正式诊断/)
+  assert.match(source, /bindtap="onToolTap" data-key="latestReport"/)
+  assert.match(source, /bindtap="onChineseReviewTap" data-review-item-id="\{\{item\.reviewItemId\}\}"/)
+  assert.match(source, /\{\{item\.reviewStageText\}\}/)
+  assert.match(source, /data-action-type="\{\{item\.actionType\}\}"/)
+})
+
 test('subject home loads a compact action workbench', async () => {
   const cloud = {
     getSubjectProfile: async () => ({
