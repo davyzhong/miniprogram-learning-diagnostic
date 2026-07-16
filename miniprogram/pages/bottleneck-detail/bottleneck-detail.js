@@ -17,8 +17,8 @@ const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-te
 const knowledgeSeed = require('../../data/math/knowledge-nodes.seed')
 const nodeMap = new Map((knowledgeSeed.nodes || []).map(n => [n.nodeId, n]))
 
-const DOMAIN_ICONS = {
-  '数与代数': '🔢', '图形与几何': '📐', '统计与概率': '📊', '综合与实践': '🔧',
+const DOMAIN_MARKERS = {
+  '数与代数': '数', '图形与几何': '形', '统计与概率': '统', '综合与实践': '综',
 }
 
 function buildKnowledgePosition(bottleneck = {}) {
@@ -27,7 +27,7 @@ function buildKnowledgePosition(bottleneck = {}) {
   if (!node) return { visible: false }
 
   const domain = node.domain || '数与代数'
-  const domainIcon = DOMAIN_ICONS[domain] || '📚'
+  const domainMarker = DOMAIN_MARKERS[domain] || '知识'
   const prerequisites = (node.prerequisites || [])
     .map(pid => {
       const preNode = nodeMap.get(pid)
@@ -43,7 +43,7 @@ function buildKnowledgePosition(bottleneck = {}) {
   return {
     visible: true,
     domain,
-    domainIcon,
+    domainMarker,
     nodeTitle: readableNameOf(node) || '待确认知识点',
     gradeRange: node.gradeRange || [],
     prerequisites: prerequisites.slice(0, 4),

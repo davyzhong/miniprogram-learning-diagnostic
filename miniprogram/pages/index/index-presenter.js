@@ -19,8 +19,9 @@ const {
   SUBJECT_SHORT_NAMES
 } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
-const { UI_ICONS, subjectIcon } = require('../../utils/ui-icons')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
+
+const SUBJECT_MARKERS = { math: '数学', chinese: '语文', english: '英语' }
 
 const SUBJECTS = SUBJECT_KEYS.map(key => ({
   key,
@@ -80,10 +81,10 @@ function subjectLabelList(subjects) {
 
 // 知识地图卡片：4 领域 + 进度可视化
 const DOMAIN_META = [
-  { key: '数与代数', icon: '🔢', short: '数与代数' },
-  { key: '图形与几何', icon: '📐', short: '图形几何' },
-  { key: '统计与概率', icon: '📊', short: '统计概率' },
-  { key: '综合与实践', icon: '🔧', short: '综合实践' },
+  { key: '数与代数', marker: '数', short: '数与代数' },
+  { key: '图形与几何', marker: '形', short: '图形几何' },
+  { key: '统计与概率', marker: '统', short: '统计概率' },
+  { key: '综合与实践', marker: '综', short: '综合实践' },
 ]
 
 function buildKnowledgeMapCard(subjects = [], bottleneckStats = {}) {
@@ -96,7 +97,7 @@ function buildKnowledgeMapCard(subjects = [], bottleneckStats = {}) {
   const domains = DOMAIN_META.map(meta => {
     // 从 subjects 找该领域的卡点数（简化版：用 subject 级统计）
     return {
-      icon: meta.icon,
+      marker: meta.marker,
       name: meta.short,
       pendingCount: 0,
       masteredCount: 0,
@@ -272,7 +273,7 @@ function buildDiagnosisPrimaryAction(student, subject, report, profile, papers) 
   ))
   if (readyPaper) {
     return {
-      icon: UI_ICONS.PAPER,
+      marker: '试卷',
       text: '查看验证卷',
       summary: '用针对性验证确认报告中的学习卡点。',
       url: buildTraceableUrl({ type: 'paper-workbench', id: readyPaper._id })
@@ -282,7 +283,7 @@ function buildDiagnosisPrimaryAction(student, subject, report, profile, papers) 
   const pending = activeBottlenecks(profile)
   if (pending.length > 0) {
     return {
-      icon: UI_ICONS.NEXT_ACTION,
+      marker: '跟进',
       text: `进入${subject.name}跟进`,
       summary: `继续跟进${formatBottleneckDisplayList(pending)}。`,
       url: subjectHomeUrl(student, subject.key)
@@ -290,7 +291,7 @@ function buildDiagnosisPrimaryAction(student, subject, report, profile, papers) 
   }
 
   return {
-    icon: UI_ICONS.CAMERA,
+    marker: '上传',
     text: '补充新样本',
     summary: '上传新的作业或试卷，观察巩固情况。',
     url: uploadUrl(student, subject.key)
@@ -323,14 +324,6 @@ function buildDiagnosisWorkbenches(input, profileBySubject, subjectByKey, format
         key: report.subject,
         subject: report.subject,
         subjectName: subject.name,
-        subjectIcon: subjectIcon(report.subject),
-        reportIcon: UI_ICONS.REPORT,
-        insightIcon: UI_ICONS.INSIGHT,
-        evidenceIcon: UI_ICONS.EVIDENCE,
-        improvedIcon: UI_ICONS.IMPROVED,
-        persistingIcon: UI_ICONS.PERSISTING,
-        waitingIcon: UI_ICONS.WAITING,
-        uploadIcon: UI_ICONS.UPLOAD,
         title: `${subject.name}诊断报告`,
         judgment: compactSummary(sanitizeUserText(judgment, { treatAsId: true }), 44),
         generatedAtText: formatChineseDateTime(report.createdAt),
@@ -340,7 +333,7 @@ function buildDiagnosisWorkbenches(input, profileBySubject, subjectByKey, format
         persistingCount,
         waitingCount,
         trendText,
-        trendIcon: improvedCount > 0 ? '📉' : (persistingCount > 0 ? '📍' : '📊'),
+        trendMarker: improvedCount > 0 ? '改善' : (persistingCount > 0 ? '跟进' : '诊断'),
         reportId: report._id,
         reportUrl: buildTraceableUrl({ type: 'report-detail', id: report._id }),
         primaryAction: buildDiagnosisPrimaryAction(student, subject, report, profile, input.papers || []),

@@ -18,6 +18,26 @@ function registeredPages() {
   return [...mainPages, ...subPages]
 }
 
+const UI_SOURCE_ROOTS = ['miniprogram/pages', 'miniprogram/utils']
+const UI_EXTENSIONS = new Set(['.wxml', '.js'])
+const PROHIBITED_UI_SYMBOL = /(?:\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u2190-\u21FF\u2600-\u27BF]|[✓✗✕★◎⌾□▧])/u
+
+function uiSourceFiles(directory) {
+  const absoluteDirectory = path.join(ROOT, directory)
+  return fs.readdirSync(absoluteDirectory, { withFileTypes: true }).flatMap(entry => {
+    const relativePath = path.join(directory, entry.name)
+    if (entry.isDirectory()) return uiSourceFiles(relativePath)
+    return UI_EXTENSIONS.has(path.extname(entry.name)) ? [relativePath] : []
+  })
+}
+
+function stripComments(source, extension) {
+  if (extension === '.wxml') return source.replace(/<!--[\s\S]*?-->/g, '')
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:\\])\/\/[^\n]*/gm, '$1')
+}
+
 function b1Rules() {
   const appWxss = read('miniprogram/app.wxss')
   const match = appWxss.match(/\/\* B1 FOUNDATION START \*\/([\s\S]*?)\/\* B1 FOUNDATION END \*\//)
@@ -134,4 +154,17 @@ test('critical compact symbol controls keep a text label or accessible label', (
     const unlabeled = iconOnlyControls.filter(control => !/aria-label="[^"]+"/.test(control))
     assert.deepEqual(unlabeled, [], `${page}.wxml 存在没有文字或无障碍标签的关键操作`)
   }
+})
+
+test('repository-authored UI sources contain no decorative emoji or unstable symbols', () => {
+  const violations = UI_SOURCE_ROOTS
+    .flatMap(uiSourceFiles)
+    .flatMap(relativePath => {
+      const source = stripComments(read(relativePath), path.extname(relativePath))
+      return source.split(/\r?\n/).flatMap((line, index) => (
+        PROHIBITED_UI_SYMBOL.test(line) ? [`${relativePath}:${index + 1}: ${line.trim()}`] : []
+      ))
+    })
+
+  assert.deepEqual(violations, [], `仓库主动渲染的 UI emoji/不稳定符号：\n${violations.join('\n')}`)
 })

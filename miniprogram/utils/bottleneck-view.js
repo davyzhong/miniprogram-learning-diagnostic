@@ -6,9 +6,9 @@ const { formatMonthDay } = require('./util')
 const { readableNameOf } = require('./user-facing-text')
 
 const STATUS_META = {
-  needs_verification: { text: '待验证', className: 'pending', icon: '?', badgeText: '待验证', actionText: '查看/下载验证卷' },
-  persisting: { text: '持续出现', className: 'persisting', icon: '!', badgeText: '持续观察', actionText: '查看/下载验证卷' },
-  improved: { text: '已改善', className: 'improved', icon: '✓', badgeText: '已改善', actionText: '查看证据' }
+  needs_verification: { text: '待验证', className: 'pending', icon: '待验证', badgeText: '待验证', actionText: '查看/下载验证卷' },
+  persisting: { text: '持续出现', className: 'persisting', icon: '持续', badgeText: '持续观察', actionText: '查看/下载验证卷' },
+  improved: { text: '已改善', className: 'improved', icon: '改善', badgeText: '已改善', actionText: '查看证据' }
 }
 
 const TREND_META = {

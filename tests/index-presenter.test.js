@@ -3,7 +3,6 @@ const assert = require('node:assert/strict')
 
 const { buildLearningProfileHomeView } = require('../miniprogram/pages/index/index-presenter')
 const { buildChildWorkbenchCards, buildFamilyWorkbenchHero } = require('../miniprogram/utils/child-workbench')
-const { UI_ICONS, subjectIcon } = require('../miniprogram/utils/ui-icons')
 
 const relative = () => '今天'
 
@@ -317,10 +316,13 @@ test('family workbench hero turns the household overview into a real action entr
   assert.deepEqual(hero.stats.map(item => item.key), ['children', 'pendingActions', 'improvements', 'formalDiagnoses'])
 })
 
-test('shared icon map defines every family workbench semantic', () => {
-  for (const key of ['VERIFICATION', 'PAPER_SUMMARY', 'DIAGNOSIS_LIST']) {
-    assert.ok(UI_ICONS[key])
-  }
+test('family workbench uses stable Chinese markers for every semantic', () => {
+  const [card] = buildChildWorkbenchCards({
+    students: [{ _id: 'student-marker', name: '小明' }]
+  }, relative)
+
+  assert.equal(card.subjectRows[0].marker, '数学')
+  assert.deepEqual(card.quickLinks.map(item => item.marker), ['诊断', '试卷', '地图', '记录'])
 })
 
 test('family workbench exposes a compact icon contract without leaking internal IDs', () => {
@@ -362,25 +364,15 @@ test('family workbench exposes a compact icon contract without leaking internal 
 
   const card = cards[0]
   assert.equal(card.statusItems.length, 4)
-  assert.deepEqual(card.statusItems.map(item => item.icon), [
-    UI_ICONS.BOTTLENECK,
-    UI_ICONS.VERIFICATION,
-    UI_ICONS.PERSISTING,
-    UI_ICONS.IMPROVED
-  ])
+  assert.deepEqual(card.statusItems.map(item => item.icon), ['分析', '验证', '上传', '改善'])
   assert.ok(card.statusItems.every(item => item.shortLabel))
-  assert.ok(card.priorityAction.icon)
+  assert.equal(card.priorityAction.marker, '验证')
   assert.ok(Array.isArray(card.secondaryActions))
   assert.deepEqual(card.subjectRows.map(item => item.key), ['math', 'chinese', 'english'])
-  assert.deepEqual(card.subjectRows.map(item => item.icon), ['math', 'chinese', 'english'].map(subjectIcon))
-  assert.equal(card.latestDiagnosis.icon, UI_ICONS.DIAGNOSIS)
-  assert.equal(card.latestDiagnosis.subjectIcon, subjectIcon('math'))
-  assert.deepEqual(card.quickLinks.map(item => item.icon), [
-    UI_ICONS.DIAGNOSIS_LIST,
-    UI_ICONS.PAPER_SUMMARY,
-    UI_ICONS.KNOWLEDGE_MAP,
-    UI_ICONS.TIME
-  ])
+  assert.deepEqual(card.subjectRows.map(item => item.marker), ['数学', '语文', '英语'])
+  assert.equal(card.latestDiagnosis.marker, '诊断')
+  assert.equal(card.latestDiagnosis.subjectMarker, '数学')
+  assert.deepEqual(card.quickLinks.map(item => item.marker), ['诊断', '试卷', '地图', '记录'])
 
   const visibleText = [
     ...card.statusItems.flatMap(item => [item.label, item.shortLabel, item.value]),
@@ -406,7 +398,7 @@ test('family workbench exposes a compact icon contract without leaking internal 
     'improvements',
     'formalDiagnoses'
   ])
-  assert.ok(hero.stats.every(item => item.icon && item.shortLabel && item.value !== undefined))
+  assert.ok(hero.stats.every(item => item.marker && item.shortLabel && item.value !== undefined))
 })
 
 test('child workbench never displays an opaque-only paper fallback code', () => {
@@ -806,7 +798,7 @@ test('learning profile builds dense diagnosis workbenches only for subjects with
 
   assert.deepEqual(view.diagnosisWorkbenches.map(item => item.subject), ['math', 'chinese'])
   assert.equal(view.diagnosisWorkbenches.some(item => item.subject === 'english'), false)
-  assert.equal(view.diagnosisWorkbenches[0].subjectIcon, subjectIcon('math'))
+  assert.equal(view.diagnosisWorkbenches[0].subjectName, '数学')
   assert.equal(view.diagnosisWorkbenches[0].evidenceCount, 6)
   assert.equal(view.diagnosisWorkbenches[0].improvedCount, 1)
   assert.equal(view.diagnosisWorkbenches[0].persistingCount, 1)

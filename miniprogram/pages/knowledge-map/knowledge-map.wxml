@@ -14,7 +14,7 @@
   <view wx:else>
     <view class="hero">
       <view class="hero-copy">
-        <text class="hero-title">🗺️ {{view.title}}</text>
+        <text class="hero-title">知识地图 {{view.title}}</text>
         <text class="hero-summary">{{view.summary}}</text>
         <text class="hero-hint">点击任意卡点直接开始学习，约 5-10 分钟讲清楚一个卡点</text>
       </view>
@@ -42,7 +42,7 @@
     <view class="domain-list">
       <view class="domain-card" wx:for="{{view.domains}}" wx:key="key">
         <view class="domain-header">
-          <text class="domain-icon">{{item.icon}}</text>
+          <text class="domain-icon">{{item.marker}}</text>
           <view class="domain-info">
             <text class="domain-name">{{item.name}}</text>
             <text class="domain-stats">{{item.count}} 个卡点{{item.pendingCount > 0 ? ' · ' + item.pendingCount + '待修' : ''}}</text>
@@ -59,7 +59,7 @@
                 data-lp-name="{{b.displayName}}"
                 data-bottleneck-id="{{b.bottleneckId}}"
                 data-node-id="{{b.nodeId}}">
-            <text class="bn-icon">{{b.statusIcon}}</text>
+            <text class="bn-icon">{{b.statusMarker}}</text>
             <view class="bn-text">
               <view class="bn-name-row">
                 <text class="bn-name">{{b.displayName}}</text>

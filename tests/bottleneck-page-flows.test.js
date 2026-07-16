@@ -172,7 +172,7 @@ test('learning progress maps ID-only matrix labels without changing status route
 
   assert.equal(page.data.bottleneckMatrix[0].lpCode, 'LP-LEAK-01')
   assert.equal(page.data.bottleneckMatrix[0].lpName, '待确认学习卡点')
-  assert.deepEqual(JSON.parse(JSON.stringify(page.data.bottleneckMatrix[0].statusIcons)), ['!'])
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.bottleneckMatrix[0].statusIcons)), ['持续'])
 })
 
 test('learning progress replaces backend error details with a neutral toast', async () => {

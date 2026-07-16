@@ -94,7 +94,7 @@ function buildChineseReviewQueue(profile = {}) {
         ],
         statusText: status === 'recurring' ? '反复出现' : (status === 'reviewing' ? '复测中' : '待复测'),
         statusClass: status === 'recurring' ? 'persisting' : 'pending',
-        statusIcon: status === 'recurring' ? '!' : '?',
+        statusIcon: status === 'recurring' ? '持续' : '待验证',
         weight: CHINESE_REVIEW_STATUS_WEIGHT[status] || 40
       }
     })
@@ -152,15 +152,10 @@ function getFormalDiagnosisReports(reports = []) {
 function buildLatestDiagnosis(report, subject, subjectName, formatRelativeTime) {
   if (!report) return null
   const bottlenecks = Array.isArray(report.bottlenecks) ? report.bottlenecks : []
-  const iconMap = { math: '📐', chinese: '📖', english: '🔤' }
+  const subjectMarker = { math: '数学', chinese: '语文', english: '英语' }
   return {
     reportId: report._id,
-    icon: iconMap[subject] || '🩺',
-    reportIcon: '📋',
-    insightIcon: '💡',
-    evidenceIcon: '🔎',
-    changeIcon: '📈',
-    actionIcon: '🎯',
+    marker: subjectMarker[subject] || '诊断',
     title: `最新${subjectName}诊断`,
     dateText: formatRelativeTime(report.createdAt),
     summary: sanitizeUserText(
@@ -355,7 +350,7 @@ function buildEnglishActionCards(stats, primaryTask = {}, options = {}, permissi
       meta: stats.spellingNeedsPracticeCount > 0
         ? `${stats.spellingNeedsPracticeCount} 个拼写薄弱词优先出现`
         : '默认 20 词，验证是否真正写得出',
-      icon: '✎',
+      icon: '听写',
       actionText: '开始听写',
       recommended: primaryTask.actionType === 'englishDictation',
       disabled: !canWrite || !hasVocabularyReady,
@@ -399,24 +394,24 @@ function buildTools(permissions = {}, options = {}, stats = {}) {
         key: 'englishWrongWords',
         title: '错词本',
         desc: hasVocabularyReady ? '薄弱词、待复测和会认不会写' : '词库准备后自动生成',
-        icon: '!',
+        icon: '错词',
         actionType: 'englishWrongWords'
       },
       stats.patternCount > 0 ? {
-        key: 'englishConfusion', title: '易混词巩固', desc: '用短题区分容易混淆的单词', icon: '🔎', actionType: 'englishConfusion'
+        key: 'englishConfusion', title: '易混词巩固', desc: '用短题区分容易混淆的单词', icon: '辨析', actionType: 'englishConfusion'
       } : null,
       {
         key: 'history',
         title: '学习记录',
         desc: '认词、听写和照片证据',
-        icon: '▧',
+        icon: '记录',
         actionType: 'history'
       },
       canWrite && !hasVocabularyReady ? {
         key: 'importVocabulary',
         title: '重试导入词库',
         desc: '自动导入失败时使用',
-        icon: '↓',
+        icon: '导入',
         actionType: 'importVocabulary'
       } : null
     ].filter(Boolean)
@@ -426,21 +421,21 @@ function buildTools(permissions = {}, options = {}, stats = {}) {
       key: 'diagnosis',
       title: '拍照诊断',
       desc: '上传新的试卷或练习',
-      icon: '⌾',
+      icon: '拍照',
       actionType: 'diagnosis'
     } : null,
     canWrite ? {
       key: 'defaultPaper',
       title: '默认试卷',
       desc: '没有新试卷时使用',
-      icon: '□',
+      icon: '试卷',
       actionType: 'defaultPaper'
     } : null,
     {
       key: 'history',
       title: '学习记录',
       desc: '照片、报告和试卷',
-      icon: '▧',
+      icon: '记录',
       actionType: 'history'
     }
   ].filter(Boolean)

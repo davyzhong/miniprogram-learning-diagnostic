@@ -7,8 +7,9 @@ const {
   SUBJECT_SHORT_NAMES
 } = require('./constants')
 const { buildTraceableUrl } = require('./traceable-actions')
-const { UI_ICONS, subjectIcon } = require('./ui-icons')
 const { sanitizeUserText, compactReadableTargets } = require('./user-facing-text')
+
+const SUBJECT_MARKERS = { math: '数学', chinese: '语文', english: '英语' }
 
 function visibleText(value, options = {}) {
   return sanitizeUserText(value, { ...options, treatAsId: true }).trim()
@@ -190,7 +191,7 @@ function buildSubjectRows(student, profilesBySubject) {
       key,
       name: subject.name,
       shortName: subject.shortName,
-      icon: subjectIcon(key),
+      marker: SUBJECT_MARKERS[key] || subject.shortName,
       summary: visibleText(summary),
       statusText: hidden ? '隐藏' : (active.length > 0 ? `${active.length} 待办` : (improved.length > 0 ? '有改善' : `${profile.totalReports || 0} 记录`)),
       actionText: subjectActionText(key, hidden),
@@ -218,8 +219,8 @@ function buildLatestValue(student, reports, papers, subjectByKey) {
     const coverageText = compactPaperCoverageText(display)
     return {
       kind: 'paper',
-      icon: UI_ICONS.PAPER_SUMMARY,
-      subjectIcon: subjectIcon(paper.subject),
+      marker: '试卷',
+      subjectMarker: SUBJECT_MARKERS[paper.subject] || subjectName,
       title: `${subjectName}验证试卷`,
       summary: [
         paperCode ? `编号 ${paperCode}` : '',
@@ -236,8 +237,8 @@ function buildLatestValue(student, reports, papers, subjectByKey) {
     const count = Array.isArray(report.bottlenecks) ? report.bottlenecks.length : 0
     return {
       kind: 'report',
-      icon: UI_ICONS.REPORT,
-      subjectIcon: subjectIcon(report.subject),
+      marker: '报告',
+      subjectMarker: SUBJECT_MARKERS[report.subject] || subjectName,
       title: `${subjectName}${report.type === 'verification' ? '验证反馈' : '诊断报告'}`,
       summary: visibleText(report.summary, { count, noun: '学习卡点' }) || (count > 0 ? `发现 ${count} 个学习卡点` : '查看完整报告'),
       url: buildTraceableUrl({ type: 'report-detail', id: report._id })
@@ -298,7 +299,7 @@ function buildPriorityAction(student, profiles = [], papers = []) {
     const summary = paperShortSummary(paper, subjectName)
     return {
       type: 'current-paper',
-      icon: UI_ICONS.VERIFICATION,
+      marker: '验证',
       subject: paper.subject || 'math',
       title: `上传${subjectName}验证卷作答照片`,
       summary: summary
@@ -314,7 +315,7 @@ function buildPriorityAction(student, profiles = [], papers = []) {
   if (activeEntry) {
     return {
       type: 'verification-paper-status',
-      icon: UI_ICONS.VERIFICATION,
+      marker: '验证',
       subject: activeEntry.key,
       title: `查看${activeEntry.subject.name}验证卷`,
       summary: `${compactBottleneckText(activeEntry.active)}等待验证，系统会自动准备纸面题，准备好后可下载打印。`,
@@ -333,7 +334,7 @@ function buildPriorityAction(student, profiles = [], papers = []) {
 
   return {
     type: 'first-upload',
-    icon: UI_ICONS.UPLOAD,
+    marker: '上传',
     subject: 'math',
     title: '上传第一份作业',
     summary: '先上传一份数学或语文作业，建立可追踪的学习档案。',
@@ -364,7 +365,7 @@ function buildSecondaryActions(student, profiles = [], primaryAction = {}) {
       return {
         type: hasActive ? 'subject-bottlenecks' : 'subject-entry',
         subject: key,
-        icon: subjectIcon(key),
+        marker: SUBJECT_MARKERS[key] || subject.shortName,
         title: hasActive
           ? `${subject.name}复习/复测`
           : (isEnglishStart ? '英语认词/听写入口' : `${subject.name}学习入口`),
@@ -384,7 +385,7 @@ function buildQuickLinks(student, reports = [], papers = []) {
 
   return [{
     key: 'latestReport',
-    icon: UI_ICONS.DIAGNOSIS_LIST,
+    marker: '诊断',
     title: '最新诊断',
     summary: latestReport ? `${reportSubjectName} · ${latestReport.type === 'verification' ? '验证反馈' : '诊断报告'}` : '暂无诊断，先上传作业',
     url: latestReport
@@ -399,7 +400,7 @@ function buildQuickLinks(student, reports = [], papers = []) {
         })
   }, {
     key: 'currentPaper',
-    icon: UI_ICONS.PAPER_SUMMARY,
+    marker: '试卷',
     title: '当前试卷',
     summary: paper ? paperShortSummary(paper, paperSubjectName) : '暂无试卷，先进入学科',
     url: paper
@@ -414,13 +415,13 @@ function buildQuickLinks(student, reports = [], papers = []) {
         })
   }, {
     key: 'knowledgeMap',
-    icon: UI_ICONS.KNOWLEDGE_MAP,
+    marker: '地图',
     title: '知识地图',
     summary: '查看知识节点、卡点和资源',
     url: knowledgeMapUrl(student, 'math')
   }, {
     key: 'learningRecords',
-    icon: UI_ICONS.TIME,
+    marker: '记录',
     title: '学习记录',
     summary: '查看完整时间线',
     url: buildTraceableUrl({
@@ -460,25 +461,25 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
       ...papers.map(paper => paper.generatedAt || paper.createdAt)
     ])
     const statusItems = [
-      statusItem('analyzing', '分析中点', '分析', UI_ICONS.BOTTLENECK, analyzingCount, 'warning', {
+      statusItem('analyzing', '分析中点', '分析', '分析', analyzingCount, 'warning', {
         type: 'learning-records',
         studentId: student._id,
         studentName: student.name,
         filter: 'analyzing'
       }),
-      statusItem('pendingVerification', '待验证点', '待验证', UI_ICONS.VERIFICATION, allActive.length, 'primary', {
+      statusItem('pendingVerification', '待验证点', '待验证', '验证', allActive.length, 'primary', {
         type: 'bottleneck-center',
         studentId: student._id,
         studentName: student.name,
         filter: 'active'
       }),
-      statusItem('pendingUpload', '待上传点', '待上传', UI_ICONS.PERSISTING, pendingUploadCount, 'danger', {
+      statusItem('pendingUpload', '待上传点', '待上传', '上传', pendingUploadCount, 'danger', {
         type: 'learning-records',
         studentId: student._id,
         studentName: student.name,
         filter: 'pending-upload'
       }),
-      statusItem('improved', '已改善点', '改善', UI_ICONS.IMPROVED, allImproved.length, 'success', {
+      statusItem('improved', '已改善点', '改善', '改善', allImproved.length, 'success', {
         type: 'bottleneck-center',
         studentId: student._id,
         studentName: student.name,
@@ -518,8 +519,8 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
     })
     const latestDiagnosisReport = formalDiagnoses[0] || null
     const latestDiagnosis = latestDiagnosisReport ? {
-      icon: UI_ICONS.DIAGNOSIS,
-      subjectIcon: subjectIcon(latestDiagnosisReport.subject),
+      marker: '诊断',
+      subjectMarker: SUBJECT_MARKERS[latestDiagnosisReport.subject] || '学习',
       ...diagnosisReports[0]
     } : null
 
@@ -600,10 +601,10 @@ function buildFamilyWorkbenchHero(cards = []) {
     actionText: totalTodos > 0 ? '处理今日优先行动' : '查看学习档案',
     url: focusAction.url || focusCard.profileUrl || '',
     stats: [
-      { key: 'children', icon: UI_ICONS.FAMILY, label: '孩子', shortLabel: '孩子', value: String(visibleCards.length) },
-      { key: 'pendingActions', icon: UI_ICONS.NEXT_ACTION, label: '待办', shortLabel: '待办', value: String(totalTodos) },
-      { key: 'improvements', icon: UI_ICONS.IMPROVED, label: '改善', shortLabel: '改善', value: String(totalImprovements) },
-      { key: 'formalDiagnoses', icon: UI_ICONS.DIAGNOSIS, label: '诊断', shortLabel: '诊断', value: String(totalFormalDiagnoses) }
+      { key: 'children', marker: '孩子', label: '孩子', shortLabel: '孩子', value: String(visibleCards.length) },
+      { key: 'pendingActions', marker: '待办', label: '待办', shortLabel: '待办', value: String(totalTodos) },
+      { key: 'improvements', marker: '改善', label: '改善', shortLabel: '改善', value: String(totalImprovements) },
+      { key: 'formalDiagnoses', marker: '诊断', label: '诊断', shortLabel: '诊断', value: String(totalFormalDiagnoses) }
     ]
   }
 }

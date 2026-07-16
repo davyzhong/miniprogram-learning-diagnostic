@@ -2,16 +2,16 @@ const { profileBottlenecks, expandFineBottleneckItems, buildConfidence } = requi
 const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
 
 const DOMAIN_META = [
-  { key: '数与代数', icon: '🔢', short: '数与代数' },
-  { key: '图形与几何', icon: '📐', short: '图形几何' },
-  { key: '统计与概率', icon: '📊', short: '统计概率' },
-  { key: '综合与实践', icon: '🔧', short: '综合实践' },
+  { key: '数与代数', marker: '数', short: '数与代数' },
+  { key: '图形与几何', marker: '形', short: '图形几何' },
+  { key: '统计与概率', marker: '统', short: '统计概率' },
+  { key: '综合与实践', marker: '综', short: '综合实践' },
 ]
 
 function statusMeta(status) {
-  if (status === 'improved') return { icon: '✅', text: '已改善', cls: 'mastered' }
-  if (status === 'persisting' || status === 'worsened') return { icon: '🔴', text: '持续出现', cls: 'active' }
-  return { icon: '🟡', text: '待验证', cls: 'pending' }
+  if (status === 'improved') return { marker: '改善', text: '已改善', cls: 'mastered' }
+  if (status === 'persisting' || status === 'worsened') return { marker: '持续', text: '持续出现', cls: 'active' }
+  return { marker: '待验证', text: '待验证', cls: 'pending' }
 }
 
 function buildSymptomText(bn = {}) {
@@ -33,7 +33,7 @@ function buildKnowledgeMapPageView(profile = {}, subject = 'math') {
   for (const meta of DOMAIN_META) {
     domainMap[meta.key] = {
       key: meta.key,
-      icon: meta.icon,
+      marker: meta.marker,
       name: meta.short,
       bottlenecks: [],
       // 改造后默认全部展开：用户进入页面即可看到卡点列表，无需再点一次
@@ -52,7 +52,7 @@ function buildKnowledgeMapPageView(profile = {}, subject = 'math') {
       bottleneckId: bn.bottleneckId || bn.lpCode || '',
       nodeId: bn.nodeId || '',
       displayName: readableNameOf(bn) || '待确认学习卡点',
-      statusIcon: meta.icon,
+      statusMarker: meta.marker,
       statusText: meta.text,
       statusClass: meta.cls,
       metaText: bn.evidenceText || `${bn.errorCount || 0} 道相关错题`,

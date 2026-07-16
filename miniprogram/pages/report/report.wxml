@@ -37,7 +37,7 @@
 
     <view id="report-section-summary" class="report-section-anchor"></view>
     <view class="card conclusion-card">
-      <view class="section-heading"><view class="heading-icon">◎</view><text>本次诊断结论</text></view>
+      <view class="section-heading"><view class="heading-icon">结论</view><text>本次诊断结论</text></view>
       <text class="conclusion-text">{{headline}}</text>
       <view class="explanation-box">
         <text class="explanation-title">{{explanationTitle}}</text>
@@ -72,20 +72,20 @@
 
     <view id="report-section-change" class="report-section-anchor"></view>
     <view class="card verification-feedback-card" wx:if="{{hasVerificationFeedback}}">
-      <view class="section-heading"><view class="heading-icon">↻</view><text>验证反馈</text></view>
+      <view class="section-heading"><view class="heading-icon">反馈</view><text>验证反馈</text></view>
       <text class="verification-feedback-summary">{{verificationFeedbackSummary}}</text>
       <view class="verification-feedback-changes" wx:if="{{verificationStatusChanges.length > 0}}">
         <view class="verification-change-item" wx:for="{{verificationStatusChanges}}" wx:key="lpCode">
           <text class="verification-change-name">{{item.lpName}}</text>
           <view class="verification-change-flow">
             <text class="verification-change-before">{{item.beforeText}}</text>
-            <text class="verification-change-arrow">→</text>
+            <text class="verification-change-arrow">变化</text>
             <text class="verification-change-after verification-change-{{item.afterClass}}">{{item.afterText}}</text>
           </view>
         </view>
       </view>
       <view class="verification-feedback-action" wx:if="{{verificationNextActionText}}">
-        <text class="verification-action-icon">→</text>
+        <text class="verification-action-icon">行动</text>
         <text class="verification-action-text">{{verificationNextActionText}}</text>
       </view>
       <view class="verification-feedback-links">
@@ -111,7 +111,7 @@
     </view>
 
     <view class="card bottleneck-group-card" wx:if="{{hasBottleneckGroups}}">
-      <view class="section-heading"><view class="heading-icon">⌁</view><text>发现的学习卡点</text></view>
+      <view class="section-heading"><view class="heading-icon">卡点</view><text>发现的学习卡点</text></view>
       <view class="bottleneck-group" wx:for="{{bottleneckGroups}}" wx:for-item="group" wx:key="categoryId">
         <view class="bottleneck-group-head">
           <text class="bottleneck-group-title">{{group.title}}</text>
@@ -138,7 +138,7 @@
     </view>
 
     <view class="card" wx:if="{{showFlatBottleneckList}}">
-      <view class="section-heading"><view class="heading-icon">⌁</view><text>发现的学习卡点</text></view>
+      <view class="section-heading"><view class="heading-icon">卡点</view><text>发现的学习卡点</text></view>
       <view class="bottleneck-item" wx:for="{{bottleneckList}}" wx:key="viewId" bindtap="onTraceableUrlTap" data-url="{{item.detailUrl}}">
         <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
         <view class="bottleneck-copy">
@@ -155,7 +155,7 @@
     </view>
 
     <view class="card learning-map-card" wx:if="{{hasLearningMap}}">
-      <view class="section-heading"><view class="heading-icon">⌘</view><text>知识地图下一步</text></view>
+      <view class="section-heading"><view class="heading-icon">地图</view><text>知识地图下一步</text></view>
       <view class="learning-map-item" wx:for="{{learningMapItems}}" wx:key="lpCode">
         <text class="learning-node">{{item.nodeText}}</text>
         <text class="learning-node-detail" wx:if="{{item.nodeDetailText}}">{{item.nodeDetailText}}</text>
@@ -190,7 +190,7 @@
     </view>
 
     <view class="card" wx:if="{{hasVerificationEvidence}}">
-      <view class="section-heading"><view class="heading-icon">✓</view><text>验证证据</text></view>
+      <view class="section-heading"><view class="heading-icon">证据</view><text>验证证据</text></view>
       <view class="evidence-item" wx:for="{{verificationEvidenceItems}}" wx:key="lpCode">
         <view class="evidence-title-row">
           <text class="evidence-name">{{item.displayName}}</text>
@@ -202,7 +202,7 @@
 
     <view id="report-section-evidence" class="report-section-anchor"></view>
     <view class="card source-card" bindtap="onViewSources">
-      <view class="section-heading"><view class="heading-icon">▧</view><text>本次使用的试卷</text></view>
+      <view class="section-heading"><view class="heading-icon">试卷</view><text>本次使用的试卷</text></view>
       <view class="source-row">
         <view class="source-copy">
           <text class="source-title">{{sourceImageCount}} 张试卷图片</text>
@@ -245,7 +245,7 @@
 
     <view id="report-section-action" class="report-section-anchor"></view>
     <view class="knowledge-map-snapshot" wx:if="{{hasKnowledgeMapSnapshot && !isVerification}}">
-      <view class="map-snapshot-header">🗺️ 知识地图更新</view>
+      <view class="map-snapshot-header">知识地图更新</view>
       <view class="map-snapshot-list">
         <view class="map-snapshot-item {{item.statusClass}}" wx:for="{{knowledgeMapSnapshot}}" wx:key="lpCode"
               catchtap="onBottleneckSnapshotTap" data-lp-code="{{item.lpCode}}" data-lp-name="{{item.displayName}}">
