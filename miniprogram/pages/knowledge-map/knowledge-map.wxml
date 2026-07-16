@@ -1,4 +1,4 @@
-<view class="page b1-page">
+<view class="page b1-page b1-subject-{{view.subject}}">
   <view wx:if="{{loading}}" class="loading">加载知识地图...</view>
 
   <view wx:elif="{{errorText}}" class="empty">
@@ -42,7 +42,7 @@
     <view class="domain-list">
       <view class="domain-card" wx:for="{{view.domains}}" wx:key="key">
         <view class="domain-header">
-          <text class="domain-icon">{{item.marker}}</text>
+          <text class="domain-marker">{{item.marker}}</text>
           <view class="domain-info">
             <text class="domain-name">{{item.name}}</text>
             <text class="domain-stats">{{item.count}} 个卡点{{item.pendingCount > 0 ? ' · ' + item.pendingCount + '待修' : ''}}</text>

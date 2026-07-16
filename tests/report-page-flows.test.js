@@ -7,6 +7,19 @@ const { loadPageAndWait, flushAsync, waitForPageLoad, isThenable } = require('./
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 const util = require('../miniprogram/utils/util')
 
+test('report uses editorial section markers and preserves its route actions', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxss'), 'utf8')
+
+  assert.match(wxml, /class="report-section-marker"/)
+  assert.match(wxml, /bindtap="onReportSectionTap"/)
+  assert.match(wxml, /bindtap="onRetryAnalysis"/)
+  assert.match(wxml, /bindtap="onGenerateVerification"/)
+  assert.match(wxss, /\.report-editorial-section/)
+  assert.match(wxss, /\.status-label-improved/)
+  assert.match(wxss, /\.report-subject-math/)
+})
+
 test('report passes its subject name into verification paper generation', async () => {
   const wx = createWxMock()
   let activePaperCall = null

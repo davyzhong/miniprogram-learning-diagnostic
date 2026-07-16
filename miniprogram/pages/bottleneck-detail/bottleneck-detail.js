@@ -317,6 +317,7 @@ Page({
         subjectName: this.data.subjectName,
         status: 'needs_verification'
       }])[0]
+      bottleneck.subjectClass = bottleneck.subject || this.data.subject
       const relatedLpCode = bottleneck && bottleneck.lpCode ? bottleneck.lpCode : this.data.lpCode
       const relatedReports = reports
         .filter(report => reportMatches(report, relatedLpCode))

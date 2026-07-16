@@ -62,6 +62,12 @@ test('knowledge-map.wxml 不再使用 domain-chevron（折叠箭头应已移除�
   assert.ok(!/onDomainTap/.test(wxml), 'wxml 不应再绑定 onDomainTap（已移除折叠交互）')
 })
 
+test('knowledge-map domain markers are text-only and not decorative glyphs', () => {
+  const presenter = read('miniprogram/pages/knowledge-map/knowledge-map-presenter.js')
+  assert.match(presenter, /marker: '01'/)
+  assert.match(presenter, /marker: '02'/)
+})
+
 // ============================================================
 // 2. student-profile：知识地图入口并入个人行动队列
 // ============================================================

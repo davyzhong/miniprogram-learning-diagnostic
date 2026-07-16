@@ -29,6 +29,7 @@ function buildViewsFromProfiles(profiles = []) {
     return profileBottlenecks(profile).map(item => ({
       ...item,
       subject,
+      subjectClass: subject,
       subjectName: profile.subjectName || SUBJECT_NAMES[subject] || ''
     }))
   })

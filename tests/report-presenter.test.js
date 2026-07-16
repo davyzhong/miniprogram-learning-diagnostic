@@ -3,6 +3,16 @@ const assert = require('node:assert/strict')
 
 const { buildReportView } = require('../miniprogram/pages/report/report-presenter')
 
+test('report presenter separates subject identity from semantic status', () => {
+  const view = buildReportView({
+    subject: 'chinese',
+    bottlenecks: [{ lpCode: 'LP-001', status: 'improved', errorCount: 1 }]
+  })
+
+  assert.equal(view.subjectClass, 'chinese')
+  assert.equal(view.bottleneckList[0].statusClass, 'improved')
+})
+
 test('report presenter keeps ID-only legacy codes out of visible labels and prose', () => {
   const view = buildReportView({
     subject: 'math',

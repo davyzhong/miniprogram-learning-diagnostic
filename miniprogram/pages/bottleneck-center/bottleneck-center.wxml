@@ -53,7 +53,7 @@
 
     <view class="bottleneck-list" wx:if="{{filteredBottlenecks.length > 0}}">
       <view
-        class="bottleneck-card bottleneck-{{item.statusClass}}"
+        class="bottleneck-card b1-subject-{{item.subjectClass}} bottleneck-{{item.statusClass}}"
         wx:for="{{filteredBottlenecks}}"
         wx:key="viewId"
         bindtap="onBottleneckTap"

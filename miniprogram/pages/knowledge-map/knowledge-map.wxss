@@ -69,3 +69,6 @@
 .bn-confidence.high { color: #c53030; background: #fed7d7; }
 .bn-confidence.medium { color: #b7791f; background: #fefcbf; }
 .bn-confidence.low { color: #718096; background: #e2e8f0; }
+.b1-subject-math { --map-subject: var(--b1-math, #b7791f); }
+.domain-marker { align-items: center; background: var(--map-subject); color: #fff; display: inline-flex; font-size: 20rpx; font-weight: 700; height: 40rpx; justify-content: center; letter-spacing: 1rpx; width: 48rpx; }
+.domain-card { border-radius: 0; box-shadow: none; border-top: 2rpx solid #ded8cc; }

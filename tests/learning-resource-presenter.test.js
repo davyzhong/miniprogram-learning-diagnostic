@@ -6,6 +6,15 @@ const {
   extractBlocks
 } = require('../miniprogram/pages/learning-resource/learning-resource-presenter')
 
+test('resource cards expose readable platform labels for text-first rendering', () => {
+  const view = buildLearningResourceView({
+    externalResources: [{ title: '示例课程', platform: 'Khan Academy', url: 'https://example.com' }]
+  })
+
+  assert.equal(view.resourceCards[0].platformLabel, 'Khan Academy')
+  assert.equal(view.resourceCards[0].actionText, '复制链接打开')
+})
+
 test('buildLearningResourceView renders pack blocks and actions', () => {
   const view = buildLearningResourceView({
     _id: 'pack-1',

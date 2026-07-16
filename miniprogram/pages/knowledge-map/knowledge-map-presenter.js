@@ -2,10 +2,10 @@ const { profileBottlenecks, expandFineBottleneckItems, buildConfidence } = requi
 const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
 
 const DOMAIN_META = [
-  { key: '数与代数', marker: '数', short: '数与代数' },
-  { key: '图形与几何', marker: '形', short: '图形几何' },
-  { key: '统计与概率', marker: '统', short: '统计概率' },
-  { key: '综合与实践', marker: '综', short: '综合实践' },
+  { key: '数与代数', marker: '01', short: '数与代数' },
+  { key: '图形与几何', marker: '02', short: '图形几何' },
+  { key: '统计与概率', marker: '03', short: '统计概率' },
+  { key: '综合与实践', marker: '04', short: '综合实践' },
 ]
 
 function statusMeta(status) {

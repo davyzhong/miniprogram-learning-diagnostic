@@ -111,7 +111,7 @@
       <view class="resource-card" wx:for="{{view.resourceCards}}" wx:key="resourceId"
             bindtap="onExternalResourceTap" data-url="{{item.url}}" data-platform="{{item.platform}}" data-can-jump="{{item.canJump}}">
         <view class="resource-info">
-          <text class="resource-icon">{{item.shortLabel}}</text>
+          <text class="resource-platform-label">{{item.platformLabel}}</text>
           <view class="resource-text">
             <text class="resource-title">{{item.title}}</text>
             <text class="resource-platform">{{item.platform}} · {{item.role}}</text>

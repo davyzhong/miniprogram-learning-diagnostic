@@ -1,5 +1,5 @@
 <!--pages/report/report.wxml-->
-<view class="page b1-page">
+<view class="page b1-page report-subject-{{subjectClass}}">
   <view class="report-header {{isVerification ? 'header-verify' : 'header-diagnosis'}}">
     <view class="report-header-inner">
       <view class="report-header-copy">
@@ -36,8 +36,8 @@
     </view>
 
     <view id="report-section-summary" class="report-section-anchor"></view>
-    <view class="card conclusion-card">
-      <view class="section-heading"><view class="heading-icon">结论</view><text>本次诊断结论</text></view>
+    <view class="report-editorial-section conclusion-card">
+      <view class="section-heading"><text class="report-section-marker">01</text><text>本次诊断结论</text></view>
       <text class="conclusion-text">{{headline}}</text>
       <view class="explanation-box">
         <text class="explanation-title">{{explanationTitle}}</text>
@@ -71,7 +71,7 @@
     </view>
 
     <view id="report-section-change" class="report-section-anchor"></view>
-    <view class="card verification-feedback-card" wx:if="{{hasVerificationFeedback}}">
+    <view class="report-editorial-section verification-feedback-card" wx:if="{{hasVerificationFeedback}}">
       <view class="section-heading"><view class="heading-icon">反馈</view><text>验证反馈</text></view>
       <text class="verification-feedback-summary">{{verificationFeedbackSummary}}</text>
       <view class="verification-feedback-changes" wx:if="{{verificationStatusChanges.length > 0}}">

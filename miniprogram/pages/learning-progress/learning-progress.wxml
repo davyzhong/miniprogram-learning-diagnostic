@@ -1,4 +1,4 @@
-<view class="page b1-page">
+<view class="page b1-page progress-editorial">
   <view class="progress-header">
     <text class="progress-title">学习进展</text>
     <text class="progress-subtitle" wx:if="{{summary.totalRounds > 0}}">{{summary.diagnosisCount}} 次诊断 · {{summary.verificationCount}} 次验证 · {{summary.improvedCount}} 个已改善</text>
@@ -53,10 +53,10 @@
       </text>
     </view>
     <view class="matrix-legend">
-      <text class="legend-item"><text class="legend-dot legend-found">●</text> 发现</text>
-      <text class="legend-item"><text class="legend-dot legend-persisting">●</text> 持续</text>
-      <text class="legend-item"><text class="legend-dot legend-improved">●</text> 改善</text>
-      <text class="legend-item"><text class="legend-dot legend-pending">●</text> 待验证</text>
+      <text class="legend-item legend-found">发现：新识别的卡点</text>
+      <text class="legend-item legend-persisting">持续：仍需练习</text>
+      <text class="legend-item legend-improved">改善：验证后已有进展</text>
+      <text class="legend-item legend-pending">待验证：等待下一次检查</text>
     </view>
   </view>
 </view>
