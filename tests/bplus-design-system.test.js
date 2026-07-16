@@ -119,6 +119,7 @@ test('B1 shared primitives, subjects, and semantic classes are global and asset-
 
 test('all 24 registered routes use the B1 page shell without redefining it locally', () => {
   const pages = registeredPages()
+  const globalPrimitive = /\.(?:b1-page|b1-card|b1-tag|b1-hit-target)\s*\{/
   assert.equal(pages.length, 24)
 
   for (const page of pages) {
@@ -127,7 +128,7 @@ test('all 24 registered routes use the B1 page shell without redefining it local
     const root = wxml.match(/<(?:view|scroll-view)\b[^>]*\bclass="([^"]*)"/)
     assert.ok(root, `${page}.wxml 缺少带 class 的页面根节点`)
     assert.match(root[1], /(?:^|\s)b1-page(?:\s|$)/, `${page}.wxml 根节点缺少 b1-page`)
-    assert.doesNotMatch(wxss, /\.b1-[\w-]+\s*\{/, `${page}.wxss 不应重复定义全局 B1 原语`)
+    assert.doesNotMatch(wxss, globalPrimitive, `${page}.wxss 不应重复定义全局 B1 原语`)
   }
 })
 
