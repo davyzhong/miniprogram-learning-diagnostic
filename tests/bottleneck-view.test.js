@@ -5,7 +5,8 @@ const {
   buildBottleneckViews,
   buildBottleneckStats,
   findBottleneckView,
-  buildGroupedBottleneckViews
+  buildGroupedBottleneckViews,
+  buildConfidence
 } = require('../miniprogram/utils/bottleneck-view')
 
 const { formatBottleneckDisplayName } = require('../miniprogram/utils/util')
@@ -55,6 +56,47 @@ test('bottleneck view exposes readable status badges instead of symbolic icons',
     ['再次出现', '持续观察', '待验证', '改善中']
   )
   assert.ok(views.every(item => !['!', '?', '✓'].includes(item.statusBadgeText)))
+})
+
+test('confidence exposes a clamped composite score and normalized evidence metrics', () => {
+  const confidence = buildConfidence({
+    weight: 180,
+    evidenceCount: 3,
+    cumulativeErrorCount: 7,
+    recentErrorCount: 2,
+    verificationPassCount: 1,
+    verificationFailCount: 2
+  })
+
+  assert.equal(confidence.score, 100)
+  assert.equal(confidence.scoreLabel, '综合置信分')
+  assert.equal(confidence.occurrenceCount, 3)
+  assert.equal(confidence.cumulativeErrorCount, 7)
+  assert.equal(confidence.recentErrorCount, 2)
+  assert.equal(confidence.passCount, 1)
+  assert.equal(confidence.failCount, 2)
+})
+
+test('fine bottlenecks identify whether metrics are independent or inherited', () => {
+  const views = buildBottleneckViews([{
+    lpCode: 'LP-001',
+    subject: 'math',
+    weight: 80,
+    evidenceCount: 3,
+    candidateBottlenecks: [
+      { bottleneckId: 'BN-DEC-MUL-POINT-COUNT', title: '小数位数判断错误' },
+      {
+        bottleneckId: 'BN-DEC-MUL-POINT-ESTIMATE',
+        title: '缺少数量级估算',
+        weight: 60,
+        evidenceCount: 2
+      }
+    ]
+  }], { subject: 'math', expandCandidates: true })
+
+  assert.equal(views.find(item => item.bottleneckId === 'BN-DEC-MUL-POINT-COUNT').metricScope, 'parent')
+  assert.equal(views.find(item => item.bottleneckId === 'BN-DEC-MUL-POINT-COUNT').metricScopeText, '沿用所属能力卡点统计')
+  assert.equal(views.find(item => item.bottleneckId === 'BN-DEC-MUL-POINT-ESTIMATE').metricScope, 'fine')
 })
 
 test('bottleneck view sorts active and high weight items before improved ones', () => {
