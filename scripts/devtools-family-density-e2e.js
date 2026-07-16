@@ -9,6 +9,7 @@ const CLI_PATH = process.env.WECHAT_DEVTOOLS_CLI
   || (process.platform === 'darwin' ? '/Applications/wechatwebdevtools.app/Contents/MacOS/cli' : 'cli')
 const OUTPUT_DIR = path.join(PROJECT_PATH, 'tmp', 'e2e', 'family-density')
 const TARGET_VIEWPORTS = new Map([
+  ['375x812', { width: 375, height: 812 }],
   ['390x844', { width: 390, height: 844 }],
   ['430x932', { width: 430, height: 932 }]
 ])
@@ -85,7 +86,7 @@ function validateFamilyDensityMetrics(metrics = {}) {
   if (!TARGET_VIEWPORTS.has(targetKey)) {
     throw new Error(
       `incompatible simulator viewport ${targetKey}; select a simulator whose wx window is exactly `
-      + '390x844 or 430x932, then rerun npm run test:e2e:family-density'
+      + '375x812, 390x844, or 430x932, then rerun npm run test:e2e:family-density'
     )
   }
   if (viewport.width > MAX_VIEWPORT_WIDTH) {
@@ -104,7 +105,8 @@ function validateFamilyDensityMetrics(metrics = {}) {
     for (const [blockName, rect] of [
       ['identity', card.identityRect],
       ['metric strip', card.metricRect],
-      ['priority block', card.priorityRect]
+      ['priority block', card.priorityRect],
+      ...(card.diagnosisRects || []).map((rect, index) => [`diagnosis row ${index + 1}`, rect])
     ]) {
       assertHorizontallyContained(rect, viewport.width, `child ${cardIndex + 1} ${blockName}`)
     }
@@ -140,7 +142,10 @@ function validateFamilyDensityMetrics(metrics = {}) {
     ['household summary', metrics.householdSummaryRect],
     ['first child identity', cards[0].identityRect],
     ['first child metric strip', cards[0].metricRect],
-    ['first child priority block', cards[0].priorityRect]
+    ['first child priority block', cards[0].priorityRect],
+    ...(cards[0].diagnosisRects && cards[0].diagnosisRects[0]
+      ? [['first child diagnosis row', cards[0].diagnosisRects[0]]]
+      : [])
   ]
   for (const [label, rect] of firstViewportRects) {
     if (bottomOf(rect) > viewport.height + EDGE_TOLERANCE) {
@@ -326,7 +331,7 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
       ...(await card.$$('.child-profile-link')),
       ...(await card.$$('.priority-action-text')),
       ...(await card.$$('.subject-row-action')),
-      ...(await card.$$('.child-diagnosis-coverage'))
+      ...(await card.$$('.child-diagnosis-action'))
     ]
     const interactive = [
       identity,
@@ -341,8 +346,8 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
       identity,
       metric,
       priority,
-      ...(await card.$$('.child-secondary-actions')),
-      ...(await card.$$('.child-subject-status')),
+      ...(await card.$$('.secondary-action-grid')),
+      ...(await card.$$('.child-subject-row')),
       ...(await card.$$('.child-diagnosis-row')),
       ...(await card.$$('.child-quick-actions'))
     ]
@@ -355,7 +360,7 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
       ...(await collectBoundedChildren([priority], '.priority-action-text', 'priority action')),
       ...(await collectBoundedChildren(secondaryRows, '.secondary-action-title', 'secondary action label')),
       ...(await collectBoundedChildren(subjectRows, '.subject-row-action', 'subject action label')),
-      ...(await collectBoundedChildren(diagnosisRows, '.child-diagnosis-coverage', 'diagnosis action label')),
+      ...(await collectBoundedChildren(diagnosisRows, '.child-diagnosis-action', 'diagnosis action label')),
       ...(await collectBoundedChildren(quickLinks, '.quick-link-title', 'quick action label'))
     ]
     cardMetrics.push({
@@ -363,6 +368,7 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
       identityRect: await elementRect(identity),
       metricRect: await elementRect(metric),
       priorityRect: await elementRect(priority),
+      diagnosisRects: await rectsFor(diagnosisRows),
       actionRects: await rectsFor(actions),
       boundedRects,
       interactiveRects: await rectsFor(interactive),
