@@ -429,6 +429,52 @@
   box-shadow: 0 10rpx 28rpx rgba(31, 79, 130, .10);
 }
 
+.icon-compatibility-entry {
+  min-height: 76rpx;
+  padding: 12rpx 16rpx;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  border: 1rpx solid #bfd7ef;
+  border-radius: 12rpx;
+  background: #eef6ff;
+}
+
+.icon-compatibility-entry:active {
+  opacity: .82;
+}
+
+.icon-compatibility-entry-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.icon-compatibility-entry-title,
+.icon-compatibility-entry-meta {
+  display: block;
+}
+
+.icon-compatibility-entry-title {
+  color: #294d73;
+  font-size: 22rpx;
+  font-weight: 800;
+}
+
+.icon-compatibility-entry-meta {
+  margin-top: 4rpx;
+  color: #64748b;
+  font-size: 18rpx;
+}
+
+.icon-compatibility-entry-action {
+  flex-shrink: 0;
+  color: #2563eb;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
 .family-workbench-hero:active,
 .personal-action-card:active,
 .personal-subject-row:active {

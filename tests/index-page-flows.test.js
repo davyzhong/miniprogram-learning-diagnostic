@@ -224,6 +224,12 @@ test('index family workbench renders the restored compact functional sections', 
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
 
   assert.match(wxml, /family-workbench-hero/)
+  assert.match(wxml, /icon-compatibility-entry/)
+  assert.match(wxml, /图标兼容性测试/)
+  assert.match(wxml, /202 项候选/)
+  assert.match(wxml, /\/pages\/icon-compatibility\/icon-compatibility/)
+  assert.doesNotMatch(wxml, /icon-compatibility-panel/)
+  assert.doesNotMatch(wxml, /iconCompatibilityItems/)
   assert.match(wxml, /home-error-state/)
   assert.match(wxml, /onRetryLoadStudents/)
   assert.doesNotMatch(wxml, /\/assets\/images\//)
@@ -240,6 +246,8 @@ test('index family workbench renders the restored compact functional sections', 
   assert.match(wxss, /\.secondary-action-card/)
   assert.match(wxss, /\.child-quick-link/)
   assert.match(wxss, /\.family-workbench-hero/)
+  assert.match(wxss, /\.icon-compatibility-entry/)
+  assert.doesNotMatch(wxss, /\.icon-compatibility-grid/)
 })
 
 test('family workbench exposes the B1 hierarchy without removing dense learning content', () => {

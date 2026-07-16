@@ -31,6 +31,19 @@
     </view>
 
     <view
+      class="icon-compatibility-entry"
+      wx:if="{{homeMode === 'family-workbench'}}"
+      catchtap="onTraceableUrlTap"
+      data-url="/pages/icon-compatibility/icon-compatibility"
+    >
+      <view class="icon-compatibility-entry-copy">
+        <text class="icon-compatibility-entry-title">图标兼容性测试</text>
+        <text class="icon-compatibility-entry-meta">202 项候选 · 14 类 · Android 真机</text>
+      </view>
+      <text class="icon-compatibility-entry-action">开始测试 ›</text>
+    </view>
+
+    <view
       class="family-workbench-hero b1-family-summary"
       wx:if="{{homeMode === 'family-workbench' && familyHero}}"
       catchtap="onTraceableUrlTap"
