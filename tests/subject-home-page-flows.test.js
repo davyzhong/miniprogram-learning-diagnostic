@@ -20,6 +20,7 @@ test('subject home keeps the B1 subject surface, diagnosis route, and Chinese re
   assert.match(source, /data-action-type="\{\{item\.actionType\}\}"/)
   assert.match(source, /\{\{knowledgeMapSymbol\}\}/)
   assert.match(source, /\{\{emptyQueueSymbol\}\}/)
+  assert.match(source, /class="queue-status-dot queue-status-dot-\{\{item\.statusClass\}\}"/)
 })
 
 test('subject home keeps the math map and task queue compact', () => {
