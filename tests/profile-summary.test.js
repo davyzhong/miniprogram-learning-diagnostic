@@ -42,6 +42,53 @@ test('a bottleneck found in another effective report becomes persisting', () => 
   assert.equal(result.changeSummary, '分数运算再次出现')
 })
 
+test('diagnosis merges accumulate real related errors without counting verification reports', () => {
+  const first = buildProfileSummary({}, {
+    _id: 'diagnosis-1',
+    type: 'diagnosis',
+    bottlenecks: [{ lpCode: 'LP-001', lpName: '分数运算', errorCount: 2 }]
+  }, new Date('2026-06-01T00:00:00.000Z'))
+  const recurrence = buildProfileSummary(first, {
+    _id: 'diagnosis-2',
+    type: 'diagnosis',
+    bottlenecks: [{ lpCode: 'LP-001', lpName: '分数运算', errorCount: 3 }]
+  }, new Date('2026-06-05T00:00:00.000Z'))
+  const verificationOnly = buildProfileSummary(recurrence, {
+    _id: 'verification-1',
+    type: 'verification',
+    bottlenecks: [{ lpCode: 'LP-001', lpName: '分数运算', errorCount: 1 }],
+    verificationTargets: ['LP-001'],
+    verificationEvidence: [{ lpCode: 'LP-001', evidenceStatus: 'failed' }]
+  }, NOW)
+  const normalizedLegacy = buildProfileSummary({
+    currentBottlenecks: [{ lpCode: 'LP-002', lpName: '旧卡点', status: 'persisting' }]
+  }, {
+    _id: 'duplicate',
+    type: 'diagnosis',
+    allPhotosDuplicate: true,
+    bottlenecks: []
+  }, NOW)
+
+  assert.equal(first.currentBottlenecks[0].cumulativeErrorCount, 2)
+  assert.equal(recurrence.currentBottlenecks[0].cumulativeErrorCount, 5)
+  assert.equal(verificationOnly.currentBottlenecks[0].cumulativeErrorCount, 5)
+  assert.equal(normalizedLegacy.currentBottlenecks[0].cumulativeErrorCount, 0)
+})
+
+test('analyze and reanalysis profile mergers keep cumulative error behavior aligned', () => {
+  const reanalysis = require('../cloudfunctions/reanalyzeMathHistory/profile-summary')
+  const report = {
+    _id: 'diagnosis-shared',
+    type: 'diagnosis',
+    bottlenecks: [{ lpCode: 'LP-001', lpName: '分数运算', relatedErrorCount: 4 }]
+  }
+
+  assert.deepEqual(
+    reanalysis.buildProfileSummary({}, report, NOW).currentBottlenecks,
+    buildProfileSummary({}, report, NOW).currentBottlenecks
+  )
+})
+
 test('only explicit complete verification evidence marks a target improved', () => {
   const previous = {
     currentBottlenecks: [{
