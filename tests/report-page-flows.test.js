@@ -7,6 +7,21 @@ const { loadPageAndWait, flushAsync, waitForPageLoad, isThenable } = require('./
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 const util = require('../miniprogram/utils/util')
 
+test('math report renders the dense quantified evidence matrix', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxss'), 'utf8')
+
+  assert.match(wxml, /\{\{item\.confidenceScoreLabel\}\}/)
+  assert.match(wxml, /\{\{item\.confidenceScore\}\}/)
+  assert.match(wxml, /wx:for="\{\{item\.evidenceMetrics\}\}"/)
+  assert.match(wxml, /\{\{item\.durationText\}\}/)
+  assert.doesNotMatch(wxml, /准确率/)
+  assert.match(wxss, /\.bottleneck-evidence-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,/)
+  assert.match(wxss, /\.bottleneck-mini-title\s*\{[\s\S]*?font-size:\s*24rpx/)
+  assert.match(wxss, /\.bottleneck-evidence-label\s*\{[\s\S]*?font-size:\s*18rpx/)
+  assert.match(wxss, /\.bottleneck-evidence-value\s*\{[\s\S]*?font-size:\s*22rpx/)
+})
+
 test('report uses editorial section markers and preserves its route actions', () => {
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxml'), 'utf8')
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxss'), 'utf8')

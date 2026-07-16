@@ -129,6 +129,25 @@
                 <text class="bottleneck-mini-title">{{item.displayName}}</text>
                 <text class="status-label status-label-{{item.statusClass}}">{{item.statusText}}</text>
               </view>
+              <view class="bottleneck-score-row">
+                <text class="bottleneck-score-label">{{item.confidenceScoreLabel}}</text>
+                <text class="bottleneck-score-value">{{item.confidenceScore}}</text>
+              </view>
+              <view class="bottleneck-score-track">
+                <view class="bottleneck-score-fill confidence-{{item.confidenceLevel}}" style="width: {{item.confidenceScore}}%;"></view>
+              </view>
+              <text class="bottleneck-metric-scope" wx:if="{{item.metricScopeText}}">{{item.metricScopeText}}</text>
+              <view class="bottleneck-evidence-grid" wx:if="{{item.evidenceMetrics.length > 0}}">
+                <view class="bottleneck-evidence-cell" wx:for="{{item.evidenceMetrics}}" wx:for-item="metric" wx:key="key">
+                  <text class="bottleneck-evidence-value">{{metric.value}}</text>
+                  <text class="bottleneck-evidence-label">{{metric.label}}</text>
+                </view>
+              </view>
+              <text class="bottleneck-time-line" wx:if="{{item.firstSeenText || item.lastSeenText || item.durationText}}">
+                <text wx:if="{{item.firstSeenText}}">首见 {{item.firstSeenText}}</text>
+                <text wx:if="{{item.lastSeenText}}"> · 最近 {{item.lastSeenText}}</text>
+                <text wx:if="{{item.durationText}}"> · {{item.durationText}}</text>
+              </text>
               <text class="bottleneck-mini-meta">{{item.evidenceText || item.metaText}}</text>
               <text class="feedback-link" catchtap="onOpenFeedback" data-target-type="bottleneck" data-target-id="{{item.bottleneckId || item.lpCode}}" data-type="wrong_bottleneck">反馈这个卡点</text>
             </view>
@@ -148,6 +167,24 @@
             <text class="status-label status-label-{{item.statusClass}}">{{item.statusText}}</text>
           </view>
           <text class="bottleneck-desc">{{item.rootCause || item.suggestion || '建议结合相关错题进一步观察。'}}</text>
+          <view class="bottleneck-score-row">
+            <text class="bottleneck-score-label">{{item.confidenceScoreLabel}}</text>
+            <text class="bottleneck-score-value">{{item.confidenceScore}}</text>
+          </view>
+          <view class="bottleneck-score-track">
+            <view class="bottleneck-score-fill confidence-{{item.confidenceLevel}}" style="width: {{item.confidenceScore}}%;"></view>
+          </view>
+          <view class="bottleneck-evidence-grid" wx:if="{{item.evidenceMetrics.length > 0}}">
+            <view class="bottleneck-evidence-cell" wx:for="{{item.evidenceMetrics}}" wx:for-item="metric" wx:key="key">
+              <text class="bottleneck-evidence-value">{{metric.value}}</text>
+              <text class="bottleneck-evidence-label">{{metric.label}}</text>
+            </view>
+          </view>
+          <text class="bottleneck-time-line" wx:if="{{item.firstSeenText || item.lastSeenText || item.durationText}}">
+            <text wx:if="{{item.firstSeenText}}">首见 {{item.firstSeenText}}</text>
+            <text wx:if="{{item.lastSeenText}}"> · 最近 {{item.lastSeenText}}</text>
+            <text wx:if="{{item.durationText}}"> · {{item.durationText}}</text>
+          </text>
           <text class="bottleneck-meta">{{item.confidenceLabel}} · {{item.confidenceDetail}} · {{item.metaText}}</text>
           <text class="feedback-link" catchtap="onOpenFeedback" data-target-type="bottleneck" data-target-id="{{item.bottleneckId || item.lpCode}}" data-type="wrong_bottleneck">反馈这个卡点</text>
         </view>
