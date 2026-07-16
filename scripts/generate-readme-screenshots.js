@@ -253,6 +253,48 @@ async function installCloudMocks(miniProgram) {
         changeSummary: '计算基础再次出现',
       },
       {
+        _id: 'report-chinese-demo',
+        studentId: student._id,
+        studentName: student.name,
+        subject: 'chinese',
+        type: 'diagnosis',
+        status: 'completed',
+        createdAt: '2026-06-14T19:40:00+08:00',
+        evidenceTime: '2026-06-14T19:40:00+08:00',
+        summary: '字词原项需要复测，阅读题继续练习回原文找依据。',
+        totalErrors: 3,
+        bottlenecks: [
+          {
+            lpCode: 'LP-201',
+            lpName: '回原文找依据',
+            errorCount: 2,
+            severity: 'medium',
+            rootCause: '回答阅读题时，关键依据没有完整回到原文核对。',
+            suggestion: '先圈出题干关键词，再在原文标记对应句。',
+          },
+        ],
+        chineseErrorItems: [
+          {
+            itemId: 'demo-bianlun',
+            itemType: 'word',
+            targetText: '辩论',
+            studentAnswer: '辨论',
+            mistakeType: '形近字混淆',
+          },
+        ],
+        imageFiles: [
+          {
+            fileID: 'cloud://mock/demo-chinese-paper-01.jpg',
+            fileName: '匿名语文练习-01.jpg',
+            ocrSummary: '匿名样例：包含字词辨析和阅读理解。',
+            isDuplicate: false,
+            uploadedAt: '2026-06-14T19:40:00+08:00',
+          },
+        ],
+        isEffective: true,
+        changeSummary: '新增字词原项复测',
+      },
+      {
         _id: 'verification-report-demo',
         studentId: student._id,
         studentName: student.name,
@@ -447,7 +489,7 @@ async function installCloudMocks(miniProgram) {
               role: 'owner',
               permissions: ownerPermissions,
               paper: papers[0],
-              latestVerificationReport: reports[1],
+              latestVerificationReport: reports.find(item => item.type === 'verification') || null,
             },
           }
         }
