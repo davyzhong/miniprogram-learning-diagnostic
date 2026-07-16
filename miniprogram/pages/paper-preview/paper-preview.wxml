@@ -1,6 +1,6 @@
 <!--pages/paper-preview/paper-preview.wxml-->
-<view class="page bplus-page">
-  <view class="paper-tags bplus-section">
+<view class="page">
+  <view class="paper-tags">
     <view class="tag tag-{{paperType}}">{{typeText}}</view>
     <view class="tag tag-subject">{{subjectName}}</view>
     <view class="tag tag-student">{{studentName}}</view>
@@ -11,7 +11,7 @@
       <view class="workbench-main">
         <view class="workbench-top">
           <view class="code-block traceable-block" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
-            <text class="code-label">🧾 验证试卷编号</text>
+            <text class="code-label">验证试卷编号</text>
             <text class="paper-code">{{paperCodeText || '待生成编号'}}</text>
           </view>
           <view class="status-pill status-{{workbenchStatus}}" bindtap="onTraceableUrlTap" data-url="{{statusUrl}}">{{workbenchStatusText}}</view>
@@ -47,7 +47,7 @@
 
   <view class="chinese-review-card card" wx:if="{{hasChineseReviewCoverage}}">
     <view class="section-title-row">
-      <text class="section-title">🈶 语文原项复测</text>
+      <text class="section-title">语文原项复测</text>
       <text class="section-action">先原项，后举一反三</text>
     </view>
     <view class="chinese-review-paper-row" wx:for="{{chineseReviewCoverage}}" wx:key="viewId">
@@ -65,7 +65,7 @@
 
   <view class="coverage-card card traceable-block" wx:if="{{bottleneckHierarchy.hasHierarchy}}" bindtap="onTraceableUrlTap" data-url="{{bottleneckCenterUrl}}">
     <view class="section-title-row">
-      <text class="section-title">🧩 覆盖卡点</text>
+      <text class="section-title">覆盖卡点</text>
       <text class="section-action">{{bottleneckHierarchy.summaryText}}</text>
     </view>
     <view class="coverage-group" wx:for="{{bottleneckHierarchy.groups}}" wx:for-item="group" wx:key="categoryId">
@@ -89,7 +89,7 @@
 
   <view class="task-pack-card card" wx:if="{{taskPack.hasTaskPack}}">
     <view class="section-title-row">
-      <text class="section-title">📤 作答回传进度</text>
+      <text class="section-title">作答回传进度</text>
       <text class="section-action">{{taskPack.progressText}}</text>
     </view>
     <view class="task-page-row task-page-{{item.status}}" wx:for="{{taskPackPages}}" wx:key="pageCode">
@@ -103,7 +103,7 @@
 
   <view class="question-card card">
     <view class="section-title-row">
-      <text class="section-title">👁️ 试卷内容预览</text>
+      <text class="section-title">试卷内容预览</text>
       <text class="section-action" wx:if="{{hasMoreQuestions}}" bindtap="onToggleQuestions">{{allQuestionsExpanded ? '收起' : '展开全部'}}</text>
     </view>
     <view class="question-list" wx:if="{{questionPreview.length > 0}}">
@@ -125,7 +125,7 @@
 
   <view class="feedback-card card">
     <view class="section-title-row">
-      <text class="section-title">📈 验证反馈</text>
+      <text class="section-title">验证反馈</text>
       <text class="section-action" wx:if="{{feedback.reportId}}" bindtap="onTraceableUrlTap" data-url="{{feedback.reportUrl}}">查看报告</text>
     </view>
     <text class="feedback-title">{{feedback.title}}</text>

@@ -390,7 +390,7 @@ function buildEnglishQuickStats(stats) {
   ]
 }
 
-function buildTools(latestReport, permissions = {}, options = {}, stats = {}) {
+function buildTools(permissions = {}, options = {}, stats = {}) {
   const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
   if (options.subject === 'english') {
     const hasVocabularyReady = hasEnglishVocabulary(options)
@@ -442,15 +442,7 @@ function buildTools(latestReport, permissions = {}, options = {}, stats = {}) {
       desc: '照片、报告和试卷',
       icon: '▧',
       actionType: 'history'
-    },
-    latestReport ? {
-      key: 'latestReport',
-      title: '完整报告',
-      desc: '查看最近诊断详情',
-      icon: '≡',
-      actionType: 'latestReport',
-      reportId: latestReport._id
-    } : null
+    }
   ].filter(Boolean)
 }
 
@@ -500,7 +492,7 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
       : (options.subject === 'english' ? 0 : taskQueue.length),
     chineseReviewQueue,
     hasChineseReviewQueue: chineseReviewQueue.length > 0,
-    tools: buildTools(latestReport, permissions, options, englishVocabularyStats),
+    tools: buildTools(permissions, options, englishVocabularyStats),
     permissions,
     canWriteActions: permissions.canUpload !== false || permissions.canGeneratePaper !== false,
     latestReportId: latestReport ? latestReport._id : '',

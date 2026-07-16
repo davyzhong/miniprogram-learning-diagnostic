@@ -1,6 +1,6 @@
 <!--pages/report/report.wxml-->
-<view class="page bplus-page">
-  <view class="report-header bplus-section {{isVerification ? 'header-verify' : 'header-diagnosis'}}">
+<view class="page">
+  <view class="report-header {{isVerification ? 'header-verify' : 'header-diagnosis'}}">
     <view class="report-header-inner">
       <view class="report-header-copy">
         <text class="report-type">{{isVerification ? '验证报告' : '诊断报告'}}</text>
@@ -28,9 +28,8 @@
   </view>
 
   <view class="content" wx:if="{{report.status !== 'analyzing'}}">
-    <view class="report-layer-nav bplus-section">
+    <view class="report-layer-nav">
       <view class="report-layer-item {{item.available ? '' : 'is-muted'}}" wx:for="{{reportLayers}}" wx:key="key" bindtap="onReportSectionTap" data-section="{{item.key}}">
-        <text class="report-layer-icon">{{item.icon}}</text>
         <text class="report-layer-label">{{item.label}}</text>
         <text class="report-layer-count" wx:if="{{item.count > 0}}">{{item.count}}</text>
       </view>

@@ -1,12 +1,12 @@
-<view class="page bplus-page">
-  <view class="progress-header bplus-section">
-    <text class="progress-title">📈 学习进展</text>
+<view class="page">
+  <view class="progress-header">
+    <text class="progress-title">学习进展</text>
     <text class="progress-subtitle" wx:if="{{summary.totalRounds > 0}}">{{summary.diagnosisCount}} 次诊断 · {{summary.verificationCount}} 次验证 · {{summary.improvedCount}} 个已改善</text>
     <text class="progress-subtitle" wx:else>暂无学习记录</text>
   </view>
 
   <view class="card advice-card" wx:if="{{overallAdvice}}">
-    <view class="section-heading"><view class="heading-icon">🎯</view><text>综合建议</text></view>
+    <view class="section-heading"><view class="heading-icon">→</view><text>综合建议</text></view>
     <text class="advice-text">{{overallAdvice}}</text>
     <view class="advice-stats">
       <view class="advice-stat"><text class="advice-stat-num advice-stat-improved">{{summary.improvedCount}}</text><text class="advice-stat-label">已改善</text></view>
@@ -16,7 +16,7 @@
   </view>
 
   <view class="card timeline-card" wx:if="{{timeline.length > 0}}">
-    <view class="section-heading"><view class="heading-icon">🕘</view><text>迭代时间线</text></view>
+    <view class="section-heading"><view class="heading-icon">↻</view><text>迭代时间线</text></view>
     <view class="timeline">
       <view class="timeline-node {{item.isVerification ? 'node-verify' : 'node-diagnosis'}}" wx:for="{{timeline}}" wx:key="reportId">
         <view class="timeline-dot {{item.isVerification ? 'dot-verify' : 'dot-diagnosis'}}"></view>
@@ -41,7 +41,7 @@
   </view>
 
   <view class="card matrix-card" wx:if="{{bottleneckMatrix.length > 0}}">
-    <view class="section-heading"><view class="heading-icon">🧩</view><text>卡点变化</text></view>
+    <view class="section-heading"><view class="heading-icon">▦</view><text>卡点变化</text></view>
     <view class="matrix-row matrix-header-row">
       <text class="matrix-cell matrix-cell-name">卡点</text>
       <text class="matrix-cell matrix-cell-round" wx:for="{{timeline}}" wx:key="reportId">{{item.shortLabel}}</text>

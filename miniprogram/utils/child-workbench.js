@@ -435,12 +435,16 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
   const students = input.students || []
   const profilesByStudentId = input.profilesByStudentId || {}
   const reportsByStudentId = input.reportsByStudentId || {}
+  const diagnosesByStudentId = input.diagnosesByStudentId || null
   const papersByStudentId = input.papersByStudentId || {}
   const subjectByKey = Object.fromEntries(SUBJECTS.map(key => [key, { key, name: SUBJECT_NAMES[key] }]))
 
   return sortFamilyStudents(students).map(student => {
     const profiles = listFor(profilesByStudentId, student._id)
     const reports = listFor(reportsByStudentId, student._id)
+    const diagnosisSource = diagnosesByStudentId
+      ? listFor(diagnosesByStudentId, student._id)
+      : reports
     const papers = listFor(papersByStudentId, student._id)
     const profileMap = new Map(profiles.map(profile => [profile.subject, profile]))
     const allActive = profiles.flatMap(activeBottlenecks)
@@ -487,23 +491,36 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
     const priorityAction = buildPriorityAction(student, profiles, papers)
     const secondaryActions = buildSecondaryActions(student, profiles, priorityAction)
     const quickLinks = buildQuickLinks(student, reports, papers)
-    const formalDiagnoses = reports
-      .filter(report => report.status === 'completed' && report.type !== 'verification' && report.isEffective !== false)
+    const formalDiagnoses = diagnosisSource
+      .filter(report => (
+        report
+        && report.subject
+        && report.type !== 'verification'
+        && report.status !== 'analyzing'
+        && report.status !== 'pending'
+        && report.status !== 'failed'
+        && report.isEffective !== false
+      ))
       .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
     const diagnosisSubjects = new Set(formalDiagnoses.map(report => report.subject).filter(Boolean))
+    const diagnosisReports = formalDiagnoses.map(report => {
+      const diagnosisSubject = visibleText(SUBJECT_NAMES[report.subject] || report.subjectName) || '学习'
+      return {
+        subject: report.subject,
+        title: `${diagnosisSubject}诊断报告`,
+        dateText: report.createdAt ? formatRelativeTime(report.createdAt) : '',
+        summary: visibleText(report.summary, {
+          count: Array.isArray(report.bottlenecks) ? report.bottlenecks.length : 0,
+          noun: '学习卡点'
+        }) || '查看本学科最新正式诊断',
+        url: buildTraceableUrl({ type: 'report-detail', id: report._id })
+      }
+    })
     const latestDiagnosisReport = formalDiagnoses[0] || null
-    const latestDiagnosisSubject = latestDiagnosisReport
-      ? (visibleText(SUBJECT_NAMES[latestDiagnosisReport.subject] || latestDiagnosisReport.subjectName) || '学习')
-      : ''
     const latestDiagnosis = latestDiagnosisReport ? {
       icon: UI_ICONS.DIAGNOSIS,
       subjectIcon: subjectIcon(latestDiagnosisReport.subject),
-      title: `${latestDiagnosisSubject}诊断报告`,
-      summary: visibleText(latestDiagnosisReport.summary, {
-        count: Array.isArray(latestDiagnosisReport.bottlenecks) ? latestDiagnosisReport.bottlenecks.length : 0,
-        noun: '学习卡点'
-      }) || '查看本学科最新正式诊断',
-      url: buildTraceableUrl({ type: 'report-detail', id: latestDiagnosisReport._id })
+      ...diagnosisReports[0]
     } : null
 
     return {
@@ -531,6 +548,7 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
       diagnosisCoverageText: `已有 ${diagnosisSubjects.size}/3 科诊断`,
       diagnosisCoverageCount: diagnosisSubjects.size,
       formalDiagnosisCount: formalDiagnoses.length,
+      diagnosisReports,
       latestDiagnosis
     }
   })

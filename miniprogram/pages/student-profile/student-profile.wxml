@@ -1,12 +1,15 @@
-<view class="page bplus-page">
-  <view class="loading-state bplus-state" wx:if="{{loading}}">
+<view class="page">
+  <view class="loading-state" wx:if="{{loading}}">
     <text>正在整理学习档案...</text>
   </view>
 
   <view class="profile-home" wx:elif="{{home}}">
     <view class="top-row">
       <view class="top-left">
-        <text class="page-title">{{home.studentName}} · 学习档案</text>
+        <view class="profile-summary-line">
+          <text class="page-title">{{home.studentName}} · 学习档案</text>
+          <text class="profile-summary-meta">{{home.gradeText}}<text wx:if="{{home.gradeText}}"> · </text>最近更新：{{home.recentUpdateText}}</text>
+        </view>
       </view>
       <view class="manage-actions">
         <view class="manage-link" wx:if="{{permissions.canManageParents}}" bindtap="onParentManagement">家长管理</view>
@@ -17,50 +20,43 @@
       </view>
     </view>
 
-    <view class="diagnosis-workbench-section bplus-section" wx:if="{{home.diagnosisWorkbenches.length > 0}}">
-      <view class="diagnosis-section-head bplus-row">
-        <text class="diagnosis-section-title">🩺 最新学科诊断</text>
+    <view class="diagnosis-workbench-section" wx:if="{{home.diagnosisWorkbenches.length > 0}}">
+      <view class="diagnosis-section-head">
+        <text class="diagnosis-section-title">最新学科诊断</text>
         <text class="diagnosis-section-meta">{{home.diagnosisWorkbenches.length}} 份正式报告</text>
       </view>
       <view class="diagnosis-workbench diagnosis-{{item.subject}}" wx:for="{{home.diagnosisWorkbenches}}" wx:key="key">
-        <view class="diagnosis-head bplus-row">
-          <view class="diagnosis-subject-icon">{{item.subjectIcon}}</view>
+        <view class="diagnosis-head">
           <view class="diagnosis-title-copy">
             <text class="diagnosis-title">{{item.title}}</text>
-            <text class="diagnosis-date">📅 {{item.generatedAtText}} · 正式诊断</text>
+            <text class="diagnosis-date">{{item.generatedAtText}} · 正式诊断</text>
           </view>
-          <text class="diagnosis-report-link" catchtap="onTraceableUrlTap" data-url="{{item.reportUrl}}">{{item.reportIcon}} 完整报告 ›</text>
+          <text class="diagnosis-report-link" catchtap="onTraceableUrlTap" data-url="{{item.reportUrl}}">完整报告 ›</text>
         </view>
-        <view class="diagnosis-insight"><text>{{item.insightIcon}}</text><text>{{item.judgment}}</text></view>
+        <text class="diagnosis-judgment">{{item.judgment}}</text>
         <view class="diagnosis-signal-line">
-          <view class="bplus-state-strip">
-            <text class="bplus-state-item"><text>{{item.evidenceIcon}}</text><text class="bplus-state-value">{{item.evidenceCount}}</text>证据</text>
-            <text class="bplus-state-item"><text>{{item.improvedIcon}}</text><text class="bplus-state-value">{{item.improvedCount}}</text>改善</text>
-            <text class="bplus-state-item" wx:if="{{item.persistingCount > 0}}"><text>{{item.persistingIcon}}</text><text class="bplus-state-value">{{item.persistingCount}}</text>持续</text>
-            <text class="bplus-state-item" wx:if="{{item.waitingCount > 0}}"><text>{{item.waitingIcon}}</text><text class="bplus-state-value">{{item.waitingCount}}</text>待验证</text>
-          </view>
-          <view class="diagnosis-trend"><view class="bplus-mini-bars"><view></view><view></view><view></view></view><text>{{item.trendIcon}} {{item.trendText}}</text></view>
+          <text>{{item.evidenceCount}} 条证据</text>
+          <text>{{item.improvedCount}} 项改善</text>
+          <text wx:if="{{item.persistingCount > 0}}">{{item.persistingCount}} 项持续</text>
+          <text wx:if="{{item.waitingCount > 0}}">{{item.waitingCount}} 项待验证</text>
         </view>
-        <view class="diagnosis-next bplus-action">
-          <text class="diagnosis-next-icon">{{item.primaryAction.icon}}</text>
-          <view class="bplus-action-main">
+        <view class="diagnosis-next" catchtap="onTraceableUrlTap" data-url="{{item.primaryAction.url}}">
+          <view class="diagnosis-next-copy">
             <text class="diagnosis-next-title">下一步：{{item.primaryAction.text}}</text>
             <text class="diagnosis-next-summary">{{item.primaryAction.summary}}</text>
           </view>
-          <view class="bplus-action-button" catchtap="onTraceableUrlTap" data-url="{{item.primaryAction.url}}">{{item.primaryAction.icon}} {{item.primaryAction.text}}</view>
-          <text class="diagnosis-upload-link" catchtap="onTraceableUrlTap" data-url="{{item.uploadUrl}}">{{item.uploadIcon}} 上传</text>
+          <text class="diagnosis-next-action">去完成 ›</text>
         </view>
       </view>
     </view>
 
-    <view class="diagnosis-load-state bplus-state" wx:elif="{{home.diagnosisDataUnavailable}}">
-      <text>⚠️ 学科诊断暂时没有加载出来</text>
-      <text>请稍后重试，页面不会用不完整的最近记录代替。</text>
+    <view class="diagnosis-load-state" wx:elif="{{home.diagnosisDataUnavailable}}">
+      <text>学科诊断暂时没有加载出来，请稍后重试。</text>
     </view>
 
     <view class="section-block personal-action-section">
       <view class="section-heading between">
-        <text>🧰 学习工具</text>
+        <text>接下来可以做什么</text>
         <text class="section-subtitle-inline">每块都可点击</text>
       </view>
       <view class="personal-action-queue">
