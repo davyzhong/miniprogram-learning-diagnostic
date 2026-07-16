@@ -104,6 +104,7 @@
 | `improvedBottlenecks` | Array\<Object\> | 是 | `[]` | 已改善的学习卡点列表 | 见下方子结构 |
 | `archivedBottlenecks` | Array\<Object\> | 否 | `[]` | 归档保护：rebuild/restore 时把旧 currentBottlenecks 存档，防止丢失 | 见 currentBottlenecks 子结构 |
 | `archivedAt` | Date | 否 | — | 归档时间 | `ISODate("2026-06-19T08:26:35Z")` |
+| `metricBackfill` | Object | 否 | — | 数学卡点历史指标回填版本和完成时间；同版本重复执行为覆盖聚合，不做增量累加 | `{ "version": "math-cumulative-errors-v1" }` |
 | `currentAnalysisId` | String | 是 | `''` | 当前正在分析的 reportId，空串表示空闲 | `"665a1b2c..."` |
 | `analysisStatus` | String | 是 | `''` | 分析状态：`'analyzing'` \| `''`（空串=空闲）\| `null`（完成后清空） | `"analyzing"` |
 | `createdAt` | Date | 是 | serverDate() | 创建时间 | `ISODate("2025-06-01T08:00:00Z")` |
@@ -123,6 +124,7 @@
 | `lastPassedAt` | Date | 最近一次完整通过验证时间 | `ISODate("2026-06-13T...")` |
 | `lastFailedVerificationAt` | Date | 最近一次验证未通过时间 | `ISODate("2026-06-13T...")` |
 | `evidenceCount` | Number | 该卡点累计被诊断发现的次数 | `2` |
+| `cumulativeErrorCount` | Number | 所有最终有效正式诊断中，该卡点相关错题数之和；不包含验证报告、重复照片、无效报告或被替换源报告 | `7` |
 | `recentErrorCount` | Number | 最近一次诊断中相关错题数 | `3` |
 | `verificationPassCount` | Number | 完整通过验证次数 | `1` |
 | `verificationFailCount` | Number | 验证未通过次数 | `0` |
@@ -134,6 +136,8 @@
 | `evidenceStrength` | String | 证据强度：`high` \| `medium` \| `low` | `"high"` |
 | `nextActionType` | String | 下一步动作类型：`resourceReview` \| `microValidation` 等 | `"resourceReview"` |
 | `nextActionText` | String | 面向家长的下一步建议 | `"先看高质量锚点校准小数乘法..."` |
+
+> 前端将 `weight` 展示为“综合置信分”。该分数综合反映证据充分度和处理优先级，不是模型准确率，也不是学生答题正确率。历史累计错题不得用 `recentErrorCount × evidenceCount` 推算。
 
 #### pendingBottlenecks 子结构
 

@@ -115,7 +115,42 @@ AI 用量账本相关改动需要同步部署 `aiUsage`、`analyzeBatch`、`gene
 
 预览成功只说明客户端可构建，不代表云函数逻辑已经完成真实数据验收。
 
-## 6. 最小烟测路径
+## 6. 数学累计错题历史回填
+
+先部署最新的 `reanalyzeMathHistory`，并在云函数环境变量中配置 `MATH_REANALYSIS_TOKEN`。回填默认只预览，不写数据。
+
+在微信开发者工具控制台执行 dry-run：
+
+```js
+wx.cloud.callFunction({
+  name: 'reanalyzeMathHistory',
+  data: {
+    phase: 'backfillCumulativeErrors',
+    apply: false,
+    studentId: '<可选：单个学生 ID>',
+    limit: 1000,
+    reanalysisToken: '<MATH_REANALYSIS_TOKEN>'
+  }
+}).then(console.log)
+```
+
+确认 `proposals` 中替代报告没有重复计数、累计错题数合理后，将 `apply` 改为 `true`。应用完成后再次执行相同 dry-run：
+
+```js
+wx.cloud.callFunction({
+  name: 'reanalyzeMathHistory',
+  data: {
+    phase: 'backfillCumulativeErrors',
+    apply: false,
+    limit: 1000,
+    reanalysisToken: '<MATH_REANALYSIS_TOKEN>'
+  }
+}).then(({ result }) => console.log(result.proposedChangeCount))
+```
+
+预期 `proposedChangeCount` 为 `0`，证明同版本回填幂等。回填失败不能阻断报告展示；旧档案会继续隐藏缺失的累计错题指标。
+
+## 7. 最小烟测路径
 
 跳过真实设备时，至少在微信开发者工具中用已有真实数据检查：
 
@@ -138,7 +173,7 @@ studentData:getStudentDashboard 请求超时，请稍后重试
 
 这表示需要优先检查对应云函数、数据量或索引，而不是只看微信运行时的通用 `WAServiceMainContext timeout`。
 
-## 7. 常见问题
+## 8. 常见问题
 
 ### 页面显示空白或“页面不存在”
 
