@@ -59,7 +59,7 @@
   </view>
 
   <view class="map-entry" wx:if="{{subject !== 'english'}}" bindtap="onKnowledgeMapTap">
-    <text class="map-entry-icon">地图</text>
+    <text class="map-entry-icon">{{knowledgeMapSymbol}}</text>
     <view class="map-entry-text">
       <text class="map-entry-title">知识地图</text>
       <text class="map-entry-desc">{{pendingTaskCount > 0 ? pendingTaskCount + ' 个待修复卡点' : '查看知识结构'}}</text>
@@ -159,7 +159,7 @@
   </view>
 
   <view class="empty-queue" wx:if="{{subject !== 'english' && pendingTaskCount === 0}}">
-    <view class="empty-icon">完成</view>
+    <view class="empty-icon">{{emptyQueueSymbol}}</view>
     <view class="empty-copy">
       <text class="empty-title">{{isFirstUse ? '还没有学科记录' : '暂时没有待处理卡点'}}</text>
       <text class="empty-desc">{{isFirstUse ? '上传第一份试卷后，这里会出现可操作的任务。' : '可以继续上传新试卷，观察最近学习情况。'}}</text>
