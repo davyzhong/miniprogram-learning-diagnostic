@@ -336,3 +336,51 @@
 .bottom-bar .btn-primary:active {
   transform: scale(.985);
 }
+
+/* B1 paper identity and semantic state layer. */
+.config-hero.b1-paper-header {
+  background: var(--b1-surface);
+  border: 1rpx solid var(--b1-border);
+  border-left: 8rpx solid var(--b1-subject-math-fg);
+  border-radius: 10rpx;
+  box-shadow: none;
+  margin: 20rpx 28rpx 16rpx;
+  padding: 20rpx;
+}
+
+.config-hero.b1-subject-chinese { border-left-color: var(--b1-subject-chinese-fg); }
+.config-hero.b1-subject-english { border-left-color: var(--b1-subject-english-fg); }
+
+.paper-header-band {
+  align-items: center;
+  display: flex;
+  gap: 12rpx;
+  justify-content: space-between;
+}
+
+.paper-state {
+  background: var(--b1-waiting-bg);
+  border-radius: 7rpx;
+  color: var(--b1-waiting-fg);
+  flex-shrink: 0;
+  font-size: 20rpx;
+  font-weight: 600;
+  padding: 5rpx 10rpx;
+}
+
+.config-card,
+.bottleneck-item {
+  border: 1rpx solid var(--b1-border);
+  border-radius: 10rpx;
+  box-shadow: none;
+}
+
+.bottleneck-item.selected {
+  background: var(--b1-subject-math-bg);
+  border-color: var(--b1-subject-math-fg);
+}
+
+.bottom-bar .btn-primary {
+  background: var(--b1-ink-strong);
+  border-radius: 9rpx;
+}

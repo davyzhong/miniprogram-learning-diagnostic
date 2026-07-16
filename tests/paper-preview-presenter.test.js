@@ -1,5 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
 const {
   buildPaperPreviewState,
   buildWorkbenchStatus
@@ -358,4 +360,23 @@ test('paper-preview.js 不再有 onSharePrint 方法', () => {
   assert.ok(!/onSharePrint\s*\(/.test(js), 'onSharePrint 方法应已删除')
   // onShareAppMessage 应保留（微信右上角系统分享）
   assert.match(js, /onShareAppMessage\s*\(/, 'onShareAppMessage 应保留（系统分享）')
+})
+
+test('paper preview keeps a compact B1 paper identity, explicit state, and text-first actions', () => {
+  const wxml = fs.readFileSync(
+    path.join(__dirname, '..', 'miniprogram/pages/paper-preview/paper-preview.wxml'),
+    'utf8'
+  )
+  const wxss = fs.readFileSync(
+    path.join(__dirname, '..', 'miniprogram/pages/paper-preview/paper-preview.wxss'),
+    'utf8'
+  )
+
+  assert.match(wxml, /b1-paper-header/)
+  assert.match(wxml, /b1-subject-\{\{subject\}\}/)
+  assert.match(wxml, /b1-state-\{\{workbenchStatus\}\}/)
+  assert.match(wxml, /primaryActionText/)
+  assert.match(wxml, /secondaryActionText/)
+  assert.match(wxss, /var\(--b1-subject-chinese-fg\)/)
+  assert.match(wxss, /var\(--b1-destructive-bg\)/)
 })

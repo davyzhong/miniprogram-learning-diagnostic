@@ -1,9 +1,12 @@
 <!--pages/default-paper/default-paper.wxml-->
 <view class="page b1-page">
   <!-- 说明 -->
-  <view class="tip-bar">
+  <view class="tip-bar b1-paper-header b1-subject-{{subject}}">
     <view class="tip-content">
-      <text class="tip-title">默认诊断试卷</text>
+      <view class="paper-header-band">
+        <text class="tip-title">默认诊断试卷</text>
+        <text class="paper-state b1-state-waiting">纸张准备</text>
+      </view>
       <text class="tip-desc">没有现成试卷？选一套标准题来做诊断</text>
     </view>
   </view>
@@ -27,7 +30,7 @@
     <view class="paper-card" wx:for="{{papers}}" wx:key="key">
       <view class="paper-header">
         <text class="paper-name">{{item.name}}</text>
-        <view class="paper-badge" wx:if="{{item.exists}}">已生成</view>
+        <view class="paper-badge b1-state-ready" wx:if="{{item.exists}}">已生成</view>
       </view>
       <view class="paper-meta">
         <text class="meta-item">覆盖 {{item.bottleneckCount}} 个卡点</text>
@@ -42,7 +45,7 @@
 
       <view class="paper-actions">
         <button class="btn-secondary paper-btn" bindtap="onPreview" data-key="{{item.key}}" disabled="{{previewingKey}}">
-          {{previewingKey === item.key ? '预览生成中...' : '预览 PDF'}}
+          {{previewingKey === item.key ? '预览生成中...' : '预览 / 打印 PDF'}}
         </button>
         <button class="btn-primary paper-btn" bindtap="onUsePaper" data-key="{{item.key}}" disabled="{{generating}}">
           {{generating && generatingKey === item.key ? '生成中...' : '使用这套试卷'}}

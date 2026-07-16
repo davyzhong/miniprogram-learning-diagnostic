@@ -375,3 +375,15 @@ test('verification paper user-facing entries are download-first, not manual gene
   assert.doesNotMatch(files, /选择本次要验证/)
   assert.match(files, /下载验证卷|查看\/下载验证卷/)
 })
+
+test('verification paper uses a compact B1 subject identity and waiting state', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/generate-verification/generate-verification.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/generate-verification/generate-verification.wxss'), 'utf8')
+
+  assert.match(wxml, /b1-paper-header/)
+  assert.match(wxml, /b1-subject-\{\{subject\}\}/)
+  assert.match(wxml, /b1-state-waiting/)
+  assert.match(wxml, /查看\/下载验证卷/)
+  assert.match(wxss, /var\(--b1-subject-math-fg\)/)
+  assert.match(wxss, /var\(--b1-waiting-bg\)/)
+})

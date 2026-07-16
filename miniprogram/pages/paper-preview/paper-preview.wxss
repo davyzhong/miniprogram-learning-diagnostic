@@ -593,3 +593,63 @@
 .btn-main::after {
   border: none;
 }
+
+/* B1 paper identity and semantic state layer. */
+.paper-tags.b1-paper-header {
+  background: var(--b1-surface);
+  border: 1rpx solid var(--b1-border);
+  border-left: 8rpx solid var(--b1-subject-math-fg);
+  border-radius: 10rpx;
+  padding: 14rpx 16rpx;
+}
+
+.paper-tags.b1-subject-chinese { border-left-color: var(--b1-subject-chinese-fg); }
+.paper-tags.b1-subject-english { border-left-color: var(--b1-subject-english-fg); }
+
+.paper-tags.b1-subject-math .tag-subject {
+  background: var(--b1-subject-math-bg);
+  color: var(--b1-subject-math-fg);
+}
+
+.paper-tags.b1-subject-chinese .tag-subject {
+  background: var(--b1-subject-chinese-bg);
+  color: var(--b1-subject-chinese-fg);
+}
+
+.paper-tags.b1-subject-english .tag-subject {
+  background: var(--b1-subject-english-bg);
+  color: var(--b1-subject-english-fg);
+}
+
+.b1-state-waiting,
+.b1-state-generated,
+.b1-state-analyzing {
+  background: var(--b1-waiting-bg);
+  color: var(--b1-waiting-fg);
+}
+
+.b1-state-downloaded,
+.b1-state-completed {
+  background: var(--b1-improved-bg);
+  color: var(--b1-improved-fg);
+}
+
+.b1-state-failed {
+  background: var(--b1-destructive-bg);
+  color: var(--b1-destructive-fg);
+}
+
+.workbench-card,
+.card {
+  border-color: var(--b1-border);
+  border-radius: 10rpx;
+  box-shadow: none;
+}
+
+.bottom-bar .btn-main {
+  border-radius: 9rpx;
+}
+
+.bottom-bar .btn-primary {
+  background: var(--b1-ink-strong);
+}
