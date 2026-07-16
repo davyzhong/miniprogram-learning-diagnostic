@@ -16,10 +16,10 @@
 
   <!-- 拍照提示 -->
   <view class="photo-tips">
-    <text class="tip-item">光线充足</text>
-    <text class="tip-item">试卷铺平</text>
-    <text class="tip-item">字迹清晰</text>
-    <text class="tip-item">红笔可见</text>
+    <text class="tip-item">光线</text>
+    <text class="tip-item">铺平</text>
+    <text class="tip-item">清晰</text>
+    <text class="tip-item">红笔</text>
   </view>
 
   <!-- 照片网格 -->
@@ -33,7 +33,7 @@
       <image class="preview-img" src="{{item.tempPath}}" mode="aspectFill" binderror="onImageLoadError" data-index="{{index}}" />
       <view class="name-warning" wx:if="{{item.nameDuplicate}}">同名</view>
       <view class="format-badge" wx:if="{{item.convertedFromHeif}}">已转JPG</view>
-      <view class="delete-btn" catchtap="onDeleteImage" data-index="{{index}}">删除</view>
+      <view class="delete-btn" aria-label="删除图片" catchtap="onDeleteImage" data-index="{{index}}">删除</view>
     </view>
 
     <!-- 添加按钮 -->
@@ -62,7 +62,7 @@
 
   <!-- 异步提示 -->
   <view class="async-tip">
-    <text class="async-icon">处理中</text>
+    <text class="async-state">后台分析</text>
     <text class="async-text">上传完成后即可返回，AI 将在后台分析，完成后可在学习记录查看</text>
   </view>
 

@@ -17,7 +17,7 @@
     </view>
     <view class="filter-bar">
       <view
-        class="filter-pill {{item.active ? 'is-active' : ''}}"
+        class="filter-pill filter-{{item.key || 'all'}} {{item.active ? 'is-active' : ''}}"
         wx:for="{{filters}}"
         wx:key="key"
         bindtap="onFilterTap"
@@ -70,7 +70,7 @@
 
     <view class="timeline">
       <view
-        class="record-card record-{{event.kind}}"
+        class="record-card subject-{{event.subject}} record-{{event.kind}}"
         wx:for="{{day.events}}"
         wx:key="id"
         wx:for-item="event"
@@ -79,7 +79,7 @@
         data-day-index="{{dayIndex}}"
         data-event-index="{{eventIndex}}"
       >
-        <view class="event-icon">{{event.icon}}</view>
+        <view class="event-marker">{{event.icon}}</view>
         <view class="event-body">
           <view class="event-topline">
             <text class="event-title">{{event.title}}</text>

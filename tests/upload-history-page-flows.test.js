@@ -942,7 +942,10 @@ test('learning record narrow-layout verifier enforces viewport and geometry boun
   const { validateLayoutMetrics } = require(scriptPath)
   const valid = {
     windowWidth: 375,
+    windowHeight: 812,
     pageWidth: 375,
+    filterCount: 4,
+    recordCount: 2,
     codeHeight: 20,
     cardRects: [
       { left: 12, width: 351, height: 340 },
@@ -958,6 +961,8 @@ test('learning record narrow-layout verifier enforces viewport and geometry boun
   }
   assert.doesNotThrow(() => validateLayoutMetrics(valid))
   assert.throws(() => validateLayoutMetrics({ ...valid, pageWidth: 410 }), /horizontal overflow/)
+  assert.throws(() => validateLayoutMetrics({ ...valid, filterCount: 3 }), /filter controls/)
+  assert.throws(() => validateLayoutMetrics({ ...valid, recordCount: 1 }), /record cards/)
   assert.throws(() => validateLayoutMetrics({
     ...valid,
     titleRect: { left: 54, top: 120, width: 200, height: 24 },
@@ -976,8 +981,24 @@ test('learning record narrow-layout verifier enforces viewport and geometry boun
   assert.match(source, /\.screenshot\(/)
   assert.match(source, /\.size\(\)/)
   assert.match(source, /\.offset\(\)/)
+  assert.match(source, /375 × 812 viewport required/)
+  assert.match(source, /MIN_FILTER_CONTROLS/)
   assert.match(wxss, /\.record-verification-paper \.event-topline\s*\{[^}]*flex-wrap:\s*wrap/s)
   assert.match(wxss, /\.record-verification-paper \.event-meta\s*\{[^}]*flex-basis:\s*100%/s)
   assert.match(wxss, /\.paper-code\s*\{[^}]*white-space:\s*nowrap/s)
   assert.equal(packageJson.scripts['test:e2e:upload-history-layout'], 'node scripts/devtools-upload-history-layout.js')
+})
+
+test('learning records use subject accents, readable text markers, and compact evidence', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload-history/upload-history.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload-history/upload-history.wxss'), 'utf8')
+
+  assert.match(wxml, /class="record-card subject-\{\{event\.subject\}\}/)
+  assert.match(wxml, /class="event-marker">\{\{event\.icon\}\}<\/view>/)
+  assert.doesNotMatch(wxml, /class="event-icon"/)
+  assert.match(wxss, /\.subject-math\s*\{[^}]*border-left-color:/s)
+  assert.match(wxss, /\.subject-chinese\s*\{[^}]*border-left-color:/s)
+  assert.match(wxss, /\.subject-english\s*\{[^}]*border-left-color:/s)
+  assert.match(wxss, /\.event-marker\s*\{/)
+  assert.match(wxss, /\.folded-evidence\s*\{[^}]*max-height:/s)
 })

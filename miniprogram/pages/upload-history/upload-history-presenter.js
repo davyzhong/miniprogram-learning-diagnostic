@@ -717,6 +717,7 @@ function evidenceFromDataset(days, dataset) {
 }
 
 module.exports = {
+  readablePaperCode,
   SUBJECT_FILTERS,
   GLOBAL_EMPTY_STATE,
   FILTER_EMPTY_STATE,
