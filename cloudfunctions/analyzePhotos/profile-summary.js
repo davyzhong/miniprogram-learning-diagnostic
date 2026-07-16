@@ -33,6 +33,10 @@ function errorCountOf(bottleneck) {
   return Math.max(0, Number(bottleneck && (bottleneck.errorCount || bottleneck.relatedErrorCount || bottleneck.evidenceCount)) || 0)
 }
 
+function diagnosisErrorCountOf(bottleneck) {
+  return Math.max(0, Number(bottleneck && (bottleneck.errorCount || bottleneck.relatedErrorCount)) || 0)
+}
+
 function uniqueStrings(values = []) {
   return Array.from(new Set((values || []).filter(Boolean)))
 }
@@ -208,6 +212,7 @@ function normalizeCurrentBottlenecks(profile = {}) {
     return profile.currentBottlenecks.map(item => ({
       ...item,
       evidenceCount: Number(item.evidenceCount) || 0,
+      cumulativeErrorCount: Math.max(0, Number(item.cumulativeErrorCount) || 0),
       recentErrorCount: Number(item.recentErrorCount) || 0,
       verificationPassCount: Number(item.verificationPassCount) || 0,
       verificationFailCount: Number(item.verificationFailCount) || 0,
@@ -222,6 +227,7 @@ function normalizeCurrentBottlenecks(profile = {}) {
     firstSeenAt: item.sinceDate,
     lastSeenAt: item.sinceDate,
     evidenceCount: Number(item.evidenceCount) || 1,
+    cumulativeErrorCount: Math.max(0, Number(item.cumulativeErrorCount) || 0),
     recentErrorCount: Number(item.relatedErrorCount || item.errorCount) || 0,
     verificationPassCount: 0,
     verificationFailCount: 0,
@@ -236,6 +242,7 @@ function normalizeCurrentBottlenecks(profile = {}) {
     lastVerifiedAt: item.improvedDate,
     lastPassedAt: item.improvedDate,
     evidenceCount: Number(item.evidenceCount) || 1,
+    cumulativeErrorCount: Math.max(0, Number(item.cumulativeErrorCount) || 0),
     recentErrorCount: 0,
     verificationPassCount: Number(item.verificationPassCount) || 1,
     verificationFailCount: Number(item.verificationFailCount) || 0,
@@ -316,6 +323,8 @@ function buildProfileSummary(profile = {}, report = {}, now = new Date()) {
     const wasImproved = previous && previous.status === STATUS.IMPROVED
     const evidenceCount = (Number(previous && previous.evidenceCount) || 0) + 1
     const recentErrorCount = errorCountOf(bottleneck)
+    const cumulativeErrorCount = (Number(previous && previous.cumulativeErrorCount) || 0)
+      + (report.type === 'verification' ? 0 : diagnosisErrorCountOf(bottleneck))
     byCode.set(bottleneck.lpCode, {
       ...previous,
       lpCode: bottleneck.lpCode,
@@ -327,6 +336,7 @@ function buildProfileSummary(profile = {}, report = {}, now = new Date()) {
       firstSeenAt: (previous && previous.firstSeenAt) || now,
       lastSeenAt: now,
       evidenceCount,
+      cumulativeErrorCount,
       recentErrorCount,
       verificationPassCount: Number(previous && previous.verificationPassCount) || 0,
       verificationFailCount: Number(previous && previous.verificationFailCount) || 0,
