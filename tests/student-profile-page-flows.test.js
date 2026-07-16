@@ -7,6 +7,16 @@ const { loadPageAndWait, flushAsync, waitForPageLoad, isThenable } = require('./
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 const util = require('../miniprogram/utils/util')
 
+test('student profile uses expanded B1 report cards and never exposes AI usage', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/student-profile/student-profile.wxml'), 'utf8')
+
+  assert.match(wxml, /class="[^"]*b1-profile-report[^"]*b1-subject-\{\{item\.subject\}\}/)
+  assert.match(wxml, /diagnosis-judgment/)
+  assert.match(wxml, /diagnosis-signal-line/)
+  assert.match(wxml, /diagnosis-next/)
+  assert.doesNotMatch(wxml, /\/pages\/ai-usage\/ai-usage/)
+})
+
 test('student profile page loads one child and keeps profile actions clickable', async () => {
   const wx = createWxMock()
   const cloud = {

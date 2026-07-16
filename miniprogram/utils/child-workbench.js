@@ -461,25 +461,25 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
       ...papers.map(paper => paper.generatedAt || paper.createdAt)
     ])
     const statusItems = [
-      statusItem('analyzing', '分析中点', '分析', '分析', analyzingCount, 'warning', {
+      statusItem('analyzing', '分析中点', '分析', '分析', analyzingCount, 'waiting', {
         type: 'learning-records',
         studentId: student._id,
         studentName: student.name,
         filter: 'analyzing'
       }),
-      statusItem('pendingVerification', '待验证点', '待验证', '验证', allActive.length, 'primary', {
+      statusItem('pendingVerification', '待验证点', '待验证', '验证', allActive.length, 'informational', {
         type: 'bottleneck-center',
         studentId: student._id,
         studentName: student.name,
         filter: 'active'
       }),
-      statusItem('pendingUpload', '待上传点', '待上传', '上传', pendingUploadCount, 'danger', {
+      statusItem('pendingUpload', '待上传点', '待上传', '上传', pendingUploadCount, 'destructive', {
         type: 'learning-records',
         studentId: student._id,
         studentName: student.name,
         filter: 'pending-upload'
       }),
-      statusItem('improved', '已改善点', '改善', '改善', allImproved.length, 'success', {
+      statusItem('improved', '已改善点', '改善', '改善', allImproved.length, 'improved', {
         type: 'bottleneck-center',
         studentId: student._id,
         studentName: student.name,

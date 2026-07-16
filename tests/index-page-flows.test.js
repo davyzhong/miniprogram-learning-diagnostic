@@ -242,6 +242,16 @@ test('index family workbench renders the restored compact functional sections', 
   assert.match(wxss, /\.family-workbench-hero/)
 })
 
+test('family workbench exposes the B1 hierarchy without removing dense learning content', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+
+  assert.match(wxml, /class="[^"]*b1-family-summary/)
+  assert.match(wxml, /class="[^"]*b1-metric[^"]*b1-metric-\{\{item\.tone\}\}/)
+  assert.match(wxml, /class="[^"]*b1-priority/)
+  assert.match(wxml, /class="[^"]*b1-subject-\{\{item\.subject\}\}/)
+  assert.equal((wxml.match(/\/pages\/ai-usage\/ai-usage/g) || []).length, 1)
+})
+
 test('family workbench keeps every dense section without requiring icon bindings', () => {
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
 

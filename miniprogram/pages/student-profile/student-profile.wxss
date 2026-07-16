@@ -4,3 +4,24 @@
 .profile-home {
   min-height: 100vh;
 }
+
+.profile-home .top-row {
+  margin-bottom: 10rpx;
+}
+
+.profile-home .diagnosis-workbench-section {
+  margin-bottom: 12rpx;
+}
+
+.profile-home .b1-profile-report {
+  border-radius: 10rpx;
+  margin-top: 8rpx;
+  padding: 14rpx 16rpx;
+}
+
+.profile-home .personal-action-card,
+.profile-home .personal-subject-row {
+  background: var(--b1-surface);
+  border-color: var(--b1-border);
+  box-shadow: none;
+}

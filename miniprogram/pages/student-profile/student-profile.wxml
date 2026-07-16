@@ -25,7 +25,7 @@
         <text class="diagnosis-section-title">最新学科诊断</text>
         <text class="diagnosis-section-meta">{{home.diagnosisWorkbenches.length}} 份正式报告</text>
       </view>
-      <view class="diagnosis-workbench diagnosis-{{item.subject}}" wx:for="{{home.diagnosisWorkbenches}}" wx:key="key">
+      <view class="diagnosis-workbench b1-profile-report b1-subject-{{item.subject}} diagnosis-{{item.subject}}" wx:for="{{home.diagnosisWorkbenches}}" wx:key="key">
         <view class="diagnosis-head">
           <view class="diagnosis-title-copy">
             <text class="diagnosis-title">{{item.title}}</text>

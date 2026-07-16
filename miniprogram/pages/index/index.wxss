@@ -685,6 +685,143 @@
   white-space: nowrap;
 }
 
+/* Task 3: B1 family workbench. Keep the restored compact information hierarchy. */
+.page {
+  background: var(--b1-canvas);
+}
+
+.top-row,
+.page-title,
+.child-name,
+.priority-title,
+.diagnosis-title,
+.diagnosis-section-title {
+  color: var(--b1-ink-strong);
+}
+
+.page-subtitle,
+.child-meta,
+.priority-summary,
+.child-diagnosis-summary,
+.diagnosis-next-summary {
+  color: var(--b1-ink-muted);
+}
+
+.manage-link {
+  background: var(--b1-informational-bg);
+  color: var(--b1-informational-fg);
+}
+
+.b1-family-summary {
+  border-color: #B6DCCD;
+  box-shadow: 0 8rpx 20rpx rgba(22, 119, 94, .10);
+}
+
+.b1-family-summary .family-hero-copy {
+  padding: 20rpx;
+  background: linear-gradient(135deg, #DFF1E9 0%, #F8F5EF 100%);
+}
+
+.b1-family-summary .family-hero-kicker,
+.b1-family-summary .family-hero-action,
+.b1-family-summary .family-hero-stat-value {
+  color: var(--b1-improved-fg);
+}
+
+.b1-family-summary .family-hero-title {
+  color: var(--b1-ink-strong);
+}
+
+.b1-family-summary .family-hero-summary,
+.b1-family-summary .family-hero-stat-label {
+  color: var(--b1-ink-muted);
+}
+
+.b1-family-summary .b1-family-stat {
+  min-width: 0;
+  background: var(--b1-surface);
+  border-color: #B6DCCD;
+}
+
+.child-card {
+  padding: 16rpx 18rpx;
+  border-radius: 12rpx;
+  background: var(--b1-surface);
+  border-color: var(--b1-border);
+  box-shadow: 0 5rpx 16rpx rgba(38, 56, 58, .06);
+}
+
+.child-card-pending { border-left-color: var(--b1-priority-fg); }
+.child-card-clear { border-left-color: var(--b1-improved-fg); }
+
+.child-avatar {
+  width: 62rpx;
+  height: 62rpx;
+  background: var(--b1-ink-strong);
+}
+
+.b1-metric {
+  border: 1rpx solid transparent;
+}
+
+.b1-metric-waiting { background: var(--b1-waiting-bg); border-color: #E7CC7C; color: var(--b1-waiting-fg); }
+.b1-metric-informational { background: var(--b1-informational-bg); border-color: #C5D2EE; color: var(--b1-informational-fg); }
+.b1-metric-destructive { background: var(--b1-destructive-bg); border-color: #E9BAC0; color: var(--b1-destructive-fg); }
+.b1-metric-improved { background: var(--b1-improved-bg); border-color: #B6DCCD; color: var(--b1-improved-fg); }
+
+.b1-priority {
+  border-color: #EEB6AD;
+  background: var(--b1-priority-bg);
+}
+
+.b1-priority .mini-section-label,
+.b1-priority .priority-action-text {
+  color: var(--b1-priority-fg);
+}
+
+.secondary-action-card,
+.child-quick-link {
+  min-height: 76rpx;
+  padding: 10rpx 12rpx;
+  background: var(--b1-surface);
+  border-color: var(--b1-border);
+}
+
+.child-subject-row,
+.child-latest-diagnosis {
+  margin-top: 5rpx;
+  padding: 9rpx 12rpx;
+  border-color: transparent;
+}
+
+.child-latest-diagnosis { border-left: 5rpx solid var(--b1-border); margin-top: 5rpx; padding: 9rpx 12rpx; }
+
+.child-subject-row.b1-subject-chinese,
+.child-latest-diagnosis.b1-subject-chinese { border-left-color: var(--b1-subject-chinese-fg); }
+.child-subject-row.b1-subject-math,
+.child-latest-diagnosis.b1-subject-math { border-left-color: var(--b1-subject-math-fg); }
+.child-subject-row.b1-subject-english,
+.child-latest-diagnosis.b1-subject-english { border-left-color: var(--b1-subject-english-fg); }
+
+.child-subject-row .subject-row-name,
+.child-latest-diagnosis .child-diagnosis-title,
+.child-latest-diagnosis .child-diagnosis-action {
+  color: inherit;
+}
+
+.b1-profile-report {
+  background: var(--b1-surface);
+  border-color: var(--b1-border);
+}
+
+.b1-profile-report .diagnosis-judgment {
+  background: var(--b1-neutral-bg);
+  color: var(--b1-ink);
+}
+
+.b1-profile-report .diagnosis-signal-line { color: var(--b1-ink-muted); }
+.b1-profile-report .diagnosis-next { border-top-color: var(--b1-border); }
+
 .hero-card {
   background: #fff;
   border-radius: 18rpx;

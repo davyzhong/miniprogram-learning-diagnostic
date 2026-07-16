@@ -149,6 +149,17 @@ test('child workbench exposes every available subject diagnosis on the family ho
   assert.match(card.diagnosisReports[1].url, /chinese-report/)
 })
 
+test('family child card maps all four metrics to distinct B1 semantic tones', () => {
+  const [card] = buildChildWorkbenchCards({
+    students: [{ _id: 'student-tones', name: '钟青羽', grade: 6 }]
+  }, relative)
+
+  assert.deepEqual(
+    card.statusItems.map(item => item.tone),
+    ['waiting', 'informational', 'destructive', 'improved']
+  )
+})
+
 test('child workbench latest paper summary stays compact when many targets are covered', () => {
   const bottleneckSummaries = Array.from({ length: 26 }, (_, index) => `训练点${index + 1}`)
   const cards = buildChildWorkbenchCards({
