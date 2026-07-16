@@ -7,12 +7,12 @@
     </view>
   </view>
 
-  <view class="form">
+  <view class="form b1-card form-card">
     <!-- 姓名 -->
     <view class="form-item">
       <text class="label">学生姓名</text>
       <input
-        class="input"
+        class="input form-input"
         placeholder="请输入学生姓名"
         value="{{name}}"
         bindinput="onNameInput"
@@ -56,7 +56,7 @@
 
   <!-- 提交按钮 -->
   <view class="bottom-bar">
-    <button class="btn-primary btn-save" bindtap="onSave" disabled="{{!canSave || saving}}">
+    <button class="b1-button-primary form-primary btn-save" bindtap="onSave" disabled="{{!canSave || saving}}">
       {{saving ? '保存中...' : '保存'}}
     </button>
   </view>

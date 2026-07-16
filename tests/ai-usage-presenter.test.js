@@ -1,5 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const {
   buildMonthLabel,
@@ -107,4 +109,22 @@ test('buildUsageState shows empty state when no events', () => {
   const state = buildUsageState([], null, '2026-06', '')
   assert.equal(state.hasEvents, false)
   assert.ok(state.emptyTitle)
+})
+
+test('B1 AI usage uses restrained summary and ledger color tiers without a profile route', () => {
+  const root = path.resolve(__dirname, '..')
+  const wxml = fs.readFileSync(path.join(root, 'miniprogram/pages/ai-usage/ai-usage.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(root, 'miniprogram/pages/ai-usage/ai-usage.wxss'), 'utf8')
+  const studentProfile = fs.readFileSync(path.join(root, 'miniprogram/pages/student-profile/student-profile.wxml'), 'utf8')
+
+  assert.match(wxml, /class="summary-card usage-summary-\{\{index\}\}"/)
+  assert.match(wxml, /class="breakdown-row usage-category-\{\{item\.key\}\}"/)
+  assert.match(wxml, /class="event-status \{\{ev\.status\}\}"/)
+  assert.match(wxml, /class="deletion-btn b1-destructive/)
+  assert.match(wxss, /\.usage-summary-0/)
+  assert.match(wxss, /\.usage-summary-1/)
+  assert.match(wxss, /\.usage-category-photo_analysis/)
+  assert.match(wxss, /var\(--b1-destructive-fg\)/)
+  assert.match(wxss, /var\(--b1-destructive-bg\)/)
+  assert.doesNotMatch(studentProfile, /ai-usage/)
 })

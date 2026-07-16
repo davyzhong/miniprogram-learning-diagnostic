@@ -1,6 +1,10 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
 const { createWxMock, loadPage } = require('./helpers/page-harness')
+
+const ROOT = path.resolve(__dirname, '..')
 
 async function flushAsync(turns = 4) {
   for (let i = 0; i < turns; i += 1) {
@@ -316,4 +320,40 @@ test('join student preserves exact actionable invite errors but hides decorated 
   page.setData({ status: 'ready', inviteId: 'invite-route-id', token: 'route-token' })
   await page.onAccept()
   assert.equal(page.data.error, '加入失败，请稍后重试')
+})
+
+test('B1 forms retain student creation and invite bindings with compact warm form controls', () => {
+  const addStudent = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/add-student/add-student.wxml'), 'utf8')
+  const addStudentStyles = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/add-student/add-student.wxss'), 'utf8')
+  const joinStudent = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/join-student/join-student.wxml'), 'utf8')
+  const joinStudentStyles = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/join-student/join-student.wxss'), 'utf8')
+
+  assert.match(addStudent, /class="form b1-card form-card"/)
+  assert.match(addStudent, /class="input form-input"/)
+  assert.match(addStudent, /class="b1-button-primary form-primary btn-save" bindtap="onSave"/)
+  assert.match(addStudent, /bindinput="onNameInput"/)
+  assert.match(addStudent, /bindtap="onGradeTap"/)
+  assert.match(addStudentStyles, /var\(--b1-surface\)/)
+  assert.match(addStudentStyles, /var\(--b1-border\)/)
+  assert.match(addStudentStyles, /var\(--b1-improved-fg\)/)
+
+  assert.match(joinStudent, /class="card b1-card form-card code-card"/)
+  assert.match(joinStudent, /class="code-input form-input"/)
+  assert.match(joinStudent, /class="b1-button-primary form-primary" loading="\{\{lookingUp\}\}" bindtap="onLookupCode"/)
+  assert.match(joinStudent, /bindinput="onInviteCodeInput"/)
+  assert.match(joinStudent, /bindtap="onAccept"/)
+  assert.match(joinStudentStyles, /var\(--b1-surface\)/)
+  assert.match(joinStudentStyles, /var\(--b1-border\)/)
+  assert.match(joinStudentStyles, /var\(--b1-improved-fg\)/)
+})
+
+test('B1 parent management keeps owner actions distinct from viewer permissions', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/parent-management/parent-management.wxml'), 'utf8')
+  const styles = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/parent-management/parent-management.wxss'), 'utf8')
+
+  assert.match(source, /wx:if="\{\{canInvite\}\}" class="b1-button-secondary member-edit"/)
+  assert.match(source, /wx:if="\{\{canInvite\}\}" class="b1-button-primary management-primary"/)
+  assert.match(source, /class="notice b1-neutral" wx:if="\{\{role === 'viewer'\}\}"/)
+  assert.doesNotMatch(source, /移除|删除家长|onRemoveMember/)
+  assert.match(styles, /var\(--b1-improved-fg\)/)
 })
