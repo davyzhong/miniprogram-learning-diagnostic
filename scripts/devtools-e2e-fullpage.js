@@ -41,8 +41,34 @@ const subjectProfiles = [{
   _id: 'profile-math', studentId: student._id, subject: 'math', subjectName: '数学',
   totalReports: 2, updatedAt: NOW,
   currentBottlenecks: [
-    { lpCode: 'LP-001', lpName: '计算基础', status: 'needs_verification', severity: 'medium' },
-    { lpCode: 'LP-008', lpName: '审题理解', status: 'persisting', severity: 'high' },
+    {
+      lpCode: 'LP-001',
+      lpName: '计算基础',
+      status: 'needs_verification',
+      severity: 'medium',
+      weight: 68,
+      evidenceCount: 2,
+      cumulativeErrorCount: 5,
+      recentErrorCount: 2,
+      verificationPassCount: 1,
+      verificationFailCount: 0,
+      firstSeenAt: '2026-06-03T09:30:00+08:00',
+      lastSeenAt: NOW
+    },
+    {
+      lpCode: 'LP-008',
+      lpName: '审题理解',
+      status: 'persisting',
+      severity: 'high',
+      weight: 86,
+      evidenceCount: 3,
+      cumulativeErrorCount: 8,
+      recentErrorCount: 3,
+      verificationPassCount: 0,
+      verificationFailCount: 2,
+      firstSeenAt: '2026-05-28T09:30:00+08:00',
+      lastSeenAt: NOW
+    },
   ],
   pendingBottlenecks: [{ lpCode: 'LP-001', lpName: '计算基础', status: 'needs_verification', severity: 'medium' }],
   improvedBottlenecks: [],
@@ -143,6 +169,7 @@ const pages = [
   {
     name: 'report 诊断报告',
     route: `/pages/report/report?id=report-e2e&${studentQ}`,
+    screenshotScrollTop: 1080,
     expect: {
       text: ['诊断报告', '计算基础', '审题理解'],
     },
@@ -384,7 +411,7 @@ async function installCloudMocks(miniProgram) {
           if (a === 'getSubjectDashboard') return { result: { success: true, student, permissions, profile: subjectProfiles[0], reports, papers } }
           if (a === 'getLearningTimeline') return { result: { success: true, student, permissions, reports, papers } }
           if (a === 'cleanupStaleLearningRecords') return { result: { success: true, permissions, cleanedCount: 0, cleanedReportIds: [], dryRun: true } }
-          if (a === 'getReportDetail') return { result: { success: true, permissions, report: reports.find(r => r._id === (data && data.reportId)) || reports[0], linkedPaper: papers[0] } }
+          if (a === 'getReportDetail') return { result: { success: true, permissions, profile: subjectProfiles[0], report: reports.find(r => r._id === (data && data.reportId)) || reports[0], linkedPaper: papers[0] } }
           if (a === 'getPaperDetail') return { result: { success: true, permissions, paper: papers.find(p => p._id === (data && data.paperId)) || papers[0], latestVerificationReport: reports[1] } }
           if (a === 'getBottleneckDetail') return { result: { success: true, permissions, student, profile: subjectProfiles[0], report: reports[0], lpCode: (data && data.lpCode) || 'LP-001' } }
           if (a === 'getLearningResource') return { result: { success: true, permissions, pack: { _id: 'pack-e2e', title: '计算基础练习包', lpCode: 'LP-001' } } }
@@ -503,8 +530,14 @@ async function runPageAssertion(spec, miniProgram) {
       entry.realConsoleErrors = real
     }
 
-    if (entry.status !== 'PASS') {
+    if (entry.status !== 'PASS' || process.env.CAPTURE_E2E_SCREENSHOTS === '1') {
       try {
+        if (spec.screenshotScrollTop) {
+          await miniProgram.evaluate(scrollTop => {
+            wx.pageScrollTo({ scrollTop, duration: 0 })
+          }, spec.screenshotScrollTop)
+          await page.waitFor(300)
+        }
         const shotPath = path.join(outputDir, `screenshots`, `${spec.name.replace(/[^\w]/g, '_')}.png`)
         fs.mkdirSync(path.dirname(shotPath), { recursive: true })
         await miniProgram.screenshot({ path: shotPath })

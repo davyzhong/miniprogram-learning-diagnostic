@@ -119,7 +119,7 @@
     </view>
     <view class="surface">
       <view class="task-row chinese-review-row" wx:for="{{chineseReviewQueue}}" wx:key="viewId" bindtap="onChineseReviewTap" data-review-item-id="{{item.reviewItemId}}">
-        <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
+        <view class="queue-status-dot queue-status-dot-{{item.statusClass}}"></view>
         <view class="row-copy">
           <view class="row-title-line">
             <text class="row-title">{{item.displayName}}</text>
@@ -148,7 +148,7 @@
         data-bottleneck-id="{{item.bottleneckId}}"
         data-view-id="{{item.viewId}}"
       >
-        <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
+        <view class="queue-status-dot queue-status-dot-{{item.statusClass}}"></view>
         <view class="row-copy">
           <text class="row-title">{{item.displayName}}</text>
           <text class="row-desc">{{item.evidenceText}}<text wx:if="{{item.severityText}}"> · {{item.severityText}}</text></text>
