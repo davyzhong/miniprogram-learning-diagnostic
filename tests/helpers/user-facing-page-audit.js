@@ -828,6 +828,22 @@ async function chineseSkillTaskStates() {
   return [state('normal', normal), state('loading', { ...normal, loading: true }), state('empty', { ...normal, task: null }), state('legacy-id-only', normal), state('error', { ...normal, task: null })]
 }
 
+async function iconCompatibilityStates() {
+  const modulePath = 'miniprogram/pages/icon-compatibility/icon-compatibility.js'
+  const normal = await runController(modulePath, {}, async page => { page.onLoad() })
+  const failedCopy = await runController(modulePath, {}, async page => {
+    page.onLoad()
+    await page.copyPublicId('')
+  })
+  return [
+    state('normal', normal),
+    state('loading', normal),
+    state('empty', normal),
+    state('legacy-id-only', normal),
+    state('error', failedCopy)
+  ]
+}
+
 async function englishConfusionStates() {
   const modulePath = 'miniprogram/pages/english-confusion/english-confusion.js'
   const normal = await runController(modulePath, { getEnglishConfusionPractice: async () => ({ items: [{ relationId: 'safe', words: ['there', 'their'], explanation: '分别表示不同含义。', prompt: 'This is ___ classroom.', answer: 'their' }] }) }, async page => { await page.onLoad({ studentId: 'student-1' }) })
@@ -860,7 +876,8 @@ const RAW_PAGE_AUDIT_REGISTRY = {
   'pages/paper-preview/paper-preview': presenterAdapter('miniprogram/pages/paper-preview/paper-preview-presenter.js', paperPreviewStates, true),
   'pages/parent-management/parent-management': controllerAdapter('miniprogram/pages/parent-management/parent-management.js', parentManagementStates),
   'pages/join-student/join-student': controllerAdapter('miniprogram/pages/join-student/join-student.js', joinStudentStates),
-  'pages/ai-usage/ai-usage': presenterAdapter('miniprogram/pages/ai-usage/ai-usage-presenter.js', aiUsageStates, true)
+  'pages/ai-usage/ai-usage': presenterAdapter('miniprogram/pages/ai-usage/ai-usage-presenter.js', aiUsageStates, true),
+  'pages/icon-compatibility/icon-compatibility': controllerAdapter('miniprogram/pages/icon-compatibility/icon-compatibility.js', iconCompatibilityStates)
 }
 
 const PAGE_AUDIT_REGISTRY = Object.fromEntries(
