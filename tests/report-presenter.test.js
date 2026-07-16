@@ -576,6 +576,54 @@ test('math diagnosis report exposes grouped bottleneck sections for parent-facin
   ])
 })
 
+test('math diagnosis report exposes a quantified evidence matrix without calling it accuracy', () => {
+  const view = buildReportView({
+    _id: 'report-math-metrics',
+    studentId: 'student-1',
+    subject: 'math',
+    type: 'diagnosis',
+    bottlenecks: []
+  }, {
+    profile: {
+      currentBottlenecks: [{
+        lpCode: 'LP-001',
+        lpName: '计算基础',
+        status: 'persisting',
+        candidateBottlenecks: [{
+          bottleneckId: 'BN-DEC-MUL-POINT-COUNT',
+          title: '小数乘法中积的小数位数判断错误',
+          weight: 80,
+          evidenceCount: 3,
+          cumulativeErrorCount: 7,
+          recentErrorCount: 2,
+          verificationPassCount: 1,
+          verificationFailCount: 2,
+          firstSeenAt: '2026-07-01T00:00:00.000Z',
+          lastSeenAt: '2026-07-16T00:00:00.000Z'
+        }]
+      }]
+    }
+  })
+  const item = view.bottleneckList[0]
+
+  assert.equal(item.confidenceScore, 80)
+  assert.equal(item.confidenceScoreLabel, '综合置信分')
+  assert.equal(item.occurrenceCount, 3)
+  assert.equal(item.cumulativeErrorCount, 7)
+  assert.equal(item.recentErrorCount, 2)
+  assert.equal(item.verificationSummary, '通过 1 · 未通过 2')
+  assert.equal(item.firstSeenText, '7月1日')
+  assert.equal(item.lastSeenText, '7月16日')
+  assert.equal(item.durationText, '持续 15 天')
+  assert.deepEqual(item.evidenceMetrics.map(metric => metric.key), [
+    'occurrence',
+    'errors',
+    'recent',
+    'verification'
+  ])
+  assert.doesNotMatch(JSON.stringify(item), /准确率/)
+})
+
 // === 诊断报告展示全量卡点（profile 级别，而非单次 report 级别）===
 
 test('诊断报告优先展示 profile.currentBottlenecks（全量合并卡点），而非 report.bottlenecks（单次）', () => {

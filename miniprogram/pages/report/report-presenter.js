@@ -409,6 +409,23 @@ function buildReportView(report, options = {}) {
         : { statusText: '需要验证', statusClass: 'pending', statusIcon: '待验证' }
     const displayName = bottleneckLabelOf(item)
     const confidence = buildConfidence(item)
+    const verificationSummary = confidence.passCount || confidence.failCount
+      ? `通过 ${confidence.passCount} · 未通过 ${confidence.failCount}`
+      : ''
+    const evidenceMetrics = [
+      confidence.occurrenceCount > 0
+        ? { key: 'occurrence', label: '出现', value: `${confidence.occurrenceCount} 次` }
+        : null,
+      confidence.cumulativeErrorCount > 0
+        ? { key: 'errors', label: '累计错题', value: `${confidence.cumulativeErrorCount} 道` }
+        : null,
+      confidence.recentErrorCount > 0
+        ? { key: 'recent', label: '最近错题', value: `${confidence.recentErrorCount} 道` }
+        : null,
+      verificationSummary
+        ? { key: 'verification', label: '复测', value: `通过 ${confidence.passCount} / 未过 ${confidence.failCount}` }
+        : null
+    ].filter(Boolean)
     return {
       ...item,
       ...status,
@@ -417,6 +434,15 @@ function buildReportView(report, options = {}) {
       confidenceLabel: confidence.label,
       confidenceLevel: confidence.level,
       confidenceDetail: confidence.detail,
+      confidenceScore: confidence.score,
+      confidenceScoreLabel: confidence.scoreLabel,
+      occurrenceCount: confidence.occurrenceCount,
+      cumulativeErrorCount: confidence.cumulativeErrorCount,
+      recentErrorCount: confidence.recentErrorCount,
+      verificationPassCount: confidence.passCount,
+      verificationFailCount: confidence.failCount,
+      verificationSummary,
+      evidenceMetrics,
       metaText: item.fineBottleneck && item.evidenceText
         ? item.evidenceText
         : `${item.errorCount || 0} 道相关错题 · ${displayName}`,

@@ -150,6 +150,16 @@ function expandFineBottleneckItems(rawItems = [], options = {}) {
       seen.add(dedupeKey)
 
       const viewId = `${item.lpCode || 'LP'}:${key}`
+      const hasIndependentMetrics = [
+        'weight',
+        'evidenceCount',
+        'cumulativeErrorCount',
+        'recentErrorCount',
+        'verificationPassCount',
+        'verificationFailCount',
+        'firstSeenAt',
+        'lastSeenAt'
+      ].some(field => candidate[field] !== undefined && candidate[field] !== null)
       result.push({
         ...item,
         id: viewId,
@@ -166,6 +176,22 @@ function expandFineBottleneckItems(rawItems = [], options = {}) {
         label: title,
         displayName: title,
         candidateBottlenecks: [candidate],
+        weight: candidate.weight !== undefined ? candidate.weight : item.weight,
+        evidenceCount: candidate.evidenceCount !== undefined ? candidate.evidenceCount : item.evidenceCount,
+        cumulativeErrorCount: candidate.cumulativeErrorCount !== undefined
+          ? candidate.cumulativeErrorCount
+          : item.cumulativeErrorCount,
+        recentErrorCount: candidate.recentErrorCount !== undefined ? candidate.recentErrorCount : item.recentErrorCount,
+        verificationPassCount: candidate.verificationPassCount !== undefined
+          ? candidate.verificationPassCount
+          : item.verificationPassCount,
+        verificationFailCount: candidate.verificationFailCount !== undefined
+          ? candidate.verificationFailCount
+          : item.verificationFailCount,
+        firstSeenAt: candidate.firstSeenAt || item.firstSeenAt,
+        lastSeenAt: candidate.lastSeenAt || item.lastSeenAt,
+        metricScope: hasIndependentMetrics ? 'fine' : 'parent',
+        metricScopeText: hasIndependentMetrics ? '' : '沿用所属能力卡点统计',
         evidenceStrength: candidate.evidenceStrength || item.evidenceStrength || '',
         microValidationRequired: Boolean(candidate.microValidationRequired),
         suggestedMicroValidation: candidate.suggestedMicroValidation || [],
@@ -214,6 +240,11 @@ function buildBottleneckView(item = {}, options = {}) {
     : (taxonomy.shortName || bottleneckLabelOf(item))
   const firstSeenText = formatDate(item.firstSeenAt || item.sinceDate)
   const lastSeenText = formatDate(item.lastSeenAt || item.lastVerifiedAt || item.improvedDate)
+  const firstSeenDate = toDate(item.firstSeenAt || item.sinceDate)
+  const lastSeenDate = toDate(item.lastSeenAt || item.lastVerifiedAt || item.improvedDate)
+  const durationDays = firstSeenDate && lastSeenDate
+    ? Math.max(0, Math.floor((lastSeenDate.getTime() - firstSeenDate.getTime()) / 86400000))
+    : 0
 
   return {
     ...item,
@@ -247,7 +278,10 @@ function buildBottleneckView(item = {}, options = {}) {
     verificationPassCount: numberOf(item.verificationPassCount),
     verificationFailCount: numberOf(item.verificationFailCount),
     recentErrorCount: numberOf(item.recentErrorCount || item.errorCount || item.relatedErrorCount),
-    evidenceCount: numberOf(item.evidenceCount)
+    cumulativeErrorCount: numberOf(item.cumulativeErrorCount),
+    evidenceCount: numberOf(item.evidenceCount),
+    durationDays,
+    durationText: durationDays > 0 ? `持续 ${durationDays} 天` : ''
   }
 }
 
@@ -327,8 +361,10 @@ const CONFIDENCE_HIGH = 75
 const CONFIDENCE_MEDIUM = 45
 
 function buildConfidence(bottleneck = {}) {
-  const weight = Number(bottleneck.weight) || 0
+  const weight = Math.max(0, Math.min(100, Number(bottleneck.weight) || 0))
   const evidenceCount = Number(bottleneck.evidenceCount) || 0
+  const cumulativeErrorCount = Math.max(0, Number(bottleneck.cumulativeErrorCount) || 0)
+  const recentErrorCount = Math.max(0, Number(bottleneck.recentErrorCount || bottleneck.errorCount || bottleneck.relatedErrorCount) || 0)
   const passCount = Number(bottleneck.verificationPassCount) || 0
   const failCount = Number(bottleneck.verificationFailCount) || 0
   const evidenceStrength = bottleneck.evidenceStrength || ''
@@ -352,7 +388,20 @@ function buildConfidence(bottleneck = {}) {
   if (failCount > 0) parts.push(`未通过${failCount}次`)
   const detail = parts.length > 0 ? parts.join(' · ') : '初步观察'
 
-  return { level, label, dots, score: effectiveWeight, detail, evidenceCount, passCount, failCount }
+  return {
+    level,
+    label,
+    dots,
+    score: effectiveWeight,
+    scoreLabel: '综合置信分',
+    detail,
+    evidenceCount,
+    occurrenceCount: evidenceCount,
+    cumulativeErrorCount,
+    recentErrorCount,
+    passCount,
+    failCount
+  }
 }
 
 module.exports = {
