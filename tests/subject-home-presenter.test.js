@@ -47,6 +47,9 @@ test('builds a subject workbench from current bottlenecks and latest reports', (
   assert.equal(view.taskQueue[0].priorityText, '高优先级')
   assert.ok(view.taskQueue.every(item => item.status !== 'improved'))
   assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history'])
+  assert.deepEqual(view.tools.map(item => item.icon), ['📸', '📄', '📚'])
+  assert.equal(view.knowledgeMapSymbol, '🗺️')
+  assert.equal(view.emptyQueueSymbol, '✅')
   assert.equal(view.latestReportId, 'report-1')
 })
 

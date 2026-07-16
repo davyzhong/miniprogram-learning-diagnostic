@@ -18,6 +18,25 @@ test('subject home keeps the B1 subject surface, diagnosis route, and Chinese re
   assert.match(source, /bindtap="onChineseReviewTap" data-review-item-id="\{\{item\.reviewItemId\}\}"/)
   assert.match(source, /\{\{item\.reviewStageText\}\}/)
   assert.match(source, /data-action-type="\{\{item\.actionType\}\}"/)
+  assert.match(source, /\{\{knowledgeMapSymbol\}\}/)
+  assert.match(source, /\{\{emptyQueueSymbol\}\}/)
+})
+
+test('subject home keeps the math map and task queue compact', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/subject-home/subject-home.wxss'), 'utf8')
+  const rule = selector => {
+    const match = source.match(new RegExp(`\\${selector}\\s*\\{([^}]*)\\}`))
+    assert.ok(match, `missing ${selector}`)
+    return match[1]
+  }
+
+  assert.match(rule('.map-entry-title'), /font-size:\s*(?:2[0-7])rpx/)
+  assert.match(rule('.map-entry-desc'), /font-size:\s*(?:1\d|2[01])rpx/)
+  assert.match(rule('.task-row'), /padding:\s*(?:1[0-6])rpx\s+0/)
+  assert.match(rule('.status-icon'), /width:\s*(?:4[0-8])rpx/)
+  assert.match(rule('.status-icon'), /height:\s*(?:4[0-8])rpx/)
+  assert.match(rule('.task-row .row-title'), /font-size:\s*(?:2[0-5])rpx/)
+  assert.match(rule('.task-row .row-desc'), /font-size:\s*(?:1\d|2[01])rpx/)
 })
 
 test('subject home loads a compact action workbench', async () => {

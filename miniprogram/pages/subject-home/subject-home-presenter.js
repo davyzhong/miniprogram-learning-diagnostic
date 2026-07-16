@@ -5,6 +5,7 @@ const {
 } = require('../../utils/bottleneck-view')
 const { subjectIllustrationOf } = require('../../utils/page-illustrations')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
 const CHINESE_REVIEW_TYPE_LABELS = {
@@ -421,21 +422,21 @@ function buildTools(permissions = {}, options = {}, stats = {}) {
       key: 'diagnosis',
       title: '拍照诊断',
       desc: '上传新的试卷或练习',
-      icon: '拍照',
+      icon: symbolOf('camera'),
       actionType: 'diagnosis'
     } : null,
     canWrite ? {
       key: 'defaultPaper',
       title: '默认试卷',
       desc: '没有新试卷时使用',
-      icon: '试卷',
+      icon: symbolOf('paper'),
       actionType: 'defaultPaper'
     } : null,
     {
       key: 'history',
       title: '学习记录',
       desc: '照片、报告和试卷',
-      icon: '记录',
+      icon: symbolOf('learningRecords'),
       actionType: 'history'
     }
   ].filter(Boolean)
@@ -481,6 +482,8 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     currentSummary: primaryTask.summary,
     nextAction: primaryTask.actionText,
     primaryTask,
+    knowledgeMapSymbol: symbolOf('knowledgeMap'),
+    emptyQueueSymbol: symbolOf('complete'),
     taskQueue: options.subject === 'english' ? [] : taskQueue,
     pendingTaskCount: options.subject === 'chinese' && chineseReviewQueue.length > 0
       ? chineseReviewQueue.length
