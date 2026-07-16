@@ -83,10 +83,10 @@
   },
   "window": {
     "backgroundTextStyle": "dark",
-    "navigationBarBackgroundColor": "#1a365d",
+    "navigationBarBackgroundColor": "#26383A",
     "navigationBarTitleText": "学习诊断",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#f7fafc"
+    "backgroundColor": "#F8F5EF"
   },
   "cloud": true,
   "plugins": {

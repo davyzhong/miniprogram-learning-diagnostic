@@ -1,4 +1,4 @@
-<view class="page">
+<view class="page b1-page">
   <!-- 月份切换 -->
   <view class="month-bar">
     <view class="month-btn" catchtap="onPrevMonth" aria-role="button" aria-label="上个月">‹</view>

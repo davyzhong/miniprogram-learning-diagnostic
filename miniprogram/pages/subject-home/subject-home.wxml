@@ -1,5 +1,5 @@
 <!--pages/subject-home/subject-home.wxml-->
-<view class="page page-{{subject}}">
+<view class="page page-{{subject}} b1-page">
   <view class="workbench-card {{subject === 'english' ? 'english-hero-card' : ''}}">
     <view class="workbench-hero-layout">
       <view class="workbench-main">
