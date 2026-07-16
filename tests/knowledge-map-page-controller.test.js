@@ -13,7 +13,19 @@
 
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
 const { loadPage } = require('./helpers/page-harness')
+const ROOT = path.resolve(__dirname, '..')
+
+test('knowledge map uses text domain markers and keeps explanation generation wired', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/knowledge-map/knowledge-map.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/knowledge-map/knowledge-map.wxss'), 'utf8')
+
+  assert.match(wxml, /class="domain-marker"/)
+  assert.match(wxml, /(?:bindtap|catchtap)="onBottleneckTap"/)
+  assert.match(wxss, /\.b1-subject-math/)
+})
 
 async function flushAsync(turns = 4) {
   for (let i = 0; i < turns; i += 1) {

@@ -500,6 +500,7 @@ function buildReportView(report, options = {}) {
   ]
 
   return {
+    subjectClass: report.subject === 'chinese' ? 'chinese' : report.subject === 'english' ? 'english' : 'math',
     headline,
     heroIllustration: reportIllustrationOf(isVerification),
     reportSummaryText,

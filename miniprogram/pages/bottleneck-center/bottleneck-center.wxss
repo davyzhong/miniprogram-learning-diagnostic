@@ -344,3 +344,7 @@
   font-size: 24rpx;
   font-weight: 850;
 }
+.b1-subject-math { border-left: 8rpx solid var(--b1-math, #b7791f); }
+.b1-subject-chinese { border-left: 8rpx solid var(--b1-chinese, #b84040); }
+.b1-subject-english { border-left: 8rpx solid var(--b1-english, #2f855a); }
+.bottleneck-card { border-radius: 0; box-shadow: none; border-bottom: 1rpx solid #ded8cc; }

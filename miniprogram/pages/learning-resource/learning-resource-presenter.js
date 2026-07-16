@@ -44,6 +44,7 @@ function buildExternalResourceCards(externalResources = []) {
       return {
         resourceId: resource.resourceId || '',
         platform,
+        platformLabel: platform,
         shortLabel: meta.shortLabel,
         title: readableNameOf(resource) || '学习资源',
         role: resource.role || '家长参考',

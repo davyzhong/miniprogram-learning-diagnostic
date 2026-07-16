@@ -4,7 +4,7 @@
   </view>
 
   <view wx:elif="{{bottleneck}}">
-    <view class="hero-card bottleneck-{{bottleneck.statusClass}}">
+    <view class="hero-card b1-subject-{{bottleneck.subjectClass}} bottleneck-{{bottleneck.statusClass}}">
       <view class="hero-top">
         <view class="status-icon">{{bottleneck.statusIcon}}</view>
         <view class="hero-copy">

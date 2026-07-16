@@ -51,3 +51,11 @@
 .legend-persisting { color: #ef4444; }
 .legend-improved { color: #22c55e; }
 .legend-pending { color: #f59e0b; }
+.progress-editorial { background: #f7f4ed; color: #25313c; }
+.progress-header { background: #243244; border-left: 10rpx solid var(--b1-math, #b7791f); padding: 28rpx; }
+.progress-editorial .card { border-radius: 0; box-shadow: none; border-top: 2rpx solid #d9d3c7; }
+.matrix-legend { display: flex; flex-wrap: wrap; gap: 12rpx; }
+.legend-item { padding: 6rpx 10rpx; }
+.legend-found, .legend-pending { background: #fff3cd; color: #8b5e00; }
+.legend-persisting { background: #fce8e6; color: #a33c32; }
+.legend-improved { background: #e6f4ea; color: #24713d; }

@@ -624,3 +624,7 @@
 .confidence-tag.high { color: #c53030; background: #fed7d7; }
 .confidence-tag.medium { color: #b7791f; background: #fefcbf; }
 .confidence-tag.low { color: #718096; background: #e2e8f0; }
+.hero-card.b1-subject-math { border-left: 10rpx solid var(--b1-math, #b7791f); }
+.hero-card.b1-subject-chinese { border-left: 10rpx solid var(--b1-chinese, #b84040); }
+.hero-card.b1-subject-english { border-left: 10rpx solid var(--b1-english, #2f855a); }
+.section { border-radius: 0; box-shadow: none; border-top: 2rpx solid #ded8cc; }

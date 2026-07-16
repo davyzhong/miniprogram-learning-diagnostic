@@ -7,6 +7,17 @@ const { loadPageAndWait, flushAsync, waitForPageLoad, isThenable } = require('./
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 const util = require('../miniprogram/utils/util')
 
+test('bottleneck pages derive B1 subject classes while retaining task and evidence actions', () => {
+  const center = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/bottleneck-center/bottleneck-center.wxml'), 'utf8')
+  const detail = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/bottleneck-detail/bottleneck-detail.wxml'), 'utf8')
+  const detailJs = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/bottleneck-detail/bottleneck-detail.js'), 'utf8')
+
+  assert.match(center, /b1-subject-\{\{item\.subjectClass\}\}/)
+  assert.match(detail, /b1-subject-\{\{bottleneck\.subjectClass\}\}/)
+  assert.match(detail, /bindtap="onOpenLearningResource"/)
+  assert.match(detailJs, /onEvidenceTap/)
+})
+
 test('bottleneck center loads dashboard bottlenecks and filters by status', async () => {
   let dashboardArgs = null
   const cloud = {
