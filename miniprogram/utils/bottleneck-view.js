@@ -11,6 +11,12 @@ const STATUS_META = {
   improved: { text: '已改善', className: 'improved', icon: '改善', badgeText: '已改善', actionText: '查看证据' }
 }
 
+// === 置信度统一口径（唯一来源，与云函数 generatePaper 的分层逻辑保持一致）===
+// 阈值：weight≥75 = 高，45-74 = 中，<45 = 低；颜色：红/黄/灰三色体系
+const CONFIDENCE_HIGH = 75
+const CONFIDENCE_MEDIUM = 45
+const CONFIDENCE_LABELS = { high: '高置信', medium: '中置信', low: '低置信' }
+
 const TREND_META = {
   new: '新发现',
   persisting: '持续出现',
@@ -52,29 +58,13 @@ function normalizeStatus(item = {}) {
   return 'needs_verification'
 }
 
-function priorityText(weight) {
-  const value = Number(weight) || 0
-  if (value >= 75) return '高优先级'
-  if (value >= 45) return '中优先级'
-  return '低优先级'
-}
-
-function priorityClass(weight) {
-  const value = Number(weight) || 0
-  if (value >= 75) return 'high'
-  if (value >= 45) return 'medium'
-  return 'low'
-}
-
 function numberOf(value) {
   return Math.max(0, Number(value) || 0)
 }
 
+// 置信度文案与 buildConfidence 共用同一套标签（高/中/低置信）
 function evidenceStrengthText(value = '') {
-  if (value === 'high') return '高置信证据'
-  if (value === 'medium') return '中置信证据'
-  if (value === 'low') return '低置信证据'
-  return ''
+  return CONFIDENCE_LABELS[value] || ''
 }
 
 function buildFineEvidenceText(item = {}) {
@@ -238,6 +228,7 @@ function buildBottleneckView(item = {}, options = {}) {
   const displayName = item.fineBottleneck
     ? (readableNameOf(item) || '待确认细卡点')
     : (taxonomy.shortName || bottleneckLabelOf(item))
+  const confidence = buildConfidence(item)
   const firstSeenText = formatDate(item.firstSeenAt || item.sinceDate)
   const lastSeenText = formatDate(item.lastSeenAt || item.lastVerifiedAt || item.improvedDate)
   const firstSeenDate = toDate(item.firstSeenAt || item.sinceDate)
@@ -265,9 +256,11 @@ function buildBottleneckView(item = {}, options = {}) {
     trend: item.trend || (status === 'improved' ? 'improved' : status === 'persisting' ? 'persisting' : 'new'),
     trendText: TREND_META[item.trend] || TREND_META[status] || '',
     weight,
-    weightText: weight ? `权重 ${weight}` : '',
-    priorityText: priorityText(weight),
-    priorityClass: priorityClass(weight),
+    // 置信度标签（统一 buildConfidence 一套：label + level + dots，红黄灰三色）
+    confidenceLabel: confidence.label,
+    confidenceLevel: confidence.level,
+    confidenceDots: confidence.dots,
+    confidenceText: `${confidence.dots} ${confidence.label}`,
     evidenceText: buildEvidenceText(item),
     timeText: buildTimeText(item),
     firstSeenText,
@@ -355,11 +348,7 @@ function findBottleneckView(views = [], identifier = '') {
   )) || null
 }
 
-// === 置信度计算（与云函数 generatePaper 的分层逻辑保持一致）===
-// 阈值：weight≥75 = 高，45-74 = 中，<45 = 低
-const CONFIDENCE_HIGH = 75
-const CONFIDENCE_MEDIUM = 45
-
+// === 置信度计算（阈值/标签常量见文件顶部统一口径区）===
 function buildConfidence(bottleneck = {}) {
   const weight = Math.max(0, Math.min(100, Number(bottleneck.weight) || 0))
   const evidenceCount = Number(bottleneck.evidenceCount) || 0
@@ -374,11 +363,11 @@ function buildConfidence(bottleneck = {}) {
 
   let level, label, dots
   if (effectiveWeight >= CONFIDENCE_HIGH) {
-    level = 'high'; label = '高置信'; dots = '●●●'
+    level = 'high'; label = CONFIDENCE_LABELS.high; dots = '●●●'
   } else if (effectiveWeight >= CONFIDENCE_MEDIUM) {
-    level = 'medium'; label = '中置信'; dots = '●●○'
+    level = 'medium'; label = CONFIDENCE_LABELS.medium; dots = '●●○'
   } else {
-    level = 'low'; label = '低置信'; dots = '●○○'
+    level = 'low'; label = CONFIDENCE_LABELS.low; dots = '●○○'
   }
 
   // 构建详情文案
@@ -407,6 +396,8 @@ function buildConfidence(bottleneck = {}) {
 module.exports = {
   STATUS_META,
   TREND_META,
+  CONFIDENCE_LABELS,
+  normalizeStatus,
   profileBottlenecks,
   expandFineBottleneckItems,
   buildBottleneckView,

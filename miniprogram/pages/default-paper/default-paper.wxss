@@ -43,7 +43,7 @@
   display: block;
   font-size: 28rpx;
   font-weight: 600;
-  color: #c05621;
+  color: var(--b1-waiting-fg);
   margin-bottom: 4rpx;
 }
 
@@ -73,7 +73,7 @@
 }
 
 .grade-btn.active {
-  background: #c05621;
+  background: var(--b1-waiting-fg);
   color: #ffffff;
   font-weight: 600;
 }
@@ -107,7 +107,7 @@
 .paper-badge {
   font-size: 20rpx;
   background: #c6f6d5;
-  color: #276749;
+  color: var(--b1-improved-fg);
   padding: 2rpx 12rpx;
   border-radius: 6rpx;
   font-weight: 600;

@@ -12,10 +12,11 @@ const SUBJECT_SHORT_NAMES = {
   english: '英'
 }
 
+// 学科色唯一来源：与 app.wxss B1 token（--b1-subject-*-fg）保持一致
 const SUBJECT_COLORS = {
-  math: { bg: '#1f4f82', fg: '#ffffff' },
-  chinese: { bg: '#276749', fg: '#ffffff' },
-  english: { bg: '#9c4f24', fg: '#ffffff' }
+  math: { bg: '#B37808', fg: '#ffffff' },
+  chinese: { bg: '#D4483A', fg: '#ffffff' },
+  english: { bg: '#4168B7', fg: '#ffffff' }
 }
 
 const RELATION_OPTIONS = [

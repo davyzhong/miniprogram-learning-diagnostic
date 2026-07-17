@@ -216,7 +216,7 @@
 .cost-estimate {
   display: inline-block;
   margin-top: 4rpx;
-  font-size: 18rpx;
+  font-size: 20rpx;
   color: var(--b1-waiting-fg);
   background: var(--b1-waiting-bg);
   padding: 2rpx 10rpx;

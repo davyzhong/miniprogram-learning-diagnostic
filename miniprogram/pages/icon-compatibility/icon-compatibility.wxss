@@ -51,7 +51,7 @@
   border-radius: 8rpx;
   background: var(--b1-improved-bg);
   color: var(--b1-improved-fg);
-  font-size: 19rpx;
+  font-size: 20rpx;
   font-weight: 600;
 }
 
@@ -97,7 +97,7 @@
 
 .category-tab-name {
   margin-top: 4rpx;
-  font-size: 18rpx;
+  font-size: 20rpx;
 }
 
 .active-category-head {
@@ -183,7 +183,7 @@
 .candidate-id {
   margin-top: 5rpx;
   color: var(--b1-informational-fg);
-  font-size: 17rpx;
+  font-size: 20rpx;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -193,7 +193,7 @@
   margin-top: 4rpx;
   overflow: hidden;
   color: var(--b1-ink-muted);
-  font-size: 17rpx;
+  font-size: 20rpx;
   line-height: 1.2;
   text-align: center;
   text-overflow: ellipsis;

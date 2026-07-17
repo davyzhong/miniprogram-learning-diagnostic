@@ -6,7 +6,7 @@
 
 .config-hero {
   padding: 34rpx 28rpx 28rpx;
-  background: linear-gradient(135deg, #1f4f82 0%, #2f78b7 100%);
+  background: var(--b1-subject-math-fg);
   color: #fff;
   border-radius: 0 0 22rpx 22rpx;
   display: flex;
@@ -106,7 +106,7 @@
   display: block;
   font-size: 25rpx;
   font-weight: 800;
-  color: #1f4f82;
+  color: var(--b1-subject-math-fg);
   margin-bottom: 4rpx;
 }
 
@@ -250,7 +250,7 @@
 
 .severity-high { background: #fee2e2; color: #9b2c2c; }
 .severity-medium { background: #fef3c7; color: #975a16; }
-.severity-low { background: #dcfce7; color: #276749; }
+.severity-low { background: #dcfce7; color: var(--b1-improved-fg); }
 
 .confidence-badge {
   font-size: 20rpx;

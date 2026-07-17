@@ -157,7 +157,7 @@
   background: rgba(192, 86, 33, 0.9);
   border-radius: 6rpx;
   color: #ffffff;
-  font-size: 18rpx;
+  font-size: 20rpx;
   padding: 3rpx 7rpx;
 }
 
@@ -168,7 +168,7 @@
   background: rgba(65, 104, 183, 0.92);
   border-radius: 6rpx;
   color: #ffffff;
-  font-size: 18rpx;
+  font-size: 20rpx;
   padding: 3rpx 7rpx;
 }
 
@@ -226,7 +226,7 @@
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #2b6cb0, #3182ce);
+  background: var(--b1-informational-fg);
   border-radius: 5rpx;
   transition: width 0.3s ease;
 }

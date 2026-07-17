@@ -24,7 +24,7 @@
 .chinese-review-paper-main { flex: 1; min-width: 0; }
 .chinese-review-paper-title { align-items: center; display: flex; gap: 10rpx; }
 .chinese-target-name { color: #25364a; font-size: 27rpx; font-weight: 800; }
-.chinese-stage-tag { background: #e8f2fb; border-radius: 6rpx; color: #245b89; font-size: 19rpx; font-weight: 700; padding: 4rpx 9rpx; }
+.chinese-stage-tag { background: #e8f2fb; border-radius: 6rpx; color: #245b89; font-size: 20rpx; font-weight: 700; padding: 4rpx 9rpx; }
 .chinese-review-paper-desc,
 .chinese-extension-text { color: #64748b; display: block; font-size: 21rpx; line-height: 1.45; margin-top: 7rpx; }
 .chinese-extension-text { color: #7c3f00; }
@@ -581,7 +581,7 @@
 }
 
 .bottom-bar .btn-primary {
-  background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%);
+  background: var(--b1-informational-fg);
   color: #fff;
 }
 

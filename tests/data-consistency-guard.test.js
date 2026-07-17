@@ -202,7 +202,7 @@ test('knowledge-nodes: every gradeRange is valid [min, max] with min ≤ max', (
 // ── 9. 数据规模下限守护（防止误删导致回退）──
 
 test('data scale does not regress below current baseline', () => {
-  assert.ok(nodes.nodes.length >= 91, `nodes should be ≥91, got ${nodes.nodes.length}`)
+  assert.ok(nodes.nodes.length >= 150, `nodes should be ≥150, got ${nodes.nodes.length}`)
   assert.ok(taxonomy.bottlenecks.length >= 28, `bottlenecks should be ≥28, got ${taxonomy.bottlenecks.length}`)
   assert.ok(resources.resources.length >= 28, `resources should be ≥28, got ${resources.resources.length}`)
   assert.ok(replay.items.length >= 41, `replay items should be ≥41, got ${replay.items.length}`)

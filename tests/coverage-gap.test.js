@@ -100,21 +100,21 @@ test('subject home applies per-subject navigation bar colors and falls back to m
 
   page.onLoad({ studentId: 'student-1', subject: 'chinese', subjectName: '语文', studentName: '钟青羽' })
   const chineseCall = wx.calls.find(call => call.name === 'setNavigationBarColor')
-  assert.equal(chineseCall.payload.backgroundColor, '#276749')
+  assert.equal(chineseCall.payload.backgroundColor, '#D4483A')
   assert.equal(chineseCall.payload.frontColor, '#ffffff')
 
   wx.calls.length = 0
   page.setData({ subject: 'english' })
   page.setNavColor()
   const englishCall = wx.calls.find(call => call.name === 'setNavigationBarColor')
-  assert.equal(englishCall.payload.backgroundColor, '#9c4f24')
+  assert.equal(englishCall.payload.backgroundColor, '#4168B7')
 
   wx.calls.length = 0
   page.setData({ subject: 'unknown-subject' })
   page.setNavColor()
   const fallbackCall = wx.calls.find(call => call.name === 'setNavigationBarColor')
   // unknown subjects fall back to math palette
-  assert.equal(fallbackCall.payload.backgroundColor, '#1f4f82')
+  assert.equal(fallbackCall.payload.backgroundColor, '#B37808')
 })
 
 // ========== uploadAndAnalyze mode=paper without paperId ==========

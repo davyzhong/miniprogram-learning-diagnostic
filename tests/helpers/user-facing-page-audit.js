@@ -131,7 +131,9 @@ function visibleBindingsForPage(pagePath) {
         })
       }
       const scope = { aliases, conditions, loops, branchChain: [] }
-      const visibleAttributes = /\b(?:aria-label|title|placeholder|alt|value|checked|label)="([^"]*\{\{[^}]+\}\}[^"]*)"/g
+      // `text`/`retryText` are the visible text props of the shared <status-view> component
+      // (loading/empty/error panels); treat them as rendered content like native visible attributes.
+      const visibleAttributes = /\b(?:aria-label|title|placeholder|alt|value|checked|label|text|retryText)="([^"]*\{\{[^}]+\}\}[^"]*)"/g
       for (const match of token.matchAll(visibleAttributes)) {
         addBindings(match[1], scope)
       }

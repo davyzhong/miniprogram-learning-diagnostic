@@ -5,7 +5,7 @@
 }
 
 .hero {
-  background: #9c4f24;
+  background: var(--b1-subject-english-fg);
   color: #fff;
   padding: 42rpx 28rpx 34rpx;
   display: flex;
@@ -115,7 +115,7 @@
 }
 
 .progress-value {
-  color: #9c4f24;
+  color: var(--b1-subject-english-fg);
   font-size: 30rpx;
   font-weight: 800;
 }
@@ -151,7 +151,7 @@
   font-size: 22rpx;
   font-weight: 700;
   background: #fff7ed;
-  color: #9c4f24;
+  color: var(--b1-subject-english-fg);
 }
 
 .state-pill {
@@ -193,9 +193,9 @@
 
 .play-btn {
   margin-top: 24rpx;
-  border: 2rpx solid #9c4f24;
+  border: 2rpx solid var(--b1-subject-english-fg);
   background: #fff;
-  color: #9c4f24;
+  color: var(--b1-subject-english-fg);
   border-radius: 14rpx;
 }
 
@@ -215,13 +215,13 @@
 
 .voice-next-btn {
   border-color: #fed7aa;
-  color: #9c4f24;
+  color: var(--b1-subject-english-fg);
   background: #fff7ed;
 }
 
 .primary-btn {
   margin-top: 22rpx;
-  background: #c05621;
+  background: var(--b1-subject-english-fg);
   color: #fff;
   border-radius: 18rpx;
   font-size: 30rpx;
@@ -242,7 +242,7 @@
 }
 
 .fold-action {
-  color: #9c4f24;
+  color: var(--b1-subject-english-fg);
   font-size: 24rpx;
   font-weight: 750;
 }
@@ -278,7 +278,7 @@
   border-radius: 999rpx;
   text-align: center;
   background: #fff7ed;
-  color: #9c4f24;
+  color: var(--b1-subject-english-fg);
   font-weight: 800;
   font-size: 22rpx;
 }
@@ -318,7 +318,7 @@
 
 .summary-num {
   display: block;
-  color: #9c4f24;
+  color: var(--b1-subject-english-fg);
   font-size: 30rpx;
   font-weight: 800;
 }

@@ -1,9 +1,7 @@
 <view class="page b1-page b1-subject-{{view.subject}}">
-  <view wx:if="{{loading}}" class="loading">加载知识地图...</view>
+  <status-view wx:if="{{loading}}" state="loading" text="加载知识地图..." />
 
-  <view wx:elif="{{errorText}}" class="empty">
-    <text>{{errorText}}</text>
-  </view>
+  <status-view wx:elif="{{errorText}}" state="error" text="{{errorText}}" retryText="重新加载" bind:retry="loadData" />
 
   <view wx:elif="{{!view.hasData}}" class="empty">
     <text class="empty-title">还没有学习卡点数据</text>
@@ -14,7 +12,10 @@
   <view wx:else>
     <view class="hero">
       <view class="hero-copy">
-        <text class="hero-title">知识地图 {{view.title}}</text>
+        <view class="hero-title-row">
+          <text class="b1-symbol hero-symbol">{{view.knowledgeMapSymbol}}</text>
+          <text class="hero-title">知识地图 {{view.title}}</text>
+        </view>
         <text class="hero-summary">{{view.summary}}</text>
         <text class="hero-hint">点击任意卡点直接开始学习，约 5-10 分钟讲清楚一个卡点</text>
       </view>
@@ -46,6 +47,18 @@
           <view class="domain-info">
             <text class="domain-name">{{item.name}}</text>
             <text class="domain-stats">{{item.count}} 个卡点{{item.pendingCount > 0 ? ' · ' + item.pendingCount + '待修' : ''}}</text>
+          </view>
+        </view>
+
+        <view class="domain-mastery" wx:if="{{item.masterySegments.length > 0}}">
+          <view class="b1-seg-bar">
+            <view class="b1-seg b1-seg-{{seg.tone}}" wx:for="{{item.masterySegments}}" wx:for-item="seg" wx:key="key" style="width: {{seg.widthPercent}}%;"></view>
+          </view>
+          <view class="b1-seg-legend">
+            <view class="b1-seg-legend-item" wx:for="{{item.masterySegments}}" wx:for-item="seg" wx:key="key">
+              <view class="b1-seg-dot b1-seg-{{seg.tone}}"></view>
+              <text>{{seg.label}}</text>
+            </view>
           </view>
         </view>
 
