@@ -14,6 +14,8 @@ const db = cloud.database();
 const BATCH_SIZE = 5;
 const CONTINUE_BATCH_SIZE = 1;
 const MAX_CONTINUE_ATTEMPTS = 3;
+// resume 恢复门槛：generating/appending 超过该时长无写入才允许恢复（与 studentData 的 stale 判定一致）
+const RESUME_STALE_MS = 10 * 60 * 1000;
 
 const SEVERITY_RANK = { high: 3, medium: 2, low: 1 };
 
@@ -495,6 +497,41 @@ exports.main = async (event = {}) => {
         }).catch(() => {});
       }
       return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message || String(err) };
+    }
+  }
+
+  // ===== resume 模式：卡死/失败后的家长自助恢复入口 =====
+  // 调度链中断（paper 停在 generating/appending 无后续写入）或已 failed 时，
+  // 由前端经权限校验后重新接入续跑链；仍在活跃生成的 paper 拒绝恢复，避免并发双链。
+  if (action === 'resume') {
+    const { paperId } = event;
+    if (!paperId) return { success: false, error: '缺少 paperId' };
+    try {
+      const access = await requireStudentAccess(studentId, openId);
+      if (!access.ok) return { success: false, error: access.error };
+      const paperRes = await db.collection('papers').doc(paperId).get();
+      const paper = paperRes.data;
+      if (!paper || paper.studentId !== studentId || paper.subject !== subject || paper.type !== 'verification') {
+        return { success: false, error: '验证卷归属不匹配' };
+      }
+      if (!['generating', 'appending', 'failed'].includes(paper.generationStatus)) {
+        return { success: false, error: '验证卷当前状态无需恢复' };
+      }
+      if (paper.generationStatus !== 'failed') {
+        const lastWrite = new Date(paper.updatedAt || paper.generatedAt || paper.createdAt || 0).getTime();
+        if (lastWrite && Date.now() - lastWrite < RESUME_STALE_MS) {
+          return { success: false, error: '验证卷仍在生成中，请稍候' };
+        }
+      }
+      if (paper.generationStatus === 'failed') {
+        await db.collection('papers').doc(paperId).update({
+          data: { generationStatus: 'generating', generationError: '', updatedAt: new Date() },
+        }).catch(() => {});
+      }
+      const reportIdToUse = reportId || paper.triggeredByReport || '';
+      return continueGeneration({ paperId, studentId, subject, reportId: reportIdToUse, openId });
     } catch (err) {
       return { success: false, error: err.message || String(err) };
     }

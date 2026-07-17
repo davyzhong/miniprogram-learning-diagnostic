@@ -1024,6 +1024,9 @@ wx.cloud.callFunction({
 | `continue` | `studentId`, `subject`, `paperId`; `reportId` 建议传入 | 读取 paper 当前题目，跳过已生成目标，只推进下一个未生成 BN |
 | `finalize` | `studentId`, `subject`, `paperId`; `reportId` 可选 | 兼容维护入口：校验已有题目完整后标记 ready |
 | `fail` | `studentId`, `subject`, `paperId`; `reportId` 可选 | 兼容维护入口：标记 failed |
+| `resume` | `studentId`, `subject`, `paperId`; `reportId` 可选 | 家长自助恢复入口：卡死（generating/appending 超过 10 分钟无写入）或 failed 的验证卷重新接入续跑链；仍在活跃生成的卷返回"仍在生成中"错误，避免并发双链 |
+
+> 卡死检测：`studentData?action=getActiveVerificationPaper` 返回 `generating` 状态时会附带 `stale` 标记（paper 的 `updatedAt`/`generatedAt`/`createdAt` 距今超过 10 分钟即为 `true`）。前端 `navigateToVerificationPaper` 在 `stale === true` 或 `failed` 时弹窗引导家长调用 `resume` 重试。
 
 ### 输出格式
 

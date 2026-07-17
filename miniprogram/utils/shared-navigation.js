@@ -253,6 +253,24 @@ async function navigateToVerificationPaper(cloudModule, { studentId, subject, re
   }
 
   if (status === 'generating' || status === 'appending') {
+    // 卡死检测：后端标记 stale（续跑链超过 10 分钟无写入）时，给家长手动恢复入口
+    if (result && result.stale === true) {
+      const confirm = await showConfirmModal('验证卷生成时间较长，可能已中断。是否继续生成？')
+      if (confirm) {
+        const resumed = await resumeVerificationPaper(cloudModule, { studentId, subject, reportId, paperId })
+        if (resumed) {
+          wx.showToast({ title: '已继续生成，完成后自动跳转', icon: 'none', duration: 2500 })
+          appStatus.registerOperation({
+            studentId, subject, opType: OP_TYPES.VERIFICATION_PAPER,
+            status: OP_STATUS.GENERATING, progress: 0, label: '验证卷生成'
+          })
+          startVerificationPoller(cloudModule, studentId, subject, reportId)
+          return { status: 'generating', paperId }
+        }
+        wx.showToast({ title: '恢复失败，请稍后再试', icon: 'none', duration: 2500 })
+      }
+      return { status, paperId }
+    }
     wx.showToast({ title: '验证卷正在后台生成，完成后自动跳转', icon: 'none', duration: 2500 })
     appStatus.registerOperation({
       studentId, subject, opType: OP_TYPES.VERIFICATION_PAPER,
@@ -263,7 +281,21 @@ async function navigateToVerificationPaper(cloudModule, { studentId, subject, re
   }
 
   if (status === 'failed') {
-    wx.showToast({ title: '验证卷后台生成失败，请稍后重新诊断或查看报告', icon: 'none', duration: 3000 })
+    // 失败后给家长明确的手动重试入口，不必重新上传诊断
+    const confirm = await showConfirmModal('验证卷生成失败，是否重试？')
+    if (confirm) {
+      const resumed = await resumeVerificationPaper(cloudModule, { studentId, subject, reportId, paperId })
+      if (resumed) {
+        wx.showToast({ title: '正在重新生成，完成后自动跳转', icon: 'none', duration: 2500 })
+        appStatus.registerOperation({
+          studentId, subject, opType: OP_TYPES.VERIFICATION_PAPER,
+          status: OP_STATUS.GENERATING, progress: 0, label: '验证卷生成'
+        })
+        startVerificationPoller(cloudModule, studentId, subject, reportId)
+        return { status: 'generating', paperId }
+      }
+      wx.showToast({ title: '重试失败，请稍后再试', icon: 'none', duration: 2500 })
+    }
     appStatus.registerOperation({
       studentId, subject, opType: OP_TYPES.VERIFICATION_PAPER,
       status: OP_STATUS.FAILED, label: '验证卷生成'
@@ -297,6 +329,31 @@ async function navigateToVerificationPaper(cloudModule, { studentId, subject, re
 
   wx.showToast({ title: '暂无验证卷，请先完成一次诊断', icon: 'none', duration: 2500 })
   return { status: 'none', paperId: '' }
+}
+
+function showConfirmModal(content) {
+  return new Promise(resolve => {
+    wx.showModal({
+      title: '验证卷',
+      content,
+      confirmText: '重试',
+      cancelText: '暂不',
+      success: res => resolve(!!(res && res.confirm)),
+      fail: () => resolve(false)
+    })
+  })
+}
+
+async function resumeVerificationPaper(cloudModule, { studentId, subject, reportId, paperId }) {
+  if (!paperId || !cloudModule || typeof cloudModule.regenerateVerificationPaper !== 'function') return false
+  try {
+    const res = await cloudModule.regenerateVerificationPaper({
+      action: 'resume', paperId, studentId, subject, reportId
+    })
+    return !!(res && res.success)
+  } catch (e) {
+    return false
+  }
 }
 
 /**

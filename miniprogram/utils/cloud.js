@@ -268,7 +268,9 @@ async function callGeneratePaper(params) {
  * @param {object} params - { studentId, subject, reportId }
  */
 async function regenerateVerificationPaper(params) {
-  return callFunction('regenerateVerificationPaper', params, { timeout: 20000 })
+  // resume action 会同步推进一个卡点（LLM 出题 + 可能的 PDF 重排），需要匹配云函数 60s 上限
+  const isResume = params && params.action === 'resume'
+  return callFunction('regenerateVerificationPaper', params, { timeout: isResume ? 60000 : 20000 })
 }
 
 /**

@@ -26,6 +26,9 @@ const {
 const { loadLatestFormalDiagnoses } = require('./formal-diagnosis');
 const { taskFor, verdict } = require('./chinese-skill-tasks');
 
+// 验证卷续跑链每一步都会写 updatedAt；超过该阈值无写入视为调度中断（卡死）
+const VERIFICATION_STALE_MS = 10 * 60 * 1000;
+
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
 
@@ -610,7 +613,12 @@ async function getActiveVerificationPaper(openId, studentId, subject, reportId) 
   if (ready) return withAccess(access, { paper: ready, status: 'ready' });
 
   const generating = papers.find(p => p.generationStatus === 'generating' || p.generationStatus === 'appending');
-  if (generating) return withAccess(access, { paper: generating, status: 'generating' });
+  if (generating) {
+    // 卡死检测：续跑链每步都会写 updatedAt，超过阈值无写入视为调度中断，前端可引导恢复
+    const lastWrite = new Date(generating.updatedAt || generating.generatedAt || generating.createdAt || 0).getTime();
+    const stale = !!(lastWrite && Date.now() - lastWrite > VERIFICATION_STALE_MS);
+    return withAccess(access, { paper: generating, status: 'generating', stale });
+  }
 
   const failed = papers.find(p => p.generationStatus === 'failed');
   if (failed) return withAccess(access, { paper: failed, status: 'failed' });
