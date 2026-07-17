@@ -32,7 +32,7 @@
 
     <view
       class="icon-compatibility-entry"
-      wx:if="{{homeMode === 'family-workbench'}}"
+      wx:if="{{homeMode === 'family-workbench' && showIconCompatibilityEntry}}"
       catchtap="onTraceableUrlTap"
       data-url="/pages/icon-compatibility/icon-compatibility"
     >
