@@ -103,7 +103,10 @@ Page({
         typeText: type === 'verification' ? '验证试卷' : '诊断试卷',
         paperType: type === 'verification' ? 'verification' : 'diagnosis',
         pdfReady: true,
-        pdfDownloaded: this.isPdfDownloaded(decodedFileId)
+        pdfDownloaded: this.isPdfDownloaded(decodedFileId),
+        // 预览模式没有 studentId/paperId 上下文，上传作答必失败，隐藏次级按钮避免死路
+        secondaryActionType: '',
+        secondaryActionText: ''
       })
     }
   },
