@@ -6,6 +6,7 @@ const { normalizePageResults } = require('./result-normalizer');
 const { getSubjectName } = require('./constants');
 const { BOTTLENECK_CODE_NAMES } = require('./bottleneck-name');
 const { TAXONOMY_BN_LIST } = require('./taxonomy-bn-list');
+const { MATH_NODE_LIST } = require('./knowledge-node-catalog');
 const { recordUsageStart, recordUsageSuccess, recordUsageFailure } = require('./usage-ledger');
 const { isFallbackConfigured, callFallbackVision } = require('./vision-fallback');
 
@@ -77,8 +78,12 @@ function buildPrompt(subject, verificationPlan = []) {
   const mathBnCatalog = subject === 'math'
     ? `\n## 标准细卡点库（candidateBottlenecks 的 bottleneckId 必须优先从这里选取）\n以下是已建立的标准细卡点。语义相同的错题必须归入同一个 bottleneckId，禁止为同一知识点创建多个 ID。\n只有以下清单确实没有覆盖的全新知识点，才允许新建 bottleneckId（命名用 BN- 前缀）。\n${mathBnCatalogLines}`
     : '';
+  const mathNodeCatalogLines = MATH_NODE_LIST.map(node => `- ${node.id}：${node.title}（${node.domain}）`).join('\n');
+  const mathNodeCatalog = subject === 'math'
+    ? `\n## 标准知识节点库（nodeIds 必须从这里选取）\n以下是已建立的标准知识节点。nodeIds 只能从这里选取，禁止自创新 ID；无法判断时返回空数组。\n${mathNodeCatalogLines}`
+    : '';
   const mathLearningMapInstruction = subject === 'math'
-    ? `\n## 数学诊断升级字段\n数学卡点除了旧的 lpCode/lpName 外，还要尽量补充知识地图字段，无法判断时用空数组或空字符串，不要编造：\n- nodeIds：对应知识节点 ID，例如 MATH-NUM-DEC-MUL-POINT、MATH-NUM-FRACTION-DIV-RECIPROCAL、MATH-MOD-PERCENT-BASE、MATH-GEO-CYLINDER-VOLUME\n- candidateBottlenecks：细颗粒度候选卡点数组，每项包含 bottleneckId、title、evidenceStrength，可选 microValidationRequired、suggestedMicroValidation、recommendedResourceIds。bottleneckId 必须优先从”标准细卡点库”中选取，不要自创新 ID\n- recommendedResourceIds：推荐资源 ID。优先给”高质量锚点 + 国内补充”的组合，例如 RES-YT-FRACTION-DIV-001 + RES-BILI-FRACTION-DIV-001\n- nextActionType：resourceReview / microValidation / verificationPaper 三选一。发现漏洞时优先 resourceReview 或 microValidation，不要一上来就 verificationPaper\n- nextActionText：一句给家长看的下一步建议`
+    ? `\n## 数学诊断升级字段\n数学卡点除了旧的 lpCode/lpName 外，还要尽量补充知识地图字段，无法判断时用空数组或空字符串，不要编造：\n- nodeIds：对应知识节点 ID，必须从上方”标准知识节点库”中选取，禁止自创新 ID；无法判断时返回空数组\n- candidateBottlenecks：细颗粒度候选卡点数组，每项包含 bottleneckId、title、evidenceStrength，可选 microValidationRequired、suggestedMicroValidation、recommendedResourceIds。bottleneckId 必须优先从”标准细卡点库”中选取，不要自创新 ID\n- recommendedResourceIds：推荐资源 ID。优先给”高质量锚点 + 国内补充”的组合，例如 RES-YT-FRACTION-DIV-001 + RES-BILI-FRACTION-DIV-001\n- nextActionType：resourceReview / microValidation / verificationPaper 三选一。发现漏洞时优先 resourceReview 或 microValidation，不要一上来就 verificationPaper\n- nextActionText：一句给家长看的下一步建议`
     : '';
   const mathBottleneckJsonFields = subject === 'math'
     ? `,
@@ -184,6 +189,7 @@ ${chineseErrorInstruction}
 ## 卡点分类体系（${subjectName}）
 ${taxonomy.map(t => `- ${t.code}：${t.name}——${t.desc}`).join('\n')}
 ${mathBnCatalog}
+${mathNodeCatalog}
 ${mathLearningMapInstruction}
 
 ## 注意

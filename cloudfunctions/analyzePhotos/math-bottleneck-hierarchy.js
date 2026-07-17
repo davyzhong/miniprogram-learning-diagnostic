@@ -1,20 +1,7 @@
-// data/math 路径解析：本文件可能位于 cloudfunctions/_shared/（需 ../../data）
-// 或 cloudfunctions/analyzePhotos/_shared/（需 ../../../data），用 try/catch 兼容两种位置。
-// 不用 node: 前缀，确保云函数 Node 运行时兼容。
-var path = require('path')
-var fs = require('fs')
-function resolveData(fileName) {
-  var candidates = [
-    path.join(__dirname, '../../data/math', fileName),
-    path.join(__dirname, '../../../data/math', fileName)
-  ]
-  for (var i = 0; i < candidates.length; i++) {
-    try { if (fs.existsSync(candidates[i])) return candidates[i] } catch (e) {}
-  }
-  return candidates[0]
-}
-var categorySeed = require(resolveData('bottleneck-categories.seed.json'))
-var bottleneckSeed = require(resolveData('bottleneck-taxonomy-v2.seed.json'))
+// 种子数据来自打包内 JS 镜像（scripts/build-math-seed-mirrors.js 生成）：
+// 云函数独立上传时 data/ 目录不会随包，原来的 fs/path 探测会在云端静默缺失。
+var categorySeed = require('./math-seeds/bottleneck-categories.seed.js')
+var bottleneckSeed = require('./math-seeds/bottleneck-taxonomy-v2.seed.js')
 
 const categoriesById = new Map((categorySeed.categories || []).map(item => [item.categoryId, item]))
 const familiesById = new Map((categorySeed.families || []).map(item => [item.familyId, item]))

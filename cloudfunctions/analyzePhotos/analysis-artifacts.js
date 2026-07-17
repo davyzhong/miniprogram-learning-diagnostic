@@ -3,6 +3,7 @@ const { markDuplicatePages } = require('./photo-dedup');
 const { buildProfileSummary } = require('./profile-summary');
 const { buildReportQuality } = require('./report-quality');
 const { aggregateVerificationEvidence, aggregateChineseReviewEvidence } = require('./verification-evidence');
+const { enrichMathReport } = require('./math-learning-map-enricher');
 const {
   assertUsableBatchResults,
   batchFailureSummary,
@@ -97,6 +98,13 @@ function createAnalysisArtifactService(deps) {
       markedPages,
       report: { ...report, failedImageFiles },
     });
+    // 数学学习地图兜底：AI 未给出 nodeIds/candidateBottlenecks/推荐资源时，
+    // 用启发式从本报告证据补齐（enricher 幂等，AI 已给字段时近似 no-op）。
+    // 必须在 buildProfileSummary 之前执行，保证报告与画像写入的是同一份瓶颈数据。
+    if (subject === 'math') {
+      const enriched = enrichMathReport({ subject, ...merged, imageFiles });
+      merged.bottlenecks = enriched.report.bottlenecks;
+    }
     let previousReport = null;
     let verificationTargets = [];
     let comparisonSummary = '';

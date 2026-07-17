@@ -307,13 +307,12 @@ function buildTargetNameMap(profile = {}) {
  * 如果 taxonomy 里找不到该 BN，降级为简单的 "code：名称"。
  */
 function buildTargetDescWithRules(targets, targetMap, subject, profile) {
-  // 加载 taxonomy（数学学科才用）
+  // 加载 taxonomy（数学学科才用）。seed 来自打包内 JS 镜像
+  // （scripts/build-math-seed-mirrors.js 生成），独立上传函数时 data/ 目录不随包。
   let taxonomyMap = null;
   if (subject === 'math') {
     try {
-      const taxonomy = require('./math-bottleneck-hierarchy');
-      // taxonomy 内部已加载 bottleneckSeed，用 bottleneckOf 查询
-      const seed = require('../../data/math/bottleneck-taxonomy-v2.seed.json');
+      const seed = require('./math-seeds/bottleneck-taxonomy-v2.seed.js');
       taxonomyMap = {};
       for (const bn of (seed.bottlenecks || [])) {
         taxonomyMap[bn.bottleneckId] = bn;
