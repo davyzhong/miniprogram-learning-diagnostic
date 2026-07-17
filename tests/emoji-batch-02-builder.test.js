@@ -12,8 +12,8 @@ const VALIDATOR_PATH = path.join(ROOT, 'scripts/emoji-compatibility/validate-bat
 const CURATION_HELPER_PATH = path.join(ROOT, 'scripts/emoji-compatibility/curate-batch-02-draft.js')
 const MANIFEST_PATH = path.join(ROOT, 'scripts/emoji-compatibility/batch-02-manifest.json')
 const REAL_SOURCE_CACHE = path.join(ROOT, 'tmp/emoji-compatibility-sources')
-const EXPECTED_MANIFEST_SHA256 = 'TASK_2_RED_MANIFEST_SHA256'
-const EXPECTED_MAPPING_SHA256 = 'TASK_2_RED_MAPPING_SHA256'
+const EXPECTED_MANIFEST_SHA256 = 'd9af46c5039ab12da84529d1de92cb6d21d9905651808d7c72ba551f1fd32040'
+const EXPECTED_MAPPING_SHA256 = '13e6174aeef4dbf3a3d8a8b09a178ad3cff53223261682edcffeb9581165d999'
 const EXPECTED_CATEGORIES = [
   ['B02-C01', '学习与办公', 35, '书本、文具、文件、图表、记录'],
   ['B02-C02', '操作与导航', 35, '方向、播放、切换、搜索、链接'],
@@ -223,10 +223,13 @@ test('decodes CLDR XML and resolves primary, derived, fallback, and C21 suffix l
   assert.deepEqual(cldr.resolveLabel('1FAE0', '融化脸'), {
     label: '融化脸', labelSource: 'fallback'
   })
-  assert.deepEqual(cldr.resolveLabel('00A9 FE0E', '版权符号'), {
+  assert.deepEqual(cldr.resolveLabel('00A9 FE0F', '版权符号'), {
+    label: '版权', labelSource: 'cldr-primary'
+  })
+  assert.deepEqual(cldr.resolveLabel('00A9 FE0E', '版权符号', { includePresentationSuffix: true }), {
     label: '版权 文本呈现', labelSource: 'cldr-primary'
   })
-  assert.deepEqual(cldr.resolveLabel('00A9 FE0F', '版权符号'), {
+  assert.deepEqual(cldr.resolveLabel('00A9 FE0F', '版权符号', { includePresentationSuffix: true }), {
     label: '版权 Emoji 呈现', labelSource: 'cldr-primary'
   })
   assert.throws(() => cldr.resolveLabel('1FAE0'), /explicit fallback label/)
@@ -426,15 +429,147 @@ test('CLI reads the local real source cache before validating the manifest', {
   }
 })
 
-test('--verify fails clearly while the Task 2 manifest is absent', () => {
-  const manifestPath = path.join(ROOT, 'scripts/emoji-compatibility/batch-02-manifest.json')
-  if (fs.existsSync(manifestPath)) return
+test('Task 2 includes an isolated non-normative curation helper', () => {
+  assert.equal(fs.existsSync(CURATION_HELPER_PATH), true, 'Task 2 curation helper must exist')
+  const source = fs.readFileSync(CURATION_HELPER_PATH, 'utf8')
+  const packageJson = fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')
 
-  const result = spawnSync(process.execPath, [VALIDATOR_PATH, '--verify'], {
-    cwd: ROOT,
-    encoding: 'utf8'
+  assert.doesNotMatch(source, /batch-02-manifest\.json/)
+  assert.doesNotMatch(source, /module\.exports|exports\./)
+  assert.match(source, /tmp[\\/]+batch-02-draft\.json|tmp', 'batch-02-draft\.json/)
+  assert.doesNotMatch(packageJson, /curate-batch-02-draft/)
+})
+
+test('normative manifest freezes exact metadata, quotas, rows, and public mapping', () => {
+  const manifestBytes = fs.readFileSync(MANIFEST_PATH)
+  const manifest = readManifest()
+  const expectedCategoryIds = Array.from(
+    { length: 26 },
+    (_, index) => `B02-C${String(index + 1).padStart(2, '0')}`
+  )
+
+  assert.equal(manifest.id, 'B02')
+  assert.equal(manifest.unicodeEmojiVersion, '17.0')
+  assert.equal(manifest.cldrVersion, '48.2')
+  assert.equal(manifest.count, 1000)
+  assert.deepEqual(manifest.categories.map(category => category.id), expectedCategoryIds)
+  assert.deepEqual(manifest.categories.map(category => category.count), [
+    ...Array(20).fill(35),
+    ...Array(6).fill(50)
+  ])
+  assert.deepEqual(
+    manifest.categories.map(category => [category.id, category.name, category.count, category.riskNote]),
+    EXPECTED_CATEGORIES
+  )
+  assert.equal(manifest.items.length, 1000)
+  assert.equal(manifest.items.slice(0, 700).every(item => Number(item.categoryId.slice(-2)) <= 20), true)
+  assert.equal(manifest.items.slice(700).every(item => Number(item.categoryId.slice(-2)) >= 21), true)
+
+  const categoryById = new Map(manifest.categories.map(category => [category.id, category]))
+  const ids = new Set()
+  const sequences = new Set()
+  manifest.items.forEach((item, index) => {
+    const expectedCategoryNumber = Math.floor(index < 700 ? index / 35 : 20 + ((index - 700) / 50)) + 1
+    const expectedCategoryId = `B02-C${String(Math.floor(expectedCategoryNumber)).padStart(2, '0')}`
+    const expectedOrder = index < 700 ? (index % 35) + 1 : ((index - 700) % 50) + 1
+
+    assert.equal(item.categoryId, expectedCategoryId)
+    assert.equal(item.order, expectedOrder)
+    assert.equal(item.id, `${expectedCategoryId}-${String(expectedOrder).padStart(3, '0')}`)
+    assert.match(item.id, /^B02-C\d{2}-\d{3}$/)
+    assert.equal(ids.has(item.id), false, `duplicate ID ${item.id}`)
+    assert.equal(sequences.has(item.sequence), false, `duplicate sequence ${item.sequence}`)
+    ids.add(item.id)
+    sequences.add(item.sequence)
+    assert.equal(
+      [...item.glyph].map(character => `U+${character.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`).join(' '),
+      item.sequence,
+      `${item.id} glyph must equal its normalized scalar sequence`
+    )
+    assert.equal(categoryById.get(item.categoryId).riskNote.length > 0, true)
+    assert.match(item.labelSource, /^(?:cldr-primary|cldr-derived|fallback)$/)
+    assert.equal(typeof item.emojiVersion, 'string')
+    assert.notEqual(item.emojiVersion.trim(), '')
+    assert.equal(typeof item.label, 'string')
+    assert.match(item.label, /\p{Script=Han}|^(?:DNA|DVD)$/u, `${item.id} needs a parent-readable Chinese label`)
   })
 
-  assert.notEqual(result.status, 0)
-  assert.match(result.stderr, /Task 2 manifest is missing: .*batch-02-manifest\.json/)
+  const mapping = normalizedMapping(manifest)
+  assert.equal(sha256(manifestBytes), EXPECTED_MANIFEST_SHA256)
+  assert.equal(sha256(Buffer.from(JSON.stringify(mapping))), EXPECTED_MAPPING_SHA256)
+  assert.deepEqual(mapping, manifest.items.map(item => ({
+    id: item.id,
+    sequence: item.sequence,
+    categoryId: item.categoryId,
+    order: item.order,
+    label: item.label,
+    labelSource: item.labelSource
+  })))
+})
+
+test('all manifest rows are source-backed and do not overlap the frozen first batch', () => {
+  const manifest = readManifest()
+  const { parseEmojiTest, parseVariationSequences, parseCldrZip, validateManifestAgainstSources } = loadValidator()
+  const emojiTest = parseEmojiTest(fs.readFileSync(path.join(REAL_SOURCE_CACHE, 'emoji-test.txt'), 'utf8'))
+  const variationSequences = parseVariationSequences(
+    fs.readFileSync(path.join(REAL_SOURCE_CACHE, 'emoji-variation-sequences.txt'), 'utf8')
+  )
+  const cldr = parseCldrZip(fs.readFileSync(path.join(REAL_SOURCE_CACHE, 'cldr-common-48.2.zip')))
+  const { EMOJI_CATEGORIES } = require(path.join(ROOT, 'miniprogram/pages/icon-compatibility/emoji-candidates.js'))
+  const firstBatchSequences = EMOJI_CATEGORIES.flatMap(category => category.items.map(item => item.sequence))
+
+  assert.deepEqual(validateManifestAgainstSources(manifest, {
+    emojiTest,
+    variationSequences,
+    cldr,
+    firstBatchSequences
+  }), {
+    total: 1000,
+    practicalCount: 700,
+    highRiskCount: 300
+  })
+})
+
+test('C21 is exactly 25 adjacent text/Emoji presentation pairs with exact suffixes', () => {
+  const items = readManifest().items.filter(item => item.categoryId === 'B02-C21')
+
+  assert.equal(items.length, 50)
+  for (let index = 0; index < items.length; index += 2) {
+    const textItem = items[index]
+    const emojiItem = items[index + 1]
+    const textTokens = sequenceTokens(textItem.sequence)
+    const emojiTokens = sequenceTokens(emojiItem.sequence)
+
+    assert.deepEqual(textTokens.slice(0, -1), emojiTokens.slice(0, -1))
+    assert.equal(textTokens.at(-1), 'FE0E')
+    assert.equal(emojiTokens.at(-1), 'FE0F')
+    assert.match(textItem.label, / 文本呈现$/)
+    assert.match(emojiItem.label, / Emoji 呈现$/)
+    assert.equal(textItem.order + 1, emojiItem.order)
+  }
+})
+
+test('risk categories retain their explicit structural coverage boundaries', () => {
+  const manifest = readManifest()
+  const byCategory = categoryId => manifest.items.filter(item => item.categoryId === categoryId)
+  const hasToken = (item, token) => sequenceTokens(item.sequence).includes(token)
+  const isModifier = token => /^1F3F[B-F]$/.test(token)
+  const isRegionalIndicator = token => /^1F1(?:E[6-9A-F]|F[0-9A-F])$/.test(token)
+  const isTag = token => /^E00[2-7][0-9A-F]$/.test(token)
+
+  assert.equal(byCategory('B02-C22').every(item => sequenceTokens(item.sequence).some(isModifier)), true)
+  assert.equal(byCategory('B02-C23').every(item => hasToken(item, '200D')), true)
+  assert.equal(byCategory('B02-C24').every(item => hasToken(item, '200D')), true)
+  assert.equal(byCategory('B02-C25').every(item => {
+    const tokens = sequenceTokens(item.sequence)
+    return tokens.filter(isRegionalIndicator).length === 2 || tokens.some(isTag)
+  }), true)
+  assert.equal(byCategory('B02-C25').some(item => sequenceTokens(item.sequence).some(isTag)), true)
+  assert.equal(byCategory('B02-C26').some(item => hasToken(item, '20E3')), true)
+
+  const allTokens = manifest.items.flatMap(item => sequenceTokens(item.sequence))
+  for (const required of ['FE0E', 'FE0F', '200D', '20E3']) assert.equal(allTokens.includes(required), true)
+  assert.equal(allTokens.some(isModifier), true)
+  assert.equal(allTokens.some(isRegionalIndicator), true)
+  assert.equal(allTokens.some(isTag), true)
 })

@@ -192,11 +192,12 @@ function parseCldrZip(bytes) {
     return null
   }
 
-  function resolveLabel(sequence, fallbackLabel) {
+  function resolveLabel(sequence, fallbackLabel, options = {}) {
     const normalized = normalizeSequence(sequence)
-    const suffix = normalized.endsWith(' FE0E')
+    const includePresentationSuffix = options.includePresentationSuffix === true
+    const suffix = includePresentationSuffix && normalized.endsWith(' FE0E')
       ? ' 文本呈现'
-      : normalized.endsWith(' FE0F') ? ' Emoji 呈现' : ''
+      : includePresentationSuffix && normalized.endsWith(' FE0F') ? ' Emoji 呈现' : ''
     const resolved = findLabel(normalized)
     if (!resolved && (typeof fallbackLabel !== 'string' || fallbackLabel.trim() === '')) {
       throw new Error(`resolveLabel requires an explicit fallback label for ${normalized}`)
@@ -393,7 +394,9 @@ function validateManifestAgainstSources(manifest, sources = {}, options = {}) {
       const fallback = suffix && item.label.endsWith(suffix)
         ? item.label.slice(0, -suffix.length)
         : item.label
-      const resolved = sources.cldr.resolveLabel(item.sequence, fallback)
+      const resolved = sources.cldr.resolveLabel(item.sequence, fallback, {
+        includePresentationSuffix: item.categoryId === 'B02-C21'
+      })
       if (resolved.label !== item.label || resolved.labelSource !== item.labelSource) {
         throw new Error(`CLDR label mismatch for ${item.id}`)
       }
