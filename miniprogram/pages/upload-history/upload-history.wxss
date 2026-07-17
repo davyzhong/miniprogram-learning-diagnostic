@@ -47,7 +47,7 @@
   bottom: 8rpx;
   color: #fff;
   display: flex;
-  font-size: 17rpx;
+  font-size: 20rpx;
   font-weight: 800;
   height: 34rpx;
   justify-content: center;
@@ -113,7 +113,7 @@
 .summary-label {
   color: #778386;
   display: block;
-  font-size: 19rpx;
+  font-size: 20rpx;
   margin-top: 2rpx;
 }
 
@@ -149,7 +149,7 @@
   background: #f8f5ef;
   border-radius: 6rpx;
   display: flex;
-  font-size: 19rpx;
+  font-size: 20rpx;
   height: 30rpx;
   justify-content: center;
   min-width: 30rpx;
@@ -414,7 +414,7 @@
   color: #6d5000;
   box-sizing: border-box;
   display: flex;
-  font-size: 18rpx;
+  font-size: 20rpx;
   font-weight: 600;
   line-height: 1;
   max-width: calc(100% - 60rpx);
@@ -579,9 +579,9 @@
 .duplicate-badge {
   background: #fff5e8;
   border-radius: 6rpx;
-  color: #c05621;
+  color: var(--b1-waiting-fg);
   flex-shrink: 0;
-  font-size: 19rpx;
+  font-size: 20rpx;
   margin-left: 10rpx;
   padding: 3rpx 8rpx;
 }

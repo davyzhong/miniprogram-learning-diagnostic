@@ -1,9 +1,7 @@
 <view class="page b1-page">
-  <view wx:if="{{loading}}" class="loading">正在整理学习任务...</view>
+  <status-view wx:if="{{loading}}" state="loading" text="正在整理学习任务..." />
 
-  <view wx:elif="{{errorText}}" class="empty">
-    <text>{{errorText}}</text>
-  </view>
+  <status-view wx:elif="{{errorText}}" state="error" text="{{errorText}}" retryText="重新加载" bind:retry="loadPack" />
 
   <view wx:else>
     <view class="hero">

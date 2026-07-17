@@ -1,0 +1,9 @@
+<view class="status-view status-view-{{state}}">
+  <view wx:if="{{state === 'loading'}}" class="status-view-spinner" aria-hidden="true"></view>
+  <text class="status-view-text">{{displayText}}</text>
+  <button
+    wx:if="{{state === 'error' && retryText}}"
+    class="status-view-retry"
+    bindtap="onRetryTap"
+  >{{retryText}}</button>
+</view>

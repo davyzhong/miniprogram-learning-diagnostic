@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "知识地图",
-  "usingComponents": {}
+  "usingComponents": {
+    "status-view": "/components/status-view/status-view"
+  }
 }

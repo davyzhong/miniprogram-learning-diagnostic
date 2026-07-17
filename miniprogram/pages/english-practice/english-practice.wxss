@@ -51,7 +51,7 @@
 }
 
 .progress-now {
-  color: #9c4f24;
+  color: var(--b1-subject-english-fg);
   font-size: 34rpx;
   font-weight: 850;
 }
@@ -133,7 +133,7 @@
 .retry-btn,
 .primary-btn {
   margin-top: 22rpx;
-  background: #9c4f24;
+  background: var(--b1-subject-english-fg);
   color: #fff;
   border-radius: 14rpx;
 }
@@ -163,7 +163,7 @@
 
 .prompt-tag {
   background: #fff7ed;
-  color: #9c4f24;
+  color: var(--b1-subject-english-fg);
 }
 
 .retry-tag {
@@ -294,7 +294,7 @@
 }
 
 .result-hint {
-  color: #9c4f24;
+  color: var(--b1-subject-english-fg);
 }
 
 .finish-card {

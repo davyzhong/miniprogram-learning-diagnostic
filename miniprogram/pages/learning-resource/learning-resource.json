@@ -1,4 +1,6 @@
 {
-  "usingComponents": {},
+  "usingComponents": {
+    "status-view": "/components/status-view/status-view"
+  },
   "navigationBarTitleText": "学习任务包"
 }

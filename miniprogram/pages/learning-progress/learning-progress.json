@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "学习进展",
-  "usingComponents": {}
+  "usingComponents": {
+    "status-view": "/components/status-view/status-view"
+  }
 }
