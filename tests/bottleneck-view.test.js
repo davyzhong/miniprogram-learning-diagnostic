@@ -207,3 +207,22 @@ test('math bottleneck views group by category and family without losing fine ite
   assert.equal(groups[0].families[0].summaryText, '2 个卡点')
   assert.equal(groups[0].families[0].items[0].displayName, '小数乘法中积的小数位数判断错误')
 })
+
+test('bottleneck views expose whitelist status symbols alongside status text', () => {
+  const { buildBottleneckView } = require('../miniprogram/utils/bottleneck-view')
+  const pending = buildBottleneckView({ lpCode: 'LP-001', status: 'needs_verification' })
+  const persisting = buildBottleneckView({ lpCode: 'LP-002', status: 'persisting' })
+  const improved = buildBottleneckView({ lpCode: 'LP-003', status: 'improved' })
+  const recurring = buildBottleneckView({ lpCode: 'LP-004', status: 'persisting', trend: 'recurring' })
+  const declining = buildBottleneckView({ lpCode: 'LP-005', status: 'improved', trend: 'declining' })
+
+  assert.equal(pending.statusSymbol, '⏳')
+  assert.equal(persisting.statusSymbol, '🔴')
+  assert.equal(improved.statusSymbol, '🟢')
+  assert.equal(recurring.statusSymbol, '🔁')
+  assert.equal(declining.statusSymbol, '📉')
+  // 文字标签保持 STATUS_META 单一来源，不被图标取代
+  assert.equal(pending.statusText, '待验证')
+  assert.equal(persisting.statusText, '持续出现')
+  assert.equal(improved.statusText, '已改善')
+})

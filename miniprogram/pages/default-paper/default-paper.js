@@ -1,5 +1,6 @@
 // pages/default-paper/default-paper.js
 const cloud = require('../../utils/cloud')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 // 默认试卷配置（每个年级 2 套）
 const PAPER_CONFIG = {
@@ -31,6 +32,9 @@ const PAPER_CONFIG = {
 
 Page({
   data: {
+    paperSymbol: symbolOf('paper'),
+    printSymbol: symbolOf('print'),
+    studentSymbol: symbolOf('student'),
     studentId: '',
     subject: '',
     subjectName: '',

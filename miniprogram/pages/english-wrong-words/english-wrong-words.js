@@ -1,5 +1,6 @@
 const cloud = require('../../utils/cloud')
 const { buildStatusSegments } = require('../../utils/status-segments')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 function countOf(value) {
   const count = Number(value)
@@ -97,6 +98,8 @@ function buildSummaryCards(summary = {}) {
 
 Page({
   data: {
+    wrongBookSymbol: symbolOf('bookRed'),
+    reviewSymbol: symbolOf('repeat'),
     studentId: '',
     studentName: '',
     grade: '',

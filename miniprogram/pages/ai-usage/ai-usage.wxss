@@ -267,3 +267,6 @@
   border-color: var(--b1-neutral-fg);
   color: var(--b1-neutral-fg);
 }
+
+/* 第四批：emoji 符号 */
+.month-symbol, .section-symbol { font-size: 28rpx; margin-right: 6rpx; }

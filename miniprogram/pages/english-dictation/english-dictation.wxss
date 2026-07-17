@@ -385,3 +385,7 @@
 .state-waitingCommand { background: #fff7e6; color: #9a6700; }
 .voice-next-btn { border-color: #c7d2fe; }
 .result-verdict.verdict-incorrect { background: #fff7e6; color: #9a6700; }
+
+/* 第四批：emoji 符号 */
+.hero-symbol, .title-symbol, .eyebrow-symbol, .section-symbol { font-size: 28rpx; margin-right: 6rpx; }
+.finish-mark.b1-symbol { font-size: 64rpx; }

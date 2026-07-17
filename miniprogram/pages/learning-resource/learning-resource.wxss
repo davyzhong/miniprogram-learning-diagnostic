@@ -519,3 +519,6 @@
 .resource-platform-label { background: #ece5d8; color: #4a4034; font-size: 20rpx; font-weight: 600; margin-right: 14rpx; padding: 6rpx 10rpx; }
 .block, .external-resources { border-radius: 0; box-shadow: none; border-top: 2rpx solid #ded8cc; }
 .hero { border-radius: 0; border-left: 10rpx solid var(--b1-math, #b7791f); box-shadow: none; }
+
+/* 第四批：emoji 符号 */
+.kicker-symbol, .section-symbol { font-size: 28rpx; margin-right: 6rpx; }

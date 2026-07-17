@@ -316,11 +316,19 @@ async function runController(modulePath, cloud = {}, execute = async () => {}, m
 
 function homePresenterStates() {
   const { buildLearningProfileHomeView } = require('../../miniprogram/pages/index/index-presenter')
+  const { symbolOf } = require('../../miniprogram/utils/ui-symbols')
   const build = input => ({
     homeMode: 'personal-profile',
     childCards: [],
     familyHero: null,
     errorText: '',
+    familyTitleSymbol: symbolOf('home'),
+    profileTitleSymbol: symbolOf('learningRecords'),
+    parentManageSymbol: symbolOf('parent'),
+    switchSymbol: symbolOf('refresh'),
+    aiUsageSymbol: symbolOf('receipt'),
+    addStudentSymbol: symbolOf('plus'),
+    emptyStateSymbol: symbolOf('sprout'),
     home: buildLearningProfileHomeView(input, () => '今天')
   })
   return [

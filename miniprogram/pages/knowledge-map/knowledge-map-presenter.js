@@ -99,6 +99,8 @@ function buildKnowledgeMapPageView(profile = {}, subject = 'math') {
     subject,
     title: '学习地图',
     knowledgeMapSymbol: symbolOf('knowledgeMap'),
+    prioritySymbol: symbolOf('star'),
+    emptySymbol: symbolOf('sprout'),
     summary: totalPending > 0
       ? `${totalPending} 个待修复 · ${totalMastered} 个已改善`
       : totalMastered > 0

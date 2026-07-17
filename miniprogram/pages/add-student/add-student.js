@@ -1,8 +1,10 @@
 // pages/add-student/add-student.js
 const cloud = require('../../utils/cloud')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 Page({
   data: {
+    setupSymbol: symbolOf('baby'),
     name: '',
     grade: null,
     avatarColor: '#4299e1',

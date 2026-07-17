@@ -6,7 +6,7 @@
   <view wx:else>
     <view class="hero">
       <view class="hero-copy">
-        <text class="kicker">学习任务包</text>
+        <text class="kicker"><text class="b1-symbol kicker-symbol">{{view.practiceSymbol}}</text>学习任务包</text>
         <text class="title">{{view.title}}</text>
         <text class="meta">{{view.timeText}} · {{view.practiceCount}} 道练习</text>
       </view>
@@ -103,7 +103,7 @@
     <!-- 外部参考资源 -->
     <view class="external-resources" wx:if="{{view.hasExternalResources}}">
       <view class="section-header">
-        <text class="section-title">外部参考</text>
+        <text class="section-title"><text class="b1-symbol section-symbol">{{view.linkSymbol}}</text>外部参考</text>
         <text class="section-hint">由家长打开，不建议孩子直接浏览</text>
       </view>
       <view class="resource-card" wx:for="{{view.resourceCards}}" wx:key="resourceId"

@@ -84,3 +84,4 @@
 .legend-found, .legend-pending { background: var(--b1-waiting-bg); color: var(--b1-waiting-fg); }
 .legend-persisting { background: var(--b1-priority-bg); color: var(--b1-priority-fg); }
 .legend-improved { background: var(--b1-improved-bg); color: var(--b1-improved-fg); }
+.timeline-type-symbol { font-size: 26rpx; }

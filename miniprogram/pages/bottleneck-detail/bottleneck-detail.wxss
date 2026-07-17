@@ -583,3 +583,4 @@
 .kicker-row { display: flex; align-items: center; gap: 8rpx; }
 .kicker-symbol { font-size: 28rpx; }
 .section-symbol { font-size: 30rpx; margin-right: 8rpx; }
+.status-icon.b1-symbol { font-size: 32rpx; }

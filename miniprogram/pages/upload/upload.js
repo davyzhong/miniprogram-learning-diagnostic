@@ -7,6 +7,7 @@ const {
 } = require('../../utils/paper-display')
 const { getSubjectName } = require('../../utils/constants')
 const { appStatus, OP_TYPES, OP_STATUS, EVENTS } = require('../../utils/app-status')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 function getFileName(filePath, index) {
   const cleanPath = String(filePath || '').split('?')[0]
@@ -71,6 +72,8 @@ Page({
 
     pageTitle: '',
     pageDesc: '',
+    cameraSymbol: symbolOf('camera'),
+    verifySymbol: symbolOf('complete'),
 
     images: [],          // { tempPath, fileId, uploaded }
     canSubmit: false,

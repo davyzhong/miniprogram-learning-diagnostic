@@ -626,3 +626,8 @@
 .load-more-btn::after {
   border: 0;
 }
+
+/* 第四批：emoji 符号 */
+.title-row { display: flex; align-items: center; gap: 10rpx; }
+.title-symbol { font-size: 32rpx; }
+.empty-deco { display: block; font-size: 80rpx; line-height: 1; margin-bottom: 16rpx; text-align: center; }

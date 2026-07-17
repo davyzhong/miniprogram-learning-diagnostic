@@ -7,6 +7,7 @@ const { buildBottleneckViews, profileBottlenecks, buildConfidence } = require('.
 const { groupBottlenecksByHierarchy } = require('../../utils/math-bottleneck-hierarchy')
 const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
 const { readableNameOf, compactReadableTargets } = require('../../utils/user-facing-text')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 // 置信度分层出题数（与云函数 generatePaper 保持一致）
 const CONFIDENCE_HIGH_THRESHOLD = 75
@@ -166,6 +167,8 @@ function applySelectionLimit(bottlenecks = [], initialTargetCodes = []) {
 
 Page({
   data: {
+    paperSymbol: symbolOf('paper'),
+    printSymbol: symbolOf('print'),
     studentId: '',
     subject: '',
     subjectName: '',

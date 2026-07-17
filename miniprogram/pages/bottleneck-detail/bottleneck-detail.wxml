@@ -6,7 +6,7 @@
   <view wx:elif="{{bottleneck}}">
     <view class="hero-card b1-subject-{{bottleneck.subjectClass}} bottleneck-{{bottleneck.statusClass}}">
       <view class="hero-top">
-        <view class="status-icon">{{bottleneck.statusIcon}}</view>
+        <view class="status-icon b1-symbol">{{bottleneck.statusSymbol}}</view>
         <view class="hero-copy">
           <view class="kicker-row">
             <text class="b1-symbol kicker-symbol" wx:if="{{subjectSymbol}}">{{subjectSymbol}}</text>

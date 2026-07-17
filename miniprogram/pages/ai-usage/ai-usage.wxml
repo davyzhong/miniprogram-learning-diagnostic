@@ -2,7 +2,7 @@
   <!-- 月份切换 -->
   <view class="month-bar">
     <view class="month-btn" catchtap="onPrevMonth" aria-role="button" aria-label="上个月">‹</view>
-    <view class="month-label">{{monthLabel}}</view>
+    <view class="month-label"><text class="b1-symbol month-symbol">{{receiptSymbol}}</text>{{monthLabel}}</view>
     <view class="month-btn" catchtap="onNextMonth" aria-role="button" aria-label="下个月">›</view>
   </view>
 
@@ -21,7 +21,7 @@
 
   <!-- 功能拆分 -->
   <view class="section" wx:if="{{breakdownVisible}}">
-    <view class="section-title">按功能拆分</view>
+    <view class="section-title"><text class="b1-symbol section-symbol">{{chartSymbol}}</text>按功能拆分</view>
     <view class="breakdown-row usage-category-{{item.key}}" wx:for="{{breakdown}}" wx:key="key">
       <view class="breakdown-name">{{item.name}}</view>
       <view class="breakdown-meta">{{item.callCount}} 次 · {{item.tokens}} token</view>

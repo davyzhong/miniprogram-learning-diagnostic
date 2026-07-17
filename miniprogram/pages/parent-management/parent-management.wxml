@@ -1,7 +1,7 @@
 <view class="page b1-page">
   <view class="header">
     <view class="header-copy">
-      <view class="eyebrow">家庭成员</view>
+      <view class="eyebrow"><text class="b1-symbol eyebrow-symbol">{{parentSymbol}}</text>家庭成员</view>
       <view class="title">{{student.name || '孩子档案'}}</view>
       <view class="subtitle" wx:if="{{student.grade}}">{{student.grade}} 年级 · {{role === 'owner' ? '创建者' : '共同家长'}}</view>
     </view>
@@ -11,7 +11,7 @@
   <view class="error" wx:if="{{error}}">{{error}}</view>
 
   <view class="card b1-card">
-    <view class="section-title">已加入家长</view>
+    <view class="section-title"><text class="b1-symbol section-symbol">{{parentSymbol}}</text>已加入家长</view>
     <view class="member" wx:for="{{members}}" wx:key="memberOpenId" wx:for-index="index">
       <view class="avatar">{{item.avatarText}}</view>
       <view class="member-main">
@@ -25,7 +25,7 @@
   </view>
 
   <view class="card b1-card edit-card" wx:if="{{editingMemberIndex >= 0}}">
-    <view class="section-title">编辑家长信息</view>
+    <view class="section-title"><text class="b1-symbol section-symbol">{{editSymbol}}</text>编辑家长信息</view>
     <view class="form-row">
       <view class="form-label">显示名称</view>
       <input class="text-input" value="{{editingDisplayName}}" placeholder="例如：青羽妈妈" bindinput="onDisplayNameInput" />
@@ -43,7 +43,7 @@
   </view>
 
   <view class="card b1-card invite-setup" wx:if="{{canInvite}}">
-    <view class="section-title">邀请家长</view>
+    <view class="section-title"><text class="b1-symbol section-symbol">{{inviteSymbol}}</text>邀请家长</view>
     <view class="form-row">
       <view class="form-label">邀请身份</view>
       <picker mode="selector" range="{{relationOptions}}" range-key="name" value="{{inviteRelationIndex}}" bindchange="onInviteRelationChange">
@@ -54,7 +54,7 @@
   </view>
 
   <view class="card b1-card invite-card" wx:if="{{invite}}">
-    <view class="section-title">邀请已生成</view>
+    <view class="section-title"><text class="b1-symbol section-symbol">{{inviteSymbol}}</text>邀请已生成</view>
     <view class="invite-code" wx:if="{{invite.inviteCode}}">{{invite.inviteCode}}</view>
     <view class="hint" wx:if="{{invite.presetRelationText}}">建议身份：{{invite.presetRelationText}}</view>
     <view class="invite-path">{{invite.path}}</view>

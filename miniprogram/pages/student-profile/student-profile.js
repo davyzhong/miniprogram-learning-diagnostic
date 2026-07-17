@@ -3,6 +3,7 @@ const cloud = require('../../utils/cloud')
 const { formatRelativeTime } = require('../../utils/util')
 const { buildLearningProfileHomeView } = require('../index/index-presenter')
 const { sharedNavigation, OWNER_PERMISSIONS } = require('../../utils/shared-navigation')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 const PROFILE_CACHE_TTL_MS = 30 * 1000
 const DIAGNOSIS_SUBJECTS = ['math', 'chinese', 'english']
@@ -30,7 +31,9 @@ Page({
     studentId: '',
     activeStudent: null,
     permissions: {},
-    home: null
+    home: null,
+    switchSymbol: symbolOf('refresh'),
+    parentManageSymbol: symbolOf('parent')
   },
 
   ...sharedNavigation,

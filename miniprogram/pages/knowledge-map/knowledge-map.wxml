@@ -4,6 +4,7 @@
   <status-view wx:elif="{{errorText}}" state="error" text="{{errorText}}" retryText="重新加载" bind:retry="loadData" />
 
   <view wx:elif="{{!view.hasData}}" class="empty">
+    <text class="empty-deco">{{view.emptySymbol}}</text>
     <text class="empty-title">还没有学习卡点数据</text>
     <text class="empty-hint">上传一份试卷后，系统会自动识别卡点并生成学习地图。</text>
     <view class="empty-cta" bindtap="onUploadTap">去上传试卷</view>
@@ -28,7 +29,7 @@
           data-lp-name="{{view.priorityBottleneck.displayName}}"
           data-bottleneck-id="{{view.priorityBottleneck.bottleneckId}}"
           data-node-id="{{view.priorityBottleneck.nodeId}}">
-      <view class="priority-badge">最该先处理</view>
+      <view class="priority-badge"><text class="b1-symbol badge-symbol">{{view.prioritySymbol}}</text>最该先处理</view>
       <view class="priority-body">
         <text class="priority-name">{{view.priorityBottleneck.displayName}}</text>
         <text class="priority-symptom">{{view.priorityBottleneck.symptomText}}</text>

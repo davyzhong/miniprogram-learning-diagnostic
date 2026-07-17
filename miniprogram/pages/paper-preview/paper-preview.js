@@ -1,5 +1,6 @@
 // pages/paper-preview/paper-preview.js
 const cloud = require('../../utils/cloud')
+const { symbolOf } = require('../../utils/ui-symbols')
 const {
   subjectNameOf,
   getPaperName,
@@ -16,6 +17,11 @@ const {
 
 Page({
   data: {
+    // 与 presenter 输出同名的符号默认值（错误态不经 presenter 时保证绑定可解析）
+    paperSymbol: symbolOf('paper'),
+    downloadSymbol: symbolOf('arrowDown'),
+    printSymbol: symbolOf('print'),
+    uploadSymbol: symbolOf('camera'),
     mode: '',           // '' | 'preview' (from temp fileId)
     paperId: '',
     studentId: '',

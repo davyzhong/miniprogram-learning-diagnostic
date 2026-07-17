@@ -12,9 +12,9 @@
         </view>
       </view>
       <view class="manage-actions">
-        <view class="manage-link" wx:if="{{permissions.canManageParents}}" bindtap="onParentManagement">家长管理</view>
+        <view class="manage-link" wx:if="{{permissions.canManageParents}}" bindtap="onParentManagement"><text class="b1-symbol manage-symbol">{{parentManageSymbol}}</text>家长管理</view>
         <view class="switch-student-btn" bindtap="onBackHome">
-          <text class="switch-icon">切换</text>
+          <text class="switch-icon b1-symbol">{{switchSymbol}}</text>
           <text class="switch-text">切换孩子</text>
         </view>
       </view>

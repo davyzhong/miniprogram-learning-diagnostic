@@ -28,3 +28,7 @@
 
 /* 第三批：诊断卡变化构成条 */
 .diagnosis-status-segments { margin-top: 10rpx; max-width: 420rpx; }
+
+/* 第四批：头部 emoji 符号 */
+.manage-symbol { font-size: 28rpx; margin-right: 5rpx; }
+.switch-icon.b1-symbol { font-size: 28rpx; }

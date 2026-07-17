@@ -1,6 +1,8 @@
 const cloud = require('../../utils/cloud')
+const { symbolOf } = require('../../utils/ui-symbols')
 Page({
-  data: { studentId: '', items: [], index: 0, selected: '', result: '', loading: true },
+  data: {
+    confusionSymbol: symbolOf('puzzle'), studentId: '', items: [], index: 0, selected: '', result: '', loading: true },
   onLoad(options = {}) {
     this.loadPractice(options).catch(() => this.setData({ loading: false }))
   },

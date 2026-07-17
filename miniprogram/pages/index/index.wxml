@@ -1,5 +1,17 @@
 <!--pages/index/index.wxml-->
 <view class="page b1-page">
+  <view
+    class="icon-compatibility-entry"
+    catchtap="onTraceableUrlTap"
+    data-url="/pages/icon-compatibility/icon-compatibility"
+  >
+    <view class="icon-compatibility-entry-copy">
+      <text class="icon-compatibility-entry-title">图标兼容性测试</text>
+      <text class="icon-compatibility-entry-meta">1202 项候选 · 2 批次 · Android 真机</text>
+    </view>
+    <text class="icon-compatibility-entry-action">开始测试 ›</text>
+  </view>
+
   <view class="loading-state" wx:if="{{loading}}">
     <text>正在整理学习档案...</text>
   </view>
@@ -16,7 +28,10 @@
   <view class="profile-home" wx:elif="{{hasStudents}}">
     <view class="top-row">
       <view class="top-copy">
-        <text class="page-title">{{homeMode === 'family-workbench' ? '家庭学习工作台' : '学习档案'}}</text>
+        <view class="page-title-row">
+          <text class="b1-symbol page-title-symbol">{{homeMode === 'family-workbench' ? familyTitleSymbol : profileTitleSymbol}}</text>
+          <text class="page-title">{{homeMode === 'family-workbench' ? '家庭学习工作台' : '学习档案'}}</text>
+        </view>
         <text class="page-subtitle" wx:if="{{homeMode === 'family-workbench'}}">点击数字、状态、学科和编号可直接追溯</text>
         <view class="profile-summary-line" wx:if="{{homeMode === 'single-profile'}}">
           <text class="profile-summary-name">{{home.studentName}}</text>
@@ -24,23 +39,10 @@
         </view>
       </view>
       <view class="manage-actions">
-        <view class="manage-link" wx:if="{{homeMode === 'single-profile' && permissions.canManageParents}}" bindtap="onParentManagement">家长管理</view>
-        <view class="manage-link" bindtap="onTraceableUrlTap" data-url="/pages/ai-usage/ai-usage">AI 用量</view>
-        <view class="manage-link" bindtap="onManageStudents">{{homeMode === 'family-workbench' ? '添加孩子' : '管理孩子'}}</view>
+        <view class="manage-link" wx:if="{{homeMode === 'single-profile' && permissions.canManageParents}}" bindtap="onParentManagement"><text class="b1-symbol manage-symbol">{{parentManageSymbol}}</text>家长管理</view>
+        <view class="manage-link" bindtap="onTraceableUrlTap" data-url="/pages/ai-usage/ai-usage"><text class="b1-symbol manage-symbol">{{aiUsageSymbol}}</text>AI 用量</view>
+        <view class="manage-link" bindtap="onManageStudents"><text class="b1-symbol manage-symbol">{{addStudentSymbol}}</text>{{homeMode === 'family-workbench' ? '添加孩子' : '管理孩子'}}</view>
       </view>
-    </view>
-
-    <view
-      class="icon-compatibility-entry"
-      wx:if="{{homeMode === 'family-workbench' && showIconCompatibilityEntry}}"
-      catchtap="onTraceableUrlTap"
-      data-url="/pages/icon-compatibility/icon-compatibility"
-    >
-      <view class="icon-compatibility-entry-copy">
-        <text class="icon-compatibility-entry-title">图标兼容性测试</text>
-        <text class="icon-compatibility-entry-meta">1202 项候选 · 2 批次 · Android 真机</text>
-      </view>
-      <text class="icon-compatibility-entry-action">开始测试 ›</text>
     </view>
 
     <view
@@ -50,6 +52,7 @@
       data-url="{{familyHero.url}}"
     >
       <view class="family-hero-copy">
+        <text class="family-hero-deco" aria-hidden="true">{{familyHeroSymbol}}</text>
         <view class="family-hero-kicker-row">
           <text class="b1-symbol family-hero-kicker-symbol" wx:if="{{familyHero.kickerSymbol}}">{{familyHero.kickerSymbol}}</text>
           <text class="family-hero-kicker">家庭今日总览</text>
@@ -331,6 +334,7 @@
   </view>
 
   <view class="empty-state" wx:else>
+    <text class="empty-deco-symbol">{{emptyStateSymbol}}</text>
     <text class="text">还没有学习档案</text>
     <text class="sub-text">添加第一个孩子后，上传试卷建立学习记录。</text>
     <view class="empty-action" bindtap="onAddStudent">添加第一个孩子</view>

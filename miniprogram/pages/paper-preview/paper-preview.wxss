@@ -653,3 +653,7 @@
 .bottom-bar .btn-primary {
   background: var(--b1-ink-strong);
 }
+
+/* 第四批：emoji 符号 */
+.paper-tag-symbol { font-size: 30rpx; margin-right: 8rpx; }
+.btn-symbol { font-size: 28rpx; margin-right: 6rpx; }

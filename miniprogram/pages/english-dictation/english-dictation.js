@@ -1,5 +1,6 @@
 const cloud = require('../../utils/cloud')
 const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 function withDisplayFields(item) {
   return _withDisplayFields(item, {
@@ -22,6 +23,7 @@ function summarizeDictationResults(results = []) {
 
 Page({
   data: {
+    dictationSymbol: symbolOf('writing'),
     studentId: '',
     studentName: '',
     grade: '',

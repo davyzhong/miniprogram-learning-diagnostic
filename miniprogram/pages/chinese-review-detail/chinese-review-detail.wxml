@@ -1,7 +1,7 @@
 <view class="page bplus-page b1-page b1-subject-chinese">
   <view class="card bplus-state" wx:if="{{loading}}">正在整理错项信息…</view>
   <view wx:elif="{{item}}">
-    <view class="hero"><text class="eyebrow">语文字词成长</text><text class="title">{{item.title}}</text><text class="stage">{{item.stage}}</text></view>
+    <view class="hero"><text class="eyebrow"><text class="b1-symbol eyebrow-symbol">{{reviewSymbol}}</text>语文字词成长</text><text class="title">{{item.title}}</text><text class="stage">{{item.stage}}</text></view>
     <view class="card bplus-section"><text class="label">上次写成</text><text class="value">{{item.wrong}}</text><text class="label">为什么容易错</text><text class="text">{{item.mistake}}</text><text class="label">原题语境</text><text class="text">{{item.context}}</text><text class="label">这次怎么练</text><text class="text">{{item.suggestion}}</text></view>
     <button class="primary bplus-action" bindtap="onStartTap">开始原项复测</button>
   </view>

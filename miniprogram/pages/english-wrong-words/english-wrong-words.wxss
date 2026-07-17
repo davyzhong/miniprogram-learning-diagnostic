@@ -261,3 +261,7 @@
   color: var(--b1-subject-english-fg);
   border: 2rpx solid #fed7aa;
 }
+
+/* 第四批：emoji 符号 */
+.hero-symbol, .title-symbol, .eyebrow-symbol, .section-symbol { font-size: 28rpx; margin-right: 6rpx; }
+.finish-mark.b1-symbol { font-size: 64rpx; }

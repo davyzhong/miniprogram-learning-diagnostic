@@ -250,6 +250,15 @@ test('index family workbench renders the restored compact functional sections', 
   assert.doesNotMatch(wxss, /\.icon-compatibility-grid/)
 })
 
+test('icon compatibility test entry stays visible in every home mode', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+  const entry = wxml.match(/<view\s+class="icon-compatibility-entry"[\s\S]*?>/)
+
+  assert.ok(entry, '首页应保留图标兼容性测试入口')
+  assert.doesNotMatch(entry[0], /wx:if|wx:elif|wx:else/)
+  assert.match(entry[0], /data-url="\/pages\/icon-compatibility\/icon-compatibility"/)
+})
+
 test('family workbench exposes the B1 hierarchy without removing dense learning content', () => {
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
 

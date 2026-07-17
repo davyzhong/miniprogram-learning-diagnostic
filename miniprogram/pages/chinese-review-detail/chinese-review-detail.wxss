@@ -1,1 +1,5 @@
 .page{min-height:100vh;padding:28rpx;background:#fff7f6}.hero{padding:28rpx 10rpx}.eyebrow,.label{display:block;color:#9f453e;font-size:24rpx}.title{display:block;margin:12rpx 0;font-size:52rpx;font-weight:700;color:#7f1d1d}.stage{color:#9a6700}.card{background:#fff;padding:28rpx;border-radius:16rpx;box-shadow:0 4rpx 16rpx rgba(127,29,29,.08);margin:18rpx 0}.value{display:block;font-size:38rpx;font-weight:700;color:#b42318;margin:8rpx 0 22rpx}.text{display:block;color:#5f3d3b;line-height:1.65;margin:8rpx 0 22rpx}.primary{margin-top:28rpx;background:#b42318;color:#fff;border-radius:14rpx}
+
+/* 第四批：emoji 符号 */
+.hero-symbol, .title-symbol, .eyebrow-symbol, .section-symbol { font-size: 28rpx; margin-right: 6rpx; }
+.finish-mark.b1-symbol { font-size: 64rpx; }

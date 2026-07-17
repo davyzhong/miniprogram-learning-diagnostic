@@ -6,6 +6,7 @@ const { buildChildWorkbenchCards, buildFamilyWorkbenchHero } = require('../../ut
 const { getSubjectName } = require('../../utils/constants')
 const { sharedNavigation, OWNER_PERMISSIONS } = require('../../utils/shared-navigation')
 const { bindPageStatus } = require('../../utils/app-status')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 const HOME_CACHE_TTL_MS = 30 * 1000
 const HOME_LOADING_TIMEOUT_MS = 12 * 1000
@@ -54,7 +55,15 @@ Page({
     familyHero: null,
     // 图标兼容性测试入口是工程验收工具，默认不在生产首屏展示；
     // 真机测试时在控制台执行 wx.setStorageSync('iconCompatibilityEntryEnabled', '1') 后重新进入首页即可显示
-    showIconCompatibilityEntry: false
+    showIconCompatibilityEntry: false,
+    // 白名单 emoji（经 symbolOf 注入，WXML 不写字面量）
+    familyTitleSymbol: symbolOf('home'),
+    profileTitleSymbol: symbolOf('learningRecords'),
+    familyHeroSymbol: symbolOf('familyFull'),
+    parentManageSymbol: symbolOf('parent'),
+    aiUsageSymbol: symbolOf('receipt'),
+    addStudentSymbol: symbolOf('plus'),
+    emptyStateSymbol: symbolOf('sprout')
   },
 
   ...sharedNavigation,

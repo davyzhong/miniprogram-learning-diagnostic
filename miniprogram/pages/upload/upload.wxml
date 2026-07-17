@@ -3,7 +3,10 @@
   <!-- 顶部说明 -->
   <view class="tip-bar">
     <view class="tip-content">
-      <text class="tip-title">{{pageTitle}}</text>
+      <view class="tip-title-row">
+        <text class="b1-symbol tip-symbol">{{mode === 'verification' ? verifySymbol : cameraSymbol}}</text>
+        <text class="tip-title">{{pageTitle}}</text>
+      </view>
       <text class="tip-desc">{{pageDesc}}</text>
     </view>
   </view>

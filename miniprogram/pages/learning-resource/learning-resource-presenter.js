@@ -1,4 +1,5 @@
 const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 // 资源平台优先级（数字越小越靠前）
 const PLATFORM_PRIORITY = {
@@ -89,6 +90,9 @@ function buildLearningResourceView(pack = {}) {
   const completed = pack.status === 'completed'
 
   return {
+    practiceSymbol: symbolOf('practice'),
+    completeSymbol: symbolOf('complete'),
+    linkSymbol: symbolOf('link'),
     id: pack._id || pack.packId || '',
     title: sanitizeUserText(pack.title || '学习任务包', { treatAsId: true }),
     status: pack.status || 'ready',

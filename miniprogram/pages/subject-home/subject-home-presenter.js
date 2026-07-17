@@ -339,7 +339,7 @@ function buildEnglishActionCards(stats, primaryTask = {}, options = {}, permissi
       meta: stats.familiarityNeedsPracticeCount > 0
         ? `${stats.familiarityNeedsPracticeCount} 个不熟词优先出现`
         : '默认 20 词，适合每天快速过一遍',
-      icon: 'Aa',
+      icon: symbolOf('ear'),
       actionText: '开始认词',
       recommended: primaryTask.actionType === 'englishPractice',
       disabled: !canWrite || !hasVocabularyReady,
@@ -353,7 +353,7 @@ function buildEnglishActionCards(stats, primaryTask = {}, options = {}, permissi
       meta: stats.spellingNeedsPracticeCount > 0
         ? `${stats.spellingNeedsPracticeCount} 个拼写薄弱词优先出现`
         : '默认 20 词，验证是否真正写得出',
-      icon: '听写',
+      icon: symbolOf('writing'),
       actionText: '开始听写',
       recommended: primaryTask.actionType === 'englishDictation',
       disabled: !canWrite || !hasVocabularyReady,
@@ -407,24 +407,24 @@ function buildTools(permissions = {}, options = {}, stats = {}) {
         key: 'englishWrongWords',
         title: '错词本',
         desc: hasVocabularyReady ? '薄弱词、待复测和会认不会写' : '词库准备后自动生成',
-        icon: '错词',
+        icon: symbolOf('bookRed'),
         actionType: 'englishWrongWords'
       },
       stats.patternCount > 0 ? {
-        key: 'englishConfusion', title: '易混词巩固', desc: '用短题区分容易混淆的单词', icon: '辨析', actionType: 'englishConfusion'
+        key: 'englishConfusion', title: '易混词巩固', desc: '用短题区分容易混淆的单词', icon: symbolOf('puzzle'), actionType: 'englishConfusion'
       } : null,
       {
         key: 'history',
         title: '学习记录',
         desc: '认词、听写和照片证据',
-        icon: '记录',
+        icon: symbolOf('learningRecords'),
         actionType: 'history'
       },
       canWrite && !hasVocabularyReady ? {
         key: 'importVocabulary',
         title: '重试导入词库',
         desc: '自动导入失败时使用',
-        icon: '导入',
+        icon: symbolOf('save'),
         actionType: 'importVocabulary'
       } : null
     ].filter(Boolean)

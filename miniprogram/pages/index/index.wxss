@@ -1928,3 +1928,11 @@
   background: var(--b1-neutral-bg);
   color: var(--b1-neutral-fg);
 }
+
+/* 第四批：全量表情库图标化 */
+.page-title-row { display: flex; align-items: center; gap: 10rpx; }
+.page-title-symbol { font-size: 32rpx; }
+.manage-symbol { font-size: 28rpx; margin-right: 5rpx; }
+.family-hero-deco { position: absolute; top: 18rpx; right: 22rpx; font-size: 64rpx; opacity: 0.9; line-height: 1; }
+.family-hero-copy { position: relative; }
+.empty-deco-symbol { display: block; font-size: 96rpx; line-height: 1; margin-bottom: 20rpx; }

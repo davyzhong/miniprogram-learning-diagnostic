@@ -187,3 +187,5 @@
 .verification-outcome-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 12rpx; }
 .verification-outcome-title { color: #25364a; font-size: 26rpx; font-weight: 700; }
 .verification-outcome-rate { color: var(--b1-improved-fg); font-size: 24rpx; font-weight: 750; }
+.status-icon.b1-symbol { font-size: 30rpx; }
+.report-type-symbol, .action-symbol { font-size: 28rpx; margin-right: 6rpx; }

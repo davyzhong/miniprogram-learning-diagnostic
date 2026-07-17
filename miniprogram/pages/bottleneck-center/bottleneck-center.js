@@ -76,6 +76,8 @@ Page({
     statsSegments: [],
     learnSymbol: symbolOf('practice'),
     verifySymbol: symbolOf('complete'),
+    headerSymbol: symbolOf('target'),
+    emptySymbol: symbolOf('folderOpen'),
     emptyText: '暂无学习卡点'
   },
 

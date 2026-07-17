@@ -571,6 +571,10 @@ function buildReportView(report, options = {}) {
   const verificationOutcome = buildVerificationOutcome(isVerification, verificationEvidenceItems)
 
   return {
+    typeSymbol: symbolOf(isVerification ? 'complete' : 'report'),
+    shareSymbol: symbolOf('link'),
+    downloadSymbol: symbolOf('arrowDown'),
+    nextStepSymbol: symbolOf('paper'),
     subjectClass: report.subject === 'chinese' ? 'chinese' : report.subject === 'english' ? 'english' : 'math',
     headline,
     heroIllustration: reportIllustrationOf(isVerification),
