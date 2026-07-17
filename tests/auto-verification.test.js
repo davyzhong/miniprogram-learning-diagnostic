@@ -686,3 +686,183 @@ test('extractFineBottlenecks 模拟实际数据：8 个粗卡点 → 39 个细�
   // 加上 2 个无 candidate 的粗卡点 fallback = 37 + 2 = 39
   assert.equal(fine.length, expectedTotal + 2, '37 个细分 + 2 个无 candidate 的粗卡点 fallback = 39')
 })
+
+// ========== 验证卷卡死检测与恢复（stale 标记 + resume action）==========
+
+test('getActiveVerificationPaper 对超过 10 分钟无写入的 generating 卷标记 stale', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '学生A' }],
+    papers: [{
+      _id: 'p-stale', studentId: 's1', subject: 'math', type: 'verification',
+      generationStatus: 'appending',
+      createdAt: new Date(Date.now() - 60 * 60 * 1000),
+      updatedAt: new Date(Date.now() - 30 * 60 * 1000),
+    }],
+    reports: [],
+  })
+  const handler = loadStudentData(db)
+  const result = await handler.main({ action: 'getActiveVerificationPaper', studentId: 's1', subject: 'math' })
+  assert.equal(result.status, 'generating')
+  assert.equal(result.stale, true)
+})
+
+test('getActiveVerificationPaper 对活跃生成的 generating 卷不标记 stale', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '学生A' }],
+    papers: [{
+      _id: 'p-active', studentId: 's1', subject: 'math', type: 'verification',
+      generationStatus: 'generating',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }],
+    reports: [],
+  })
+  const handler = loadStudentData(db)
+  const result = await handler.main({ action: 'getActiveVerificationPaper', studentId: 's1', subject: 'math' })
+  assert.equal(result.status, 'generating')
+  assert.equal(result.stale, false)
+})
+
+test('regenerateVerificationPaper resume 拒绝无权访问的调用者', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '学生A' }],
+    papers: [{
+      _id: 'paper-1', studentId: 's1', subject: 'math', type: 'verification',
+      generationStatus: 'failed',
+    }],
+    reports: [],
+  })
+  const handler = loadRegenerateVerificationPaper(db, 'other-openid')
+  const result = await handler.main({ action: 'resume', studentId: 's1', subject: 'math', paperId: 'paper-1' })
+  assert.equal(result.success, false)
+  assert.equal(result.error, '无权执行该操作')
+  assert.equal(db.dump('papers')[0].generationStatus, 'failed')
+})
+
+test('regenerateVerificationPaper resume 拒绝仍在活跃生成的卷', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '学生A' }],
+    papers: [{
+      _id: 'paper-1', studentId: 's1', subject: 'math', type: 'verification',
+      bottleneckTargets: ['BN-001'],
+      questions: [],
+      generationStatus: 'generating',
+      updatedAt: new Date(), // 刚有写入，视为活跃
+    }],
+    reports: [],
+  })
+  const handler = loadRegenerateVerificationPaper(db, 'owner-1')
+  const result = await handler.main({ action: 'resume', studentId: 's1', subject: 'math', paperId: 'paper-1' })
+  assert.equal(result.success, false)
+  assert.match(result.error, /仍在生成中/)
+  assert.equal(db.dump('papers')[0].generationStatus, 'generating')
+})
+
+test('regenerateVerificationPaper resume 恢复 failed 卷并续跑到 ready', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '学生A' }],
+    papers: [{
+      _id: 'paper-1', studentId: 's1', subject: 'math', type: 'verification',
+      triggeredByReport: 'report-1',
+      bottleneckTargets: ['BN-001', 'BN-002'],
+      questions: [{ questionId: 'q1', lpCode: 'BN-001', content: '已生成题' }],
+      generationStatus: 'failed',
+      generationError: 'LLM 超时',
+    }],
+    reports: [{ _id: 'report-1', studentId: 's1', subject: 'math', type: 'diagnosis' }],
+  })
+  const cloudCalls = []
+  const cloud = createCloudMock({
+    db,
+    openId: 'owner-1',
+    callFunction: async payload => {
+      cloudCalls.push(payload)
+      if (payload.name === 'generatePaper' && payload.data._regeneratePdf) {
+        return { result: { success: true, pdfFileId: 'cloud://paper.pdf', questionCount: 2 } }
+      }
+      if (payload.name === 'generatePaper') {
+        return { result: { success: true, appendedQuestionCount: 1, questionCount: 2 } }
+      }
+      return { result: { success: true } }
+    }
+  })
+  const handler = loadModule('cloudfunctions/regenerateVerificationPaper/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({
+    action: 'resume', studentId: 's1', subject: 'math', paperId: 'paper-1', reportId: 'report-1',
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.status, 'ready')
+
+  const generateCall = cloudCalls.find(call => call.name === 'generatePaper' && !call.data._regeneratePdf)
+  assert.ok(generateCall, '应续跑未生成的卡点')
+  assert.equal(JSON.stringify(generateCall.data.targets), JSON.stringify(['BN-002']))
+
+  const paper = db.dump('papers')[0]
+  assert.equal(paper.generationStatus, 'ready')
+  assert.equal(paper.generationError, '')
+  const report = db.dump('reports')[0]
+  assert.equal(report.verificationPaperStatus, 'ready')
+})
+
+test('regenerateVerificationPaper resume 恢复卡死的 generating 卷', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '学生A' }],
+    papers: [{
+      _id: 'paper-1', studentId: 's1', subject: 'math', type: 'verification',
+      triggeredByReport: 'report-1',
+      bottleneckTargets: ['BN-001', 'BN-002', 'BN-003'],
+      questions: [{ questionId: 'q1', lpCode: 'BN-001', content: '已生成题' }],
+      generationStatus: 'appending',
+      updatedAt: new Date(Date.now() - 30 * 60 * 1000), // 30 分钟无写入，卡死
+    }],
+    reports: [{ _id: 'report-1', studentId: 's1', subject: 'math', type: 'diagnosis' }],
+  })
+  const cloudCalls = []
+  const cloud = createCloudMock({
+    db,
+    openId: 'owner-1',
+    callFunction: async payload => {
+      cloudCalls.push(payload)
+      if (payload.name === 'generatePaper') {
+        return { result: { success: true, appendedQuestionCount: 1, questionCount: 2 } }
+      }
+      if (payload.name === 'regenerateVerificationPaper') {
+        return { result: { success: true, scheduled: true } }
+      }
+      return { result: { success: true } }
+    }
+  })
+  const handler = loadModule('cloudfunctions/regenerateVerificationPaper/index.js', {
+    'wx-server-sdk': cloud
+  })
+
+  const result = await handler.main({
+    action: 'resume', studentId: 's1', subject: 'math', paperId: 'paper-1', reportId: 'report-1',
+  })
+
+  assert.equal(result.success, true)
+  assert.equal(result.status, 'appending')
+  const continueCall = cloudCalls.find(call =>
+    call.name === 'regenerateVerificationPaper' && call.data.action === 'continue'
+  )
+  assert.ok(continueCall, '恢复后应重新调度续跑链')
+})
+
+test('regenerateVerificationPaper resume 拒绝 ready 卷', async () => {
+  const db = createDatabase({
+    students: [{ _id: 's1', _openid: 'owner-1', name: '学生A' }],
+    papers: [{
+      _id: 'paper-1', studentId: 's1', subject: 'math', type: 'verification',
+      generationStatus: 'ready', pdfFileId: 'cloud://paper.pdf',
+    }],
+    reports: [],
+  })
+  const handler = loadRegenerateVerificationPaper(db, 'owner-1')
+  const result = await handler.main({ action: 'resume', studentId: 's1', subject: 'math', paperId: 'paper-1' })
+  assert.equal(result.success, false)
+  assert.match(result.error, /无需恢复/)
+})
