@@ -7,7 +7,7 @@ const { createWxMock, loadPage } = require('./helpers/page-harness')
 const ROOT = path.resolve(__dirname, '..')
 const PAGE_JS = 'miniprogram/pages/icon-compatibility/icon-compatibility.js'
 
-test('compatibility page keeps only category metadata and the active items in page data', () => {
+test('compatibility page defaults to batch two and keeps only active category items in page data', () => {
   const wx = createWxMock({
     getDeviceInfo: () => ({ model: 'Pixel 9', system: 'Android 16', platform: 'android' }),
     getAppBaseInfo: () => ({ version: '9.0.1', SDKVersion: '3.16.1' })
@@ -16,9 +16,13 @@ test('compatibility page keeps only category metadata and the active items in pa
 
   page.onLoad()
 
-  assert.equal(page.data.activeCategory.id, 'C01')
-  assert.equal(page.data.activeItems.length, 7)
-  assert.equal(page.data.categoryTabs.length, 14)
+  assert.equal(page.data.activeBatch.id, 'B02')
+  assert.equal(page.data.activeCategory.id, 'B02-C01')
+  assert.equal(page.data.activeItems.length, 35)
+  assert.equal(page.data.categoryTabs.length, 26)
+  assert.equal(page.data.batchTabs.length, 2)
+  assert.equal(page.data.candidateCount, 1202)
+  assert.equal(Object.hasOwn(page.data, 'batches'), false)
   page.data.categoryTabs.forEach(tab => assert.equal(Object.hasOwn(tab, 'items'), false))
   assert.match(page.data.environmentText, /Pixel 9/)
   assert.match(page.data.environmentText, /Android 16/)
@@ -28,10 +32,10 @@ test('compatibility page keeps only category metadata and the active items in pa
   assert.equal(page.data.isLastCategory, false)
 
   page.onCategoryTap({ currentTarget: { dataset: { index: 1 } } })
-  assert.equal(page.data.activeCategory.id, 'C02')
-  assert.equal(page.data.activeItems.length, 15)
-  assert.equal(page.data.activeTabId, 'category-C02')
-  assert.doesNotMatch(JSON.stringify(page.data), /🗺️/)
+  assert.equal(page.data.activeCategory.id, 'B02-C02')
+  assert.equal(page.data.activeItems.length, 35)
+  assert.equal(page.data.activeTabId, 'category-B02-C02')
+  assert.doesNotMatch(JSON.stringify(page.data), /"id":"C01-01"/)
 })
 
 test('compatibility page supports legacy and unavailable environment APIs', () => {
@@ -57,33 +61,83 @@ test('compatibility page supports legacy and unavailable environment APIs', () =
   assert.equal(throwing.data.environmentText, '环境信息不可用')
 })
 
-test('compatibility page navigates category boundaries without layout-state drift', () => {
+test('compatibility page switches batches and restores an independent category position', () => {
   const { page } = loadPage(PAGE_JS)
   page.onLoad()
 
   page.onPreviousCategory()
-  assert.equal(page.data.activeCategory.id, 'C01')
+  assert.equal(page.data.activeCategory.id, 'B02-C01')
   page.onNextCategory()
-  assert.equal(page.data.activeCategory.id, 'C02')
+  assert.equal(page.data.activeCategory.id, 'B02-C02')
+
+  page.selectCategory(11)
+  assert.equal(page.data.activeCategory.id, 'B02-C12')
+  page.selectBatch('B01')
+  assert.equal(page.data.activeCategory.id, 'C01')
+  page.selectCategory(2)
+  assert.equal(page.data.activeCategory.id, 'C03')
+  page.selectBatch('B02')
+  assert.equal(page.data.activeCategory.id, 'B02-C12')
+  page.selectBatch('B01')
+  assert.equal(page.data.activeCategory.id, 'C03')
 
   page.selectCategory(13)
   assert.equal(page.data.activeCategory.id, 'C14')
-  assert.equal(page.data.isFirstCategory, false)
   assert.equal(page.data.isLastCategory, true)
   page.onNextCategory()
   assert.equal(page.data.activeCategory.id, 'C14')
 })
 
-test('compatibility page copies exact public category and item IDs', async () => {
+test('compatibility page falls back to the active batch first category for invalid input', () => {
+  const { page } = loadPage(PAGE_JS)
+
+  page.selectCategory(-1)
+  assert.equal(page.data.activeCategory.id, 'B02-C01')
+  page.selectCategory('not-a-number')
+  assert.equal(page.data.activeCategory.id, 'B02-C01')
+  page.selectCategory(999)
+  assert.equal(page.data.activeCategory.id, 'B02-C01')
+
+  page.selectBatch('B01')
+  page.selectCategory(4)
+  page.selectBatch('unknown')
+  assert.equal(page.data.activeBatch.id, 'B01')
+  assert.equal(page.data.activeCategory.id, 'C01')
+})
+
+test('compatibility page copies exact public batch, category, and item IDs', async () => {
   const wx = createWxMock()
   const { page } = loadPage(PAGE_JS, { wx })
   page.onLoad()
 
-  await page.onCopyCategoryId({ currentTarget: { dataset: { id: 'C01' } } })
-  await page.onCopyItemId({ currentTarget: { dataset: { id: 'C01-04' } } })
+  await page.onCopyBatchId({ currentTarget: { dataset: { id: 'B02' } } })
+  await page.onCopyCategoryId({ currentTarget: { dataset: { id: 'B02-C03' } } })
+  await page.onCopyItemId({ currentTarget: { dataset: { id: 'B02-C03-017' } } })
 
   const copied = wx.calls.filter(call => call.name === 'setClipboardData').map(call => call.payload.data)
-  assert.deepEqual(copied, ['C01', 'C01-04'])
+  assert.deepEqual(copied, ['B02', 'B02-C03', 'B02-C03-017'])
+})
+
+test('batch and category switches never send inactive collections through setData', () => {
+  const { page } = loadPage(PAGE_JS)
+  const payloads = []
+  const originalSetData = page.setData.bind(page)
+  page.setData = update => {
+    payloads.push(update)
+    originalSetData(update)
+  }
+
+  page.selectCategory(20)
+  page.selectBatch('B01')
+  page.selectCategory(13)
+  page.selectBatch('B02')
+
+  payloads.forEach(payload => {
+    assert.equal(Object.hasOwn(payload, 'batches'), false)
+    assert.equal(Object.hasOwn(payload, 'batchTabs'), false)
+    assert.equal(Object.hasOwn(payload, 'categories'), false)
+    assert.ok(payload.activeItems.length <= 50)
+  })
 })
 
 test('compatibility page template renders only active items and registers a subpackage route', () => {
