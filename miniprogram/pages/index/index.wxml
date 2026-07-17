@@ -38,7 +38,7 @@
     >
       <view class="icon-compatibility-entry-copy">
         <text class="icon-compatibility-entry-title">图标兼容性测试</text>
-        <text class="icon-compatibility-entry-meta">202 项候选 · 14 类 · Android 真机</text>
+        <text class="icon-compatibility-entry-meta">1202 项候选 · 2 批次 · Android 真机</text>
       </view>
       <text class="icon-compatibility-entry-action">开始测试 ›</text>
     </view>

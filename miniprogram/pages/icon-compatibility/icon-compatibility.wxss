@@ -12,7 +12,11 @@
 .test-summary-top,
 .active-category-head,
 .active-category-title-row,
-.category-navigation {
+.category-navigation,
+.batch-overview,
+.batch-tabs,
+.batch-tab,
+.batch-tab-main {
   display: flex;
   align-items: center;
 }
@@ -53,6 +57,82 @@
   color: var(--b1-improved-fg);
   font-size: 20rpx;
   font-weight: 600;
+}
+
+.batch-overview {
+  gap: 8rpx;
+  margin-top: 12rpx;
+}
+
+.batch-overview-item {
+  flex: 1;
+  padding: 8rpx 6rpx;
+  border-radius: 8rpx;
+  background: var(--b1-canvas);
+  color: var(--b1-ink-muted);
+  font-size: 20rpx;
+  font-weight: 600;
+  text-align: center;
+}
+
+.batch-overview-item.is-verified {
+  background: var(--b1-improved-bg);
+  color: var(--b1-improved-fg);
+}
+
+.batch-overview-item.is-pending {
+  background: var(--b1-waiting-bg);
+  color: var(--b1-waiting-fg);
+}
+
+.batch-tabs {
+  gap: 10rpx;
+  margin-top: 14rpx;
+}
+
+.batch-tab {
+  min-width: 0;
+  height: 76rpx;
+  flex: 1;
+  justify-content: space-between;
+  gap: 8rpx;
+  padding: 10rpx 12rpx;
+  box-sizing: border-box;
+  border: 1rpx solid var(--b1-border);
+  border-radius: 10rpx;
+  background: var(--b1-surface);
+  color: var(--b1-ink-muted);
+}
+
+.batch-tab.is-active {
+  border-color: var(--b1-informational-fg);
+  background: var(--b1-informational-bg);
+  color: var(--b1-informational-fg);
+}
+
+.batch-tab-main {
+  min-width: 0;
+  align-items: baseline;
+  gap: 6rpx;
+}
+
+.batch-tab-name {
+  font-size: 23rpx;
+  font-weight: 700;
+}
+
+.batch-tab-status,
+.batch-tab-id {
+  font-size: 18rpx;
+  white-space: nowrap;
+}
+
+.batch-tab-id {
+  flex-shrink: 0;
+  padding: 6rpx 8rpx;
+  border-radius: 6rpx;
+  background: rgba(255, 255, 255, .72);
+  font-weight: 700;
 }
 
 .category-scroll {
@@ -157,7 +237,7 @@
 
 .candidate-item {
   min-width: 0;
-  height: 156rpx;
+  height: 174rpx;
   padding: 12rpx 6rpx 10rpx;
   box-sizing: border-box;
   display: flex;
@@ -181,23 +261,30 @@
 }
 
 .candidate-id {
+  width: 100%;
   margin-top: 5rpx;
+  overflow: hidden;
   color: var(--b1-informational-fg);
-  font-size: 20rpx;
+  font-size: 14rpx;
   font-weight: 700;
   line-height: 1.2;
+  text-align: center;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 .candidate-label {
   width: 100%;
   margin-top: 4rpx;
+  min-height: 48rpx;
   overflow: hidden;
   color: var(--b1-ink-muted);
   font-size: 20rpx;
   line-height: 1.2;
   text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .category-navigation {
