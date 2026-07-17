@@ -74,6 +74,7 @@ function createAnalysisPoller(options = {}) {
   const {
     loadReport,
     loadProgress,
+    isProgressTerminal = null,
     onCompleted = () => {},
     onFailed = () => {},
     onTimeoutStatus = () => {},
@@ -92,13 +93,19 @@ function createAnalysisPoller(options = {}) {
   return createBasePoller({
     ...pollerOptions,
     request: async () => {
-      const report = await loadReport()
+      let report = await loadReport()
       let progress = null
       if (report && report.status === 'analyzing' && typeof loadProgress === 'function') {
         try {
           progress = await loadProgress(report)
         } catch (e) {
           progress = null
+        }
+        // 轻量轮询模式：loadReport 可只返回快照、每 tick 只查进度；
+        // 进度到达终态（completed/failed）时给 loadReport 一次机会重拉全量报告，
+        // 让 completed/failed 分支拿到带结果/错误的真实报告
+        if (progress && typeof isProgressTerminal === 'function' && isProgressTerminal(progress)) {
+          report = await loadReport({ terminal: true, progress })
         }
       }
       return { report, progress }

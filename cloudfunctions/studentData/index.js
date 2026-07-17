@@ -25,6 +25,7 @@ const {
 } = require('./timeline-dto');
 const { loadLatestFormalDiagnoses } = require('./formal-diagnosis');
 const { taskFor, verdict } = require('./chinese-skill-tasks');
+const { createRecentImageFileNames } = require('./recent-image-file-names');
 
 // 验证卷续跑链每一步都会写 updatedAt；超过该阈值无写入视为调度中断（卡死）
 const VERIFICATION_STALE_MS = 10 * 60 * 1000;
@@ -37,6 +38,7 @@ const ACTIONS = new Set([
   'getStudentDashboard',
   'getSubjectDashboard',
   'getLearningTimeline',
+  'listRecentImageFileNames',
   'getReportDetail',
   'getPaperDetail',
   'getActiveVerificationPaper',
@@ -375,7 +377,7 @@ async function getRawReports(studentId, subject, limit = 100) {
     .get();
   return res.data || [];
 }
-
+const listRecentImageFileNames = createRecentImageFileNames({ db, normalizeSubject, normalizeLimit, isArchivedReport });
 async function cleanupProfileAnalysisState(studentId, subject, reportIds) {
   if (!studentId || reportIds.size === 0) return;
   const profiles = await getSubjectProfiles(studentId);
@@ -771,6 +773,7 @@ exports.main = async (event = {}) => {
         cursor: event.cursor,
       });
     }
+    if (action === 'listRecentImageFileNames') return listRecentImageFileNames(openId, event);
     if (action === 'getChineseSkillTask') return getChineseSkillTask(openId, event.studentId)
     if (action === 'submitChineseSkillTask') return submitChineseSkillTask(openId, event)
     if (action === 'getReportDetail') {

@@ -8,9 +8,9 @@ const { getSubjectName } = require('./constants')
 const { createPoller } = require('./poller')
 const { appStatus, OP_TYPES, OP_STATUS } = require('./app-status')
 
-// 验证卷轮询：每 5 秒一次，最多 24 次（2 分钟）
+// 验证卷轮询：每 5 秒一次，最多 72 次（6 分钟，覆盖后端 2-8 分钟的典型生成时长）
 const VERIFICATION_POLL_INTERVAL = 5000
-const VERIFICATION_POLL_MAX_ATTEMPTS = 24
+const VERIFICATION_POLL_MAX_ATTEMPTS = 72
 
 const OWNER_PERMISSIONS = {
   canView: true,
@@ -394,7 +394,7 @@ function startVerificationPoller(cloudModule, studentId, subject, reportId) {
       return true
     },
     onTimeout: () => {
-      wx.showToast({ title: '生成时间较长，请稍后从学科首页查看', icon: 'none', duration: 3000 })
+      wx.showToast({ title: '验证卷后台会继续生成，请稍后从学科首页或学习记录查看', icon: 'none', duration: 3000 })
     }
   })
   _activePoller.start()

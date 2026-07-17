@@ -18,7 +18,7 @@ test('math report renders the dense quantified evidence matrix', () => {
   assert.doesNotMatch(wxml, /准确率/)
   assert.match(wxss, /\.bottleneck-evidence-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,/)
   assert.match(wxss, /\.bottleneck-mini-title\s*\{[\s\S]*?font-size:\s*24rpx/)
-  assert.match(wxss, /\.bottleneck-evidence-label\s*\{[\s\S]*?font-size:\s*18rpx/)
+  assert.match(wxss, /\.bottleneck-evidence-label\s*\{[\s\S]*?font-size:\s*20rpx/)
   assert.match(wxss, /\.bottleneck-evidence-value\s*\{[\s\S]*?font-size:\s*22rpx/)
 })
 
@@ -253,6 +253,167 @@ test('report exposes retry when an analysis task is stale', async () => {
 
   assert.equal(page.data.analysisTaskMissing, true)
   assert.equal(page.data.analysisStatusText, '分析超时，请重新分析')
+})
+
+test('report polling only queries analysis progress per tick and fetches detail once on terminal', async () => {
+  let pollOptions = null
+  let detailCalls = 0
+  const cloud = {
+    getReportDetail: async () => {
+      detailCalls += 1
+      return { report: { _id: 'report-1', status: 'completed' } }
+    },
+    getAnalysisProgress: async () => ({ status: 'processing', completedBatches: 1, totalBatches: 4 })
+  }
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '' },
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: options => {
+          pollOptions = options
+          return { start() {}, stop() {} }
+        }
+      },
+      './report-presenter': { buildReportView: () => ({}) }
+    }
+  })
+  page.setData({
+    reportId: 'report-1',
+    report: { _id: 'report-1', studentId: 'student-1', subject: 'math', status: 'analyzing' }
+  })
+
+  page.startPolling('report-1')
+
+  // 分析进行中：每个 tick 复用已加载的报告快照，不拉全量详情
+  const snapshot = await pollOptions.loadReport()
+  await pollOptions.loadReport()
+  assert.equal(snapshot.status, 'analyzing')
+  assert.equal(detailCalls, 0)
+
+  // 进度到达终态：才拉一次报告详情刷新页面
+  const terminalReport = await pollOptions.loadReport({ terminal: true })
+  assert.equal(detailCalls, 1)
+  assert.equal(terminalReport.status, 'completed')
+
+  // 终态判定只认 completed/failed
+  assert.equal(pollOptions.isProgressTerminal({ status: 'processing' }), false)
+  assert.equal(pollOptions.isProgressTerminal({ status: 'completed' }), true)
+  assert.equal(pollOptions.isProgressTerminal({ status: 'failed' }), true)
+})
+
+test('report polling timeout promises an automatic refresh instead of dead waiting', async () => {
+  let pollOptions = null
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': {},
+      '../../utils/util': { formatChineseDateTime: () => '' },
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: options => {
+          pollOptions = options
+          return { start() {}, stop() {} }
+        }
+      },
+      './report-presenter': { buildReportView: () => ({}) }
+    }
+  })
+
+  page.startPolling('report-1')
+  pollOptions.onTimeout()
+
+  const toast = wx.calls.filter(call => call.name === 'showToast').at(-1)
+  assert.match(toast.payload.title, /完成后本页会自动刷新/)
+  assert.match(page.data.analysisStatusText, /完成后本页会自动刷新/)
+  // 轮询超时不等于任务丢失：不展示"重新分析"的修复入口
+  assert.equal(page.data.analysisTaskMissing, false)
+})
+
+test('report auto reloads when the analysis operation completes after polling stopped', async () => {
+  const { appStatus, OP_TYPES, OP_STATUS } = require('../miniprogram/utils/app-status')
+  let detailLoads = 0
+  const cloud = {
+    getReportDetail: async () => {
+      detailLoads += 1
+      return {
+        permissions: { canView: true },
+        pendingCount: 0,
+        report: {
+          _id: 'report-auto-1',
+          studentId: 'student-auto-1',
+          subject: 'math',
+          type: 'diagnosis',
+          status: detailLoads > 1 ? 'completed' : 'analyzing',
+          createdAt: '2026-06-11T10:00:00Z',
+          bottlenecks: [],
+          errorDetails: []
+        }
+      }
+    }
+  }
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '' },
+      '../../utils/analysis-poller': {
+        createAnalysisPoller: () => ({ start() {}, stop() {}, isRunning: () => false })
+      },
+      './report-presenter': { buildReportView: () => ({}) }
+    }
+  })
+
+  try {
+    page.onLoad({ id: 'report-auto-1' })
+    await flushAsync(10)
+    assert.equal(detailLoads, 1)
+    assert.equal(page.data.report.status, 'analyzing')
+
+    // 后台分析完成（其他页面/轮询驱动的事件）：本页自动重新加载
+    appStatus.registerOperation({
+      studentId: 'student-auto-1', subject: 'math',
+      opType: OP_TYPES.ANALYSIS, status: OP_STATUS.ANALYZING,
+      reportId: 'report-auto-1'
+    })
+    appStatus.registerOperation({
+      studentId: 'student-auto-1', subject: 'math',
+      opType: OP_TYPES.ANALYSIS, status: OP_STATUS.COMPLETED,
+      progress: 100, reportId: 'report-auto-1'
+    })
+    await flushAsync(10)
+    assert.equal(detailLoads, 2)
+    assert.equal(page.data.report.status, 'completed')
+
+    // 其他报告的事件不触发本页刷新
+    appStatus.registerOperation({
+      studentId: 'student-auto-1', subject: 'math',
+      opType: OP_TYPES.ANALYSIS, status: OP_STATUS.ANALYZING,
+      reportId: 'report-other'
+    })
+    appStatus.registerOperation({
+      studentId: 'student-auto-1', subject: 'math',
+      opType: OP_TYPES.ANALYSIS, status: OP_STATUS.COMPLETED,
+      progress: 100, reportId: 'report-other'
+    })
+    await flushAsync(10)
+    assert.equal(detailLoads, 2)
+  } finally {
+    if (page._statusUnsub) page._statusUnsub()
+  }
+})
+
+test('verification poller budget covers six minutes and guides users on timeout', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'miniprogram/utils/shared-navigation.js'), 'utf8')
+  assert.match(source, /VERIFICATION_POLL_INTERVAL = 5000/)
+  assert.match(source, /VERIFICATION_POLL_MAX_ATTEMPTS = 72/)
+  // 超时提示：后台继续生成，引导去学科首页/学习记录查看
+  assert.match(source, /后台会继续生成，请稍后从学科首页或学习记录查看/)
+
+  const sharedNavigation = require('../miniprogram/utils/shared-navigation')
+  assert.equal(
+    sharedNavigation.VERIFICATION_POLL_INTERVAL * sharedNavigation.VERIFICATION_POLL_MAX_ATTEMPTS,
+    6 * 60 * 1000
+  )
 })
 
 

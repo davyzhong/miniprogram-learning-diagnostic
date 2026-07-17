@@ -182,3 +182,72 @@ test('analysis poller wraps createPoller and only loads progress for analyzing r
   assert.deepEqual(calls, ['create'])
   assert.equal(onCompletedReport._id, 'report-1')
 })
+
+test('analysis poller refetches the report once when progress reaches a terminal state', async () => {
+  const loadReportContexts = []
+  let completedReport = null
+  const snapshot = { _id: 'report-1', status: 'analyzing', createdAt: '2026-06-13T09:59:00+08:00' }
+  const fresh = { _id: 'report-1', status: 'completed' }
+  const poller = createAnalysisPoller({
+    loadReport: async (context = {}) => {
+      loadReportContexts.push(context)
+      return context.terminal ? fresh : snapshot
+    },
+    loadProgress: async () => ({
+      status: 'completed',
+      totalBatches: 4,
+      completedBatches: 4,
+      createdAt: '2026-06-13T09:59:00+08:00'
+    }),
+    isProgressTerminal: progress => progress.status === 'completed' || progress.status === 'failed',
+    onCompleted: report => { completedReport = report },
+    now: () => new Date('2026-06-13T10:00:00+08:00').getTime(),
+    createPoller: options => ({
+      start: () => options.request().then(value => options.onValue(value, 1)),
+      stop: () => {},
+      isRunning: () => false
+    })
+  })
+
+  await poller.start()
+
+  assert.equal(loadReportContexts.length, 2)
+  assert.deepEqual(loadReportContexts[0], {})
+  assert.equal(loadReportContexts[1].terminal, true)
+  // completed 分支拿到的是重拉后的真实报告，而不是分析中的快照
+  assert.equal(completedReport.status, 'completed')
+})
+
+test('analysis poller keeps the snapshot report while progress is not terminal', async () => {
+  const loadReportContexts = []
+  let analyzingState = null
+  const snapshot = { _id: 'report-1', status: 'analyzing', createdAt: '2026-06-13T09:59:00+08:00' }
+  const poller = createAnalysisPoller({
+    loadReport: async (context = {}) => {
+      loadReportContexts.push(context)
+      return snapshot
+    },
+    loadProgress: async () => ({
+      status: 'processing',
+      totalBatches: 4,
+      completedBatches: 1,
+      createdAt: '2026-06-13T09:59:30+08:00'
+    }),
+    isProgressTerminal: progress => progress.status === 'completed' || progress.status === 'failed',
+    onAnalyzing: state => { analyzingState = state },
+    now: () => new Date('2026-06-13T10:00:00+08:00').getTime(),
+    createPoller: options => ({
+      start: () => options.request().then(value => options.onValue(value, 1)),
+      stop: () => {},
+      isRunning: () => true
+    })
+  })
+
+  await poller.start()
+
+  // 非终态：只调一次 loadReport（快照），不触发终态重拉
+  assert.equal(loadReportContexts.length, 1)
+  assert.deepEqual(loadReportContexts[0], {})
+  assert.equal(analyzingState.status, 'analyzing')
+  assert.equal(analyzingState.progressPercent, 25)
+})

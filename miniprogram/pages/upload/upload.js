@@ -178,10 +178,10 @@ Page({
 
   async loadExistingFileNames() {
     try {
-      const reports = await cloud.getReports(this.data.studentId, this.data.subject, 20)
-      const existingFileNames = reports.flatMap(report => (
-        Array.isArray(report.imageFiles) ? report.imageFiles.map(photo => photo.fileName).filter(Boolean) : []
-      ))
+      // 轻量去重读取：服务端投影只返回文件名，不再拉 20 份全量报告
+      const existingFileNames = await cloud.listRecentImageFileNames(
+        this.data.studentId, this.data.subject, 20
+      )
       this.setData({ existingFileNames })
     } catch (err) {
       console.warn('读取历史照片文件名失败', err)
@@ -285,18 +285,34 @@ Page({
         return
       }
 
-      wx.compressImage({
-        src: tempPath,
-        quality: 92,
-        success: res => {
-          if (res && res.tempFilePath) {
-            resolve(res.tempFilePath)
-            return
-          }
-          reject(new Error('HEIF 转换未返回可上传文件'))
-        },
-        fail: reject
-      })
+      // OCR 场景 quality 80 + 限宽 1600px 足够，转换产物比 quality 92 原尺寸小很多
+      const compress = compressedWidth => {
+        const options = {
+          src: tempPath,
+          quality: 80,
+          success: res => {
+            if (res && res.tempFilePath) {
+              resolve(res.tempFilePath)
+              return
+            }
+            reject(new Error('HEIF 转换未返回可上传文件'))
+          },
+          fail: reject
+        }
+        // 只传 compressedWidth 时高度按比例缩放；不超过 1600px 则保持原尺寸
+        if (compressedWidth) options.compressedWidth = compressedWidth
+        wx.compressImage(options)
+      }
+
+      if (typeof wx.getImageInfo === 'function') {
+        wx.getImageInfo({
+          src: tempPath,
+          success: info => compress(info && info.width > 1600 ? 1600 : 0),
+          fail: () => compress(0)
+        })
+        return
+      }
+      compress(0)
     })
   },
 
@@ -342,24 +358,39 @@ Page({
     try {
       wx.showLoading({ title: '上传中...' })
 
-      // 1. 逐张上传到云存储，重试时复用已经上传成功的图片
-      const fileIds = []
-      for (let i = 0; i < images.length; i++) {
-        const image = this.data.images[i]
-        const fileId = image.uploaded && image.fileId
-          ? image.fileId
-          : await this.uploadOne(image, i)
-        fileIds.push(fileId)
-
-        const progress = Math.round(((i + 1) / images.length) * 100)
-        this.setData({
-          [`images[${i}].fileId`]: fileId,
-          [`images[${i}].uploaded`]: true,
-          [`images[${i}].uploadError`]: '',
-          uploadedCount: i + 1,
-          uploadProgress: progress
-        })
+      // 1. 3 路并发上传到云存储（保持结果顺序，单张失败不阻塞其他图片），
+      //    重试时复用已经上传成功的图片
+      const fileIds = new Array(images.length)
+      let nextIndex = 0
+      let completedCount = 0
+      let firstError = null
+      const worker = async () => {
+        while (nextIndex < images.length) {
+          const i = nextIndex
+          nextIndex += 1
+          const image = this.data.images[i]
+          try {
+            const fileId = image.uploaded && image.fileId
+              ? image.fileId
+              : await this.uploadOne(image, i)
+            fileIds[i] = fileId
+            completedCount += 1
+            this.setData({
+              [`images[${i}].fileId`]: fileId,
+              [`images[${i}].uploaded`]: true,
+              [`images[${i}].uploadError`]: '',
+              uploadedCount: completedCount,
+              uploadProgress: Math.round((completedCount / images.length) * 100)
+            })
+          } catch (err) {
+            if (!firstError) firstError = err
+          }
+        }
       }
+      const workerCount = Math.min(3, images.length)
+      await Promise.all(Array.from({ length: workerCount }, () => worker()))
+      // 全部图片都已尝试：有失败则走统一错误汇总（标记第一张未上传成功的图片）
+      if (firstError) throw firstError
 
       wx.hideLoading()
 

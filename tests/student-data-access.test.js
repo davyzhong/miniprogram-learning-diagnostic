@@ -832,3 +832,78 @@ test('getReportDetail strips debug/raw AI fields but keeps rendering fields', as
   // 反馈不在详情中内联（按需加载）
   assert.equal(detail.feedback, undefined)
 })
+
+// ── listRecentImageFileNames：上传页去重提示的轻量读取 ──
+
+function seedFileNameDatabase(options = {}) {
+  return createDatabase({
+    students: [{ _id: 'student-1', _openid: 'owner-1', name: '钟青羽', grade: 6 }],
+    studentMembers: [
+      { _id: 'member-1', studentId: 'student-1', ownerOpenId: 'owner-1', memberOpenId: 'viewer-1', role: 'viewer', status: 'active' }
+    ],
+    reports: [
+      {
+        _id: 'report-math-old', studentId: 'student-1', subject: 'math', type: 'diagnosis', status: 'completed',
+        summary: '含长 OCR 摘要的报告',
+        imageFiles: [
+          { fileID: 'cloud://a', fileName: 'a.jpg', ocrSummary: 'x'.repeat(200) },
+          { fileID: 'cloud://b', fileName: 'b.jpg', ocrSummary: 'y'.repeat(200) }
+        ],
+        createdAt: '2026-06-12T09:30:00Z'
+      },
+      {
+        _id: 'report-math-new', studentId: 'student-1', subject: 'math', type: 'diagnosis', status: 'completed',
+        imageFiles: [{ fileID: 'cloud://a2', fileName: 'a.jpg' }],
+        createdAt: '2026-06-13T09:30:00Z'
+      },
+      {
+        _id: 'report-chinese', studentId: 'student-1', subject: 'chinese', type: 'diagnosis', status: 'completed',
+        imageFiles: [{ fileID: 'cloud://c', fileName: 'c.jpg' }],
+        createdAt: '2026-06-14T09:30:00Z'
+      },
+      {
+        _id: 'report-archived', studentId: 'student-1', subject: 'math', type: 'diagnosis', status: 'timeout',
+        isArchived: true, archivedAt: '2026-06-15T10:00:00Z',
+        imageFiles: [{ fileID: 'cloud://z', fileName: 'archived.jpg' }],
+        createdAt: '2026-06-15T09:30:00Z'
+      }
+    ],
+    papers: []
+  }, options)
+}
+
+test('listRecentImageFileNames 用 field 投影只返回文件名（去重、按学科、排除已归档）', async () => {
+  const queries = []
+  const db = seedFileNameDatabase({ onQuery: query => queries.push(query) })
+  const handler = loadStudentData(db, 'viewer-1')
+
+  const result = await handler.main({
+    action: 'listRecentImageFileNames',
+    studentId: 'student-1',
+    subject: 'math',
+    limit: 20
+  })
+
+  assert.equal(result.success, true)
+  // 跨报告去重（a.jpg 出现两次只返回一次），排除语文学科和已归档报告
+  assert.deepEqual(JSON.parse(JSON.stringify(result.fileNames)), ['a.jpg', 'b.jpg'])
+
+  const reportQuery = queries.find(query => query.collection === 'reports')
+  assert.ok(reportQuery, '应当查询 reports 集合')
+  assert.equal(reportQuery.projection['imageFiles.fileName'], true, '必须使用 field 投影只取文件名')
+  // 响应中不携带 OCR 摘要等大字段
+  assert.equal(JSON.stringify(result).includes('ocrSummary'), false)
+})
+
+test('listRecentImageFileNames 拒绝无权访问的用户并要求 studentId', async () => {
+  const db = seedFileNameDatabase()
+  const handler = loadStudentData(db, 'stranger-1')
+
+  const denied = await handler.main({ action: 'listRecentImageFileNames', studentId: 'student-1', subject: 'math' })
+  assert.equal(denied.success, false)
+  assert.equal(denied.error, '无权访问该学生')
+
+  const missing = await handler.main({ action: 'listRecentImageFileNames' })
+  assert.equal(missing.success, false)
+  assert.equal(missing.error, '缺少 studentId')
+})
