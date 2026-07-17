@@ -52,10 +52,35 @@
 .legend-improved { color: #22c55e; }
 .legend-pending { color: #f59e0b; }
 .progress-editorial { background: #f7f4ed; color: #25313c; }
-.progress-header { background: #243244; border-left: 10rpx solid var(--b1-math, #b7791f); padding: 28rpx; }
-.progress-editorial .card { border-radius: 0; box-shadow: none; border-top: 2rpx solid #d9d3c7; }
-.matrix-legend { display: flex; flex-wrap: wrap; gap: 12rpx; }
-.legend-item { padding: 6rpx 10rpx; }
-.legend-found, .legend-pending { background: #fff3cd; color: #8b5e00; }
-.legend-persisting { background: #fce8e6; color: #a33c32; }
-.legend-improved { background: #e6f4ea; color: #24713d; }
+.progress-header { background: var(--b1-ink-strong); border-left: 10rpx solid var(--b1-subject-math-fg); padding: 28rpx; }
+.progress-title-row { display: flex; align-items: center; gap: 10rpx; }
+.progress-title-row .progress-title { color: #fff; }
+.progress-header .progress-subtitle { color: rgba(255, 255, 255, 0.75); }
+.progress-title-symbol { font-size: 32rpx; }
+.progress-rate-pill { margin-left: auto; display: inline-flex; align-items: baseline; gap: 6rpx; padding: 6rpx 14rpx; border-radius: 999rpx; background: var(--b1-improved-bg); }
+.progress-rate-value { font-size: 26rpx; font-weight: 700; color: var(--b1-improved-fg); line-height: 1.2; }
+.progress-rate-label { font-size: 20rpx; color: var(--b1-improved-fg); }
+.progress-editorial .card { border-radius: 0; box-shadow: none; border-top: 2rpx solid var(--b1-border); }
+
+/* 卡点变化矩阵：B1 三色热力格（颜色块内保留单字文字标记，缺色也可辨识） */
+.matrix-cell-round.heat-cell {
+  flex: 1;
+  min-width: 56rpx;
+  min-height: 44rpx;
+  margin: 3rpx;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6rpx;
+}
+.heat-marker { font-size: 20rpx; font-weight: 700; line-height: 1; }
+.heat-pending { background: var(--b1-waiting-bg); color: var(--b1-waiting-fg); }
+.heat-persisting { background: var(--b1-priority-bg); color: var(--b1-priority-fg); }
+.heat-improved { background: var(--b1-improved-bg); color: var(--b1-improved-fg); }
+.heat-none { background: var(--b1-neutral-bg); color: var(--b1-ink-subtle); }
+.matrix-legend { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 16rpx; }
+.legend-item { padding: 6rpx 10rpx; border-radius: 6rpx; font-size: 20rpx; }
+.legend-found, .legend-pending { background: var(--b1-waiting-bg); color: var(--b1-waiting-fg); }
+.legend-persisting { background: var(--b1-priority-bg); color: var(--b1-priority-fg); }
+.legend-improved { background: var(--b1-improved-bg); color: var(--b1-improved-fg); }

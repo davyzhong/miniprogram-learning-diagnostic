@@ -6,7 +6,10 @@
         <view class="workbench-header">
           <view class="subject-mark">{{subjectInitial}}</view>
           <view class="workbench-copy">
-            <text class="workbench-eyebrow">{{primaryTask.title}}</text>
+            <view class="workbench-eyebrow-row">
+              <text class="b1-symbol workbench-eyebrow-symbol" wx:if="{{subjectSymbol}}">{{subjectSymbol}}</text>
+              <text class="workbench-eyebrow">{{primaryTask.title}}</text>
+            </view>
             <text class="workbench-title">{{subject === 'english' ? '英语词汇掌握' : primaryTask.actionText}}</text>
           </view>
         </view>
@@ -67,6 +70,15 @@
     <text class="map-entry-arrow">›</text>
   </view>
 
+  <view class="map-entry progress-entry" wx:if="{{subject !== 'english' && totalReports > 0}}" bindtap="onLearningProgressTap">
+    <text class="map-entry-icon">{{progressSymbol}}</text>
+    <view class="map-entry-text">
+      <text class="map-entry-title">学习进展</text>
+      <text class="map-entry-desc">{{improvedCount > 0 ? improvedCount + ' 个已改善 · 迭代时间线与卡点变化' : '诊断/验证迭代时间线与卡点变化'}}</text>
+    </view>
+    <text class="map-entry-arrow">›</text>
+  </view>
+
   <view class="analysis-state" wx:if="{{analysisStatus}}" bindtap="onAnalysisCardTap">
     <view class="state-icon state-icon-analyzing">···</view>
     <view class="state-copy">
@@ -78,14 +90,17 @@
 
   <view class="quick-strip" wx:if="{{subject !== 'english'}}">
     <view class="quick-cell" bindtap="onQuickStatTap" data-target="pending">
+      <text class="b1-symbol quick-symbol">{{quickSymbols.pending}}</text>
       <text class="quick-num pending-color">{{pendingTaskCount}}</text>
       <text class="quick-label">待处理</text>
     </view>
     <view class="quick-cell" bindtap="onQuickStatTap" data-target="records">
+      <text class="b1-symbol quick-symbol">{{quickSymbols.records}}</text>
       <text class="quick-num">{{totalReports}}</text>
       <text class="quick-label">诊断记录</text>
     </view>
     <view class="quick-cell" bindtap="onQuickStatTap" data-target="improved">
+      <text class="b1-symbol quick-symbol">{{quickSymbols.improved}}</text>
       <text class="quick-num improved-color">{{improvedCount}}</text>
       <text class="quick-label">已改善</text>
     </view>
@@ -93,18 +108,26 @@
 
   <view class="english-vocab-card" wx:if="{{subject === 'english'}}">
     <view class="section-heading">
-      <view class="heading-icon">Aa</view>
+      <view class="heading-icon b1-symbol">{{subjectSymbol}}</view>
       <text>个人词库摘要</text>
     </view>
     <view class="english-vocab-status">
       <text class="english-vocab-status-title">{{englishVocabularyStats.totalWords}} 个词已进入个人词库</text>
       <text class="english-vocab-status-desc">词库作为底座自动维护，日常优先从认词练习和纸面听写开始。</text>
     </view>
-    <view class="english-stat-grid">
-      <view class="english-stat" wx:for="{{englishQuickStats}}" wx:key="key">
-        <text class="english-stat-value">{{item.value}}</text>
-        <text class="english-stat-label">{{item.label}}</text>
+    <view class="english-vocab-segments" wx:if="{{englishVocabSegments.length > 0}}">
+      <view class="b1-seg-bar">
+        <view class="b1-seg b1-seg-{{item.tone}}" wx:for="{{englishVocabSegments}}" wx:key="key" style="width: {{item.widthPercent}}%;"></view>
       </view>
+      <view class="b1-seg-legend">
+        <view class="b1-seg-legend-item" wx:for="{{englishVocabSegments}}" wx:key="key">
+          <view class="b1-seg-dot b1-seg-{{item.tone}}"></view>
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+    <view class="english-vocab-empty" wx:elif="{{englishVocabularyStats.totalWords > 0}}">
+      <text>词库构成还在整理中，完成一次练习后更新。</text>
     </view>
     <view class="weak-word-list" wx:if="{{englishVocabularyStats.weakWords.length > 0}}">
       <text class="weak-word-label">最近需要多见几次</text>
@@ -150,7 +173,10 @@
       >
         <view class="queue-status-dot queue-status-dot-{{item.statusClass}}"></view>
         <view class="row-copy">
-          <text class="row-title">{{item.displayName}}</text>
+          <view class="row-title-line">
+            <text class="row-title">{{item.displayName}}</text>
+            <text class="confidence-tag confidence-{{item.confidenceLevel}}">{{item.confidenceText}}</text>
+          </view>
           <text class="row-desc">{{item.evidenceText}}<text wx:if="{{item.severityText}}"> · {{item.severityText}}</text></text>
         </view>
         <text class="status-label status-label-{{item.statusClass}}">{{item.statusText}}</text>

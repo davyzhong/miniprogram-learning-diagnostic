@@ -66,16 +66,29 @@ test('candidate IDs and Unicode scalar sequences are unique and immutable', () =
   assertDeepFrozen(EMOJI_CATEGORIES)
 })
 
-test('C01 is the frozen first verified snapshot without approving later candidates', () => {
+test('UI whitelist keeps the C01 core, admits only C02–C06 verified candidates, and rejects all others', () => {
   const c01 = findCategory('C01')
   assert.ok(c01)
   assert.equal(c01.statusText, '首批已验证')
   assert.deepEqual(c01.items.map(item => item.glyph), ['🗺️', '📚', '📄', '📸', '📊', '🎯', '✅'])
   c01.items.forEach(item => assert.equal(isApprovedUiSymbol(item.glyph), true))
 
-  assert.deepEqual(Object.values(UI_SYMBOLS), c01.items.map(item => item.glyph))
-  EMOJI_CATEGORIES.slice(1).flatMap(category => category.items).forEach(item => {
-    assert.equal(isApprovedUiSymbol(item.glyph), false, `${item.id} must remain a candidate`)
+  // 第二批策展：UI_SYMBOLS 扩充为 C01-C06 子集（不含 ZWJ/VS16 高风险字形），
+  // C01 七枚必须全部保留，其余白名单成员一律来自 C02-C06。
+  const c01Glyphs = new Set(c01.items.map(item => item.glyph))
+  const whitelistGlyphs = Object.values(UI_SYMBOLS)
+  c01Glyphs.forEach(glyph => assert.ok(whitelistGlyphs.includes(glyph), `C01 ${glyph} 必须保留在白名单`))
+  assert.ok(whitelistGlyphs.length > c01Glyphs.size, '白名单应在 C01 基础上扩充')
+
+  const approvedBeyondC01 = new Set(whitelistGlyphs.filter(glyph => !c01Glyphs.has(glyph)))
+  EMOJI_CATEGORIES.slice(1).forEach(category => {
+    category.items.forEach(item => {
+      if (approvedBeyondC01.has(item.glyph)) {
+        assert.ok(['C02', 'C03', 'C04', 'C05', 'C06'].includes(category.id), `${item.id} 只可从 C02-C06 策展`)
+        return
+      }
+      assert.equal(isApprovedUiSymbol(item.glyph), false, `${item.id} must remain a candidate`)
+    })
   })
   assert.equal(findCategory('C99'), null)
 })

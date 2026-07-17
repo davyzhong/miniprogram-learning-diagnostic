@@ -25,6 +25,19 @@
       </view>
     </view>
 
+    <view class="composition-card" wx:if="{{compositionSegments.length > 0}}">
+      <text class="composition-title">词库掌握构成 · 共 {{totalWords}} 词</text>
+      <view class="b1-seg-bar">
+        <view class="b1-seg b1-seg-{{seg.tone}}" wx:for="{{compositionSegments}}" wx:for-item="seg" wx:key="key" style="width: {{seg.widthPercent}}%;"></view>
+      </view>
+      <view class="b1-seg-legend">
+        <view class="b1-seg-legend-item" wx:for="{{compositionSegments}}" wx:for-item="seg" wx:key="key">
+          <view class="b1-seg-dot b1-seg-{{seg.tone}}"></view>
+          <text>{{seg.label}}</text>
+        </view>
+      </view>
+    </view>
+
     <view class="section">
       <text class="section-title">分组处理</text>
       <view class="group-list">

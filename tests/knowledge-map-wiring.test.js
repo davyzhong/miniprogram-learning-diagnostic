@@ -12,6 +12,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
+const { buildKnowledgeMapPageView } = require('../miniprogram/pages/knowledge-map/knowledge-map-presenter')
 
 const ROOT = path.join(__dirname, '..')
 
@@ -171,4 +172,23 @@ test('bottleneck-detail 和 knowledge-map 两条"学一下"入口都走 cloud.ge
   const kmResourceNav = kmNav.find(u => /learning-resource/.test(u))
   assert.ok(bdResourceNav, 'bottleneck-detail 必须有跳 learning-resource 的逻辑')
   assert.ok(kmResourceNav, 'knowledge-map 必须有跳 learning-resource 的逻辑')
+})
+
+test('knowledge map domains expose mastery segments and the map symbol', () => {
+  const view = buildKnowledgeMapPageView({
+    currentBottlenecks: [
+      { lpCode: 'LP-001', status: 'improved', domain: '数与代数' },
+      { lpCode: 'LP-008', status: 'persisting', domain: '数与代数' },
+      { lpCode: 'LP-003', status: 'needs_verification', domain: '图形与几何' }
+    ]
+  }, 'math')
+
+  assert.equal(view.knowledgeMapSymbol, '🗺️')
+  const algebra = view.domains.find(d => d.key === '数与代数')
+  assert.deepEqual(algebra.masterySegments.map(item => item.key), ['mastered', 'pending'])
+  assert.deepEqual(algebra.masterySegments.map(item => item.count), [1, 1])
+  assert.equal(algebra.masterySegments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
+  const geometry = view.domains.find(d => d.key === '图形与几何')
+  assert.deepEqual(geometry.masterySegments.map(item => item.key), ['pending'])
+  assert.equal(geometry.masterySegments[0].widthPercent, 100)
 })

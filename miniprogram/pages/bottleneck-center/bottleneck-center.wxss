@@ -98,7 +98,7 @@
 
 .stat-label {
   color: #64748b;
-  font-size: 19rpx;
+  font-size: 20rpx;
   margin-top: 5rpx;
 }
 
@@ -222,7 +222,7 @@
   border-radius: 9rpx;
   background: #e0f2fe;
   color: #1d4ed8;
-  font-size: 18rpx;
+  font-size: 20rpx;
   font-weight: 850;
   flex-shrink: 0;
 }
@@ -253,24 +253,24 @@
   border-radius: 9rpx;
   background: #f1f5f9;
   color: #52677d;
-  font-size: 19rpx;
+  font-size: 20rpx;
   line-height: 1.2;
   font-weight: 800;
 }
 
-.priority-high {
-  background: #ffedd5;
-  color: #c2410c;
+.confidence-high {
+  background: var(--b1-priority-bg);
+  color: var(--b1-priority-fg);
 }
 
-.priority-medium {
-  background: #fef3c7;
-  color: #92400e;
+.confidence-medium {
+  background: var(--b1-waiting-bg);
+  color: var(--b1-waiting-fg);
 }
 
-.priority-low {
-  background: #ecfdf5;
-  color: #15803d;
+.confidence-low {
+  background: var(--b1-neutral-bg);
+  color: var(--b1-neutral-fg);
 }
 
 .state-recurring,
@@ -348,3 +348,7 @@
 .b1-subject-chinese { border-left: 8rpx solid var(--b1-chinese, #b84040); }
 .b1-subject-english { border-left: 8rpx solid var(--b1-english, #2f855a); }
 .bottleneck-card { border-radius: 0; box-shadow: none; border-bottom: 1rpx solid #ded8cc; }
+
+/* 第三批：全量状态构成条 + 操作按钮 emoji 符号 */
+.stats-segments { margin: 0 24rpx 8rpx; }
+.card-action-symbol { font-size: 28rpx; margin-right: 6rpx; }

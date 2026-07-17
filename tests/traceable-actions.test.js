@@ -40,6 +40,16 @@ test('traceable actions build deterministic page urls', () => {
     }),
     '/pages/bottleneck-detail/bottleneck-detail?studentId=student-1&subject=math&lpCode=LP-001&studentName=S1'
   )
+
+  assert.equal(
+    buildTraceableUrl({
+      type: 'learning-progress',
+      studentId: 'student-1',
+      subject: 'math',
+      studentName: 'S1'
+    }),
+    '/pages/learning-progress/learning-progress?studentId=student-1&subject=math&studentName=S1'
+  )
 })
 
 test('traceable actions support list, permission and empty-state fallbacks', () => {

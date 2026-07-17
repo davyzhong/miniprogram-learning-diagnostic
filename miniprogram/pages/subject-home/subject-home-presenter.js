@@ -5,7 +5,8 @@ const {
 } = require('../../utils/bottleneck-view')
 const { subjectIllustrationOf } = require('../../utils/page-illustrations')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
-const { symbolOf } = require('../../utils/ui-symbols')
+const { symbolOf, subjectSymbolOf } = require('../../utils/ui-symbols')
+const { buildStatusSegments } = require('../../utils/status-segments')
 
 const SEVERITY_WEIGHT = { high: 80, medium: 55, low: 25 }
 const CHINESE_REVIEW_TYPE_LABELS = {
@@ -106,15 +107,16 @@ function buildChineseReviewQueue(profile = {}) {
 function buildBottleneckDetail(item) {
   const displayName = item.displayName || ''
   const evidenceText = item.evidenceText || '等待补充证据'
-  const priorityText = item.priorityText || ''
+  // 置信度标签统一来自 buildConfidence（buildBottleneckView 已挂载到 item 上）
+  const confidenceText = item.confidenceLabel || ''
 
   if (item.status === 'persisting') {
-    return [`${displayName}在不同记录中再次出现`, evidenceText, priorityText].filter(Boolean).join(' · ')
+    return [`${displayName}在不同记录中再次出现`, evidenceText, confidenceText].filter(Boolean).join(' · ')
   }
   if (item.status === 'improved') {
     return [`${displayName}已通过验证`, '继续观察巩固'].filter(Boolean).join(' · ')
   }
-  return [`建议用验证题确认${displayName}`, evidenceText, priorityText].filter(Boolean).join(' · ')
+  return [`建议用验证题确认${displayName}`, evidenceText, confidenceText].filter(Boolean).join(' · ')
 }
 
 function buildSubjectBottleneckViews(profile = {}, options = {}) {
@@ -386,6 +388,16 @@ function buildEnglishQuickStats(stats) {
   ]
 }
 
+// 词库构成堆叠条：绿=真正掌握 / 红=待练习 / 金=待复习 / 灰=未测（数据来自 buildEnglishVocabularyStats）
+function buildEnglishVocabSegments(stats) {
+  return buildStatusSegments([
+    { key: 'mastered', label: `掌握 ${stats.overallMasteredCount}`, count: stats.overallMasteredCount, tone: 'improved' },
+    { key: 'needsPractice', label: `待练 ${stats.needsPracticeCount}`, count: stats.needsPracticeCount, tone: 'destructive' },
+    { key: 'dueReview', label: `待复习 ${stats.dueReviewCount}`, count: stats.dueReviewCount, tone: 'waiting' },
+    { key: 'untested', label: `未测 ${stats.untestedCount}`, count: stats.untestedCount, tone: 'neutral' }
+  ])
+}
+
 function buildTools(permissions = {}, options = {}, stats = {}) {
   const canWrite = permissions.canUpload !== false || permissions.canGeneratePaper !== false
   if (options.subject === 'english') {
@@ -478,11 +490,18 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
   return {
     subjectTitle: options.subject === 'english' ? '英语词汇掌握' : `${subjectName}工作台`,
     subjectIllustration: subjectIllustrationOf(subject, subjectName),
+    subjectSymbol: subjectSymbolOf(options.subject || profile.subject || ''),
+    quickSymbols: {
+      pending: symbolOf('target'),
+      records: symbolOf('paper'),
+      improved: symbolOf('trendUp')
+    },
     totalReports: profile.totalReports || reports.filter(item => item.status === 'completed').length,
     currentSummary: primaryTask.summary,
     nextAction: primaryTask.actionText,
     primaryTask,
     knowledgeMapSymbol: symbolOf('knowledgeMap'),
+    progressSymbol: symbolOf('trendUp') || symbolOf('report'),
     emptyQueueSymbol: symbolOf('complete'),
     taskQueue: options.subject === 'english' ? [] : taskQueue,
     pendingTaskCount: options.subject === 'chinese' && chineseReviewQueue.length > 0
@@ -505,6 +524,7 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     isFirstUse: options.subject === 'english' ? !hasEnglishVocabulary(options) : (!hasDiagnosis && !hasEnglishVocabulary(options)),
     englishVocabularyStats,
     englishQuickStats,
+    englishVocabSegments: buildEnglishVocabSegments(englishVocabularyStats),
     englishActionCards,
     hasEnglishVocabulary: hasEnglishVocabulary(options)
   }

@@ -5,6 +5,7 @@ const TRACEABLE_TYPES = new Set([
   'paper-workbench',
   'bottleneck-center',
   'bottleneck-detail',
+  'learning-progress',
   'generate-verification',
   'upload',
   'learning-records',
@@ -110,6 +111,14 @@ function buildTraceableUrl(action) {
       lpCode: id || normalized.lpCode,
       bottleneckId: normalized.bottleneckId,
       viewId: normalized.viewId,
+      studentName
+    })
+  }
+
+  if (type === 'learning-progress') {
+    return withQuery('/pages/learning-progress/learning-progress', {
+      studentId,
+      subject,
       studentName
     })
   }

@@ -9,6 +9,8 @@ const {
   SUBJECT_NAMES
 } = require('../../utils/constants')
 const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
+const { symbolOf } = require('../../utils/ui-symbols')
+const { buildStatusSegments } = require('../../utils/status-segments')
 
 const SUBJECT_FILTERS = [
   { key: 'all', name: '全部' },
@@ -71,6 +73,9 @@ Page({
       improvedCount: 0,
       recurringCount: 0
     },
+    statsSegments: [],
+    learnSymbol: symbolOf('practice'),
+    verifySymbol: symbolOf('complete'),
     emptyText: '暂无学习卡点'
   },
 
@@ -119,10 +124,18 @@ Page({
       }
 
       const allBottlenecks = buildViewsFromProfiles(profiles)
+      const stats = buildBottleneckStats(allBottlenecks)
+      // 全量状态构成条：金=待验证（待跟进中非持续）/ 红=持续出现 / 绿=已改善
+      const waitingCount = Math.max(0, (stats.activeCount || 0) - (stats.persistingCount || 0))
       this.setData({
         studentName,
         allBottlenecks,
-        stats: buildBottleneckStats(allBottlenecks),
+        stats,
+        statsSegments: buildStatusSegments([
+          { key: 'waiting', label: `待验证 ${waitingCount}`, count: waitingCount, tone: 'waiting' },
+          { key: 'persisting', label: `持续 ${stats.persistingCount || 0}`, count: stats.persistingCount || 0, tone: 'destructive' },
+          { key: 'improved', label: `已改善 ${stats.improvedCount || 0}`, count: stats.improvedCount || 0, tone: 'improved' }
+        ]),
         loading: false
       })
       this.applyFilters()

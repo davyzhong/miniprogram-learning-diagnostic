@@ -9,6 +9,8 @@ const { bottleneckListText } = require('../../utils/learning-records')
 const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-display')
 const { SUBJECT_NAMES } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
+const { buildStatusSegments } = require('../../utils/status-segments')
+const { symbolOf, subjectSymbolOf } = require('../../utils/ui-symbols')
 const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
 const { formatMonthDay, formatClock } = require('../../utils/util')
 const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
@@ -258,10 +260,14 @@ Page({
     relatedReports: [],
     relatedPapers: [],
     evidenceChain: [],
+    passRateSegments: [],
     visibleEvidenceChain: [],
     hiddenEvidenceCount: 0,
     showAllEvidence: false,
-    emptyText: ''
+    emptyText: '',
+    subjectSymbol: '',
+    practiceSymbol: symbolOf('practice'),
+    evidenceSymbol: symbolOf('evidence')
   },
 
   onLoad(options = {}) {
@@ -276,6 +282,7 @@ Page({
       studentName,
       subject,
       subjectName: options.subjectName ? decodeURIComponent(options.subjectName) : (SUBJECT_NAMES[subject] || '数学'),
+      subjectSymbol: subjectSymbolOf(subject),
       lpCode,
       bottleneckId,
       viewId
@@ -331,10 +338,16 @@ Page({
       const knowledgePosition = buildKnowledgePosition(bottleneck)
       // 置信度仪表盘
       const confidence = buildConfidence(bottleneck)
+      // 验证通过率构成条（绿=通过 / 红=未通过），仅在有验证记录时展示
+      const passRateSegments = buildStatusSegments([
+        { key: 'pass', label: `通过 ${confidence.passCount || 0}`, count: confidence.passCount || 0, tone: 'improved' },
+        { key: 'fail', label: `未通过 ${confidence.failCount || 0}`, count: confidence.failCount || 0, tone: 'destructive' }
+      ])
 
       this.setData({
         bottleneck,
         confidence,
+        passRateSegments,
         relatedReports,
         relatedPapers,
         evidenceChain,

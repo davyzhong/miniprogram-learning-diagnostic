@@ -1,8 +1,22 @@
 const cloud = require('../../utils/cloud')
+const { buildStatusSegments } = require('../../utils/status-segments')
 
 function countOf(value) {
   const count = Number(value)
   return Number.isFinite(count) ? count : 0
+}
+
+// 词库掌握构成条（互斥两段：已稳定 vs 待巩固，合计=词库总量）。
+// 仅用已计算的 overall.masteredCount 与 totalWords，不叠加会重复计数的维度桶。
+function buildCompositionSegments(summary = {}) {
+  const overall = summary.overall || {}
+  const mastered = countOf(overall.masteredCount)
+  const total = countOf(summary.totalWords)
+  const inProgress = Math.max(0, total - mastered)
+  return buildStatusSegments([
+    { key: 'mastered', label: `已稳定 ${mastered}`, count: mastered, tone: 'improved' },
+    { key: 'inProgress', label: `待巩固 ${inProgress}`, count: inProgress, tone: 'waiting' }
+  ])
 }
 
 function meaningOf(word = {}) {
@@ -90,6 +104,7 @@ Page({
     error: '',
     totalWords: 0,
     summaryCards: [],
+    compositionSegments: [],
     groups: [],
     weakWords: [],
     confusionCount: 0
@@ -120,6 +135,7 @@ Page({
         loading: false,
         totalWords: countOf(summary.totalWords),
         summaryCards: buildSummaryCards(summary),
+        compositionSegments: buildCompositionSegments(summary),
         groups: buildGroups(summary),
         weakWords: (result.weakWords || []).map(normalizeWeakWord),
         confusionCount: (confusion.items || []).length

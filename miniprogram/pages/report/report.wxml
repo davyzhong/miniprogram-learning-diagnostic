@@ -1,6 +1,15 @@
 <!--pages/report/report.wxml-->
 <view class="page b1-page report-subject-{{subjectClass}}">
-  <view class="report-header {{isVerification ? 'header-verify' : 'header-diagnosis'}}">
+  <!-- 加载失败：页内错误块 + 重试（保留 report.js 既有 toast） -->
+  <status-view
+    wx:if="{{!report._id}}"
+    state="error"
+    text="报告加载失败，请检查网络后重试"
+    retryText="重新加载"
+    bind:retry="onTraceableUrlTap"
+    data-url="/pages/report/report?id={{reportId}}"
+  />
+  <view class="report-header {{isVerification ? 'header-verify' : 'header-diagnosis'}}" wx:if="{{report._id}}">
     <view class="report-header-inner">
       <view class="report-header-copy">
         <text class="report-type">{{isVerification ? '验证报告' : '诊断报告'}}</text>
@@ -9,6 +18,17 @@
         <text class="paper-code-chip" wx:if="{{paperCodeText}}" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">验证卷 {{paperCodeText}}</text>
         <text class="report-headline">{{headline}}</text>
         <text class="report-summary" wx:if="{{trendSummaryText}}">{{trendSummaryText}}</text>
+        <view class="trend-band" wx:if="{{trendSegments.length > 0}}">
+          <view class="b1-seg-bar">
+            <view class="b1-seg b1-seg-{{item.tone}}" wx:for="{{trendSegments}}" wx:key="key" style="width: {{item.widthPercent}}%;"></view>
+          </view>
+          <view class="b1-seg-legend trend-band-legend">
+            <view class="b1-seg-legend-item" wx:for="{{trendSegments}}" wx:key="key">
+              <view class="b1-seg-dot b1-seg-{{item.tone}}"></view>
+              <text>{{item.label}}</text>
+            </view>
+          </view>
+        </view>
         <text class="report-summary" wx:if="{{reportSummaryText}}">{{reportSummaryText}}</text>
         <view class="quality-chip quality-chip-{{qualityClass}}" wx:if="{{hasQuality}}">{{qualityLabel}}</view>
       </view>
@@ -27,11 +47,28 @@
     </view>
   </view>
 
-  <view class="content" wx:if="{{report.status !== 'analyzing'}}">
+  <view class="content" wx:if="{{report._id && report.status !== 'analyzing'}}">
     <view class="report-layer-nav">
       <view class="report-layer-item {{item.available ? '' : 'is-muted'}}" wx:for="{{reportLayers}}" wx:key="key" bindtap="onReportSectionTap" data-section="{{item.key}}">
+        <text class="b1-symbol report-layer-symbol" wx:if="{{item.symbol}}">{{item.symbol}}</text>
         <text class="report-layer-label">{{item.label}}</text>
         <text class="report-layer-count" wx:if="{{item.count > 0}}">{{item.count}}</text>
+      </view>
+    </view>
+
+    <view class="verification-outcome-card" wx:if="{{verificationOutcome.visible}}">
+      <view class="verification-outcome-head">
+        <text class="verification-outcome-title">本次验证通过率</text>
+        <text class="verification-outcome-rate">{{verificationOutcome.passRateText}}</text>
+      </view>
+      <view class="b1-seg-bar">
+        <view class="b1-seg b1-seg-{{item.tone}}" wx:for="{{verificationOutcome.segments}}" wx:key="key" style="width: {{item.widthPercent}}%;"></view>
+      </view>
+      <view class="b1-seg-legend">
+        <view class="b1-seg-legend-item" wx:for="{{verificationOutcome.segments}}" wx:key="key">
+          <view class="b1-seg-dot b1-seg-{{item.tone}}"></view>
+          <text>{{item.label}}</text>
+        </view>
       </view>
     </view>
 

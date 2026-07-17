@@ -11,6 +11,7 @@ const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-disp
 const {
   buildBottleneckViews,
   buildBottleneckStats,
+  buildConfidence,
   profileBottlenecks
 } = require('../../utils/bottleneck-view')
 const {
@@ -20,6 +21,8 @@ const {
 } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
+const { symbolOf, subjectSymbolOf } = require('../../utils/ui-symbols')
+const { buildStatusSegments } = require('../../utils/status-segments')
 
 const SUBJECT_MARKERS = { math: '数学', chinese: '语文', english: '英语' }
 
@@ -44,6 +47,17 @@ function newestDate(values) {
 
 function activeBottlenecks(profile = {}) {
   return profileBottlenecks(profile).filter(item => item.status !== 'improved')
+}
+
+// 卡点相关卡片统一附带置信度标签（buildConfidence 一套：dots + label + level）
+function topConfidenceOf(items = []) {
+  const top = items.slice().sort((a, b) => (Number(b.weight) || 0) - (Number(a.weight) || 0))[0]
+  if (!top) return { confidenceText: '', confidenceLevel: '' }
+  const confidence = buildConfidence(top)
+  return {
+    confidenceText: `${confidence.dots} ${confidence.label}`,
+    confidenceLevel: confidence.level
+  }
 }
 
 function allSubjectBottleneckViews(profileBySubject) {
@@ -320,6 +334,14 @@ function buildDiagnosisWorkbenches(input, profileBySubject, subjectByKey, format
           : waitingCount > 0
             ? '等待验证'
             : '已有诊断'
+      // 状态 pill 色调：改善绿 / 跟进红 / 等待金 / 中性
+      const trendClass = improvedCount > 0 && improvedCount >= persistingCount
+        ? 'improved'
+        : persistingCount > 0
+          ? 'persisting'
+          : waitingCount > 0
+            ? 'pending'
+            : 'neutral'
       return {
         key: report.subject,
         subject: report.subject,
@@ -332,10 +354,29 @@ function buildDiagnosisWorkbenches(input, profileBySubject, subjectByKey, format
         improvedCount,
         persistingCount,
         waitingCount,
+        // 变化构成堆叠条：金=待验证 / 红=持续 / 绿=改善（与孩子卡同套公共类）
+        diagnosisSegments: buildStatusSegments([
+          { key: 'waiting', label: `待验证 ${waitingCount}`, count: waitingCount, tone: 'waiting' },
+          { key: 'persisting', label: `持续 ${persistingCount}`, count: persistingCount, tone: 'destructive' },
+          { key: 'improved', label: `改善 ${improvedCount}`, count: improvedCount, tone: 'improved' }
+        ]),
         trendText,
+        trendClass,
+        trendSymbol: trendClass === 'improved' ? symbolOf('trendUp') : (trendClass === 'persisting' ? symbolOf('warning') : symbolOf('pending')),
         trendMarker: improvedCount > 0 ? '改善' : (persistingCount > 0 ? '跟进' : '诊断'),
+        statusSegments: buildStatusSegments([
+          { key: 'improved', label: `改善 ${improvedCount}`, count: improvedCount, tone: 'improved' },
+          { key: 'waiting', label: `待验证 ${waitingCount}`, count: waitingCount, tone: 'waiting' },
+          { key: 'persisting', label: `持续 ${persistingCount}`, count: persistingCount, tone: 'priority' }
+        ]),
         reportId: report._id,
         reportUrl: buildTraceableUrl({ type: 'report-detail', id: report._id }),
+        learningProgressUrl: buildTraceableUrl({
+          type: 'learning-progress',
+          studentId: student._id || '',
+          studentName: student.name || '',
+          subject: report.subject
+        }),
         primaryAction: buildDiagnosisPrimaryAction(student, subject, report, profile, input.papers || []),
         uploadUrl: uploadUrl(student, report.subject)
       }
@@ -454,6 +495,7 @@ function buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowled
 
   return [{
     key: 'bottleneckCenter',
+    symbol: symbolOf('pin'),
     title: activeCount > 0 ? '学习卡点修复' : (improvedCount > 0 ? '已改善记录' : '学习卡点'),
     summary: activeCount > 0
       ? `待跟进 ${activeCount} 个${persistingCount > 0 ? ` · 持续出现 ${persistingCount} 个` : ''}`
@@ -462,18 +504,21 @@ function buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowled
     url: bottleneckCenterUrl(student, activeCount > 0 ? 'active' : (improvedCount > 0 ? 'improved' : ''))
   }, {
     key: 'uploadEvidence',
+    symbol: symbolOf('camera'),
     title: '上传新作业',
     summary: '补充新的照片样本，让诊断和复测更准。',
     actionText: '去上传',
     url: uploadUrl(student, nextSubject || 'math')
   }, {
     key: 'knowledgeMap',
+    symbol: symbolOf('knowledgeMap'),
     title: '数学知识地图',
     summary: knowledgeMapCard.summary || '查看知识节点、卡点和学习资源。',
     actionText: '看地图',
     url: knowledgeMapUrl(student)
   }, {
     key: 'learningRecords',
+    symbol: symbolOf('learningRecords'),
     title: '学习记录',
     summary: latestRecord ? compactSummary(latestRecord.summary || latestRecord.title, 34) : '查看历史报告、试卷和上传记录。',
     actionText: '看记录',
@@ -537,7 +582,8 @@ function buildPriorityHighlights(profileBySubject) {
         summary: `重点关注：${formatBottleneckDisplayList(active)}`,
         statusText: '建议验证',
         statusClass: 'pending',
-        actionText: `进入${subject.name}工作台`
+        actionText: `进入${subject.name}工作台`,
+        ...topConfidenceOf(active)
       }
     }
 
@@ -550,7 +596,8 @@ function buildPriorityHighlights(profileBySubject) {
         summary: `已改善：${formatBottleneckDisplayList(improved)}`,
         statusText: '已有改善',
         statusClass: 'improved',
-        actionText: `进入${subject.name}工作台`
+        actionText: `进入${subject.name}工作台`,
+        ...topConfidenceOf(improved)
       }
     }
 
@@ -580,11 +627,18 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
       key: subject.key,
       name: subject.name,
       shortName: subject.shortName,
+      symbol: subjectSymbolOf(subject.key),
       statusText: active.length > 0 || improved.length > 0 ? '已有观察' : '待采样',
       totalReports: profile.totalReports || 0,
       summary,
+      // 迷你状态条：金=待跟进，绿=已改善
+      statusSegments: buildStatusSegments([
+        { key: 'active', label: '待跟进', count: active.length, tone: 'waiting' },
+        { key: 'improved', label: '已改善', count: improved.length, tone: 'improved' }
+      ]),
       actionText: `进入${subject.name}工作台`,
-      url: subjectHomeUrl(student, subject.key)
+      url: subjectHomeUrl(student, subject.key),
+      ...topConfidenceOf(active.length > 0 ? active : improved)
     }
   })
 
