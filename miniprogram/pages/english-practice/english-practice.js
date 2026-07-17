@@ -171,7 +171,7 @@ Page({
           patternItems: [],
           finished: false,
           errorTitle: '暂无可练习单词',
-          error: '还没有可练习单词，请先导入钟青羽的个人英语词库。'
+          error: '还没有可练习单词，请先导入孩子的个人英语词库。'
         })
         return
       }

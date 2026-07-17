@@ -271,7 +271,7 @@ function buildEnglishPrimaryTask(options = {}, permissions = {}) {
   if (totalWords === 0) {
     return {
       title: '正在准备词库',
-      summary: '系统会自动导入钟青羽的个人单词表。完成后，首页会直接显示认词练习和纸面听写入口。',
+      summary: '系统会自动导入孩子的个人单词表。完成后，首页会直接显示认词练习和纸面听写入口。',
       actionText: '查看学习记录',
       actionType: 'history',
       recommendedMode: 'preparing'

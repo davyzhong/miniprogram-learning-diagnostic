@@ -1,7 +1,7 @@
 <view class="page b1-page b1-subject-english">
   <view class="hero">
     <view class="hero-copy">
-      <text class="eyebrow">{{studentName || '钟青羽'}} · 英语</text>
+      <text class="eyebrow">{{studentName || '孩子'}} · 英语</text>
       <text class="title">纸面听写</text>
       <text class="subtitle">看提示在纸上写英文，完成后拍照上传识别。</text>
     </view>

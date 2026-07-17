@@ -130,7 +130,7 @@ Page({
         writingCountdown: 0,
         commandHint: queue.length > 0 ? '点击开始听写，或说“开始”。' : '',
         wordListExpanded: true,
-        error: queue.length > 0 ? '' : '还没有可听写单词，请先导入钟青羽的个人英语词库。'
+        error: queue.length > 0 ? '' : '还没有可听写单词，请先导入孩子的个人英语词库。'
       })
       this._sessionStartedAt = Date.now()
     } catch (error) {

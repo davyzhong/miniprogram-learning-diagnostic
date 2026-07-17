@@ -20,7 +20,7 @@
   <view wx:else class="practice-shell">
     <view class="practice-topbar">
       <view class="practice-title-wrap">
-        <text class="practice-kicker">{{studentName || '钟青羽'}} · 英语</text>
+        <text class="practice-kicker">{{studentName || '孩子'}} · 英语</text>
         <text class="practice-title">认词练习</text>
       </view>
       <view class="progress-pill">
