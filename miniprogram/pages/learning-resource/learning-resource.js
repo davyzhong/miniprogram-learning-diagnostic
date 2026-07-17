@@ -1,6 +1,11 @@
 const cloud = require('../../utils/cloud')
 const { buildLearningResourceView } = require('./learning-resource-presenter')
 
+// 外部平台小程序 appId：配置真实 appId 后才会尝试跳转，否则统一复制链接
+const PLATFORM_MINIPROGRAM_APP_IDS = {
+  // 'B站': 'wx...', '哔哩哔哩': 'wx...', '小红书': 'wx...'
+}
+
 function copyLinkWithToast(url, platform) {
   wx.setClipboardData({
     data: url,
@@ -110,19 +115,15 @@ Page({
       return
     }
 
-    if (canJump && platform === 'B站' || platform === '哔哩哔哩') {
-      // 尝试跳转 B站小程序，降级为复制链接
-      wx.openEmbeddedMiniProgram && wx.openEmbeddedMiniProgram({
-        appId: 'wx7e979c1c1c1c1c1c', // 占位，需替换为 B站小程序实际 appId
+    // 小程序跳转需要目标平台的真实 appId；未配置时统一复制链接，避免假 appId 跳转必败
+    const appId = canJump ? PLATFORM_MINIPROGRAM_APP_IDS[platform] : ''
+    if (appId && wx.openEmbeddedMiniProgram) {
+      wx.openEmbeddedMiniProgram({
+        appId,
         fail: () => copyLinkWithToast(url, platform)
-      }) || copyLinkWithToast(url, platform)
-    } else if (canJump && platform === '小红书') {
-      wx.openEmbeddedMiniProgram && wx.openEmbeddedMiniProgram({
-        appId: 'wx6a1f1f1f1f1f1f1f', // 占位，需替换为小红书小程序实际 appId
-        fail: () => copyLinkWithToast(url, platform)
-      }) || copyLinkWithToast(url, platform)
-    } else {
-      copyLinkWithToast(url, platform)
+      })
+      return
     }
+    copyLinkWithToast(url, platform)
   }
 })
