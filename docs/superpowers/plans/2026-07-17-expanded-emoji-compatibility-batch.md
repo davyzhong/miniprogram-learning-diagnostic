@@ -53,6 +53,7 @@ git status --short > tmp/emoji-batch-02-initial-status.txt
 git diff -- miniprogram/pages/index/index.wxml > tmp/emoji-batch-02-index-before.patch
 git hash-object miniprogram/pages/icon-compatibility/emoji-candidates.js > tmp/emoji-batch-01-worktree-blob.txt
 git rev-parse HEAD:miniprogram/pages/icon-compatibility/emoji-candidates.js > tmp/emoji-batch-01-head-blob.txt
+test "$(cat tmp/emoji-batch-01-worktree-blob.txt)" = "$(cat tmp/emoji-batch-01-head-blob.txt)"
 ```
 
 Never stage unrelated files. For files that were already dirty, inspect both `git diff` and `git diff --cached` before every commit. The homepage summary change must be staged as a synthetic HEAD-based blob containing only the one approved text replacement:
@@ -274,7 +275,7 @@ Run:
 node --test tests/emoji-candidates.test.js tests/emoji-batch-02.test.js
 ```
 
-Expected: PASS. Also run `git rev-parse HEAD:miniprogram/pages/icon-compatibility/emoji-candidates.js` and compare it with `tmp/emoji-batch-01-head-blob.txt`; the original module blob must be unchanged.
+Expected: PASS. Also compare both `git rev-parse HEAD:miniprogram/pages/icon-compatibility/emoji-candidates.js` and `git hash-object miniprogram/pages/icon-compatibility/emoji-candidates.js` with their saved initial values; both the committed and worktree versions of the original module must be unchanged.
 
 - [ ] **Step 6: Commit runtime data**
 
@@ -331,13 +332,13 @@ Keep `lastCategoryIndexByBatch = { B02: 0, B01: 0 }` outside `data`. Implement t
 
 ```js
 activeState(batchId, categoryIndex) // returns only activeBatch, categoryTabs metadata, activeCategory, activeItems and boundary flags
-selectBatch(batchId)                // unknown ID falls back to B02; restores valid saved position
+selectBatch(batchId)                // unknown ID keeps the current valid batch and selects its first category; B02 only if no current batch is valid
 onBatchTap(event)                   // reads event.currentTarget.dataset.id
 selectCategory(index)               // any invalid index falls back to index 0
 onCopyBatchId(event)                // delegates exact dataset.id to copyPublicId
 ```
 
-`selectBatch()` and `selectCategory()` call the shared `activeState()` helper. Never pass a full batch or inactive category items into `setData`.
+`selectBatch()` and `selectCategory()` call the shared `activeState()` helper. Tests must prove that invalid input while viewing B01 yields `B01/C01`, while invalid input before any valid state yields `B02/B02-C01`. Never pass a full batch or inactive category items into `setData`.
 
 - [ ] **Step 4: Run focused page tests**
 
@@ -501,7 +502,7 @@ Expected: FAIL because the two scripts do not exist.
 3. Open C21 and assert exactly 50 cards.
 4. Switch to B01, move to C03, switch to B02 and move to C12, then switch both ways and assert independent restoration.
 5. Save screenshots to `tmp/emoji-batch-02-top.png`, `tmp/emoji-batch-02-practical.png`, `tmp/emoji-batch-02-c21.png`, and `tmp/emoji-batch-02-longest.png`.
-6. When `EMOJI_REQUIRE_NARROW=1`, fail unless `systemInfo.screenWidth <= 320`; this makes the narrow screenshot criterion measurable rather than inferred.
+6. When `EMOJI_REQUIRE_NARROW=1`, fail unless `systemInfo.screenWidth <= 320`; use distinct `tmp/emoji-batch-02-narrow-*.png` filenames so the narrow run cannot overwrite normal screenshots.
 
 - [ ] **Step 3: Implement compiled package measurement**
 
@@ -534,8 +535,11 @@ Run:
 npm run check:size
 npm run perf:emoji-compat
 npm run test:e2e:emoji-compat
+# In WeChat DevTools, select the built-in iPhone 5 simulator (320 x 568 CSS px), then run:
 EMOJI_REQUIRE_NARROW=1 npm run test:e2e:emoji-compat
 ```
+
+The iPhone 5 simulator selection is an explicit prerequisite because the installed DevTools CLI/automator API cannot change the simulator device. Before the narrow command, verify the DevTools toolbar shows `iPhone 5`; the script independently checks `systemInfo.screenWidth <= 320` and writes only `-narrow-` screenshot paths. The Android compatibility run remains the QR preview on the target phone.
 
 Use the same Preview configuration documented in `docs/performance/emoji-compatibility-lab-baseline.md`. Record baseline icon subpackage size `23,906 bytes`, new compiled main package size, new compiled icon subpackage size, total size, and deltas.
 
@@ -578,6 +582,8 @@ npm run emoji:batch02:verify
 npm run emoji:batch02:runtime:verify
 git diff --exit-code -- scripts/emoji-compatibility/batch-02-manifest.json miniprogram/pages/icon-compatibility/emoji-candidates-batch-02.js
 test "$(git rev-parse HEAD:miniprogram/pages/icon-compatibility/emoji-candidates.js)" = "$(cat tmp/emoji-batch-01-head-blob.txt)"
+test "$(git hash-object miniprogram/pages/icon-compatibility/emoji-candidates.js)" = "$(cat tmp/emoji-batch-01-worktree-blob.txt)"
+git diff --exit-code -- miniprogram/pages/icon-compatibility/emoji-candidates.js
 ```
 
 Expected: all commands pass and generated files are unchanged.
