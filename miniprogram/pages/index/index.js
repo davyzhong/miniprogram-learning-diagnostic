@@ -51,13 +51,23 @@ Page({
     homeMode: 'empty',
     home: null,
     childCards: [],
-    familyHero: null
+    familyHero: null,
+    // 图标兼容性测试入口是工程验收工具，默认不在生产首屏展示；
+    // 真机测试时在控制台执行 wx.setStorageSync('iconCompatibilityEntryEnabled', '1') 后重新进入首页即可显示
+    showIconCompatibilityEntry: false
   },
 
   ...sharedNavigation,
 
   onShow() {
     this._cloud = cloud
+    if (this.data.showIconCompatibilityEntry !== true) {
+      try {
+        if (wx.getStorageSync('iconCompatibilityEntryEnabled') === '1') {
+          this.setData({ showIconCompatibilityEntry: true })
+        }
+      } catch (err) {}
+    }
     // 首次 onShow 时绑定统一状态感知（操作完成时强制刷新首页）
     if (!this._statusBound) {
       this._statusBound = true
