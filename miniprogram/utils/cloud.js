@@ -342,6 +342,15 @@ async function getLearningTimeline({ studentId, subject, limit, cursor } = {}) {
   return callFunction('studentData', { action: 'getLearningTimeline', studentId, subject, limit, cursor })
 }
 
+/**
+ * 最近上传照片的文件名列表（上传页去重提示用）。
+ * 服务端 field 投影只取 imageFiles.fileName，避免客户端直读 20 份全量报告。
+ */
+async function listRecentImageFileNames(studentId, subject, limit = 20) {
+  const result = await callFunction('studentData', { action: 'listRecentImageFileNames', studentId, subject, limit })
+  return result.fileNames || []
+}
+
 async function cleanupStaleLearningRecords({ studentId, subject, dryRun = false } = {}) {
   return callFunction('studentData', { action: 'cleanupStaleLearningRecords', studentId, subject, dryRun })
 }
@@ -514,6 +523,7 @@ module.exports = {
   getChineseSkillTask,
   submitChineseSkillTask,
   getLearningTimeline,
+  listRecentImageFileNames,
   cleanupStaleLearningRecords,
   getReportDetail,
   getPaperDetail,

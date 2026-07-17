@@ -89,6 +89,30 @@ test('cloud function wrapper records duration and payload size metrics', async (
   assert.ok(metrics.some(item => item.name === 'cloud.callFunction.resultBytes'))
 })
 
+test('listRecentImageFileNames wrapper calls studentData and returns the file name array', async () => {
+  let called = null
+  const cloud = loadCloudUtil({
+    cloud: {
+      database: () => createDatabase(),
+      callFunction: async payload => {
+        called = payload
+        return { result: { success: true, fileNames: ['a.jpg', 'b.jpg'] } }
+      }
+    }
+  })
+
+  const fileNames = await cloud.listRecentImageFileNames('student-1', 'math', 20)
+
+  assert.equal(called.name, 'studentData')
+  assert.deepEqual(JSON.parse(JSON.stringify(called.data)), {
+    action: 'listRecentImageFileNames',
+    studentId: 'student-1',
+    subject: 'math',
+    limit: 20
+  })
+  assert.deepEqual(JSON.parse(JSON.stringify(fileNames)), ['a.jpg', 'b.jpg'])
+})
+
 test('temporary cloud URLs are deduplicated and fetched in platform-sized batches', async () => {
   const db = createDatabase()
   const batches = []

@@ -3,9 +3,10 @@ const cloud = require('../../utils/cloud')
 const { formatChineseDateTime } = require('../../utils/util')
 const { createAnalysisPoller } = require('../../utils/analysis-poller')
 const { buildReportView } = require('./report-presenter')
+const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { getSubjectName } = require('../../utils/constants')
 const { navigateToVerificationPaper, startVerificationPoller, stopVerificationPoller } = require('../../utils/shared-navigation')
-const { appStatus, OP_TYPES, OP_STATUS } = require('../../utils/app-status')
+const { appStatus, bindPageStatus, OP_TYPES, OP_STATUS } = require('../../utils/app-status')
 
 function downloadCloudFile(fileID) {
   return new Promise((resolve, reject) => {
@@ -114,12 +115,34 @@ Page({
 
   onLoad(options) {
     const id = options.id || options.reportId
+    // 统一状态感知：分析在后台完成（如轮询已超时停止）时自动刷新报告
+    bindPageStatus(this, {
+      studentIdGetter: () => (this._fullReport || this.data.report || {}).studentId || '',
+      subjectGetter: () => (this._fullReport || this.data.report || {}).subject || '',
+      handlers: {
+        onOperationCompleted: op => this.maybeReloadOnOperationCompleted(op)
+      }
+    })
     if (id) {
       this.setData({ reportId: id })
       this.loadReport(id)
     } else {
       wx.showToast({ title: '缺少报告信息', icon: 'none' })
     }
+  },
+
+  // 分析操作完成（operation:completed）时自动重新加载报告详情。
+  // 守卫条件：只关心分析类操作、报告 ID 匹配、页面报告仍在分析中、且轮询已停
+  // （轮询进行中的完成事件由轮询自己触发刷新，避免重复拉取）。
+  maybeReloadOnOperationCompleted(op) {
+    const reportId = this.data.reportId
+    if (!reportId) return
+    if (!op || (op.opType !== OP_TYPES.ANALYSIS && op.opType !== OP_TYPES.VERIFICATION_ANALYSIS)) return
+    if (op.reportId && op.reportId !== reportId) return
+    if (this._poller && typeof this._poller.isRunning === 'function' && this._poller.isRunning()) return
+    const current = this.data.report || {}
+    if (current.status && current.status !== 'analyzing') return
+    this.loadReport(reportId)
   },
 
   onShow() {
@@ -381,7 +404,12 @@ Page({
   onViewLearningProgress() {
     const report = this._fullReport
     if (!report) return
-    const url = `/pages/learning-progress/learning-progress?studentId=${report.studentId}&subject=${report.subject}`
+    const url = buildTraceableUrl({
+      type: 'learning-progress',
+      studentId: report.studentId,
+      subject: report.subject,
+      studentName: report.studentName
+    })
     wx.navigateTo({ url })
   },
 
@@ -512,13 +540,23 @@ Page({
   startPolling(reportId) {
     if (this._poller) this._poller.stop()
     this._poller = createAnalysisPoller({
-      loadReport: async () => {
+      // 轻量轮询：分析进行中每 tick 只查 getAnalysisProgress，复用已加载的报告快照，
+      // 不再重复拉全量详情（每 tick 5-7 次 DB 读 + 整份报告传输）；
+      // 只有进度到终态（terminal: true）时才重新拉取报告详情刷新页面。
+      loadReport: async (context = {}) => {
+        const snapshot = this._fullReport || this.data.report
+        if (!context.terminal && snapshot && snapshot._id === reportId) {
+          return snapshot
+        }
         const detail = typeof cloud.getReportDetail === 'function'
           ? await cloud.getReportDetail(reportId)
           : { report: await cloud.getReport(reportId) }
         return detail.report
       },
       loadProgress: () => cloud.getAnalysisProgress(reportId),
+      isProgressTerminal: progress => !!progress && (
+        progress.status === 'completed' || progress.status === 'failed'
+      ),
       onCompleted: (report) => {
         wx.showToast({ title: '诊断完成', icon: 'success' })
         // 同步到全局状态感知体系
@@ -576,8 +614,9 @@ Page({
       },
       onError: err => console.error('轮询报告状态失败', err),
       onTimeout: () => {
-        wx.showToast({ title: '分析时间较长，请稍后查看', icon: 'none' })
-        this.setData({ analysisStatusText: '分析超时，请稍后查看' })
+        // 轮询预算用尽 ≠ 分析失败：后台仍在分析，operation:completed 时本页自动刷新
+        wx.showToast({ title: '分析仍在后台进行，完成后本页会自动刷新', icon: 'none', duration: 3000 })
+        this.setData({ analysisStatusText: '分析时间较长，完成后本页会自动刷新' })
       }
     })
     this._poller.start()

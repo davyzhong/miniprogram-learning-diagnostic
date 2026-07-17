@@ -148,6 +148,7 @@ wx.cloud.callFunction({
 | `getStudentDashboard` | `studentId` | student、subjectProfiles、latestReport、latestPaper、recentReports、recentPapers |
 | `getSubjectDashboard` | `studentId`, `subject` | student、profile、reports、papers |
 | `getLearningTimeline` | `studentId`；`subject` 可选 | reports、papers、englishSessions、learningResourcePacks（投影轻量字段，不含 items） |
+| `listRecentImageFileNames` | `studentId`；`subject`、`limit` 可选 | `fileNames[]`：最近报告的照片文件名（服务端 field 投影只取 `imageFiles.fileName`，跨报告去重、排除已归档），供上传页同名照片提示，替代客户端直读全量报告 |
 | `getReportDetail` | `reportId` | report（剥离 pageResults/rawPages/aiRaw）、linkedPaper、profile、pendingCount；反馈按需加载（前端调 `reportFeedback.listFeedbackByReport`） |
 | `getPaperDetail` | `paperId` | student、paper |
 | `getActiveVerificationPaper` | `studentId`、`subject` | paper、status（ready/generating/failed/none）。验证卷自动生成场景的状态查询 |
