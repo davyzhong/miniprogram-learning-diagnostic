@@ -2,12 +2,33 @@
   <view class="test-summary b1-card">
     <view class="test-summary-top">
       <view>
-        <text class="test-title">实用图标测试</text>
-        <text class="test-count">{{candidateCount}} 项 · {{categoryTabs.length}} 类</text>
+        <text class="test-title">Android 图标兼容性测试</text>
+        <text class="test-count">分批查看，每个编号都可复制反馈</text>
       </view>
       <text class="environment-label">测试环境</text>
     </view>
     <text class="environment-text">{{environmentText}}</text>
+    <view class="batch-overview">
+      <text class="batch-overview-item is-verified">已通过 202</text>
+      <text class="batch-overview-item is-pending">待测试 1000</text>
+      <text class="batch-overview-item">共 1202</text>
+    </view>
+  </view>
+
+  <view class="batch-tabs">
+    <view
+      class="batch-tab {{activeBatch.id === item.id ? 'is-active' : ''}}"
+      wx:for="{{batchTabs}}"
+      wx:key="id"
+      data-id="{{item.id}}"
+      bindtap="onBatchTap"
+    >
+      <view class="batch-tab-main">
+        <text class="batch-tab-name">{{item.name}}</text>
+        <text class="batch-tab-status">{{item.statusText}} {{item.count}}</text>
+      </view>
+      <text class="batch-tab-id" data-id="{{item.id}}" bindtap="onCopyBatchId">{{item.id}}</text>
+    </view>
   </view>
 
   <scroll-view class="category-scroll" scroll-x enhanced show-scrollbar="{{false}}" scroll-into-view="{{activeTabId}}">
@@ -31,7 +52,7 @@
       <view class="active-category-title-row">
         <text class="active-category-id">{{activeCategory.id}}</text>
         <text class="active-category-name">{{activeCategory.name}}</text>
-        <text class="verified-status" wx:if="{{activeCategory.statusText}}" aria-label="首批已验证">{{activeCategory.statusText}}</text>
+        <text class="verified-status">{{activeBatch.statusText}}</text>
       </view>
       <text class="active-category-meta">{{activeItems.length}} 项 · 点击分类编号可复制</text>
     </view>

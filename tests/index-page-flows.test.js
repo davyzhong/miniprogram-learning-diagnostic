@@ -226,7 +226,7 @@ test('index family workbench renders the restored compact functional sections', 
   assert.match(wxml, /family-workbench-hero/)
   assert.match(wxml, /icon-compatibility-entry/)
   assert.match(wxml, /图标兼容性测试/)
-  assert.match(wxml, /202 项候选/)
+  assert.match(wxml, /1202 项候选 · 2 批次/)
   assert.match(wxml, /\/pages\/icon-compatibility\/icon-compatibility/)
   assert.doesNotMatch(wxml, /icon-compatibility-panel/)
   assert.doesNotMatch(wxml, /iconCompatibilityItems/)
