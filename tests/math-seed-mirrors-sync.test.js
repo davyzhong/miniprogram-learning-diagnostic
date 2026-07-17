@@ -22,6 +22,10 @@ const MIRROR_TARGETS = [
     dir: 'cloudfunctions/generatePaper/math-seeds',
     seeds: ['knowledge-nodes', 'bottleneck-taxonomy-v2', 'learning-resources'],
   },
+  {
+    dir: 'miniprogram/data/math',
+    seeds: ['knowledge-nodes', 'bottleneck-taxonomy-v2', 'learning-resources', 'bottleneck-categories'],
+  },
 ]
 
 test('math seed 镜像与 data/math seed 深度相等', () => {

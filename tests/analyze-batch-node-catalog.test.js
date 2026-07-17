@@ -26,13 +26,13 @@ function normalizeSingleBottleneck(bottleneck) {
   return result.pageResults[0].bottlenecks[0]
 }
 
-test('knowledge-node-catalog 与 knowledge-nodes seed 同步（91 节点防漂移）', () => {
+test('knowledge-node-catalog 与 knowledge-nodes seed 同步（节点数防漂移）', () => {
   const expected = (knowledgeSeed.nodes || []).map(node => ({
     id: node.nodeId,
     title: node.title,
     domain: node.domain,
   }))
-  assert.equal(MATH_NODE_LIST.length, 91, '标准知识节点目录应有 91 个节点')
+  assert.ok(MATH_NODE_LIST.length >= 91, `标准知识节点目录不应少于 91 个节点（防误删），当前 ${MATH_NODE_LIST.length}`)
   assert.deepEqual(MATH_NODE_LIST, expected,
     'knowledge-node-catalog.js 与 seed 不同步，请重跑 scripts/build-math-node-catalog.js')
   assert.equal(new Set(MATH_NODE_LIST.map(node => node.id)).size, MATH_NODE_LIST.length, '节点 ID 应唯一')

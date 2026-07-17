@@ -1,4 +1,6 @@
-// 自动同步的 seed 数据
+// 由 scripts/build-math-seed-mirrors.js 自动生成，勿手改。
+// 细颗粒度学习卡点库（前端版）。内容与 data/math/bottleneck-taxonomy-v2.seed.json 保持一致；
+// 这里改用 module.exports，符合 miniprogram/data 下 *.seed.js 的前端加载约定。
 module.exports = {
   "version": "0.1.0",
   "updatedAt": "2026-06-17",
