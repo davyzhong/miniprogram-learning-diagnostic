@@ -19,6 +19,7 @@
         <view class="member-role">{{item.relationText}} · {{item.roleText}}</view>
       </view>
       <button wx:if="{{canInvite}}" class="b1-button-secondary member-edit" size="mini" data-index="{{index}}" bindtap="onEditMember">编辑</button>
+      <button wx:if="{{canInvite && item.role !== 'owner'}}" class="b1-button-secondary member-edit" size="mini" data-index="{{index}}" bindtap="onRemoveMember">移除</button>
     </view>
     <view class="empty" wx:if="{{!loading && members.length === 0}}">暂无家长成员</view>
   </view>

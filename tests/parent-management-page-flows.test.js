@@ -354,6 +354,7 @@ test('B1 parent management keeps owner actions distinct from viewer permissions'
   assert.match(source, /wx:if="\{\{canInvite\}\}" class="b1-button-secondary member-edit"/)
   assert.match(source, /wx:if="\{\{canInvite\}\}" class="b1-button-primary management-primary"/)
   assert.match(source, /class="notice b1-neutral" wx:if="\{\{role === 'viewer'\}\}"/)
-  assert.doesNotMatch(source, /移除|删除家长|onRemoveMember/)
+  // 移除入口按设计文档属于 owner 专属能力：viewer 不可见，owner 本人行也不出现
+  assert.match(source, /wx:if="\{\{canInvite && item.role !== 'owner'\}\}".*bindtap="onRemoveMember"/)
   assert.match(styles, /var\(--b1-improved-fg\)/)
 })

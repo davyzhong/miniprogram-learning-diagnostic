@@ -45,6 +45,7 @@ Page({
     loading: false,
     creating: false,
     saving: false,
+    removing: false,
     error: '',
     relationOptions: VISIBLE_RELATION_OPTIONS,
     inviteRelation: DEFAULT_INVITE_RELATION,
@@ -130,6 +131,40 @@ Page({
       editingRelationIndex: relationIndex,
       error: ''
     })
+  },
+
+  async onRemoveMember(e) {
+    if (!this.data.canInvite || this.data.removing) return
+    const index = Number(e.currentTarget.dataset.index)
+    const member = this.data.members[index]
+    if (!member || member.role === 'owner') return
+
+    const studentName = (this.data.student && this.data.student.name) || '孩子'
+    const confirmed = await new Promise(resolve => {
+      wx.showModal({
+        title: '移除家长',
+        content: `移除后，${member.displayText || '这位家长'}将无法再查看${studentName}的学习资料。`,
+        confirmText: '移除',
+        cancelText: '取消',
+        success: res => resolve(!!(res && res.confirm)),
+        fail: () => resolve(false)
+      })
+    })
+    if (!confirmed) return
+
+    this.setData({ removing: true, error: '' })
+    try {
+      await cloud.revokeStudentMember(this.data.studentId, member.memberOpenId)
+      this.setData({ removing: false })
+      await this.loadMembers()
+      wx.showToast({ title: '已移除', icon: 'success' })
+    } catch (error) {
+      console.error('移除家长失败', error)
+      this.setData({
+        removing: false,
+        error: '移除失败，请稍后重试'
+      })
+    }
   },
 
   onCancelEditMember() {
