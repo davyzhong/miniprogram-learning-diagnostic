@@ -20,7 +20,10 @@ function registeredPages() {
 
 const UI_SOURCE_ROOTS = ['miniprogram/pages', 'miniprogram/utils']
 const UI_EXTENSIONS = new Set(['.wxml', '.js'])
-const UI_LITERAL_EXEMPTIONS = ['miniprogram/pages/icon-compatibility/emoji-candidates.js']
+const UI_LITERAL_EXEMPTIONS = [
+  'miniprogram/pages/icon-compatibility/emoji-candidates.js',
+  'miniprogram/pages/icon-compatibility/emoji-candidates-batch-02.js'
+]
 const PROHIBITED_UI_SYMBOL = /(?:\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u2190-\u21FF\u2600-\u27BF]|[✓✗✕★◎⌾□▧])/u
 // 白名单唯一来源是 utils/ui-symbols.js（C01-C06 策展集），扫描按其放行
 const APPROVED_UI_SYMBOLS = Object.values(require('../miniprogram/utils/ui-symbols').UI_SYMBOLS)
@@ -31,6 +34,16 @@ function uiSourceFiles(directory) {
     const relativePath = path.join(directory, entry.name)
     if (entry.isDirectory()) return uiSourceFiles(relativePath)
     return UI_EXTENSIONS.has(path.extname(entry.name)) ? [relativePath] : []
+  })
+}
+
+function runtimeSourceFiles(directory) {
+  const absoluteDirectory = path.join(ROOT, directory)
+  if (!fs.existsSync(absoluteDirectory)) return []
+  return fs.readdirSync(absoluteDirectory, { withFileTypes: true }).flatMap(entry => {
+    const relativePath = path.join(directory, entry.name)
+    if (entry.isDirectory()) return runtimeSourceFiles(relativePath)
+    return ['.js', '.wxml', '.json'].includes(path.extname(entry.name)) ? [relativePath] : []
   })
 }
 
@@ -161,7 +174,10 @@ test('critical compact symbol controls keep a text label or accessible label', (
 })
 
 test('repository-authored UI sources contain no decorative emoji or unstable symbols', () => {
-  assert.deepEqual(UI_LITERAL_EXEMPTIONS, ['miniprogram/pages/icon-compatibility/emoji-candidates.js'])
+  assert.deepEqual(UI_LITERAL_EXEMPTIONS, [
+    'miniprogram/pages/icon-compatibility/emoji-candidates.js',
+    'miniprogram/pages/icon-compatibility/emoji-candidates-batch-02.js'
+  ])
   const violations = UI_SOURCE_ROOTS
     .flatMap(uiSourceFiles)
     .filter(relativePath => !UI_LITERAL_EXEMPTIONS.includes(relativePath))
@@ -176,6 +192,23 @@ test('repository-authored UI sources contain no decorative emoji or unstable sym
     })
 
   assert.deepEqual(violations, [], `仓库主动渲染的 UI emoji/不稳定符号：\n${violations.join('\n')}`)
+})
+
+test('expanded emoji runtime is imported only by its isolated compatibility controller', () => {
+  const roots = ['miniprogram/pages', 'miniprogram/components', 'miniprogram/utils']
+  const files = [
+    ...roots.flatMap(runtimeSourceFiles),
+    'miniprogram/app.js',
+    'miniprogram/app.json'
+  ]
+  const references = files
+    .filter(relativePath => relativePath !== 'miniprogram/pages/icon-compatibility/emoji-candidates-batch-02.js')
+    .filter(relativePath => read(relativePath).includes('emoji-candidates-batch-02'))
+    .sort()
+
+  assert.deepEqual(references, [
+    'miniprogram/pages/icon-compatibility/icon-compatibility.js'
+  ])
 })
 
 function wxssFiles(directory) {
