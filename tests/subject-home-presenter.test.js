@@ -44,7 +44,7 @@ test('builds a subject workbench from current bottlenecks and latest reports', (
   assert.deepEqual(view.taskQueue.map(item => item.displayName), ['审题理解', '计算基础'])
   assert.deepEqual(view.taskQueue.map(item => item.evidenceText), ['最近 2 道相关错题', '最近 4 道相关错题'])
   assert.deepEqual(view.taskQueue.map(item => item.actionText), ['查看/下载验证卷', '查看/下载验证卷'])
-  assert.equal(view.taskQueue[0].priorityText, '高优先级')
+  assert.equal(view.taskQueue[0].confidenceText, '●●● 高置信')
   assert.ok(view.taskQueue.every(item => item.status !== 'improved'))
   assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history'])
   assert.deepEqual(view.tools.map(item => item.icon), ['📸', '📄', '📚'])
@@ -135,7 +135,7 @@ test('math workbench expands coarse bottlenecks into fine-grained candidate bott
   assert.equal(view.taskQueue[0].fineBottleneck, true)
   assert.equal(view.taskQueue[0].lpCode, 'LP-001')
   assert.equal(view.taskQueue[0].bottleneckId, 'BN-DEC-MUL-POINT-COUNT')
-  assert.match(view.taskQueue[0].evidenceText, /高置信证据/)
+  assert.match(view.taskQueue[0].evidenceText, /高置信/)
   assert.match(view.taskQueue[0].evidenceText, /归属计算基础/)
   assert.match(view.taskQueue[0].evidenceText, /推荐资源 1 个/)
   assert.equal(view.taskQueue[0].viewId, 'LP-001:BN-DEC-MUL-POINT-COUNT')
@@ -356,4 +356,41 @@ test('English workbench recommends paper dictation when spelling has more weak w
   assert.equal(view.englishActionCards.find(item => item.key === 'englishPractice').recommended, false)
   assert.ok(view.tools.every(item => item.key !== 'englishPractice'))
   assert.ok(view.tools.every(item => item.key !== 'englishDictation'))
+})
+
+test('english vocabulary stats drive a four-part composition bar', () => {
+  const view = buildSubjectHomeView({}, [], () => '今天', {
+    subject: 'english',
+    subjectName: '英语',
+    englishVocabulary: {
+      summary: {
+        totalWords: 320,
+        needsPracticeCount: 22,
+        dueReviewCount: 18,
+        untestedCount: 210,
+        overall: { masteredCount: 70 }
+      }
+    }
+  })
+
+  assert.deepEqual(view.englishVocabSegments.map(item => item.key), ['mastered', 'needsPractice', 'dueReview', 'untested'])
+  assert.deepEqual(view.englishVocabSegments.map(item => item.tone), ['improved', 'destructive', 'waiting', 'neutral'])
+  assert.deepEqual(view.englishVocabSegments.map(item => item.count), [70, 22, 18, 210])
+  assert.equal(view.englishVocabSegments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
+  assert.equal(view.subjectSymbol, '📘')
+})
+
+test('english vocabulary composition bar stays empty without words', () => {
+  const view = buildSubjectHomeView({}, [], () => '今天', { subject: 'english', subjectName: '英语' })
+  assert.deepEqual(view.englishVocabSegments, [])
+})
+
+test('subject workbench exposes whitelist symbols for header and quick stats', () => {
+  const view = buildSubjectHomeView({ subject: 'math', currentBottlenecks: [] }, [], () => '今天', {
+    subject: 'math',
+    subjectName: '数学'
+  })
+  assert.equal(view.subjectSymbol, '📐')
+  assert.deepEqual(Object.keys(view.quickSymbols), ['pending', 'records', 'improved'])
+  Object.values(view.quickSymbols).forEach(symbol => assert.ok(symbol.length > 0))
 })

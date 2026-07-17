@@ -1,5 +1,7 @@
-const { profileBottlenecks, expandFineBottleneckItems, buildConfidence } = require('../../utils/bottleneck-view')
+const { profileBottlenecks, expandFineBottleneckItems, buildConfidence, normalizeStatus, STATUS_META } = require('../../utils/bottleneck-view')
 const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
+const { buildStatusSegments } = require('../../utils/status-segments')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 const DOMAIN_META = [
   { key: '数与代数', marker: '01', short: '数与代数' },
@@ -8,10 +10,13 @@ const DOMAIN_META = [
   { key: '综合与实践', marker: '04', short: '综合实践' },
 ]
 
+// 状态文案统一引用 STATUS_META（bottleneck-view 单一来源）；
+// cls 是知识地图自有样式类名（mastered/active/pending），只在此处做映射
 function statusMeta(status) {
-  if (status === 'improved') return { marker: '改善', text: '已改善', cls: 'mastered' }
-  if (status === 'persisting' || status === 'worsened') return { marker: '持续', text: '持续出现', cls: 'active' }
-  return { marker: '待验证', text: '待验证', cls: 'pending' }
+  const normalized = normalizeStatus({ status })
+  const meta = STATUS_META[normalized] || STATUS_META.needs_verification
+  const cls = normalized === 'improved' ? 'mastered' : (normalized === 'persisting' ? 'active' : 'pending')
+  return { marker: meta.icon, text: meta.text, cls }
 }
 
 function buildSymptomText(bn = {}) {
@@ -66,13 +71,23 @@ function buildKnowledgeMapPageView(profile = {}, subject = 'math') {
   }
 
   const domains = Object.values(domainMap)
-    .map(d => ({
-      ...d,
-      count: d.bottlenecks.length,
+    .map(d => {
+      const count = d.bottlenecks.length
       // 统一口径："待修复" = status !== 'improved'（含 needs_verification + persisting）
-      pendingCount: d.bottlenecks.filter(b => b.statusClass !== 'mastered').length,
-      masteredCount: d.bottlenecks.filter(b => b.statusClass === 'mastered').length,
-    }))
+      const pendingCount = d.bottlenecks.filter(b => b.statusClass !== 'mastered').length
+      const masteredCount = d.bottlenecks.filter(b => b.statusClass === 'mastered').length
+      return {
+        ...d,
+        count,
+        pendingCount,
+        masteredCount,
+        // 掌握度构成条（绿=已改善 / 金=待修复），count 直接驱动分段宽度
+        masterySegments: buildStatusSegments([
+          { key: 'mastered', label: `已改善 ${masteredCount}`, count: masteredCount, tone: 'improved' },
+          { key: 'pending', label: `待修复 ${pendingCount}`, count: pendingCount, tone: 'waiting' }
+        ])
+      }
+    })
     // 只返回有卡点的领域，避免空 domain 占位干扰
     .filter(d => d.count > 0)
 
@@ -83,6 +98,7 @@ function buildKnowledgeMapPageView(profile = {}, subject = 'math') {
   return {
     subject,
     title: '学习地图',
+    knowledgeMapSymbol: symbolOf('knowledgeMap'),
     summary: totalPending > 0
       ? `${totalPending} 个待修复 · ${totalMastered} 个已改善`
       : totalMastered > 0

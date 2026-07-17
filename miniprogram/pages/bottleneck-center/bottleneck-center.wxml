@@ -31,6 +31,18 @@
       </view>
     </view>
 
+    <view class="stats-segments" wx:if="{{statsSegments.length > 0}}">
+      <view class="b1-seg-bar">
+        <view class="b1-seg b1-seg-{{item.tone}}" wx:for="{{statsSegments}}" wx:key="key" style="width: {{item.widthPercent}}%;"></view>
+      </view>
+      <view class="b1-seg-legend">
+        <view class="b1-seg-legend-item" wx:for="{{statsSegments}}" wx:key="key">
+          <view class="b1-seg-dot b1-seg-{{item.tone}}"></view>
+          <text>{{item.label}}</text>
+        </view>
+      </view>
+    </view>
+
     <scroll-view class="filter-row" scroll-x>
       <view
         class="filter-chip {{activeSubject === item.key ? 'active' : ''}}"
@@ -73,10 +85,9 @@
           <text class="bottleneck-desc">{{item.evidenceText}}</text>
           <text class="bottleneck-time" wx:if="{{item.timeText}}">{{item.timeText}}</text>
           <view class="chip-row">
-            <text class="chip priority-{{item.priorityClass}}">{{item.priorityText}}</text>
+            <text class="chip confidence-{{item.confidenceLevel}}">{{item.confidenceText}}</text>
             <text class="chip" wx:if="{{item.category}}">{{item.category}}</text>
             <text class="chip state-{{item.statusClass}}">{{item.statusText}}</text>
-            <text class="chip" wx:if="{{item.weightText}}">{{item.weightText}}</text>
           </view>
         </view>
         <view class="card-actions">
@@ -87,14 +98,14 @@
             data-lp-code="{{item.lpCode}}"
             data-bottleneck-id="{{item.bottleneckId}}"
             data-view-id="{{item.viewId}}"
-          >学一下</view>
+          ><text class="b1-symbol card-action-symbol">{{learnSymbol}}</text>学一下</view>
           <view
             class="card-action verify"
             catchtap="onGenerateForBottleneck"
             data-subject="{{item.subject}}"
             data-lp-code="{{item.lpCode}}"
             data-bottleneck-id="{{item.bottleneckId}}"
-          >验证</view>
+          ><text class="b1-symbol card-action-symbol">{{verifySymbol}}</text>验证</view>
         </view>
       </view>
     </view>

@@ -31,6 +31,10 @@
             <text class="diagnosis-title">{{item.title}}</text>
             <text class="diagnosis-date">{{item.generatedAtText}} · 正式诊断</text>
           </view>
+          <view class="trend-pill trend-pill-{{item.trendClass}}" wx:if="{{item.trendText}}">
+            <text class="b1-symbol trend-pill-symbol" wx:if="{{item.trendSymbol}}">{{item.trendSymbol}}</text>
+            <text>{{item.trendText}}</text>
+          </view>
           <text class="diagnosis-report-link" catchtap="onTraceableUrlTap" data-url="{{item.reportUrl}}">完整报告 ›</text>
         </view>
         <text class="diagnosis-judgment">{{item.judgment}}</text>
@@ -39,6 +43,11 @@
           <text>{{item.improvedCount}} 项改善</text>
           <text wx:if="{{item.persistingCount > 0}}">{{item.persistingCount}} 项持续</text>
           <text wx:if="{{item.waitingCount > 0}}">{{item.waitingCount}} 项待验证</text>
+        </view>
+        <view class="diagnosis-status-segments" wx:if="{{item.diagnosisSegments.length > 0}}">
+          <view class="b1-seg-bar">
+            <view class="b1-seg b1-seg-{{seg.tone}}" wx:for="{{item.diagnosisSegments}}" wx:for-item="seg" wx:key="key" style="width: {{seg.widthPercent}}%;"></view>
+          </view>
         </view>
         <view class="diagnosis-next" catchtap="onTraceableUrlTap" data-url="{{item.primaryAction.url}}">
           <view class="diagnosis-next-copy">
@@ -67,7 +76,10 @@
           catchtap="onTraceableUrlTap"
           data-url="{{item.url}}"
         >
-          <text class="personal-action-title">{{item.title}}</text>
+          <view class="personal-action-title-row">
+            <text class="b1-symbol personal-action-symbol" wx:if="{{item.symbol}}">{{item.symbol}}</text>
+            <text class="personal-action-title">{{item.title}}</text>
+          </view>
           <text class="personal-action-summary">{{item.summary}}</text>
           <text class="personal-action-link">{{item.actionText}} ›</text>
         </view>
@@ -85,8 +97,16 @@
           data-url="{{item.url}}"
         >
           <view class="personal-subject-copy">
-            <text class="personal-subject-name">{{item.name}}</text>
+            <view class="personal-subject-name-line">
+              <text class="b1-symbol personal-subject-symbol" wx:if="{{item.symbol}}">{{item.symbol}}</text>
+              <text class="personal-subject-name">{{item.name}}</text>
+            </view>
             <text class="personal-subject-summary">{{item.summary}}</text>
+            <view class="personal-subject-segments" wx:if="{{item.statusSegments.length > 0}}">
+              <view class="b1-seg-bar">
+                <view class="b1-seg b1-seg-{{seg.tone}}" wx:for="{{item.statusSegments}}" wx:for-item="seg" wx:key="key" style="width: {{seg.widthPercent}}%;"></view>
+              </view>
+            </view>
           </view>
           <view class="personal-subject-right">
             <text class="personal-subject-status">{{item.statusText}}</text>

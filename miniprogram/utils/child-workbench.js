@@ -8,6 +8,8 @@ const {
 } = require('./constants')
 const { buildTraceableUrl } = require('./traceable-actions')
 const { sanitizeUserText, compactReadableTargets } = require('./user-facing-text')
+const { symbolOf } = require('./ui-symbols')
+const { buildStatusSegments } = require('./status-segments')
 
 const SUBJECT_MARKERS = { math: '数学', chinese: '语文', english: '英语' }
 
@@ -153,12 +155,13 @@ function subjectAction(student, subject, filter = '') {
   }
 }
 
-function statusItem(key, label, shortLabel, icon, value, tone, action) {
+function statusItem(key, label, shortLabel, icon, value, tone, action, symbol = '') {
   return {
     key,
     label,
     shortLabel,
     icon,
+    symbol,
     value: String(value || 0),
     tone,
     url: buildTraceableUrl(action)
@@ -194,6 +197,11 @@ function buildSubjectRows(student, profilesBySubject) {
       marker: SUBJECT_MARKERS[key] || subject.shortName,
       summary: visibleText(summary),
       statusText: hidden ? '隐藏' : (active.length > 0 ? `${active.length} 待办` : (improved.length > 0 ? '有改善' : `${profile.totalReports || 0} 记录`)),
+      // 迷你状态条：金=待跟进，绿=已改善（隐藏学科不展示）
+      statusSegments: hidden ? [] : buildStatusSegments([
+        { key: 'active', label: '待跟进', count: active.length, tone: 'waiting' },
+        { key: 'improved', label: '已改善', count: improved.length, tone: 'improved' }
+      ]),
       actionText: subjectActionText(key, hidden),
       hidden,
       url: buildTraceableUrl(hidden
@@ -386,6 +394,7 @@ function buildQuickLinks(student, reports = [], papers = []) {
   return [{
     key: 'latestReport',
     marker: '诊断',
+    symbol: symbolOf('report'),
     title: '最新诊断',
     summary: latestReport ? `${reportSubjectName} · ${latestReport.type === 'verification' ? '验证反馈' : '诊断报告'}` : '暂无诊断，先上传作业',
     url: latestReport
@@ -401,6 +410,7 @@ function buildQuickLinks(student, reports = [], papers = []) {
   }, {
     key: 'currentPaper',
     marker: '试卷',
+    symbol: symbolOf('paper'),
     title: '当前试卷',
     summary: paper ? paperShortSummary(paper, paperSubjectName) : '暂无试卷，先进入学科',
     url: paper
@@ -416,12 +426,14 @@ function buildQuickLinks(student, reports = [], papers = []) {
   }, {
     key: 'knowledgeMap',
     marker: '地图',
+    symbol: symbolOf('knowledgeMap'),
     title: '知识地图',
     summary: '查看知识节点、卡点和资源',
     url: knowledgeMapUrl(student, 'math')
   }, {
     key: 'learningRecords',
     marker: '记录',
+    symbol: symbolOf('learningRecords'),
     title: '学习记录',
     summary: '查看完整时间线',
     url: buildTraceableUrl({
@@ -460,32 +472,47 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
       ...reports.map(report => report.evidenceTime || report.createdAt),
       ...papers.map(paper => paper.generatedAt || paper.createdAt)
     ])
+    // 已改善指标优先直达学习进展页（按学科展示改善轨迹）；无改善时回退到卡点中心空态
+    const improvedSubject = SUBJECTS.find(key => improvedBottlenecks(profileMap.get(key) || {}).length > 0) || 'math'
     const statusItems = [
       statusItem('analyzing', '分析中点', '分析', '分析', analyzingCount, 'waiting', {
         type: 'learning-records',
         studentId: student._id,
         studentName: student.name,
         filter: 'analyzing'
-      }),
+      }, symbolOf('pending')),
       statusItem('pendingVerification', '待验证点', '待验证', '验证', allActive.length, 'informational', {
         type: 'bottleneck-center',
         studentId: student._id,
         studentName: student.name,
         filter: 'active'
-      }),
+      }, symbolOf('evidence')),
       statusItem('pendingUpload', '待上传点', '待上传', '上传', pendingUploadCount, 'destructive', {
         type: 'learning-records',
         studentId: student._id,
         studentName: student.name,
         filter: 'pending-upload'
-      }),
-      statusItem('improved', '已改善点', '改善', '改善', allImproved.length, 'improved', {
-        type: 'bottleneck-center',
-        studentId: student._id,
-        studentName: student.name,
-        filter: 'improved'
-      })
+      }, symbolOf('camera')),
+      statusItem('improved', '已改善点', '改善', '改善', allImproved.length, 'improved', allImproved.length > 0
+        ? {
+          type: 'learning-progress',
+          studentId: student._id,
+          studentName: student.name,
+          subject: improvedSubject
+        }
+        : {
+          type: 'bottleneck-center',
+          studentId: student._id,
+          studentName: student.name,
+          filter: 'improved'
+        }, symbolOf('trendUp'))
     ]
+    // 三色状态构成堆叠条（金=待处理[分析中+待验证] / 红=待上传 / 绿=已改善）
+    const statusSegments = buildStatusSegments([
+      { key: 'pending', label: `待处理 ${analyzingCount + allActive.length}`, count: analyzingCount + allActive.length, tone: 'waiting' },
+      { key: 'pendingUpload', label: `待上传 ${pendingUploadCount}`, count: pendingUploadCount, tone: 'destructive' },
+      { key: 'improved', label: `已改善 ${allImproved.length}`, count: allImproved.length, tone: 'improved' }
+    ])
     const todoCount = analyzingCount + allActive.length + pendingUploadCount
     const latestValue = buildLatestValue(student, reports, papers, subjectByKey)
     const nextAction = buildNextAction(student, profiles, papers)
@@ -540,6 +567,7 @@ function buildChildWorkbenchCards(input = {}, formatRelativeTime = () => '') {
         title: `${student.name || '孩子'}学习档案`
       }),
       statusItems,
+      statusSegments,
       subjectRows: buildSubjectRows(student, profileMap),
       latestValue,
       nextAction,
@@ -565,6 +593,12 @@ function buildFamilyWorkbenchHero(cards = []) {
   const visibleCards = Array.isArray(cards) ? cards.filter(Boolean) : []
   if (visibleCards.length === 0) return null
 
+  const totalAnalyzing = visibleCards.reduce((sum, card) => {
+    return sum + numericStatusValue(card, 'analyzing')
+  }, 0)
+  const totalPendingUpload = visibleCards.reduce((sum, card) => {
+    return sum + numericStatusValue(card, 'pendingUpload')
+  }, 0)
   const totalTodos = visibleCards.reduce((sum, card) => {
     return sum
       + numericStatusValue(card, 'analyzing')
@@ -600,6 +634,13 @@ function buildFamilyWorkbenchHero(cards = []) {
       : '没有堆积任务时，可以进入学习记录或学科工作台补充新的学习证据。',
     actionText: totalTodos > 0 ? '处理今日优先行动' : '查看学习档案',
     url: focusAction.url || focusCard.profileUrl || '',
+    kickerSymbol: symbolOf('target'),
+    // 家庭级构成条：金=待处理（分析中+待验证）/ 红=待上传 / 绿=已改善
+    statusSegments: buildStatusSegments([
+      { key: 'pending', label: `待处理 ${totalAnalyzing + totalPendingVerification}`, count: totalAnalyzing + totalPendingVerification, tone: 'waiting' },
+      { key: 'pendingUpload', label: `待上传 ${totalPendingUpload}`, count: totalPendingUpload, tone: 'destructive' },
+      { key: 'improved', label: `已改善 ${totalImprovements}`, count: totalImprovements, tone: 'improved' }
+    ]),
     stats: [
       { key: 'children', marker: '孩子', label: '孩子', shortLabel: '孩子', value: String(visibleCards.length) },
       { key: 'pendingActions', marker: '待办', label: '待办', shortLabel: '待办', value: String(totalTodos) },

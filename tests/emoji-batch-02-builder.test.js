@@ -9,7 +9,39 @@ const AdmZip = require('adm-zip')
 
 const ROOT = path.resolve(__dirname, '..')
 const VALIDATOR_PATH = path.join(ROOT, 'scripts/emoji-compatibility/validate-batch-02-manifest.js')
+const CURATION_HELPER_PATH = path.join(ROOT, 'scripts/emoji-compatibility/curate-batch-02-draft.js')
+const MANIFEST_PATH = path.join(ROOT, 'scripts/emoji-compatibility/batch-02-manifest.json')
 const REAL_SOURCE_CACHE = path.join(ROOT, 'tmp/emoji-compatibility-sources')
+const EXPECTED_MANIFEST_SHA256 = 'TASK_2_RED_MANIFEST_SHA256'
+const EXPECTED_MAPPING_SHA256 = 'TASK_2_RED_MAPPING_SHA256'
+const EXPECTED_CATEGORIES = [
+  ['B02-C01', '学习与办公', 35, '书本、文具、文件、图表、记录'],
+  ['B02-C02', '操作与导航', 35, '方向、播放、切换、搜索、链接'],
+  ['B02-C03', '状态与时间', 35, '提醒、进度、日历、时钟、结果'],
+  ['B02-C04', '面部与情绪', 35, '常见反馈、思考、困惑、鼓励'],
+  ['B02-C05', '基础手势', 35, '指向、赞同、协作、书写、观察'],
+  ['B02-C06', '人物与职业', 35, '学生、教师、家长、职业角色'],
+  ['B02-C07', '陆地动物', 35, '宠物、野生动物、生肖相关'],
+  ['B02-C08', '飞禽水生昆虫', 35, '鸟类、水生动物、昆虫'],
+  ['B02-C09', '植物天气自然', 35, '植物、天气、地貌、天体'],
+  ['B02-C10', '主食水果蔬菜', 35, '食材、餐食、水果、蔬菜'],
+  ['B02-C11', '饮品甜点餐具', 35, '饮品、甜点、餐具、庆祝食物'],
+  ['B02-C12', '体育与活动', 35, '球类、运动、奖项、户外活动'],
+  ['B02-C13', '艺术音乐游戏', 35, '乐器、表演、美术、玩具、游戏'],
+  ['B02-C14', '交通工具', 35, '陆海空交通、站点、出行'],
+  ['B02-C15', '建筑与地点', 35, '家庭、学校、公共场所、地标'],
+  ['B02-C16', '家居与日用品', 35, '家具、清洁、照明、生活用品'],
+  ['B02-C17', '科技与媒体', 35, '手机、电脑、影音、通信设备'],
+  ['B02-C18', '工具科学医疗', 35, '工具、实验、医疗、测量设备'],
+  ['B02-C19', '服饰与个人物品', 35, '衣物、配饰、箱包、个人用品'],
+  ['B02-C20', '数学图形与符号', 35, '数字、字母、数学、形状、标记'],
+  ['B02-C21', '文本与 Emoji 呈现', 50, 'VS15/VS16、默认文本和默认彩色差异'],
+  ['B02-C22', '肤色修饰组合', 50, '五档肤色、手势和人物修饰'],
+  ['B02-C23', '性别职业 ZWJ', 50, '性别、职业、活动等连接序列'],
+  ['B02-C24', '家庭关系 ZWJ', 50, '家庭、伴侣、亲子和多人组合'],
+  ['B02-C25', '旗帜与标签序列', 50, '区域旗帜、特殊旗帜和 tag 序列'],
+  ['B02-C26', '键帽与复杂新版', 50, '键帽、长序列、近期新增和易拆分组合']
+]
 const PUBLIC_EXPORTS = [
   'PINNED_SOURCES',
   'assertPinnedHash',
@@ -23,6 +55,30 @@ const PUBLIC_EXPORTS = [
 function loadValidator() {
   delete require.cache[VALIDATOR_PATH]
   return require(VALIDATOR_PATH)
+}
+
+function sha256(bytes) {
+  return crypto.createHash('sha256').update(bytes).digest('hex')
+}
+
+function readManifest() {
+  assert.equal(fs.existsSync(MANIFEST_PATH), true, 'Task 2 normative manifest must exist')
+  return JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'))
+}
+
+function normalizedMapping(manifest) {
+  return manifest.items.map(item => ({
+    id: item.id,
+    sequence: item.sequence,
+    categoryId: item.categoryId,
+    order: item.order,
+    label: item.label,
+    labelSource: item.labelSource
+  }))
+}
+
+function sequenceTokens(sequence) {
+  return sequence.split(/\s+/).map(token => token.replace(/^U\+/, '').toUpperCase())
 }
 
 function cldrFixture() {

@@ -120,19 +120,19 @@
   line-height: 1.2;
 }
 
-.priority-high {
-  background: #ffedd5;
-  color: #c2410c;
+.confidence-high {
+  background: var(--b1-priority-bg);
+  color: var(--b1-priority-fg);
 }
 
-.priority-medium {
-  background: #fef3c7;
-  color: #92400e;
+.confidence-medium {
+  background: var(--b1-waiting-bg);
+  color: var(--b1-waiting-fg);
 }
 
-.priority-low {
-  background: #ecfdf5;
-  color: #15803d;
+.confidence-low {
+  background: var(--b1-neutral-bg);
+  color: var(--b1-neutral-fg);
 }
 
 .state-recurring,
@@ -189,7 +189,7 @@
 
 .metric-label {
   color: #64748b;
-  font-size: 19rpx;
+  font-size: 20rpx;
   margin-top: 5rpx;
 }
 
@@ -262,112 +262,134 @@
   padding: 0 22rpx;
 }
 
+.pass-rate-card {
+  margin-top: 16rpx;
+  padding: 20rpx 18rpx;
+  border-radius: 18rpx;
+  background: #fff;
+  border: 1rpx solid #dbe7f3;
+}
+
+.pass-rate-title {
+  display: block;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: var(--b1-ink-muted);
+  margin-bottom: 12rpx;
+}
+
 .evidence-list {
   display: flex;
   flex-direction: column;
   gap: 14rpx;
+  position: relative;
+  padding-left: 30rpx;
 }
 
-.evidence-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 16rpx;
-  border-radius: 18rpx;
-  background: #fff;
-  border: 1rpx solid #dbe7f3;
-  box-shadow: 0 4rpx 16rpx rgba(15, 47, 82, .05);
-  padding: 20rpx 18rpx;
-  border-left: 8rpx solid #3b82f6;
+/* 点线时间线：左侧虚线导轨 + 每条证据一个圆点（卡片自身左边框仍表状态色） */
+/* 证据链：横向点状时间线（点=状态色，右侧连线串联，横向滑动浏览） */
+.evidence-timeline {
+  width: 100%;
+  white-space: nowrap;
 }
 
-.evidence-diagnosis-report {
-  border-left-color: #f97316;
+.tl-track {
+  display: inline-flex;
+  align-items: stretch;
+  padding: 8rpx 4rpx 4rpx;
 }
 
-.evidence-verification-report {
-  border-left-color: #22c55e;
-}
-
-.evidence-verification-paper {
-  border-left-color: #2563eb;
-}
-
-.evidence-row,
-.compact-row {
-  display: flex;
-  align-items: center;
-  gap: 16rpx;
-  min-height: 106rpx;
-  padding: 18rpx 0;
-  border-top: 1rpx solid #edf2f7;
-}
-
-.evidence-row:first-child,
-.compact-row:first-child {
-  border-top: 0;
-}
-
-.row-icon {
-  width: 66rpx;
-  height: 66rpx;
-  border-radius: 20rpx;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-size: 24rpx;
-  font-weight: 900;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.tl-node {
+  display: inline-flex;
+  flex-direction: column;
+  width: 220rpx;
   flex-shrink: 0;
+  padding: 0 18rpx 8rpx 0;
+  white-space: normal;
+  vertical-align: top;
 }
 
-.evidence-icon {
-  width: 66rpx;
-  height: 66rpx;
-  border-radius: 20rpx;
-  background: #dbeafe;
-  color: #1d4ed8;
-  font-size: 24rpx;
-  font-weight: 900;
+.tl-rail {
   display: flex;
   align-items: center;
-  justify-content: center;
+  height: 28rpx;
+  margin-bottom: 10rpx;
+}
+
+.tl-dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
   flex-shrink: 0;
+  border: 3rpx solid var(--b1-surface);
+  box-shadow: 0 0 0 2rpx var(--b1-border);
 }
 
-.row-report {
-  background: #ffedd5;
-  color: #c2410c;
-}
+.tl-dot-diagnosis { background: var(--b1-informational-fg); }
+.tl-dot-feedback,
+.tl-dot-done { background: var(--b1-improved-fg); }
+.tl-dot-pending { background: var(--b1-waiting-fg); }
 
-.evidence-copy {
+.tl-line {
   flex: 1;
-  min-width: 0;
+  height: 2rpx;
+  background: var(--b1-border);
+  margin-left: 6rpx;
 }
 
-.evidence-head,
-.evidence-title-line {
+.tl-time {
+  color: #94a3b8;
+  font-size: 20rpx;
+  line-height: 1.3;
+}
+
+.tl-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12rpx;
+  gap: 8rpx;
+  margin-top: 4rpx;
 }
 
-.evidence-category {
+.tl-category {
   color: #64748b;
   font-size: 20rpx;
   font-weight: 850;
 }
 
-.evidence-status {
+.tl-status {
   flex-shrink: 0;
-  padding: 5rpx 10rpx;
+  padding: 4rpx 10rpx;
   border-radius: 999rpx;
   background: #eef2ff;
   color: #2563eb;
-  font-size: 18rpx;
+  font-size: 20rpx;
   font-weight: 850;
   line-height: 1.2;
+}
+
+.tl-title {
+  color: #172033;
+  font-size: 24rpx;
+  font-weight: 850;
+  line-height: 1.35;
+  margin-top: 6rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.tl-summary {
+  color: #52677d;
+  font-size: 20rpx;
+  line-height: 1.4;
+  margin-top: 4rpx;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .status-diagnosis {
@@ -386,40 +408,6 @@
   color: #1d4ed8;
 }
 
-.evidence-title {
-  color: #172033;
-  font-size: 27rpx;
-  font-weight: 900;
-  line-height: 1.35;
-  min-width: 0;
-  word-break: break-all;
-}
-
-.evidence-desc {
-  display: block;
-  color: #52677d;
-  font-size: 22rpx;
-  line-height: 1.45;
-  margin-top: 8rpx;
-}
-
-.evidence-chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
-  margin-top: 12rpx;
-}
-
-.evidence-chip {
-  padding: 6rpx 10rpx;
-  border-radius: 8rpx;
-  background: #f1f5f9;
-  color: #52677d;
-  font-size: 19rpx;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
 .expand-row {
   height: 72rpx;
   border-radius: 16rpx;
@@ -431,6 +419,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-top: 8rpx;
 }
 
 .learning-entry {
@@ -471,45 +460,6 @@
 }
 
 .row-copy {
-  flex: 1;
-  min-width: 0;
-}
-
-.row-title-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12rpx;
-}
-
-.row-title,
-.compact-title {
-  color: #1f2937;
-  font-size: 25rpx;
-  font-weight: 850;
-}
-
-.row-time {
-  color: #94a3b8;
-  font-size: 20rpx;
-  white-space: nowrap;
-}
-
-.row-desc,
-.compact-desc {
-  display: block;
-  color: #64748b;
-  font-size: 22rpx;
-  line-height: 1.45;
-  margin-top: 5rpx;
-}
-
-.compact-row {
-  align-items: flex-start;
-}
-
-.compact-row .compact-title,
-.compact-row .compact-desc {
   flex: 1;
   min-width: 0;
 }
@@ -624,7 +574,12 @@
 .confidence-tag.high { color: #c53030; background: #fed7d7; }
 .confidence-tag.medium { color: #b7791f; background: #fefcbf; }
 .confidence-tag.low { color: #718096; background: #e2e8f0; }
-.hero-card.b1-subject-math { border-left: 10rpx solid var(--b1-math, #b7791f); }
-.hero-card.b1-subject-chinese { border-left: 10rpx solid var(--b1-chinese, #b84040); }
-.hero-card.b1-subject-english { border-left: 10rpx solid var(--b1-english, #2f855a); }
+.hero-card.b1-subject-math { border-left: 10rpx solid var(--b1-subject-math-fg); }
+.hero-card.b1-subject-chinese { border-left: 10rpx solid var(--b1-subject-chinese-fg); }
+.hero-card.b1-subject-english { border-left: 10rpx solid var(--b1-subject-english-fg); }
 .section { border-radius: 0; box-shadow: none; border-top: 2rpx solid #ded8cc; }
+
+/* 第三批：emoji 符号（28-32rpx，文字保留） */
+.kicker-row { display: flex; align-items: center; gap: 8rpx; }
+.kicker-symbol { font-size: 28rpx; }
+.section-symbol { font-size: 30rpx; margin-right: 8rpx; }

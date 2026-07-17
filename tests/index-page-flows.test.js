@@ -6,7 +6,7 @@ const ROOT = path.resolve(__dirname, '..')
 const { loadPageAndWait, flushAsync, waitForPageLoad, isThenable } = require('./helpers/page-flow-utils')
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 const util = require('../miniprogram/utils/util')
-const { buildChildWorkbenchCards } = require('../miniprogram/utils/child-workbench')
+const { buildChildWorkbenchCards, buildFamilyWorkbenchHero } = require('../miniprogram/utils/child-workbench')
 
 test('add student trims input and creates all subject profiles', async () => {
   let saved = null
@@ -905,4 +905,98 @@ test('index falls back to 1+N path when getHomeDashboard throws', async () => {
   assert.equal(homeDashboardCalls, 1, 'should try getHomeDashboard first')
   assert.equal(accessibleCalls, 1, 'should fall back to getAccessibleStudents')
   assert.equal(page.data.homeMode, 'single-profile')
+})
+
+test('child workbench cards expose status segments and a learning-progress entry for improved', () => {
+  const [card] = buildChildWorkbenchCards({
+    students: [{ _id: 'student-segments', name: '钟青羽', grade: 6 }],
+    profilesByStudentId: {
+      'student-segments': [{
+        subject: 'math',
+        currentBottlenecks: [
+          { lpCode: 'LP-001', status: 'needs_verification' },
+          { lpCode: 'LP-002', status: 'improved' }
+        ]
+      }]
+    },
+    reportsByStudentId: { 'student-segments': [] },
+    papersByStudentId: { 'student-segments': [] }
+  })
+
+  assert.deepEqual(card.statusSegments.map(item => item.key), ['pending', 'improved'])
+  assert.equal(card.statusSegments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
+  const improvedItem = card.statusItems.find(item => item.key === 'improved')
+  assert.match(improvedItem.url, /pages\/learning-progress\/learning-progress\?studentId=student-segments&subject=math/)
+  assert.equal(improvedItem.symbol, '📈')
+  assert.ok(card.quickLinks.every(link => link.symbol && link.symbol.length > 0))
+  const mathRow = card.subjectRows.find(row => row.key === 'math')
+  assert.deepEqual(mathRow.statusSegments.map(item => item.key), ['active', 'improved'])
+})
+
+test('child card improved metric falls back to bottleneck center without improvements', () => {
+  const [card] = buildChildWorkbenchCards({
+    students: [{ _id: 'student-no-improved', name: '钟青羽', grade: 6 }],
+    profilesByStudentId: {
+      'student-no-improved': [{
+        subject: 'math',
+        currentBottlenecks: [{ lpCode: 'LP-001', status: 'needs_verification' }]
+      }]
+    },
+    reportsByStudentId: { 'student-no-improved': [] },
+    papersByStudentId: { 'student-no-improved': [] }
+  })
+
+  const improvedItem = card.statusItems.find(item => item.key === 'improved')
+  assert.match(improvedItem.url, /pages\/bottleneck-center\/bottleneck-center/)
+})
+
+test('family hero exposes a kicker symbol and an aggregated status bar', () => {
+  const cards = buildChildWorkbenchCards({
+    students: [
+      { _id: 'student-a', name: '钟青羽', grade: 6 },
+      { _id: 'student-b', name: '钟筱雨', grade: 3 }
+    ],
+    profilesByStudentId: {
+      'student-a': [{ subject: 'math', currentBottlenecks: [{ lpCode: 'LP-001', status: 'needs_verification' }, { lpCode: 'LP-002', status: 'improved' }] }],
+      'student-b': [{ subject: 'math', currentBottlenecks: [{ lpCode: 'LP-001', status: 'persisting' }] }]
+    },
+    reportsByStudentId: { 'student-a': [], 'student-b': [] },
+    papersByStudentId: { 'student-a': [], 'student-b': [] }
+  })
+  const hero = buildFamilyWorkbenchHero(cards)
+
+  assert.equal(hero.kickerSymbol, '🎯')
+  assert.deepEqual(hero.statusSegments.map(item => item.key), ['pending', 'improved'])
+  assert.equal(hero.statusSegments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
+})
+
+test('single-profile home exposes subject symbols, mini bars and a trend pill class', () => {
+  const { buildLearningProfileHomeView } = require('../miniprogram/pages/index/index-presenter')
+  const home = buildLearningProfileHomeView({
+    student: { _id: 'student-1', name: '钟青羽' },
+    profiles: [{
+      subject: 'math',
+      totalReports: 1,
+      currentBottlenecks: [
+        { lpCode: 'LP-001', status: 'needs_verification' },
+        { lpCode: 'LP-002', status: 'improved' }
+      ]
+    }],
+    reports: [{
+      _id: 'report-1',
+      subject: 'math',
+      type: 'diagnosis',
+      status: 'completed',
+      createdAt: '2026-06-12T10:00:00Z',
+      bottlenecks: [{ lpCode: 'LP-001' }]
+    }],
+    papers: []
+  }, () => '今天')
+
+  const mathSubject = home.subjects.find(item => item.key === 'math')
+  assert.equal(mathSubject.symbol, '📐')
+  assert.deepEqual(mathSubject.statusSegments.map(item => item.key), ['active', 'improved'])
+  assert.equal(home.diagnosisWorkbenches[0].trendText, '稳步改善')
+  assert.equal(home.diagnosisWorkbenches[0].trendClass, 'improved')
+  assert.ok(home.personalActionQueue.every(item => item.symbol && item.symbol.length > 0))
 })

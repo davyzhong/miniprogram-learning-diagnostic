@@ -144,7 +144,7 @@ test('builds a directly readable report headline and source summary', () => {
   assert.equal(view.sourceImageCount, 2)
   assert.match(view.evidenceTimeText, /2026年6月13日/)
   assert.equal(view.trendSummaryText, '1 个持续出现，1 个新发现')
-  assert.equal(view.bottleneckList[0].statusText, '需要验证')
+  assert.equal(view.bottleneckList[0].statusText, '待验证')
   assert.equal(view.bottleneckList[0].statusClass, 'pending')
 })
 
@@ -760,4 +760,62 @@ test('全部验证通过时建议继续诊断', () => {
   assert.ok(view.verificationNextActionText.includes('全部改善'), '全通过应建议继续诊断')
   assert.equal(view.verificationFeedbackFailed, 0)
   assert.equal(view.verificationFeedbackUncertain, 0)
+})
+
+test('trend summary stays a string while structured segments drive the change band', () => {
+  const view = buildReportView({
+    type: 'diagnosis',
+    bottlenecks: [
+      { lpCode: 'LP-001', lpName: '分数运算', status: 'persisting', trend: 'persisting', errorCount: 2 },
+      { lpCode: 'LP-002', lpName: '单位换算', status: 'needs_verification', trend: 'new', errorCount: 1 },
+      { lpCode: 'LP-003', lpName: '审题理解', status: 'improved', trend: 'improved', errorCount: 1 }
+    ]
+  })
+
+  assert.equal(view.trendSummaryText, '1 个持续出现，1 个已改善，1 个新发现')
+  assert.deepEqual(view.trendSegments.map(item => item.key), ['new', 'persisting', 'improved'])
+  assert.deepEqual(view.trendSegments.map(item => item.tone), ['informational', 'destructive', 'improved'])
+  assert.deepEqual(view.trendSegments.map(item => item.label), ['新发现 1', '持续出现 1', '已改善 1'])
+  assert.equal(view.trendSegments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
+})
+
+test('report layers carry whitelist symbols for section navigation', () => {
+  const view = buildReportView({
+    type: 'diagnosis',
+    bottlenecks: [{ lpCode: 'LP-001', errorCount: 1 }]
+  })
+
+  assert.deepEqual(view.reportLayers.map(item => item.key), ['summary', 'evidence', 'change', 'action'])
+  view.reportLayers.forEach(layer => {
+    assert.equal(typeof layer.symbol, 'string')
+    assert.ok(layer.symbol.length > 0, `${layer.key} 应有白名单符号`)
+  })
+})
+
+test('verification outcome builds a three-part pass-rate band from evidence counts', () => {
+  const view = buildReportView({
+    type: 'verification',
+    bottlenecks: [{ lpCode: 'LP-001', status: 'improved' }],
+    verificationEvidence: [
+      { lpCode: 'LP-001', evidenceStatus: 'passed' },
+      { lpCode: 'LP-002', evidenceStatus: 'failed' },
+      { lpCode: 'LP-003', evidenceStatus: 'unclear' }
+    ]
+  })
+
+  assert.equal(view.verificationOutcome.visible, true)
+  assert.equal(view.verificationOutcome.total, 3)
+  assert.equal(view.verificationOutcome.passRateText, '通过率 33%')
+  assert.deepEqual(view.verificationOutcome.segments.map(item => item.key), ['passed', 'failed', 'uncertain'])
+  assert.deepEqual(view.verificationOutcome.segments.map(item => item.tone), ['improved', 'destructive', 'waiting'])
+  assert.equal(view.verificationOutcome.segments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
+})
+
+test('verification outcome stays hidden for diagnosis reports or missing evidence', () => {
+  const diagnosis = buildReportView({ type: 'diagnosis', bottlenecks: [] })
+  assert.equal(diagnosis.verificationOutcome.visible, false)
+  assert.deepEqual(diagnosis.verificationOutcome.segments, [])
+
+  const noEvidence = buildReportView({ type: 'verification', bottlenecks: [], verificationEvidence: [] })
+  assert.equal(noEvidence.verificationOutcome.visible, false)
 })

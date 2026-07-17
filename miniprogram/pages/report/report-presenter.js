@@ -3,7 +3,9 @@ const {
   buildBottleneckView,
   expandFineBottleneckItems,
   buildGroupedBottleneckViews,
-  buildConfidence
+  buildConfidence,
+  normalizeStatus,
+  STATUS_META
 } = require('../../utils/bottleneck-view')
 const { buildLearningMapReportItems } = require('../../utils/math-learning-map')
 const { paperCodeOf } = require('../../utils/paper-display')
@@ -11,6 +13,8 @@ const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { reportIllustrationOf } = require('../../utils/page-illustrations')
 const { beijingParts } = require('../../utils/util')
 const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
+const { symbolOf } = require('../../utils/ui-symbols')
+const { buildStatusSegments } = require('../../utils/status-segments')
 
 const DEFAULT_SOURCE_EVIDENCE_LIMIT = 3
 const DEFAULT_ERROR_DETAIL_LIMIT = 20
@@ -23,20 +27,40 @@ function formatDateTime(value) {
   return `${p.year}年${p.month}月${p.day}日 ${h}:${min}`
 }
 
+const TREND_SEGMENT_META = [
+  { key: 'new', label: '新发现', tone: 'informational' },
+  { key: 'persisting', label: '持续出现', tone: 'destructive' },
+  { key: 'recurring', label: '再次出现', tone: 'priority' },
+  { key: 'declining', label: '下降中', tone: 'waiting' },
+  { key: 'improved', label: '已改善', tone: 'improved' }
+]
+
+// 变化构成：返回拼接文案（保留原展示）+ 结构化分段（供"变化构成色带"渲染）
 function buildTrendSummary(bottlenecks = []) {
   const counts = bottlenecks.reduce((acc, item) => {
     const trend = item.trend || ''
     if (trend) acc[trend] = (acc[trend] || 0) + 1
     return acc
   }, {})
-  const parts = [
+  const textParts = [
     counts.recurring ? `${counts.recurring} 个再次出现` : '',
     counts.persisting ? `${counts.persisting} 个持续出现` : '',
     counts.declining ? `${counts.declining} 个下降中` : '',
     counts.improved ? `${counts.improved} 个已改善` : '',
     counts.new ? `${counts.new} 个新发现` : ''
   ].filter(Boolean)
-  return parts.length > 0 ? parts.join('，') : ''
+  const text = textParts.length > 0 ? textParts.join('，') : ''
+  const segments = buildStatusSegments(
+    TREND_SEGMENT_META
+      .filter(meta => counts[meta.key] > 0)
+      .map(meta => ({
+        key: meta.key,
+        label: `${meta.label} ${counts[meta.key]}`,
+        count: counts[meta.key],
+        tone: meta.tone
+      }))
+  )
+  return { text, segments }
 }
 
 function qualityViewOf(quality = {}) {
@@ -83,6 +107,26 @@ function evidenceSummaryCounts(items = []) {
     else acc.uncertain += 1
     return acc
   }, { passed: 0, failed: 0, uncertain: 0 })
+}
+
+// 验证报告顶部"通过率色带"：绿=通过 / 红=未通过 / 金=不确定（图像不清、证据不足等）
+function buildVerificationOutcome(isVerification, verificationEvidenceItems = []) {
+  const empty = { visible: false, passed: 0, failed: 0, uncertain: 0, total: 0, passRateText: '', segments: [] }
+  if (!isVerification || verificationEvidenceItems.length === 0) return empty
+  const counts = evidenceSummaryCounts(verificationEvidenceItems)
+  const total = counts.passed + counts.failed + counts.uncertain
+  if (total <= 0) return empty
+  return {
+    visible: true,
+    ...counts,
+    total,
+    passRateText: `通过率 ${Math.round((counts.passed / total) * 100)}%`,
+    segments: buildStatusSegments([
+      { key: 'passed', label: `通过 ${counts.passed}`, count: counts.passed, tone: 'improved' },
+      { key: 'failed', label: `未通过 ${counts.failed}`, count: counts.failed, tone: 'destructive' },
+      { key: 'uncertain', label: `不确定 ${counts.uncertain}`, count: counts.uncertain, tone: 'waiting' }
+    ])
+  }
 }
 
 function joinParts(parts = []) {
@@ -402,11 +446,7 @@ function buildReportView(report, options = {}) {
     : 1
 
   const bottleneckList = bottlenecks.map(item => {
-    const status = item.status === 'improved'
-      ? { statusText: '已有改善', statusClass: 'improved', statusIcon: '改善' }
-      : (item.status === 'persisting' || item.status === 'worsened')
-        ? { statusText: '持续出现', statusClass: 'persisting', statusIcon: '持续' }
-        : { statusText: '需要验证', statusClass: 'pending', statusIcon: '待验证' }
+    // 状态文案统一沿用 buildBottleneckView（STATUS_META 单一来源），不再本地覆盖
     const displayName = bottleneckLabelOf(item)
     const confidence = buildConfidence(item)
     const verificationSummary = confidence.passCount || confidence.failCount
@@ -428,7 +468,6 @@ function buildReportView(report, options = {}) {
     ].filter(Boolean)
     return {
       ...item,
-      ...status,
       displayName,
       confidenceDots: confidence.dots,
       confidenceLabel: confidence.label,
@@ -501,11 +540,12 @@ function buildReportView(report, options = {}) {
     qualityView
   })
   const reportLayers = [
-    { key: 'summary', marker: '结论', label: '结论', count: 1, available: true },
+    { key: 'summary', marker: '结论', label: '结论', symbol: symbolOf('report'), count: 1, available: true },
     {
       key: 'evidence',
       marker: '证据',
       label: '证据',
+      symbol: symbolOf('evidence'),
       count: sourcePhotos.length + allErrorDetailList.length + verificationEvidenceItems.length,
       available: sourcePhotos.length + allErrorDetailList.length + verificationEvidenceItems.length > 0
     },
@@ -513,6 +553,7 @@ function buildReportView(report, options = {}) {
       key: 'change',
       marker: '变化',
       label: '变化',
+      symbol: symbolOf('refresh'),
       count: bottlenecks.length,
       available: bottlenecks.length > 0 || Boolean(report.linkedVerificationReport)
     },
@@ -520,10 +561,14 @@ function buildReportView(report, options = {}) {
       key: 'action',
       marker: '行动',
       label: '行动',
+      symbol: symbolOf('target'),
       count: bottlenecks.length + chineseErrorItems.length,
       available: bottlenecks.length > 0 || chineseErrorItems.length > 0 || Boolean(explanation.explanationActionText)
     }
   ]
+
+  const trendSummary = buildTrendSummary(bottlenecks)
+  const verificationOutcome = buildVerificationOutcome(isVerification, verificationEvidenceItems)
 
   return {
     subjectClass: report.subject === 'chinese' ? 'chinese' : report.subject === 'english' ? 'english' : 'math',
@@ -545,7 +590,9 @@ function buildReportView(report, options = {}) {
       subject: report.subject,
       filter: 'evidence-time'
     }),
-    trendSummaryText: buildTrendSummary(bottlenecks),
+    trendSummaryText: trendSummary.text,
+    trendSegments: trendSummary.segments,
+    verificationOutcome,
     sourceImageCount: sourcePhotos.length,
     hasSourceEvidence: allSourceEvidenceItems.length > 0,
     sourceEvidenceItems,
@@ -634,13 +681,14 @@ function buildVerificationFeedback(report, options = {}) {
     const diagBn = diagnosisBottlenecks.find(db => db.lpCode === vb.lpCode)
     const beforeStatus = diagBn ? 'found' : 'new'
     const beforeText = beforeStatus === 'found' ? '发现卡点' : '新发现'
-    const afterText = vb.status === 'improved' ? '已改善' : (vb.status === 'persisting' || vb.status === 'worsened' ? '仍需练习' : '需要验证')
+    // 状态文案统一引用 STATUS_META（bottleneck-view 单一来源）
+    const afterMeta = STATUS_META[normalizeStatus(vb)] || STATUS_META.needs_verification
     return {
       lpCode: vb.lpCode,
       lpName: readableNameOf(vb) || '待确认学习卡点',
       beforeText,
-      afterText,
-      afterClass: vb.status === 'improved' ? 'improved' : 'persisting',
+      afterText: afterMeta.text,
+      afterClass: afterMeta.className,
       errorCount: vb.errorCount || 0,
     }
   })

@@ -1,12 +1,21 @@
 <view class="page b1-page progress-editorial">
+  <status-view wx:if="{{errorText}}" state="error" text="{{errorText}}" retryText="重新加载" bind:retry="loadData" />
+  <block wx:else>
   <view class="progress-header">
-    <text class="progress-title">学习进展</text>
+    <view class="progress-title-row">
+      <text class="b1-symbol progress-title-symbol">{{headerSymbol}}</text>
+      <text class="progress-title">学习进展</text>
+      <view class="progress-rate-pill" wx:if="{{improvementRateText}}">
+        <text class="progress-rate-value">{{improvementRateText}}</text>
+        <text class="progress-rate-label">改善率</text>
+      </view>
+    </view>
     <text class="progress-subtitle" wx:if="{{summary.totalRounds > 0}}">{{summary.diagnosisCount}} 次诊断 · {{summary.verificationCount}} 次验证 · {{summary.improvedCount}} 个已改善</text>
     <text class="progress-subtitle" wx:else>暂无学习记录</text>
   </view>
 
   <view class="card advice-card" wx:if="{{overallAdvice}}">
-    <view class="section-heading"><view class="heading-icon">建议</view><text>综合建议</text></view>
+    <view class="section-heading"><view class="heading-icon b1-symbol">{{adviceSymbol}}</view><text>综合建议</text></view>
     <text class="advice-text">{{overallAdvice}}</text>
     <view class="advice-stats">
       <view class="advice-stat"><text class="advice-stat-num advice-stat-improved">{{summary.improvedCount}}</text><text class="advice-stat-label">已改善</text></view>
@@ -16,7 +25,7 @@
   </view>
 
   <view class="card timeline-card" wx:if="{{timeline.length > 0}}">
-    <view class="section-heading"><view class="heading-icon">时间</view><text>迭代时间线</text></view>
+    <view class="section-heading"><view class="heading-icon b1-symbol">{{timelineSymbol}}</view><text>迭代时间线</text></view>
     <view class="timeline">
       <view class="timeline-node {{item.isVerification ? 'node-verify' : 'node-diagnosis'}}" wx:for="{{timeline}}" wx:key="reportId">
         <view class="timeline-dot {{item.isVerification ? 'dot-verify' : 'dot-diagnosis'}}"></view>
@@ -41,16 +50,16 @@
   </view>
 
   <view class="card matrix-card" wx:if="{{bottleneckMatrix.length > 0}}">
-    <view class="section-heading"><view class="heading-icon">卡点</view><text>卡点变化</text></view>
+    <view class="section-heading"><view class="heading-icon b1-symbol">{{matrixSymbol}}</view><text>卡点变化</text></view>
     <view class="matrix-row matrix-header-row">
       <text class="matrix-cell matrix-cell-name">卡点</text>
       <text class="matrix-cell matrix-cell-round" wx:for="{{timeline}}" wx:key="reportId">{{item.shortLabel}}</text>
     </view>
     <view class="matrix-row" wx:for="{{bottleneckMatrix}}" wx:key="lpCode">
       <text class="matrix-cell matrix-cell-name">{{item.lpName}}</text>
-      <text class="matrix-cell matrix-cell-round matrix-status-{{item.statusByRound[index]}}" wx:for="{{timeline}}" wx:for-item="round" wx:for-index="index" wx:key="reportId">
-        {{item.statusIcons[index]}}
-      </text>
+      <view class="matrix-cell matrix-cell-round heat-cell heat-{{item.statusByRound[index]}}" wx:for="{{timeline}}" wx:for-item="round" wx:for-index="index" wx:key="reportId">
+        <text class="heat-marker">{{item.statusMarkers[index]}}</text>
+      </view>
     </view>
     <view class="matrix-legend">
       <text class="legend-item legend-found">发现：新识别的卡点</text>
@@ -59,4 +68,5 @@
       <text class="legend-item legend-pending">待验证：等待下一次检查</text>
     </view>
   </view>
+  </block>
 </view>

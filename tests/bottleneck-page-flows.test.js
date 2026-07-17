@@ -189,10 +189,10 @@ test('learning progress maps ID-only matrix labels without changing status route
 test('learning progress replaces backend error details with a neutral toast', async () => {
   const wx = createWxMock()
   const cloud = {
-    getLearningProgress: async () => ({
-      success: false,
-      error: '失败 BN-ERROR-01 cloud://env/file'
-    })
+    // cloud 封装在 success === false 时会 throw（信封契约），这里模拟真实失败路径
+    getLearningProgress: async () => {
+      throw new Error('失败 BN-ERROR-01 cloud://env/file')
+    }
   }
   const { page } = loadPage('miniprogram/pages/learning-progress/learning-progress.js', {
     wx,
@@ -470,4 +470,121 @@ test('bottleneck detail uses forward action wording instead of duplicate return 
 
   assert.doesNotMatch(source, /返回卡点中心/)
   assert.match(source, /查看全部卡点/)
+})
+
+test('learning progress exposes an improvement rate for the header pill', async () => {
+  const cloud = {
+    getLearningProgress: async () => ({
+      success: true,
+      data: {
+        timeline: [],
+        bottleneckMatrix: [],
+        summary: { totalRounds: 3, improvedCount: 2, pendingCount: 1, persistingCount: 1 }
+      }
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/learning-progress/learning-progress.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.studentId = 'student-1'
+  page.subject = 'math'
+  await page.loadData()
+
+  assert.equal(page.data.improvementRateText, '50%')
+  assert.equal(page.data.headerSymbol, '📈')
+})
+
+test('learning progress hides the improvement rate when there are no bottlenecks', async () => {
+  const cloud = {
+    getLearningProgress: async () => ({
+      success: true,
+      data: { timeline: [], bottleneckMatrix: [], summary: { totalRounds: 0 } }
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/learning-progress/learning-progress.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.studentId = 'student-1'
+  page.subject = 'math'
+  await page.loadData()
+
+  assert.equal(page.data.improvementRateText, '')
+})
+
+test('bottleneck center exposes a full status composition bar under the stats grid', async () => {
+  const cloud = {
+    getStudentDashboard: async () => ({
+      student: { name: '钟青羽' },
+      subjectProfiles: [{
+        subject: 'math',
+        currentBottlenecks: [
+          { lpCode: 'LP-001', status: 'needs_verification' },
+          { lpCode: 'LP-002', status: 'persisting' },
+          { lpCode: 'LP-003', status: 'improved' }
+        ]
+      }]
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/bottleneck-center/bottleneck-center.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await page.onLoad({ studentId: 'student-1' })
+
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.statsSegments.map(item => item.key))), ['waiting', 'persisting', 'improved'])
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.statsSegments.map(item => item.count))), [1, 1, 1])
+  assert.equal(page.data.statsSegments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
+  assert.equal(page.data.learnSymbol, '📋')
+  assert.equal(page.data.verifySymbol, '✅')
+})
+
+test('bottleneck detail builds a two-tone verification pass bar from counts', async () => {
+  const cloud = {
+    getSubjectDashboard: async () => ({
+      profile: {
+        subject: 'math',
+        currentBottlenecks: [{
+          lpCode: 'LP-001',
+          lpName: '计算错误（加减乘除）',
+          status: 'needs_verification',
+          verificationPassCount: 3,
+          verificationFailCount: 1
+        }]
+      },
+      reports: [],
+      papers: []
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await loadPageAndWait(page, { studentId: 'student-1', subject: 'math', lpCode: 'LP-001' })
+
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.passRateSegments.map(item => item.key))), ['pass', 'fail'])
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.passRateSegments.map(item => item.tone))), ['improved', 'destructive'])
+  assert.equal(page.data.passRateSegments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
+  assert.equal(page.data.subjectSymbol, '📐')
+})
+
+test('bottleneck detail hides the pass bar when there is no verification yet', async () => {
+  const cloud = {
+    getSubjectDashboard: async () => ({
+      profile: {
+        subject: 'math',
+        currentBottlenecks: [{ lpCode: 'LP-001', lpName: '计算错误（加减乘除）', status: 'needs_verification' }]
+      },
+      reports: [],
+      papers: []
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', {
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  await loadPageAndWait(page, { studentId: 'student-1', subject: 'math', lpCode: 'LP-001' })
+
+  assert.deepEqual(JSON.parse(JSON.stringify(page.data.passRateSegments)), [])
 })

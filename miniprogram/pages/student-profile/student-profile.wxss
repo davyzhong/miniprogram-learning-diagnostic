@@ -25,3 +25,6 @@
   border-color: var(--b1-border);
   box-shadow: none;
 }
+
+/* 第三批：诊断卡变化构成条 */
+.diagnosis-status-segments { margin-top: 10rpx; max-width: 420rpx; }

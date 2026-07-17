@@ -4,6 +4,7 @@ const { formatRelativeTime } = require('../../utils/util')
 const { buildStatusText } = require('../../utils/learning-records')
 const { createAnalysisPoller } = require('../../utils/analysis-poller')
 const { buildSubjectHomeView } = require('./subject-home-presenter')
+const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { navigateToVerificationPaper, stopVerificationPoller } = require('../../utils/shared-navigation')
 const { getSubjectColor } = require('../../utils/constants')
 const { bindPageStatus } = require('../../utils/app-status')
@@ -352,6 +353,13 @@ Page({
     })
   },
 
+  onLearningProgressTap() {
+    const { studentId, subject, studentName } = this.data
+    wx.navigateTo({
+      url: buildTraceableUrl({ type: 'learning-progress', studentId, subject, studentName })
+    })
+  },
+
   // ========== 记录点击 ==========
 
   onRecordTap(e) {
@@ -399,9 +407,16 @@ Page({
       this.onUploadHistoryTap()
       return
     }
+    const { studentId, subject, studentName } = this.data
+    // 已改善指标直达学习进展页（本学科改善轨迹）；无改善时回退到卡点中心
+    if (target === 'improved' && Number(this.data.improvedCount) > 0) {
+      wx.navigateTo({
+        url: buildTraceableUrl({ type: 'learning-progress', studentId, subject, studentName })
+      })
+      return
+    }
     if (target === 'pending' || target === 'improved') {
       const status = target === 'improved' ? 'improved' : 'active'
-      const { studentId, subject, studentName } = this.data
       wx.navigateTo({
         url: `/pages/bottleneck-center/bottleneck-center?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&subject=${subject}&status=${status}`
       })

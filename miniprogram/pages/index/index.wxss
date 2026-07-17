@@ -157,7 +157,7 @@
 .child-status {
   padding: 6rpx 10rpx;
   border-radius: 999rpx;
-  font-size: 19rpx;
+  font-size: 20rpx;
   font-weight: 850;
   flex-shrink: 0;
 }
@@ -223,7 +223,7 @@
 
 .child-status-label {
   display: block;
-  font-size: 19rpx;
+  font-size: 20rpx;
   font-weight: 700;
   margin-top: 7rpx;
 }
@@ -274,7 +274,7 @@
   border-radius: 999rpx;
   background: #e0f2fe;
   color: #1d4ed8;
-  font-size: 19rpx;
+  font-size: 20rpx;
   font-weight: 800;
   white-space: nowrap;
   flex-shrink: 0;
@@ -316,7 +316,7 @@
 .child-panel-label {
   display: block;
   color: #2563eb;
-  font-size: 19rpx;
+  font-size: 20rpx;
   font-weight: 850;
   letter-spacing: .04em;
 }
@@ -373,7 +373,7 @@
 .secondary-action-summary {
   display: block;
   color: #64748b;
-  font-size: 19rpx;
+  font-size: 20rpx;
   line-height: 1.35;
   margin-top: 8rpx;
 }
@@ -410,7 +410,7 @@
 .quick-link-summary {
   display: block;
   color: #64748b;
-  font-size: 17rpx;
+  font-size: 20rpx;
   line-height: 1.25;
   margin-top: 6rpx;
   overflow: hidden;
@@ -465,7 +465,7 @@
 .icon-compatibility-entry-meta {
   margin-top: 4rpx;
   color: #64748b;
-  font-size: 18rpx;
+  font-size: 20rpx;
 }
 
 .icon-compatibility-entry-action {
@@ -547,7 +547,7 @@
 .family-hero-stat-label {
   display: block;
   color: #64748b;
-  font-size: 18rpx;
+  font-size: 20rpx;
   font-weight: 750;
   margin-top: 4rpx;
 }
@@ -635,6 +635,31 @@
   font-weight: 900;
 }
 
+.personal-subject-name-line {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+}
+
+.personal-subject-name-line .personal-subject-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.confidence-tag {
+  flex-shrink: 0;
+  padding: 4rpx 10rpx;
+  border-radius: 7rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.confidence-tag.confidence-high { background: var(--b1-priority-bg); color: var(--b1-priority-fg); }
+.confidence-tag.confidence-medium { background: var(--b1-waiting-bg); color: var(--b1-waiting-fg); }
+.confidence-tag.confidence-low { background: var(--b1-neutral-bg); color: var(--b1-neutral-fg); }
+
 .personal-subject-summary {
   display: block;
   margin-top: 6rpx;
@@ -675,7 +700,7 @@
 
 .child-diagnosis-list { border-top: 1rpx solid #dce5ef; margin-top: 11rpx; padding-top: 9rpx; }
 .child-diagnosis-head { align-items: center; display: flex; justify-content: space-between; margin-bottom: 4rpx; }
-.child-diagnosis-count { color: #718096; font-size: 18rpx; }
+.child-diagnosis-count { color: #718096; font-size: 20rpx; }
 
 .child-latest-diagnosis {
   align-items: center;
@@ -687,10 +712,10 @@
   padding: 9rpx 11rpx;
 }
 .child-diagnosis-copy { flex: 1; min-width: 0; }
-.child-diagnosis-label { color: #64748b; display: block; font-size: 18rpx; }
+.child-diagnosis-label { color: #64748b; display: block; font-size: 20rpx; }
 .child-diagnosis-title-line { align-items: baseline; display: flex; gap: 10rpx; }
 .child-diagnosis-title { color: #24364b; font-size: 23rpx; font-weight: 780; margin-right: 10rpx; }
-.child-diagnosis-date { color: #8391a1; flex-shrink: 0; font-size: 18rpx; }
+.child-diagnosis-date { color: #8391a1; flex-shrink: 0; font-size: 20rpx; }
 .child-diagnosis-summary { color: #64748b; display: block; font-size: 20rpx; line-height: 1.35; margin-top: 3rpx; }
 .child-diagnosis-action { color: #2865a8; flex-shrink: 0; font-size: 21rpx; font-weight: 720; }
 
@@ -704,14 +729,14 @@
 .diagnosis-head { align-items: center; display: flex; gap: 12rpx; }
 .diagnosis-title-copy { flex: 1; min-width: 0; }
 .diagnosis-title { color: #24364b; display: block; font-size: 25rpx; font-weight: 780; }
-.diagnosis-date { color: #8391a1; display: block; font-size: 19rpx; margin-top: 2rpx; }
+.diagnosis-date { color: #8391a1; display: block; font-size: 20rpx; margin-top: 2rpx; }
 .diagnosis-report-link { color: #2865a8; flex-shrink: 0; font-size: 20rpx; font-weight: 700; }
 .diagnosis-judgment { background: #f7f9fc; color: #465b70; display: block; font-size: 21rpx; line-height: 1.4; margin-top: 9rpx; padding: 8rpx 10rpx; }
-.diagnosis-signal-line { color: #64748b; display: flex; flex-wrap: wrap; font-size: 19rpx; gap: 12rpx; margin-top: 8rpx; }
+.diagnosis-signal-line { color: #64748b; display: flex; flex-wrap: wrap; font-size: 20rpx; gap: 12rpx; margin-top: 8rpx; }
 .diagnosis-next { align-items: center; border-top: 1rpx solid #edf2f7; display: flex; gap: 12rpx; margin-top: 9rpx; padding-top: 9rpx; }
 .diagnosis-next-copy { flex: 1; min-width: 0; }
 .diagnosis-next-title { color: #24364b; display: block; font-size: 22rpx; font-weight: 750; }
-.diagnosis-next-summary { color: #64748b; display: block; font-size: 19rpx; line-height: 1.35; margin-top: 2rpx; }
+.diagnosis-next-summary { color: #64748b; display: block; font-size: 20rpx; line-height: 1.35; margin-top: 2rpx; }
 .diagnosis-next-action { color: #2865a8; flex-shrink: 0; font-size: 20rpx; font-weight: 720; }
 .diagnosis-load-state { background: #f8fafc; color: #64748b; font-size: 21rpx; margin-bottom: 14rpx; padding: 14rpx; }
 
@@ -720,7 +745,7 @@
   border-radius: 999rpx;
   background: #e0f2fe;
   color: #1d4ed8;
-  font-size: 19rpx;
+  font-size: 20rpx;
   font-weight: 850;
 }
 
@@ -1326,7 +1351,7 @@
   border-radius: 9rpx;
   background: #e0f2fe;
   color: #1d4ed8;
-  font-size: 18rpx;
+  font-size: 20rpx;
   font-weight: 800;
   flex-shrink: 0;
 }
@@ -1357,7 +1382,7 @@
   border-radius: 9rpx;
   background: #f1f5f9;
   color: #52677d;
-  font-size: 19rpx;
+  font-size: 20rpx;
   line-height: 1.2;
   font-weight: 800;
 }
@@ -1738,7 +1763,7 @@
 .section-more {
   float: right;
   font-size: 22rpx;
-  color: #2b6cb0;
+  color: var(--b1-informational-fg);
   font-weight: 400;
 }
 
@@ -1794,5 +1819,112 @@
 
 .domain-badge.mastered {
   background: #c6f6d5;
-  color: #276749;
+  color: var(--b1-improved-fg);
+}
+
+/* ========== 第三批：emoji 符号行 + 状态构成条 + 趋势 pill ========== */
+.family-hero-kicker-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.family-hero-kicker-symbol {
+  font-size: 30rpx;
+}
+
+.family-hero-segments {
+  margin-top: 16rpx;
+}
+
+.child-status-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5rpx;
+  margin-top: 7rpx;
+}
+
+.child-status-symbol {
+  font-size: 28rpx;
+}
+
+.child-status-segments {
+  margin-top: 14rpx;
+}
+
+.diagnosis-status-segments {
+  margin-top: 12rpx;
+}
+
+.subject-row-segments {
+  margin-top: 8rpx;
+  max-width: 320rpx;
+}
+
+.personal-subject-segments {
+  margin-top: 8rpx;
+  max-width: 320rpx;
+}
+
+.quick-link-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.quick-link-symbol {
+  font-size: 28rpx;
+}
+
+.personal-action-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+}
+
+.personal-action-symbol {
+  font-size: 30rpx;
+}
+
+.personal-subject-symbol {
+  font-size: 30rpx;
+  margin-right: 8rpx;
+}
+
+/* 趋势状态 pill：稳步改善/仍需跟进/等待验证（文字保留，符号只辅助识别） */
+.trend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  flex-shrink: 0;
+  padding: 6rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.trend-pill-symbol {
+  font-size: 28rpx;
+}
+
+.trend-pill-improved {
+  background: var(--b1-improved-bg);
+  color: var(--b1-improved-fg);
+}
+
+.trend-pill-persisting {
+  background: var(--b1-destructive-bg);
+  color: var(--b1-destructive-fg);
+}
+
+.trend-pill-pending {
+  background: var(--b1-waiting-bg);
+  color: var(--b1-waiting-fg);
+}
+
+.trend-pill-neutral {
+  background: var(--b1-neutral-bg);
+  color: var(--b1-neutral-fg);
 }

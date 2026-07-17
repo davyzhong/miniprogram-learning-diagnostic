@@ -22,7 +22,8 @@ const UI_SOURCE_ROOTS = ['miniprogram/pages', 'miniprogram/utils']
 const UI_EXTENSIONS = new Set(['.wxml', '.js'])
 const UI_LITERAL_EXEMPTIONS = ['miniprogram/pages/icon-compatibility/emoji-candidates.js']
 const PROHIBITED_UI_SYMBOL = /(?:\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u2190-\u21FF\u2600-\u27BF]|[✓✗✕★◎⌾□▧])/u
-const APPROVED_UI_SYMBOLS = ['🗺️', '📚', '📄', '📸', '📊', '🎯', '✅']
+// 白名单唯一来源是 utils/ui-symbols.js（C01-C06 策展集），扫描按其放行
+const APPROVED_UI_SYMBOLS = Object.values(require('../miniprogram/utils/ui-symbols').UI_SYMBOLS)
 
 function uiSourceFiles(directory) {
   const absoluteDirectory = path.join(ROOT, directory)
@@ -175,4 +176,35 @@ test('repository-authored UI sources contain no decorative emoji or unstable sym
     })
 
   assert.deepEqual(violations, [], `仓库主动渲染的 UI emoji/不稳定符号：\n${violations.join('\n')}`)
+})
+
+function wxssFiles(directory) {
+  const absoluteDirectory = path.join(ROOT, directory)
+  if (!fs.existsSync(absoluteDirectory)) return []
+  return fs.readdirSync(absoluteDirectory, { withFileTypes: true }).flatMap(entry => {
+    const relativePath = path.join(directory, entry.name)
+    if (entry.isDirectory()) return wxssFiles(relativePath)
+    return entry.name.endsWith('.wxss') ? [relativePath] : []
+  })
+}
+
+test('legacy subject hexes are retired from every miniprogram WXSS (B1 tokens are the single source)', () => {
+  // 被淘汰的旧学科色：深蓝 #1f4f82 / 蓝 #2b6cb0 / 棕 #9c4f24 / 橙 #c05621
+  const DEPRECATED_HEXES = ['#1f4f82', '#2b6cb0', '#9c4f24', '#c05621']
+  const files = ['miniprogram/app.wxss', ...wxssFiles('miniprogram/pages'), ...wxssFiles('miniprogram/components')]
+  const violations = files.flatMap(relativePath => {
+    const source = read(relativePath)
+    return DEPRECATED_HEXES
+      .filter(hex => source.toLowerCase().includes(hex))
+      .map(hex => `${relativePath} 仍引用已淘汰色值 ${hex}`)
+  })
+
+  assert.deepEqual(violations, [], `页面 WXSS 应统一使用 var(--b1-*) token：\n${violations.join('\n')}`)
+})
+
+test('JS subject colors stay in sync with the B1 subject tokens', () => {
+  const { SUBJECT_COLORS } = require('../miniprogram/utils/constants')
+  assert.equal(SUBJECT_COLORS.math.bg.toUpperCase(), '#B37808')
+  assert.equal(SUBJECT_COLORS.chinese.bg.toUpperCase(), '#D4483A')
+  assert.equal(SUBJECT_COLORS.english.bg.toUpperCase(), '#4168B7')
 })

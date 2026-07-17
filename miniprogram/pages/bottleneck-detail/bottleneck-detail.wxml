@@ -8,17 +8,19 @@
       <view class="hero-top">
         <view class="status-icon">{{bottleneck.statusIcon}}</view>
         <view class="hero-copy">
-          <text class="kicker">{{subjectName}}学习卡点</text>
+          <view class="kicker-row">
+            <text class="b1-symbol kicker-symbol" wx:if="{{subjectSymbol}}">{{subjectSymbol}}</text>
+            <text class="kicker">{{subjectName}}学习卡点</text>
+          </view>
           <text class="title">{{bottleneck.displayName}}</text>
           <text class="summary" wx:if="{{bottleneck.parentDescription}}">{{bottleneck.parentDescription}}</text>
           <text class="summary">{{bottleneck.evidenceText}}</text>
         </view>
       </view>
       <view class="chip-row">
-        <text class="chip priority-{{bottleneck.priorityClass}}">{{bottleneck.priorityText}}</text>
+        <text class="chip confidence-{{bottleneck.confidenceLevel}}">{{bottleneck.confidenceText}}</text>
         <text class="chip" wx:if="{{bottleneck.category}}">{{bottleneck.category}}</text>
         <text class="chip state-{{bottleneck.statusClass}}">{{bottleneck.statusText}}</text>
-        <text class="chip" wx:if="{{bottleneck.weightText}}">{{bottleneck.weightText}}</text>
       </view>
     </view>
 
@@ -50,6 +52,19 @@
       </view>
     </view>
 
+    <view class="pass-rate-card" wx:if="{{passRateSegments.length > 0}}">
+      <text class="pass-rate-title">验证通过率</text>
+      <view class="b1-seg-bar">
+        <view class="b1-seg b1-seg-{{seg.tone}}" wx:for="{{passRateSegments}}" wx:for-item="seg" wx:key="key" style="width: {{seg.widthPercent}}%;"></view>
+      </view>
+      <view class="b1-seg-legend">
+        <view class="b1-seg-legend-item" wx:for="{{passRateSegments}}" wx:for-item="seg" wx:key="key">
+          <view class="b1-seg-dot b1-seg-{{seg.tone}}"></view>
+          <text>{{seg.label}}</text>
+        </view>
+      </view>
+    </view>
+
     <view class="time-card" wx:if="{{bottleneck.timeText}}">
       <text class="time-title">时间线索</text>
       <text class="time-text">{{bottleneck.timeText}}</text>
@@ -58,7 +73,10 @@
     <view class="section learning-section">
       <view class="section-title-line">
         <view>
-          <view class="section-heading">学习任务包</view>
+          <view class="section-heading">
+            <text class="b1-symbol section-symbol">{{practiceSymbol}}</text>
+            <text>学习任务包</text>
+          </view>
           <text class="section-subtitle">先用 5-10 分钟把这个卡点学清楚，再安排验证。</text>
         </view>
       </view>
@@ -90,38 +108,40 @@
     <view class="section">
       <view class="section-title-line">
         <view>
-          <view class="section-heading">卡点证据链</view>
+          <view class="section-heading">
+            <text class="b1-symbol section-symbol">{{evidenceSymbol}}</text>
+            <text>卡点证据链</text>
+          </view>
           <text class="section-subtitle">按时间串起诊断、验证卷和反馈，避免重复列表混在一起。</text>
         </view>
         <text class="section-count" wx:if="{{evidenceChain.length > 0}}">{{evidenceChain.length}} 条</text>
       </view>
-      <view class="evidence-list" wx:if="{{visibleEvidenceChain.length > 0}}">
-        <view
-          class="evidence-card evidence-{{item.kind}}"
-          wx:for="{{visibleEvidenceChain}}"
-          wx:key="id"
-          bindtap="onEvidenceTap"
-          data-id="{{item.id}}"
-          data-type="{{item.type}}"
-          data-url="{{item.url}}"
-        >
-          <view class="evidence-icon row-{{item.type}}">{{item.icon}}</view>
-          <view class="evidence-copy">
-            <view class="evidence-head">
-              <text class="evidence-category">{{item.category}}</text>
-              <text class="evidence-status status-{{item.statusClass}}">{{item.statusText}}</text>
-            </view>
-            <view class="evidence-title-line">
-              <text class="evidence-title">{{item.title}}</text>
-              <text class="row-time">{{item.timeText}}</text>
-            </view>
-            <text class="evidence-desc">{{item.summary}}</text>
-            <view class="evidence-chip-row" wx:if="{{item.metaChips.length > 0}}">
-              <text class="evidence-chip" wx:for="{{item.metaChips}}" wx:for-item="chip" wx:key="*this">{{chip}}</text>
+      <view class="evidence-timeline-wrap" wx:if="{{visibleEvidenceChain.length > 0}}">
+        <scroll-view class="evidence-timeline" scroll-x enhanced show-scrollbar="{{false}}">
+          <view class="tl-track">
+            <view
+              class="tl-node"
+              wx:for="{{visibleEvidenceChain}}"
+              wx:key="id"
+              bindtap="onEvidenceTap"
+              data-id="{{item.id}}"
+              data-type="{{item.type}}"
+              data-url="{{item.url}}"
+            >
+              <view class="tl-rail">
+                <view class="tl-dot tl-dot-{{item.statusClass}}"></view>
+                <view class="tl-line" wx:if="{{index < visibleEvidenceChain.length - 1}}"></view>
+              </view>
+              <text class="tl-time">{{item.timeText}}</text>
+              <view class="tl-head">
+                <text class="tl-category">{{item.category}}</text>
+                <text class="tl-status status-{{item.statusClass}}">{{item.statusText}}</text>
+              </view>
+              <text class="tl-title">{{item.title}}</text>
+              <text class="tl-summary">{{item.summary}}</text>
             </view>
           </view>
-          <text class="arrow">›</text>
-        </view>
+        </scroll-view>
         <view class="expand-row" wx:if="{{hiddenEvidenceCount > 0}}" bindtap="onToggleEvidence">
           展开全部 {{hiddenEvidenceCount}} 条证据
         </view>
