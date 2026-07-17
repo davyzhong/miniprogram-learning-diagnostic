@@ -377,7 +377,7 @@ test('english vocabulary stats drive a four-part composition bar', () => {
   assert.deepEqual(view.englishVocabSegments.map(item => item.tone), ['improved', 'destructive', 'waiting', 'neutral'])
   assert.deepEqual(view.englishVocabSegments.map(item => item.count), [70, 22, 18, 210])
   assert.equal(view.englishVocabSegments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
-  assert.equal(view.subjectSymbol, '📘')
+  assert.equal(view.subjectSymbol, '🔤')
 })
 
 test('english vocabulary composition bar stays empty without words', () => {
@@ -390,7 +390,7 @@ test('subject workbench exposes whitelist symbols for header and quick stats', (
     subject: 'math',
     subjectName: '数学'
   })
-  assert.equal(view.subjectSymbol, '📐')
+  assert.equal(view.subjectSymbol, '🧮')
   assert.deepEqual(Object.keys(view.quickSymbols), ['pending', 'records', 'improved'])
   Object.values(view.quickSymbols).forEach(symbol => assert.ok(symbol.length > 0))
 })

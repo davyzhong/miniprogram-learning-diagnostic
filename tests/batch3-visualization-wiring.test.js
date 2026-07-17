@@ -198,5 +198,5 @@ test('curated emoji resolve from ui-symbols by semantic key (no raw literals nee
   assert.equal(symbolOf('pending'), '⏳')
   assert.equal(symbolOf('warning'), '⚠️')
   assert.equal(symbolOf('unknown-key'), '')
-  assert.equal(subjectSymbolOf('math'), '📐')
+  assert.equal(subjectSymbolOf('math'), '🧮')
 })

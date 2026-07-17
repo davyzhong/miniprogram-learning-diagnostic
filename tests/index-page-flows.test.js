@@ -994,7 +994,7 @@ test('single-profile home exposes subject symbols, mini bars and a trend pill cl
   }, () => '今天')
 
   const mathSubject = home.subjects.find(item => item.key === 'math')
-  assert.equal(mathSubject.symbol, '📐')
+  assert.equal(mathSubject.symbol, '🧮')
   assert.deepEqual(mathSubject.statusSegments.map(item => item.key), ['active', 'improved'])
   assert.equal(home.diagnosisWorkbenches[0].trendText, '稳步改善')
   assert.equal(home.diagnosisWorkbenches[0].trendClass, 'improved')

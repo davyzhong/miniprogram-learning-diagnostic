@@ -26,7 +26,8 @@ const UI_LITERAL_EXEMPTIONS = [
 ]
 const PROHIBITED_UI_SYMBOL = /(?:\p{Extended_Pictographic}|\p{Emoji_Presentation}|[\u2190-\u21FF\u2600-\u27BF]|[✓✗✕★◎⌾□▧])/u
 // 白名单唯一来源是 utils/ui-symbols.js（C01-C06 策展集），扫描按其放行
-const APPROVED_UI_SYMBOLS = Object.values(require('../miniprogram/utils/ui-symbols').UI_SYMBOLS)
+const APPROVED_UI_SYMBOLS = [...new Set(Object.values(require('../miniprogram/utils/ui-symbols').UI_SYMBOLS))]
+  .sort((left, right) => [...right].length - [...left].length)
 
 function uiSourceFiles(directory) {
   const absoluteDirectory = path.join(ROOT, directory)

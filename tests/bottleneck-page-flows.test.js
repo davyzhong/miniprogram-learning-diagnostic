@@ -566,7 +566,7 @@ test('bottleneck detail builds a two-tone verification pass bar from counts', as
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.passRateSegments.map(item => item.key))), ['pass', 'fail'])
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.passRateSegments.map(item => item.tone))), ['improved', 'destructive'])
   assert.equal(page.data.passRateSegments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
-  assert.equal(page.data.subjectSymbol, '📐')
+  assert.equal(page.data.subjectSymbol, '🧮')
 })
 
 test('bottleneck detail hides the pass bar when there is no verification yet', async () => {
