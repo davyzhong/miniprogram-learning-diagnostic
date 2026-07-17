@@ -38,3 +38,24 @@ module.exports = ${JSON.stringify(seed, null, 2)}
   }
   console.log(`已生成 ${target.seeds.length} 个镜像到 ${target.dir}`);
 }
+
+// 前端镜像：miniprogram/data/math/*.seed.js 历史上手工维护，容易漂移；
+// 统一由本脚本生成，内容与对应 seed JSON 一致（module.exports 前端加载约定）。
+const FRONTEND_DESCRIPTIONS = {
+  'knowledge-nodes': '小学数学知识节点库（前端版）',
+  'bottleneck-taxonomy-v2': '细颗粒度学习卡点库（前端版）',
+  'learning-resources': '全网学习资源链接、评价和推荐等级（前端版）',
+  'bottleneck-categories': '小学数学学习卡点粗类与卡点家族治理库（前端版）',
+};
+const FRONTEND_DIR = path.join(ROOT, 'miniprogram/data/math');
+for (const [seedName, description] of Object.entries(FRONTEND_DESCRIPTIONS)) {
+  const seedPath = path.join(SEED_DIR, `${seedName}.seed.json`);
+  const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
+  const content = `// 由 scripts/build-math-seed-mirrors.js 自动生成，勿手改。
+// ${description}。内容与 data/math/${seedName}.seed.json 保持一致；
+// 这里改用 module.exports，符合 miniprogram/data 下 *.seed.js 的前端加载约定。
+module.exports = ${JSON.stringify(seed, null, 2)}
+`;
+  fs.writeFileSync(path.join(FRONTEND_DIR, `${seedName}.seed.js`), content);
+}
+console.log(`已生成 ${Object.keys(FRONTEND_DESCRIPTIONS).length} 个镜像到 miniprogram/data/math`);

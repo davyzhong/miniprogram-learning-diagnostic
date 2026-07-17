@@ -1,5 +1,5 @@
-// 小学数学学习卡点粗类与卡点家族治理库（前端版）。
-// 内容与仓库根 data/math/bottleneck-categories.seed.json 保持一致；
+// 由 scripts/build-math-seed-mirrors.js 自动生成，勿手改。
+// 小学数学学习卡点粗类与卡点家族治理库（前端版）。内容与 data/math/bottleneck-categories.seed.json 保持一致；
 // 这里改用 module.exports，符合 miniprogram/data 下 *.seed.js 的前端加载约定。
 module.exports = {
   "version": "0.1.0",
