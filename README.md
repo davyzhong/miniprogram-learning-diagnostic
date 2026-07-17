@@ -417,7 +417,7 @@ flowchart LR
 | 后端 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI（图像） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI（文本） | CloudBase AI `deepseek-v4-flash` | 用于生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 15 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / learningResourcePacks / aiUsageEvents / dataDeletionRequests / userConsents |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 17 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / englishPracticeAttempts / chineseSkillAttempts / learningResourcePacks / aiUsageEvents / dataDeletionRequests / userConsents |
 | PDF 生成 | pdfkit | 云函数内生成 A4 试卷/报告 PDF |
 | 测试 | Node.js 内置 test runner | `node --test`，无外部测试框架依赖 |
 
@@ -504,6 +504,8 @@ cd miniprogram-learning-diagnostic
 - `englishImportBatches`
 - `studentEnglishWords`
 - `englishPracticeSessions`
+- `englishPracticeAttempts`
+- `chineseSkillAttempts`
 - `learningResourcePacks`
 - `aiUsageEvents`
 - `dataDeletionRequests`

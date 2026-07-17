@@ -88,6 +88,8 @@
 | `englishImportBatches` | 云函数访问 | 英语词库候选导入批次 |
 | `studentEnglishWords` | 云函数访问 | 单个孩子的个人英语单词库 |
 | `englishPracticeSessions` | 云函数访问 | 英语 20 词听写会话与逐题记录 |
+| `englishPracticeAttempts` | 云函数访问 | 英语单词练习逐次作答记录（熟悉度/拼写维度更新依据） |
+| `chineseSkillAttempts` | 云函数访问 | 语文阅读表达微任务的逐次提交记录 |
 | `learningResourcePacks` | 仅创建者可读写 | 数学学习卡点任务包 |
 | `aiUsageEvents` | 仅创建者可读写 | AI 用量追加式事件账本 |
 | `dataDeletionRequests` | 仅创建者可读写 | 用户发起的数据删除请求 |
