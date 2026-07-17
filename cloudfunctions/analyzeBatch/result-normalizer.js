@@ -1,4 +1,5 @@
 const { TAXONOMY_BN_LIST, BN_VARIANT_ALIASES } = require('./taxonomy-bn-list');
+const { MATH_NODE_LIST, NODE_VARIANT_ALIASES } = require('./knowledge-node-catalog');
 
 function cleanText(value, maxLength) {
   return String(value || '').slice(0, maxLength);
@@ -86,6 +87,67 @@ function canonicalizeBottleneckId(rawId, title) {
 
   // 4. 都不命中：保留原 ID，标记为新卡点
   return { canonicalId: id, isNew: true };
+}
+
+/**
+ * 将 AI 返回的 nodeId 归并到标准知识节点 ID，返回标准 ID 或空串。
+ * 五层匹配：
+ *   1. 已是标准 ID → 直接返回
+ *   2. 在 NODE_VARIANT_ALIASES 变体映射表中 → 映射到标准 ID
+ *   3. ID 前缀互含（如 MATH-NUM-DEC-MUL-POINT-ERROR）→ 归并
+ *   4. title 双向子串匹配（归一化后 ≥4 字，同 normalizeBnTitle 做法）→ 归并
+ *   5. 都不命中 → 丢弃（返回空串）。与 BN 的"保留为新"策略不同：
+ *      自由发挥的 nodeId 指向不存在的节点，留着只会污染掌握状态键。
+ */
+function canonicalizeNodeId(rawId, title) {
+  const id = String(rawId || '').trim();
+  if (!id) return '';
+
+  // 1. 已是标准 ID
+  if (MATH_NODE_LIST.some(node => node.id === id)) return id;
+
+  // 2. 在变体映射表中
+  if (NODE_VARIANT_ALIASES[id]) return NODE_VARIANT_ALIASES[id];
+
+  // 3. ID 前缀互含。标准 ID 之间互不为前缀，所以"标准 ID 是 rawId 前缀"至多命中一个；
+  //    "rawId 是标准 ID 前缀"可能命中多个（如 MATH-NUM-DEC），只在唯一时归并。
+  const extended = MATH_NODE_LIST.find(node => id.startsWith(node.id));
+  if (extended) return extended.id;
+  const truncated = MATH_NODE_LIST.filter(node => node.id.startsWith(id));
+  if (truncated.length === 1) return truncated[0].id;
+
+  // 4. title 关键词匹配：用归一化后的 title 与节点目录做 substring 匹配
+  const normTitle = normalizeBnTitle(title);
+  if (normTitle.length >= 4) {
+    for (const node of MATH_NODE_LIST) {
+      const nodeNormTitle = normalizeBnTitle(node.title);
+      if (nodeNormTitle.length >= 4 && (normTitle.includes(nodeNormTitle) || nodeNormTitle.includes(normTitle))) {
+        return node.id;
+      }
+    }
+  }
+
+  // 5. 都不命中：丢弃
+  return '';
+}
+
+/**
+ * 归一化瓶颈的 nodeIds：逐个 canonicalize，命中的去重保留（cap 6）；
+ * 被丢弃的原始值记入 unmatchedNodeIds（cap 6），供后续数据扩充时回溯真实 AI 输出。
+ */
+function canonicalizeNodeIds(values, title) {
+  const rawValues = cleanStringArray(values, 12, 80);
+  const nodeIds = [];
+  const unmatchedNodeIds = [];
+  for (const raw of rawValues) {
+    const canonicalId = canonicalizeNodeId(raw, title);
+    if (canonicalId) {
+      if (!nodeIds.includes(canonicalId) && nodeIds.length < 6) nodeIds.push(canonicalId);
+    } else if (!unmatchedNodeIds.includes(raw) && unmatchedNodeIds.length < 6) {
+      unmatchedNodeIds.push(raw);
+    }
+  }
+  return { nodeIds, unmatchedNodeIds };
 }
 
 function normalizeNextActionType(value) {
@@ -188,20 +250,25 @@ function normalizeChineseErrorItems(items) {
 function normalizeBottlenecks(items) {
   return items
     .filter(item => item && typeof item.lpCode === 'string' && typeof item.lpName === 'string')
-    .map(item => ({
-      lpCode: item.lpCode.slice(0, 30),
-      lpName: item.lpName.slice(0, 80),
-      errorCount: Math.max(0, Number(item.errorCount) || 0),
-      severity: ['high', 'medium', 'low'].includes(item.severity) ? item.severity : 'medium',
-      rootCause: cleanText(item.rootCause, 300),
-      suggestion: cleanText(item.suggestion, 300),
-      nodeIds: cleanStringArray(item.nodeIds, 6, 80),
-      candidateBottlenecks: normalizeCandidateBottlenecks(item.candidateBottlenecks),
-      evidenceStrength: normalizeEvidenceStrength(item.evidenceStrength),
-      nextActionType: normalizeNextActionType(item.nextActionType),
-      nextActionText: cleanText(item.nextActionText, 200),
-      recommendedResourceIds: cleanStringArray(item.recommendedResourceIds, 8, 80),
-    }));
+    .map(item => {
+      const { nodeIds, unmatchedNodeIds } = canonicalizeNodeIds(item.nodeIds, item.lpName);
+      const normalized = {
+        lpCode: item.lpCode.slice(0, 30),
+        lpName: item.lpName.slice(0, 80),
+        errorCount: Math.max(0, Number(item.errorCount) || 0),
+        severity: ['high', 'medium', 'low'].includes(item.severity) ? item.severity : 'medium',
+        rootCause: cleanText(item.rootCause, 300),
+        suggestion: cleanText(item.suggestion, 300),
+        nodeIds,
+        candidateBottlenecks: normalizeCandidateBottlenecks(item.candidateBottlenecks),
+        evidenceStrength: normalizeEvidenceStrength(item.evidenceStrength),
+        nextActionType: normalizeNextActionType(item.nextActionType),
+        nextActionText: cleanText(item.nextActionText, 200),
+        recommendedResourceIds: cleanStringArray(item.recommendedResourceIds, 8, 80),
+      };
+      if (unmatchedNodeIds.length > 0) normalized.unmatchedNodeIds = unmatchedNodeIds;
+      return normalized;
+    });
 }
 
 function normalizeErrorDetails(items) {
@@ -296,4 +363,6 @@ module.exports = {
   normalizeCandidateBottlenecks,
   canonicalizeBottleneckId,
   normalizeBnTitle,
+  canonicalizeNodeId,
+  canonicalizeNodeIds,
 };

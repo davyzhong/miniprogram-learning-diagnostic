@@ -1,6 +1,8 @@
-const knowledgeSeed = require('../../data/math/knowledge-nodes.seed.json')
-const bottleneckSeed = require('../../data/math/bottleneck-taxonomy-v2.seed.json')
-const resourceSeed = require('../../data/math/learning-resources.seed.json')
+// 种子数据来自打包内 JS 镜像（scripts/build-math-seed-mirrors.js 生成）：
+// 云函数独立上传时 data/ 目录不会随包，不能直接 require ../../data/math/*.json。
+const knowledgeSeed = require('./math-seeds/knowledge-nodes.seed.js')
+const bottleneckSeed = require('./math-seeds/bottleneck-taxonomy-v2.seed.js')
+const resourceSeed = require('./math-seeds/learning-resources.seed.js')
 const { normalizeFineBottleneck } = require('./math-bottleneck-hierarchy')
 
 const MAX_CANDIDATE_BOTTLENECKS = 3
@@ -11,8 +13,13 @@ const BACKFILL_VERSION = 'math-learning-map-v2.2-hierarchy'
 const nodesById = new Map((knowledgeSeed.nodes || []).map(node => [node.nodeId, node]))
 const bottlenecksById = new Map((bottleneckSeed.bottlenecks || []).map(item => [item.bottleneckId, item]))
 const resourcesById = new Map((resourceSeed.resources || []).map(item => [item.resourceId, item]))
-const qualityAnchorPlatforms = new Set(resourceSeed.selectionPolicy?.qualityAnchorPlatforms || [])
-const domesticSupplementPlatforms = new Set(resourceSeed.selectionPolicy?.domesticSupplementPlatforms || [])
+// selectionPolicy 字段已改名（commit 733f918）：conceptAnchorPlatforms = 高质量概念锚点，
+// jumpablePlatforms + authoritativePlatforms = 国内资源（见 seed 的 domesticUseRule）。
+const qualityAnchorPlatforms = new Set(resourceSeed.selectionPolicy?.conceptAnchorPlatforms || [])
+const domesticSupplementPlatforms = new Set([
+  ...(resourceSeed.selectionPolicy?.jumpablePlatforms || []),
+  ...(resourceSeed.selectionPolicy?.authoritativePlatforms || [])
+])
 
 const LEGACY_CODE_ALIASES = {
   'LP-001': ['LP-OP', 'LP-FD', 'LP-PRE'],

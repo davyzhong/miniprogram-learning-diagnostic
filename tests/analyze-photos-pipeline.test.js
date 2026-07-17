@@ -16,6 +16,10 @@ const {
 } = require('../cloudfunctions/analyzePhotos/comparison')
 
 const {
+  createAnalysisArtifactService
+} = require('../cloudfunctions/analyzePhotos/analysis-artifacts')
+
+const {
   normalizeOcrSummary,
   markDuplicatePages
 } = require('../cloudfunctions/analyzePhotos/photo-dedup')
@@ -386,4 +390,111 @@ test('isNonRetryableError catches verification and permission errors', () => {
   assert.equal(isNonRetryableError('无权访问'), true)
   assert.equal(isNonRetryableError('ESOCKETTIMEDOUT'), false)
   assert.equal(isNonRetryableError('图片分析失败'), false)
+})
+
+// ── 数学学习地图兜底：buildAnalysisArtifacts 对 math 报告调用 enrichMathReport ──
+
+function createMathArtifactsService() {
+  return createAnalysisArtifactService({
+    db: {},
+    command: {},
+    normalizeForLookup: value => String(value || ''),
+    normalizeForCompare: value => String(value || ''),
+    getHistoricalContext: async () => ({ historicalPhotos: [], previousReport: null }),
+    reanalysisSourceReportIds: () => [],
+    getSubjectProfile: async () => null,
+    updateSubjectProfile: async () => {},
+    clearSubjectProfileAnalysis: async () => {},
+    failedBatchDebugMessage: () => '',
+  })
+}
+
+function buildMathArtifacts(bottlenecks, options = {}) {
+  const service = createMathArtifactsService()
+  return service.buildAnalysisArtifacts({
+    reportId: 'report-1',
+    report: { _id: 'report-1', subject: options.subject || 'math' },
+    fileIDs: ['cloud://a'],
+    batches: [['cloud://a']],
+    subject: options.subject || 'math',
+    studentId: 'student-1',
+    mode: 'diagnosis',
+    verificationPaper: null,
+    batchResults: [{
+      success: true,
+      data: {
+        pageResults: [{
+          imageIndex: 1,
+          fileID: 'cloud://a',
+          ocrSummary: '6 ÷ 7/8 = ? 学生直接乘 7/8',
+          totalErrors: 1,
+          bottlenecks,
+          errorDetails: [{
+            questionContent: '6 ÷ 7/8',
+            studentAnswer: '42/8',
+            correctAnswer: '48/7',
+            lpCode: 'LP-002'
+          }],
+        }],
+      },
+    }],
+  })
+}
+
+test('math report merge fills learning-map fields via heuristic fallback when AI omits them', async () => {
+  const artifacts = await buildMathArtifacts([
+    { lpCode: 'LP-002', lpName: '分数除法', errorCount: 1, severity: 'high', rootCause: '除以分数没有转换成乘倒数' },
+  ])
+
+  const bottleneck = artifacts.merged.bottlenecks[0]
+  assert.ok((bottleneck.nodeIds || []).length > 0, '兜底应补出 nodeIds')
+  assert.ok((bottleneck.candidateBottlenecks || []).length > 0, '兜底应补出 candidateBottlenecks')
+  assert.ok((bottleneck.recommendedResourceIds || []).length > 0, '兜底应补出 recommendedResourceIds')
+  assert.ok(bottleneck.nextActionType, '兜底应补出 nextActionType')
+  // 兜底发生在 buildProfileSummary 之前，画像应基于同一份补齐数据构建
+  const profileBottleneck = (artifacts.profileSummary.currentBottlenecks || [])
+    .find(item => item.lpCode === 'LP-002')
+  assert.ok(profileBottleneck, '画像应包含该瓶颈')
+  assert.ok((profileBottleneck.nodeIds || []).length > 0, '画像瓶颈应带上兜底补出的 nodeIds')
+})
+
+test('math report merge keeps AI-provided learning-map fields', async () => {
+  const artifacts = await buildMathArtifacts([
+    {
+      lpCode: 'LP-002',
+      lpName: '分数除法',
+      errorCount: 1,
+      severity: 'high',
+      nodeIds: ['MATH-NUM-FRACTION-DIV-RECIPROCAL'],
+      candidateBottlenecks: [{
+        bottleneckId: 'BN-FRACTION-DIV-RECIPROCAL-MISSING',
+        title: '除以分数未稳定转换为乘倒数',
+        evidenceStrength: 'high'
+      }],
+      recommendedResourceIds: ['RES-YT-FRACTION-DIV-001'],
+      nextActionType: 'resourceReview',
+      nextActionText: '先看高质量锚点，再配合国内资源复述。',
+    },
+  ])
+
+  const bottleneck = artifacts.merged.bottlenecks[0]
+  assert.ok(bottleneck.nodeIds.includes('MATH-NUM-FRACTION-DIV-RECIPROCAL'), 'AI 给的 nodeIds 应保留')
+  assert.ok(
+    bottleneck.candidateBottlenecks.some(item => item.bottleneckId === 'BN-FRACTION-DIV-RECIPROCAL-MISSING'),
+    'AI 给的 candidateBottlenecks 应保留'
+  )
+  assert.ok(bottleneck.recommendedResourceIds.includes('RES-YT-FRACTION-DIV-001'), 'AI 给的资源 ID 应保留')
+  assert.equal(bottleneck.nextActionType, 'resourceReview', 'AI 给的 nextActionType 不应被覆盖')
+  assert.equal(bottleneck.nextActionText, '先看高质量锚点，再配合国内资源复述。', 'AI 给的 nextActionText 不应被覆盖')
+})
+
+test('non-math report merge does not trigger learning-map enrichment', async () => {
+  const artifacts = await buildMathArtifacts(
+    [{ lpCode: 'LP-101', lpName: '识字词语', errorCount: 1, severity: 'high' }],
+    { subject: 'chinese' }
+  )
+
+  const bottleneck = artifacts.merged.bottlenecks[0]
+  assert.deepEqual(bottleneck.nodeIds || [], [])
+  assert.deepEqual(bottleneck.candidateBottlenecks || [], [])
 })
