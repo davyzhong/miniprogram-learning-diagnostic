@@ -1,7 +1,9 @@
 const cloud = require('../../utils/cloud')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 Page({
-  data: { studentId: '', studentName: '', item: null, loading: true },
+  data: {
+    reviewSymbol: symbolOf('writing'), studentId: '', studentName: '', item: null, loading: true },
   onLoad(options = {}) {
     this.loadDetail(options).catch(() => this.setData({ loading: false }))
   },

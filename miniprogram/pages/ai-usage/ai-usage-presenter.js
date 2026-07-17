@@ -1,6 +1,7 @@
 // AI 用量账单页 presenter —— 纯逻辑，不依赖 wx/cloud，可直接单测。
 const { beijingParts } = require('../../utils/util')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 const GLOBAL_EMPTY_STATE = {
   emptyTitle: '本月暂无 AI 用量',
@@ -141,6 +142,8 @@ function buildUsageState(events, summary, activeMonth, activeFilter = '') {
   const hasEvents = days.length > 0
 
   return {
+    receiptSymbol: symbolOf('receipt'),
+    chartSymbol: symbolOf('report'),
     activeMonth: activeMonth || currentMonth(),
     monthLabel,
     summaryCards,

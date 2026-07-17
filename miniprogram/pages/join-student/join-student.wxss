@@ -115,3 +115,8 @@
   color: var(--b1-ink);
   border: 2rpx solid var(--b1-border);
 }
+
+/* 第四批：emoji 符号 */
+.setup-deco { font-size: 72rpx; line-height: 1; margin-bottom: 12rpx; }
+.eyebrow-symbol, .section-symbol { font-size: 28rpx; margin-right: 6rpx; }
+.state-icon.b1-symbol { font-size: 56rpx; }

@@ -31,6 +31,7 @@
         <view class="timeline-dot {{item.isVerification ? 'dot-verify' : 'dot-diagnosis'}}"></view>
         <view class="timeline-content">
           <view class="timeline-header">
+            <text class="b1-symbol timeline-type-symbol">{{item.typeSymbol}}</text>
             <text class="timeline-type">{{item.isVerification ? '验证' : '诊断'}}</text>
             <text class="timeline-date">{{item.dateText}}</text>
           </view>

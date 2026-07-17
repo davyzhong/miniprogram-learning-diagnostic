@@ -329,3 +329,7 @@
 .mic-orb { background: #4f46e5; box-shadow: 0 20rpx 36rpx rgba(79, 70, 229, .24); }
 .mic-orb.recording { background: #4f46e5; box-shadow: 0 20rpx 36rpx rgba(79, 70, 229, .30); }
 .result-incorrect { border-left-color: #9a6700; background: #fff7e6; }
+
+/* 第四批：emoji 符号 */
+.hero-symbol, .title-symbol, .eyebrow-symbol, .section-symbol { font-size: 28rpx; margin-right: 6rpx; }
+.finish-mark.b1-symbol { font-size: 64rpx; }

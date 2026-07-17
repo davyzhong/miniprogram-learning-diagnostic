@@ -326,3 +326,6 @@
   color: var(--b1-ink-subtle);
   font-size: 20rpx;
 }
+
+/* 第四批：emoji 符号 */
+.test-symbol { font-size: 28rpx; margin-right: 6rpx; }

@@ -352,3 +352,7 @@
 /* 第三批：全量状态构成条 + 操作按钮 emoji 符号 */
 .stats-segments { margin: 0 24rpx 8rpx; }
 .card-action-symbol { font-size: 28rpx; margin-right: 6rpx; }
+.badge-symbol { font-size: 28rpx; margin-right: 6rpx; }
+.title-row { display: flex; align-items: center; gap: 10rpx; }
+.title-symbol { font-size: 32rpx; }
+.empty-deco { display: block; font-size: 88rpx; line-height: 1; margin-bottom: 16rpx; }

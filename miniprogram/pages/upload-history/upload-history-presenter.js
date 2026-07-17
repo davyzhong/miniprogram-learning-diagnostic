@@ -20,6 +20,7 @@ const {
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
 const { formatDate, formatClock, formatMonthDay } = require('../../utils/util')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 const HUMAN_PAPER_CODE_PATTERN = /^(?:[\u4e00-\u9fa5]{1,12}|[A-Z]{2,12})-(?:\d{8}-\d{1,3}|\d{2,3})$/i
 const MAX_INLINE_EVIDENCE = 3
@@ -32,11 +33,13 @@ const SUBJECT_FILTERS = [
 ]
 
 const GLOBAL_EMPTY_STATE = {
+  emptySymbol: symbolOf('folderOpen'),
   emptyTitle: '暂无学习记录',
   emptyDesc: '完成一次诊断、学习任务包或纸面验证卷后，记录会按天显示在这里。'
 }
 
 const FILTER_EMPTY_STATE = {
+  emptySymbol: symbolOf('folderOpen'),
   emptyTitle: '当前学科暂无记录',
   emptyDesc: '可切换“全部”查看其他学习记录。'
 }
@@ -167,7 +170,7 @@ function buildPhotoEvidenceRows(photos = [], kind = 'photo') {
     const cleanSummary = cleanPhotoSummary(photo.summaryText || photo.ocrSummary)
     return {
       kind,
-      icon: kind === 'answer-upload' ? '传' : '片',
+      icon: symbolOf(kind === 'answer-upload' ? 'camera' : 'photoCamera'),
       title: displayPhotoTitle(photo, index, kind),
       summary: sanitizeVisibleText(cleanSummary, { noun: '识别内容' }) || '暂无 OCR 摘要',
       isDuplicate: Boolean(photo.isDuplicate),
@@ -239,7 +242,7 @@ function buildReportEvent(report, photos, subjectName = '', fallbackSubject = ''
     subject,
     kind: isVerification ? 'verification-report' : 'diagnosis-report',
     displayLevel: 'main',
-    icon: isVerification ? '验证' : '报告',
+    icon: symbolOf(isVerification ? 'complete' : 'report'),
     url: reportUrl,
     title: sanitizeVisibleText(reportTitle(report, subjectName)),
     timeText: timeText(eventTime),
@@ -331,7 +334,7 @@ function buildPaperEvent(paper, subjectName = '', fallbackSubject = '', linkedRe
     subject,
     kind: 'verification-paper',
     displayLevel: 'main',
-    icon: '验证',
+    icon: symbolOf('paper'),
     url: paperUrl,
     title: sanitizeVisibleText(`${subjectName}纸面验证卷`),
     timeText: timeText(eventTime),
@@ -379,7 +382,7 @@ function countVerdicts(items = [], getter) {
 function buildEnglishPhotoEvidenceRows(session = {}, urlByFileID = new Map()) {
   return (session.photoFileIds || []).map((fileID, index) => ({
     kind: 'english-dictation-photo',
-    icon: '写',
+    icon: symbolOf('writing'),
     title: `听写纸照片${index + 1}`,
     summary: session.analysisStatus === 'completed' ? '听写纸已完成 AI 批改' : '听写纸已上传，等待 AI 批改',
     isDuplicate: false,
@@ -424,7 +427,7 @@ function buildEnglishSessionEvent(session = {}, subjectName = '英语', urlByFil
     subject: 'english',
     kind: isSpelling ? 'english-dictation-session' : 'english-familiarity-session',
     displayLevel: 'main',
-    icon: isSpelling ? '写' : '词',
+    icon: symbolOf(isSpelling ? 'writing' : 'letters'),
     url: '',
     title,
     timeText: timeText(eventTime),
@@ -466,7 +469,7 @@ function buildLearningResourceEvent(pack = {}, subjectName = '') {
     subject: pack.subject || '',
     kind: 'learning-resource',
     displayLevel: 'main',
-    icon: '学',
+    icon: symbolOf('practice'),
     url: `/pages/learning-resource/learning-resource?packId=${encodeURIComponent(pack._id || '')}`,
     title: sanitizeVisibleText(`学习任务包：${title}`, { noun: '学习内容' }),
     timeText: timeText(eventTime),
@@ -581,6 +584,7 @@ function buildHistoryState(events, activeSubject, statusItems = [], options = {}
   const analytics = buildRecordAnalytics(filteredEvents, filteredStatusItems)
 
   return {
+    headerSymbol: symbolOf('learningRecords'),
     activeSubject: safeSubject,
     subject: safeSubject,
     allEvents: events,

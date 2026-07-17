@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="hero-copy">
       <text class="eyebrow">{{studentName || '孩子'}} · 英语</text>
-      <text class="title">错词本</text>
+      <text class="title"><text class="b1-symbol hero-symbol">{{wrongBookSymbol}}</text>错词本</text>
       <text class="subtitle">把不熟、写错和到期复测的单词集中处理。</text>
     </view>
   </view>
@@ -39,7 +39,7 @@
     </view>
 
     <view class="section">
-      <text class="section-title">分组处理</text>
+      <text class="section-title"><text class="b1-symbol section-symbol">{{reviewSymbol}}</text>分组处理</text>
       <view class="group-list">
         <view class="group-row" wx:for="{{groups}}" wx:key="key">
           <view class="group-count">{{item.count}}</view>
@@ -52,7 +52,7 @@
     </view>
 
     <view class="section">
-      <text class="section-title">最近需要多见几次</text>
+      <text class="section-title"><text class="b1-symbol section-symbol">{{reviewSymbol}}</text>最近需要多见几次</text>
       <view class="empty-card" wx:if="{{weakWords.length === 0}}">
         <text class="empty-title">暂时没有高频错词</text>
         <text class="empty-desc">完成认词练习或纸面听写后，这里会自动出现需要加强的词。</text>

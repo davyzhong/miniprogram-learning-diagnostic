@@ -4,11 +4,12 @@ const { getBottleneckMeta } = require('./bottleneck-taxonomy')
 const { groupBottlenecksByHierarchy } = require('./math-bottleneck-hierarchy')
 const { formatMonthDay } = require('./util')
 const { readableNameOf } = require('./user-facing-text')
+const { symbolOf } = require('./ui-symbols')
 
 const STATUS_META = {
-  needs_verification: { text: '待验证', className: 'pending', icon: '待验证', badgeText: '待验证', actionText: '查看/下载验证卷' },
-  persisting: { text: '持续出现', className: 'persisting', icon: '持续', badgeText: '持续观察', actionText: '查看/下载验证卷' },
-  improved: { text: '已改善', className: 'improved', icon: '改善', badgeText: '已改善', actionText: '查看证据' }
+  needs_verification: { text: '待验证', className: 'pending', icon: '待验证', badgeText: '待验证', actionText: '查看/下载验证卷', symbolKey: 'pending' },
+  persisting: { text: '持续出现', className: 'persisting', icon: '持续', badgeText: '持续观察', actionText: '查看/下载验证卷', symbolKey: 'statusRed' },
+  improved: { text: '已改善', className: 'improved', icon: '改善', badgeText: '已改善', actionText: '查看证据', symbolKey: 'statusGreen' }
 }
 
 // === 置信度统一口径（唯一来源，与云函数 generatePaper 的分层逻辑保持一致）===
@@ -211,12 +212,17 @@ function buildTimeText(item = {}) {
 function statusMetaFor(item = {}) {
   const status = normalizeStatus(item)
   if (item.trend === 'recurring') {
-    return { ...STATUS_META.persisting, text: '再次出现', className: 'recurring', badgeText: '再次出现' }
+    return { ...STATUS_META.persisting, text: '再次出现', className: 'recurring', badgeText: '再次出现', symbolKey: 'repeat' }
   }
   if (item.trend === 'declining') {
-    return { ...STATUS_META.improved, text: '下降中', className: 'declining', badgeText: '改善中' }
+    return { ...STATUS_META.improved, text: '下降中', className: 'declining', badgeText: '改善中', symbolKey: 'trendDown' }
   }
   return STATUS_META[status] || STATUS_META.needs_verification
+}
+
+// 状态语义图标（白名单 emoji）：与状态色叠加，不替代文字
+function statusSymbolFor(meta = {}) {
+  return symbolOf(meta.symbolKey || STATUS_META.needs_verification.symbolKey)
 }
 
 function buildBottleneckView(item = {}, options = {}) {
@@ -252,6 +258,7 @@ function buildBottleneckView(item = {}, options = {}) {
     statusText: meta.text,
     statusClass: meta.className,
     statusIcon: meta.icon,
+    statusSymbol: statusSymbolFor(meta),
     statusBadgeText: meta.badgeText || meta.text,
     trend: item.trend || (status === 'improved' ? 'improved' : status === 'persisting' ? 'persisting' : 'new'),
     trendText: TREND_META[item.trend] || TREND_META[status] || '',

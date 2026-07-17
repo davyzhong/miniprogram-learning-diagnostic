@@ -4,7 +4,7 @@
   <view class="tip-bar b1-paper-header b1-subject-{{subject}}">
     <view class="tip-content">
       <view class="paper-header-band">
-        <text class="tip-title">默认诊断试卷</text>
+        <text class="tip-title"><text class="b1-symbol title-symbol">{{paperSymbol}}</text>默认诊断试卷</text>
         <text class="paper-state b1-state-waiting">纸张准备</text>
       </view>
       <text class="tip-desc">没有现成试卷？选一套标准题来做诊断</text>
@@ -12,7 +12,7 @@
   </view>
 
   <!-- 年级选择 -->
-  <view class="section-title">选择年级</view>
+  <view class="section-title"><text class="b1-symbol section-symbol">{{studentSymbol}}</text>选择年级</view>
   <view class="grade-row">
     <view
       class="grade-btn {{grade === item ? 'active' : ''}}"
@@ -25,7 +25,7 @@
 
   <!-- 试卷列表（A/B 卷） -->
   <view class="paper-list" wx:if="{{grade}}">
-    <view class="section-title">选择试卷</view>
+    <view class="section-title"><text class="b1-symbol section-symbol">{{paperSymbol}}</text>选择试卷</view>
 
     <view class="paper-card" wx:for="{{papers}}" wx:key="key">
       <view class="paper-header">

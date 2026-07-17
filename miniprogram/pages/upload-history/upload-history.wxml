@@ -2,7 +2,10 @@
 <view class="page b1-page">
   <view class="header compact-header">
     <view class="header-copy">
-      <text class="title">{{titleText}}</text>
+      <view class="title-row">
+        <text class="b1-symbol title-symbol">{{headerSymbol}}</text>
+        <text class="title">{{titleText}}</text>
+      </view>
       <text class="subtitle">诊断、验证卷和反馈按学习闭环整理。</text>
     </view>
   </view>
@@ -40,6 +43,7 @@
   <view class="loading" wx:if="{{loading}}">正在加载学习记录...</view>
 
   <view class="empty" wx:if="{{!loading && days.length === 0}}">
+    <text class="empty-deco">{{emptySymbol}}</text>
     <text class="empty-title">{{emptyTitle}}</text>
     <text class="empty-desc">{{emptyDesc}}</text>
   </view>

@@ -1,6 +1,7 @@
 const cloud = require('../../utils/cloud')
 const { RELATION_OPTIONS } = require('../../utils/constants')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 function safeVisibleText(value, fallback = '') {
   return sanitizeUserText(value || fallback, { treatAsId: true }) || fallback
@@ -35,6 +36,9 @@ function formatMember(member) {
 
 Page({
   data: {
+    parentSymbol: symbolOf('parent'),
+    inviteSymbol: symbolOf('link'),
+    editSymbol: symbolOf('pencil'),
     studentId: '',
     student: null,
     role: '',

@@ -12,7 +12,7 @@
   <view class="report-header {{isVerification ? 'header-verify' : 'header-diagnosis'}}" wx:if="{{report._id}}">
     <view class="report-header-inner">
       <view class="report-header-copy">
-        <text class="report-type">{{isVerification ? '验证报告' : '诊断报告'}}</text>
+        <text class="report-type"><text class="b1-symbol report-type-symbol">{{typeSymbol}}</text>{{isVerification ? '验证报告' : '诊断报告'}}</text>
         <text class="report-date">{{dateText}}</text>
         <text class="report-date traceable-text" wx:if="{{evidenceTimeText}}" bindtap="onTraceableUrlTap" data-url="{{evidenceTimeUrl}}">证据时间：{{evidenceTimeText}}</text>
         <text class="paper-code-chip" wx:if="{{paperCodeText}}" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">验证卷 {{paperCodeText}}</text>
@@ -196,7 +196,7 @@
     <view class="card" wx:if="{{showFlatBottleneckList}}">
       <view class="section-heading"><view class="heading-icon">卡点</view><text>发现的学习卡点</text></view>
       <view class="bottleneck-item" wx:for="{{bottleneckList}}" wx:key="viewId" bindtap="onTraceableUrlTap" data-url="{{item.detailUrl}}">
-        <view class="status-icon status-icon-{{item.statusClass}}">{{item.statusIcon}}</view>
+        <view class="status-icon status-icon-{{item.statusClass}} b1-symbol">{{item.statusSymbol}}</view>
         <view class="bottleneck-copy">
           <view class="bottleneck-title-row">
             <text class="bottleneck-title">{{item.displayName}}</text>
@@ -333,10 +333,10 @@
       </view>
     </view>
 
-    <view class="primary-action" wx:if="{{showNextStep && canGeneratePaper}}" bindtap="onGenerateVerification"><text>＋</text><text>查看验证卷</text></view>
+    <view class="primary-action" wx:if="{{showNextStep && canGeneratePaper}}" bindtap="onGenerateVerification"><text class="b1-symbol action-symbol">{{nextStepSymbol}}</text><text>查看验证卷</text></view>
     <view class="bottom-actions">
-      <button class="btn-secondary action-btn" bindtap="onShare">分享</button>
-      <button class="btn-secondary action-btn" bindtap="onDownloadPDF" disabled="{{generatingPdf}}">{{generatingPdf ? '生成中...' : '下载 PDF'}}</button>
+      <button class="btn-secondary action-btn" bindtap="onShare"><text class="b1-symbol action-symbol">{{shareSymbol}}</text>分享</button>
+      <button class="btn-secondary action-btn" bindtap="onDownloadPDF" disabled="{{generatingPdf}}"><text class="b1-symbol action-symbol" wx:if="{{!generatingPdf}}">{{downloadSymbol}}</text>{{generatingPdf ? '生成中...' : '下载 PDF'}}</button>
     </view>
   </view>
 

@@ -1,6 +1,7 @@
 const cloud = require('../../utils/cloud')
 const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 const RECOGNITION_WAIT_TIMEOUT_MS = 12000
 const RECORD_BUTTON_READY = '开始回答'
@@ -70,6 +71,8 @@ function withDisplayFields(item) {
 
 Page({
   data: {
+    practiceSymbol: symbolOf('ear'),
+    finishSymbol: symbolOf('complete'),
     studentId: '',
     studentName: '',
     grade: '',

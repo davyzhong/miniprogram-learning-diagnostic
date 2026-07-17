@@ -1,5 +1,6 @@
 const { EMOJI_CATEGORIES, EMOJI_CANDIDATE_COUNT } = require('./emoji-candidates')
 const { EMOJI_BATCH_02, EMOJI_BATCH_02_COUNT } = require('./emoji-candidates-batch-02')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 function categoryMeta(category) {
   return {
@@ -94,6 +95,7 @@ const INITIAL_STATE = activeState('B02', 0)
 
 Page({
   data: {
+    headerSymbol: symbolOf('puzzle'),
     candidateCount: EMOJI_CANDIDATE_COUNT + EMOJI_BATCH_02_COUNT,
     batchTabs: BATCH_TABS,
     ...INITIAL_STATE,

@@ -3,7 +3,7 @@
   <view class="config-hero b1-paper-header b1-subject-{{subject}}">
     <view class="config-hero-copy">
       <view class="paper-header-band">
-        <text class="config-kicker">验证卷</text>
+        <text class="config-kicker"><text class="b1-symbol kicker-symbol">{{printSymbol}}</text>验证卷</text>
         <text class="paper-state b1-state-waiting">自动准备</text>
       </view>
       <text class="config-title">{{subjectName}}纸面验证卷</text>
@@ -12,7 +12,7 @@
   </view>
 
   <view class="config-card" wx:if="{{selectedCount > 0}}">
-    <view class="section-title">覆盖范围</view>
+    <view class="section-title"><text class="b1-symbol section-symbol">{{paperSymbol}}</text>覆盖范围</view>
     <text class="scope-text">{{paperConfig.scopeText}}</text>
     <text class="strategy-text">{{paperConfig.strategyText}}</text>
     <view class="task-pack" wx:if="{{paperConfig.taskPages.length > 0}}">

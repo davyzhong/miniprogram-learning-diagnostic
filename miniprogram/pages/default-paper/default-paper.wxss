@@ -238,3 +238,7 @@
   border-radius: 9rpx;
   padding: 14rpx 0;
 }
+
+/* 第四批：emoji 符号 */
+.tip-title-row { display: flex; align-items: center; gap: 8rpx; }
+.tip-symbol, .title-symbol, .kicker-symbol, .section-symbol { font-size: 28rpx; margin-right: 6rpx; }

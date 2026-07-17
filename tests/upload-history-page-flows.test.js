@@ -743,7 +743,7 @@ test('learning record screenshot fixture keeps a dense verification paper readab
   }
   const visibleText = JSON.stringify([paperVisibleModel, reportVisibleModel])
 
-  assert.equal(paperEvent.icon, '验证')
+  assert.equal(paperEvent.icon, '📄')
   assert.equal(paperEvent.paperCode, '数学-20260712-06')
   assert.equal(paperEvent.showPaperCode, true)
   assert.match(paperEvent.summary, /覆盖 36 个数学学习卡点/)
@@ -1001,4 +1001,23 @@ test('learning records use subject accents, readable text markers, and compact e
   assert.match(wxss, /\.subject-english\s*\{[^}]*border-left-color:/s)
   assert.match(wxss, /\.event-marker\s*\{/)
   assert.match(wxss, /\.folded-evidence\s*\{[^}]*max-height:/s)
+})
+
+test('timeline events mark record types with whitelist emoji icons', () => {
+  const presenter = require('../miniprogram/pages/upload-history/upload-history-presenter')
+  const { events } = presenter.buildTimelineEvents(
+    [
+      { _id: 'r-diag', subject: 'math', type: 'diagnosis', status: 'completed', createdAt: '2026-07-01', bottlenecks: [] },
+      { _id: 'r-ver', subject: 'math', type: 'verification', status: 'completed', createdAt: '2026-07-02', bottlenecks: [] }
+    ],
+    [{ _id: 'p-1', subject: 'math', type: 'verification', createdAt: '2026-07-03' }],
+    new Map(),
+    'math',
+    '数学'
+  )
+
+  const byKind = Object.fromEntries(events.map(event => [event.kind, event.icon]))
+  assert.equal(byKind['diagnosis-report'], '📊')
+  assert.equal(byKind['verification-report'], '✅')
+  assert.equal(byKind['verification-paper'], '📄')
 })

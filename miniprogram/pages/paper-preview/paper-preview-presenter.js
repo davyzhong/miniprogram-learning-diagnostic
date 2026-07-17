@@ -12,6 +12,7 @@ const {
 const { getSubjectName } = require('../../utils/constants')
 const { buildTraceableUrl } = require('../../utils/traceable-actions')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 function subjectNameOf(subject) {
   return getSubjectName(subject, subject || '')
@@ -391,6 +392,10 @@ function buildPaperPreviewState({ paper, detail = {}, subjectName = '', studentN
   const secondaryAction = buildSecondaryAction(workbenchStatus.status, { uploadUrl, reportUrl })
 
   return {
+    paperSymbol: symbolOf('paper'),
+    downloadSymbol: symbolOf('arrowDown'),
+    printSymbol: symbolOf('print'),
+    uploadSymbol: symbolOf('camera'),
     paperId: p._id,
     studentId: p.studentId || '',
     subject: p.subject || 'math',

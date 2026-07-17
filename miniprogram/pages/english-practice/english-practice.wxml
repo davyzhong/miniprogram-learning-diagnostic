@@ -11,7 +11,7 @@
   </view>
 
   <view wx:elif="{{finished}}" class="finish-card">
-    <text class="finish-mark">OK</text>
+    <text class="finish-mark b1-symbol">{{finishSymbol}}</text>
     <text class="finish-title">本轮认词练习完成</text>
     <text class="finish-desc">不熟悉和听不清的单词已经记录，后续会提高出现频率。</text>
     <button class="primary-btn" bindtap="onFinishTap">完成并返回</button>
@@ -21,7 +21,7 @@
     <view class="practice-topbar">
       <view class="practice-title-wrap">
         <text class="practice-kicker">{{studentName || '孩子'}} · 英语</text>
-        <text class="practice-title">认词练习</text>
+        <text class="practice-title"><text class="b1-symbol title-symbol">{{practiceSymbol}}</text>认词练习</text>
       </view>
       <view class="progress-pill">
         <text class="progress-now">{{currentIndex + 1}}</text>

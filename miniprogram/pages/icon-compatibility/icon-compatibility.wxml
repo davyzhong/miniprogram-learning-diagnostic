@@ -2,7 +2,7 @@
   <view class="test-summary b1-card">
     <view class="test-summary-top">
       <view>
-        <text class="test-title">Android 图标兼容性测试</text>
+        <text class="test-title"><text class="b1-symbol test-symbol">{{headerSymbol}}</text>Android 图标兼容性测试</text>
         <text class="test-count">分批查看，每个编号都可复制反馈</text>
       </view>
       <text class="environment-label">测试环境</text>

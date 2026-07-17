@@ -77,6 +77,7 @@ Page({
         summary: sanitizeUserText(t.summary || '', { treatAsId: true }),
         improvedBottlenecksText: compactReadableTargets(t.improvedBottlenecks || []),
         shortLabel: t.isVerification ? '验证' : '诊断',
+        typeSymbol: symbolOf(t.isVerification ? 'complete' : 'report'),
       }))
 
       // 构建卡点矩阵：每个卡点在每个轮次的状态

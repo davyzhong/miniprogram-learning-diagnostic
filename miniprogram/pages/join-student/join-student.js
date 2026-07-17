@@ -1,6 +1,7 @@
 const cloud = require('../../utils/cloud')
 const { RELATION_OPTIONS } = require('../../utils/constants')
 const { sanitizeUserText } = require('../../utils/user-facing-text')
+const { symbolOf } = require('../../utils/ui-symbols')
 
 function safeRelationOptions(options = []) {
   return options.map(option => {
@@ -43,6 +44,8 @@ Page({
     status: 'loading',
     student: null,
     role: '',
+    familySymbol: symbolOf('family'),
+    studentSymbol: symbolOf('student'),
     relationOptions: VISIBLE_RELATION_OPTIONS,
     relation: DEFAULT_RELATION,
     relationIndex: DEFAULT_RELATION_INDEX,
