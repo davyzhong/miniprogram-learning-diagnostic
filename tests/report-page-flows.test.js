@@ -867,3 +867,75 @@ test('report bottleneck rows merge score and scope into compact lines', () => {
   // 细颗粒度说明从页头移到卡点卡片 caption
   assert.match(wxml, /card-caption/)
 })
+
+test('report hides evidence time when it falls on the report day', async () => {
+  const cloud = {
+    getReportDetail: async () => ({
+      permissions: { canView: true },
+      report: {
+        _id: 'report-1',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        summary: '发现审题理解卡点',
+        totalErrors: 3,
+        createdAt: '2026-07-12T01:30:00.000Z',
+        evidenceTime: '2026-07-12T01:30:00.000Z', // 与报告生成同一天（北京时间）
+        imageFiles: [{ fileID: 'cloud://photo-1' }],
+        bottlenecks: [{ lpCode: 'LP-008', lpName: '审题理解', errorCount: 3 }],
+        errorDetails: []
+      }
+    }),
+    getReportFeedback: async () => [],
+    getSubjectDashboard: async () => ({ profile: null })
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '2026年7月12日 9:30' },
+      './report-presenter': require('../miniprogram/pages/report/report-presenter')
+    }
+  })
+
+  await page.loadReport('report-1')
+  assert.equal(page.data.evidenceTimeText, '', '证据时间与报告同一天时不重复展示')
+})
+
+test('report keeps evidence time when it falls on a different day', async () => {
+  const cloud = {
+    getReportDetail: async () => ({
+      permissions: { canView: true },
+      report: {
+        _id: 'report-1',
+        studentId: 'student-1',
+        subject: 'math',
+        type: 'diagnosis',
+        status: 'completed',
+        summary: '发现审题理解卡点',
+        totalErrors: 3,
+        createdAt: '2026-07-12T01:30:00.000Z',
+        evidenceTime: '2026-07-10T12:00:00.000Z', // 早于报告日，需保留
+        imageFiles: [{ fileID: 'cloud://photo-1' }],
+        bottlenecks: [{ lpCode: 'LP-008', lpName: '审题理解', errorCount: 3 }],
+        errorDetails: []
+      }
+    }),
+    getReportFeedback: async () => [],
+    getSubjectDashboard: async () => ({ profile: null })
+  }
+  const wx = createWxMock()
+  const { page } = loadPage('miniprogram/pages/report/report.js', {
+    wx,
+    modules: {
+      '../../utils/cloud': cloud,
+      '../../utils/util': { formatChineseDateTime: () => '2026年7月12日 9:30' },
+      './report-presenter': require('../miniprogram/pages/report/report-presenter')
+    }
+  })
+
+  await page.loadReport('report-1')
+  assert.ok(page.data.evidenceTimeText, '证据时间早于报告日时必须保留展示')
+})
