@@ -59,7 +59,6 @@ Page({
     // 白名单 emoji（经 symbolOf 注入，WXML 不写字面量）
     familyTitleSymbol: symbolOf('home'),
     profileTitleSymbol: symbolOf('learningRecords'),
-    familyHeroSymbol: symbolOf('familyFull'),
     parentManageSymbol: symbolOf('parent'),
     aiUsageSymbol: symbolOf('receipt'),
     addStudentSymbol: symbolOf('plus'),

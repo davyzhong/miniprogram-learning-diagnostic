@@ -29,7 +29,7 @@
         <view class="diagnosis-head">
           <view class="diagnosis-title-copy">
             <text class="diagnosis-title">{{item.title}}</text>
-            <text class="diagnosis-date">{{item.generatedAtText}} · 正式诊断</text>
+            <text class="diagnosis-date">{{item.generatedAtText}} · 正式诊断 · {{item.evidenceCount}} 条证据</text>
           </view>
           <view class="trend-pill trend-pill-{{item.trendClass}}" wx:if="{{item.trendText}}">
             <text class="b1-symbol trend-pill-symbol" wx:if="{{item.trendSymbol}}">{{item.trendSymbol}}</text>
@@ -38,15 +38,15 @@
           <text class="diagnosis-report-link" catchtap="onTraceableUrlTap" data-url="{{item.reportUrl}}">完整报告 ›</text>
         </view>
         <text class="diagnosis-judgment">{{item.judgment}}</text>
-        <view class="diagnosis-signal-line">
-          <text>{{item.evidenceCount}} 条证据</text>
-          <text>{{item.improvedCount}} 项改善</text>
-          <text wx:if="{{item.persistingCount > 0}}">{{item.persistingCount}} 项持续</text>
-          <text wx:if="{{item.waitingCount > 0}}">{{item.waitingCount}} 项待验证</text>
-        </view>
-        <view class="diagnosis-status-segments" wx:if="{{item.diagnosisSegments.length > 0}}">
+        <view class="diagnosis-status-segments" wx:if="{{item.statusSegments.length > 0}}">
           <view class="b1-seg-bar">
-            <view class="b1-seg b1-seg-{{seg.tone}}" wx:for="{{item.diagnosisSegments}}" wx:for-item="seg" wx:key="key" style="width: {{seg.widthPercent}}%;"></view>
+            <view class="b1-seg b1-seg-{{seg.tone}}" wx:for="{{item.statusSegments}}" wx:for-item="seg" wx:key="key" style="width: {{seg.widthPercent}}%;"></view>
+          </view>
+          <view class="b1-seg-legend">
+            <view class="b1-seg-legend-item" wx:for="{{item.statusSegments}}" wx:for-item="seg" wx:key="key">
+              <view class="b1-seg-dot b1-seg-{{seg.tone}}"></view>
+              <text>{{seg.label}}</text>
+            </view>
           </view>
         </view>
         <view class="diagnosis-next" catchtap="onTraceableUrlTap" data-url="{{item.primaryAction.url}}">

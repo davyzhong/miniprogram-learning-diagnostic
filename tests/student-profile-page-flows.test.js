@@ -12,7 +12,8 @@ test('student profile uses expanded B1 report cards and never exposes AI usage',
 
   assert.match(wxml, /class="[^"]*b1-profile-report[^"]*b1-subject-\{\{item\.subject\}\}/)
   assert.match(wxml, /diagnosis-judgment/)
-  assert.match(wxml, /diagnosis-signal-line/)
+  assert.match(wxml, /diagnosis-status-segments/)
+  assert.doesNotMatch(wxml, /diagnosis-signal-line/)
   assert.match(wxml, /diagnosis-next/)
   assert.doesNotMatch(wxml, /\/pages\/ai-usage\/ai-usage/)
 })

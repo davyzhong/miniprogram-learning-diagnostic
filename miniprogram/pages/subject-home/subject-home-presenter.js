@@ -232,6 +232,18 @@ function buildPrimaryTask(subjectName, taskQueue, hasDiagnosis, permissions = {}
   }
 }
 
+// hero 大标题：学科当前状态结论（不带计数——计数只出现在地图/进展入口），
+// 避免与主按钮 actionText、入口计数文字重复。
+function buildHeroTitle(options = {}, state = {}) {
+  if (options.subject === 'english') return '英语词汇掌握'
+  if (state.chineseReviewCount > 0) return '有具体错项等待复测'
+  if (options.subject === 'chinese' && state.taskCount > 0) return '有能力型卡点待跟进'
+  if (state.taskCount > 0) return '有学习卡点等待验证'
+  if (state.hasDiagnosis && state.improvedCount > 0) return '已有卡点改善记录'
+  if (state.hasDiagnosis) return '当前没有待验证卡点'
+  return '尚未形成学科诊断'
+}
+
 function hasEnglishVocabulary(options = {}) {
   const summary = options.englishVocabulary && options.englishVocabulary.summary
   return options.subject === 'english' && summary && Number(summary.totalWords) > 0
@@ -343,7 +355,10 @@ function buildEnglishActionCards(stats, primaryTask = {}, options = {}, permissi
       actionText: '开始认词',
       recommended: primaryTask.actionType === 'englishPractice',
       disabled: !canWrite || !hasVocabularyReady,
-      disabledText: preparing ? '词库准备中' : '暂无词库'
+      disabledText: preparing ? '词库准备中' : '暂无词库',
+      disabledHint: preparing
+        ? '个人单词表正在自动导入，完成后即可开始'
+        : (!canWrite ? '仅档案创建者可开始练习' : '词库导入后即可开始')
     },
     {
       key: 'englishDictation',
@@ -357,7 +372,10 @@ function buildEnglishActionCards(stats, primaryTask = {}, options = {}, permissi
       actionText: '开始听写',
       recommended: primaryTask.actionType === 'englishDictation',
       disabled: !canWrite || !hasVocabularyReady,
-      disabledText: preparing ? '词库准备中' : '暂无词库'
+      disabledText: preparing ? '词库准备中' : '暂无词库',
+      disabledHint: preparing
+        ? '个人单词表正在自动导入，完成后即可开始'
+        : (!canWrite ? '仅档案创建者可开始练习' : '词库导入后即可开始')
     }
   ]
 
@@ -491,11 +509,12 @@ function buildSubjectHomeView(profile = {}, reports = [], formatRelativeTime = (
     subjectTitle: options.subject === 'english' ? '英语词汇掌握' : `${subjectName}工作台`,
     subjectIllustration: subjectIllustrationOf(subject, subjectName),
     subjectSymbol: subjectSymbolOf(options.subject || profile.subject || ''),
-    quickSymbols: {
-      pending: symbolOf('target'),
-      records: symbolOf('paper'),
-      improved: symbolOf('trendUp')
-    },
+    heroTitle: buildHeroTitle(options, {
+      taskCount: taskQueue.length,
+      chineseReviewCount: chineseReviewQueue.length,
+      hasDiagnosis,
+      improvedCount: bottleneckStats.improvedCount
+    }),
     totalReports: profile.totalReports || reports.filter(item => item.status === 'completed').length,
     currentSummary: primaryTask.summary,
     nextAction: primaryTask.actionText,

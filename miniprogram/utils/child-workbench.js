@@ -589,64 +589,44 @@ function numericStatusValue(card, key) {
   return Number.isFinite(value) ? value : 0
 }
 
+function compactMetric(key, label, value, tone) {
+  const count = Math.max(0, Number(value) || 0)
+  if (count === 0) return null
+  return {
+    key,
+    label,
+    value: count,
+    displayValue: count > 99 ? '99+' : String(count),
+    tone
+  }
+}
+
 function buildFamilyWorkbenchHero(cards = []) {
   const visibleCards = Array.isArray(cards) ? cards.filter(Boolean) : []
   if (visibleCards.length === 0) return null
 
-  const totalAnalyzing = visibleCards.reduce((sum, card) => {
-    return sum + numericStatusValue(card, 'analyzing')
-  }, 0)
-  const totalPendingUpload = visibleCards.reduce((sum, card) => {
-    return sum + numericStatusValue(card, 'pendingUpload')
-  }, 0)
-  const totalTodos = visibleCards.reduce((sum, card) => {
-    return sum
-      + numericStatusValue(card, 'analyzing')
-      + numericStatusValue(card, 'pendingVerification')
-      + numericStatusValue(card, 'pendingUpload')
-  }, 0)
-  const totalPendingVerification = visibleCards.reduce((sum, card) => {
-    return sum + numericStatusValue(card, 'pendingVerification')
-  }, 0)
-  const totalImprovements = visibleCards.reduce((sum, card) => {
-    return sum + numericStatusValue(card, 'improved')
-  }, 0)
-  const totalFormalDiagnoses = visibleCards.reduce((sum, card) => {
-    const value = Number(card.formalDiagnosisCount)
-    return sum + (Number.isFinite(value) ? value : 0)
-  }, 0)
-  const focusCard = visibleCards.find(card => numericStatusValue(card, 'pendingUpload') > 0)
-    || visibleCards.find(card => numericStatusValue(card, 'pendingVerification') > 0)
-    || visibleCards.find(card => numericStatusValue(card, 'analyzing') > 0)
-    || visibleCards[0]
-  const focusAction = focusCard.priorityAction || focusCard.nextAction || {}
-  const focusName = focusCard.name || '孩子'
-  const pendingText = totalPendingVerification > 0
-    ? `${totalPendingVerification} 个学习卡点等待处理`
-    : '当前没有待验证卡点'
+  const pending = visibleCards.reduce((sum, card) => (
+    sum + numericStatusValue(card, 'analyzing') + numericStatusValue(card, 'pendingVerification')
+  ), 0)
+  const pendingUpload = visibleCards.reduce((sum, card) => (
+    sum + numericStatusValue(card, 'pendingUpload')
+  ), 0)
+  const improved = visibleCards.reduce((sum, card) => (
+    sum + numericStatusValue(card, 'improved')
+  ), 0)
+  const metrics = [
+    compactMetric('pending', '待处理', pending, 'waiting'),
+    compactMetric('pendingUpload', '待上传', pendingUpload, 'destructive'),
+    compactMetric('improved', '已改善', improved, 'improved')
+  ].filter(Boolean)
+  const idleText = pending === 0 && pendingUpload === 0 ? '今日无待办' : ''
+  const spoken = [idleText, ...metrics.map(item => `${item.value}项${item.label}`)].filter(Boolean)
 
   return {
-    title: totalTodos > 0
-      ? `今天先看${focusName}的学习行动`
-      : '今天的家庭学习状态很清爽',
-    summary: totalTodos > 0
-      ? `${pendingText}，可以从这里直接进入最需要处理的一步。`
-      : '没有堆积任务时，可以进入学习记录或学科工作台补充新的学习证据。',
-    actionText: totalTodos > 0 ? '处理今日优先行动' : '查看学习档案',
-    url: focusAction.url || focusCard.profileUrl || '',
-    kickerSymbol: symbolOf('target'),
-    // 家庭级构成条：金=待处理（分析中+待验证）/ 红=待上传 / 绿=已改善
-    statusSegments: buildStatusSegments([
-      { key: 'pending', label: `待处理 ${totalAnalyzing + totalPendingVerification}`, count: totalAnalyzing + totalPendingVerification, tone: 'waiting' },
-      { key: 'pendingUpload', label: `待上传 ${totalPendingUpload}`, count: totalPendingUpload, tone: 'destructive' },
-      { key: 'improved', label: `已改善 ${totalImprovements}`, count: totalImprovements, tone: 'improved' }
-    ]),
-    stats: [
-      { key: 'children', marker: '孩子', label: '孩子', shortLabel: '孩子', value: String(visibleCards.length) },
-      { key: 'pendingActions', marker: '待办', label: '待办', shortLabel: '待办', value: String(totalTodos) },
-      { key: 'improvements', marker: '改善', label: '改善', shortLabel: '改善', value: String(totalImprovements) },
-      { key: 'formalDiagnoses', marker: '诊断', label: '诊断', shortLabel: '诊断', value: String(totalFormalDiagnoses) }
-    ]
+    label: '家庭今日',
+    metrics,
+    idleText,
+    ariaLabel: ['家庭今日', ...spoken].join('，')
   }
 }
 

@@ -405,21 +405,6 @@ Page({
     const target = e.currentTarget.dataset.target || ''
     if (target === 'records') {
       this.onUploadHistoryTap()
-      return
-    }
-    const { studentId, subject, studentName } = this.data
-    // 已改善指标直达学习进展页（本学科改善轨迹）；无改善时回退到卡点中心
-    if (target === 'improved' && Number(this.data.improvedCount) > 0) {
-      wx.navigateTo({
-        url: buildTraceableUrl({ type: 'learning-progress', studentId, subject, studentName })
-      })
-      return
-    }
-    if (target === 'pending' || target === 'improved') {
-      const status = target === 'improved' ? 'improved' : 'active'
-      wx.navigateTo({
-        url: `/pages/bottleneck-center/bottleneck-center?studentId=${studentId}&studentName=${encodeURIComponent(studentName || '')}&subject=${subject}&status=${status}`
-      })
     }
   },
 

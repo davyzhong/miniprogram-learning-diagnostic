@@ -46,39 +46,19 @@
     </view>
 
     <view
-      class="family-workbench-hero b1-family-summary"
+      class="family-summary-strip"
       wx:if="{{homeMode === 'family-workbench' && familyHero}}"
-      catchtap="onTraceableUrlTap"
-      data-url="{{familyHero.url}}"
+      aria-label="{{familyHero.ariaLabel}}"
     >
-      <view class="family-hero-copy">
-        <text class="family-hero-deco" aria-hidden="true">{{familyHeroSymbol}}</text>
-        <view class="family-hero-kicker-row">
-          <text class="b1-symbol family-hero-kicker-symbol" wx:if="{{familyHero.kickerSymbol}}">{{familyHero.kickerSymbol}}</text>
-          <text class="family-hero-kicker">家庭今日总览</text>
-        </view>
-        <text class="family-hero-title">{{familyHero.title}}</text>
-        <text class="family-hero-summary">{{familyHero.summary}}</text>
-        <view class="family-hero-footer">
-          <view class="family-hero-stats">
-            <view class="family-hero-stat b1-family-stat" wx:for="{{familyHero.stats}}" wx:key="label">
-              <text class="family-hero-stat-value">{{item.value}}</text>
-              <text class="family-hero-stat-label">{{item.label}}</text>
-            </view>
-          </view>
-          <text class="family-hero-action">{{familyHero.actionText}} ›</text>
-        </view>
-        <view class="family-hero-segments" wx:if="{{familyHero.statusSegments.length > 0}}">
-          <view class="b1-seg-bar">
-            <view class="b1-seg b1-seg-{{item.tone}}" wx:for="{{familyHero.statusSegments}}" wx:key="key" style="width: {{item.widthPercent}}%;"></view>
-          </view>
-          <view class="b1-seg-legend">
-            <view class="b1-seg-legend-item" wx:for="{{familyHero.statusSegments}}" wx:key="key">
-              <view class="b1-seg-dot b1-seg-{{item.tone}}"></view>
-              <text>{{item.label}}</text>
-            </view>
-          </view>
-        </view>
+      <text class="family-summary-label">{{familyHero.label}}</text>
+      <view class="family-summary-metrics">
+        <text class="family-summary-idle" wx:if="{{familyHero.idleText}}">{{familyHero.idleText}}</text>
+        <text class="family-summary-separator" wx:if="{{familyHero.idleText && familyHero.metrics.length > 0}}">·</text>
+        <text
+          class="family-summary-metric family-summary-metric-{{item.tone}}"
+          wx:for="{{familyHero.metrics}}"
+          wx:key="key"
+        >{{item.displayValue}} {{item.label}}</text>
       </view>
     </view>
 
@@ -164,22 +144,6 @@
           </view>
         </view>
 
-        <view class="child-status-grid">
-          <view
-            class="child-status-cell child-metric-cell b1-metric b1-metric-{{item.tone}}"
-            wx:for="{{child.statusItems}}"
-            wx:key="key"
-            catchtap="onTraceableUrlTap"
-            data-url="{{item.url}}"
-          >
-            <text class="child-status-num">{{item.value}}</text>
-            <view class="child-status-label-row">
-              <text class="b1-symbol child-status-symbol" wx:if="{{item.symbol}}">{{item.symbol}}</text>
-              <text class="child-status-label">{{item.label}}</text>
-            </view>
-          </view>
-        </view>
-
         <view class="child-status-segments" wx:if="{{child.statusSegments.length > 0}}">
           <view class="b1-seg-bar">
             <view class="b1-seg b1-seg-{{item.tone}}" wx:for="{{child.statusSegments}}" wx:key="key" style="width: {{item.widthPercent}}%;"></view>
@@ -218,7 +182,7 @@
           <view class="diagnosis-head">
             <view class="diagnosis-title-copy">
               <text class="diagnosis-title">{{item.title}}</text>
-              <text class="diagnosis-date">{{item.generatedAtText}} · 正式诊断</text>
+              <text class="diagnosis-date">{{item.generatedAtText}} · 正式诊断 · {{item.evidenceCount}} 条证据</text>
             </view>
             <view class="trend-pill trend-pill-{{item.trendClass}}" wx:if="{{item.trendText}}">
               <text class="b1-symbol trend-pill-symbol" wx:if="{{item.trendSymbol}}">{{item.trendSymbol}}</text>
@@ -227,17 +191,6 @@
             <text class="diagnosis-report-link" catchtap="onTraceableUrlTap" data-url="{{item.reportUrl}}">完整报告 ›</text>
           </view>
           <text class="diagnosis-judgment">{{item.judgment}}</text>
-          <view class="diagnosis-signal-line">
-            <text>{{item.evidenceCount}} 条证据</text>
-            <text>{{item.improvedCount}} 项改善</text>
-            <text wx:if="{{item.persistingCount > 0}}">{{item.persistingCount}} 项持续</text>
-            <text wx:if="{{item.waitingCount > 0}}">{{item.waitingCount}} 项待验证</text>
-          </view>
-          <view class="diagnosis-status-segments" wx:if="{{item.diagnosisSegments.length > 0}}">
-            <view class="b1-seg-bar">
-              <view class="b1-seg b1-seg-{{seg.tone}}" wx:for="{{item.diagnosisSegments}}" wx:for-item="seg" wx:key="key" style="width: {{seg.widthPercent}}%;"></view>
-            </view>
-          </view>
           <view class="diagnosis-status-segments" wx:if="{{item.statusSegments.length > 0}}">
             <view class="b1-seg-bar">
               <view class="b1-seg b1-seg-{{seg.tone}}" wx:for="{{item.statusSegments}}" wx:for-item="seg" wx:key="key" style="width: {{seg.widthPercent}}%;"></view>

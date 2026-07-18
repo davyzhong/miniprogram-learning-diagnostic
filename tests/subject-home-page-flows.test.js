@@ -21,6 +21,13 @@ test('subject home keeps the B1 subject surface, diagnosis route, and Chinese re
   assert.match(source, /\{\{knowledgeMapSymbol\}\}/)
   assert.match(source, /\{\{emptyQueueSymbol\}\}/)
   assert.match(source, /class="queue-status-dot queue-status-dot-\{\{item\.statusClass\}\}"/)
+
+  // 密度去重契约：quick-strip 大数字格已删（待处理/已改善计数由地图/进展入口承担），
+  // 只保留诊断记录单行统计；hero 标题用结论文案；英语卡 disabled meta 与按钮不同文
+  assert.doesNotMatch(source, /quick-strip|quick-cell|quick-num|quick-label/)
+  assert.match(source, /class="quick-stats-line" wx:if="\{\{subject !== 'english' && totalReports > 0\}\}"/)
+  assert.match(source, /class="workbench-title">\{\{heroTitle\}\}/)
+  assert.match(source, /\{\{item\.disabled \? item\.disabledHint : item\.meta\}\}/)
 })
 
 test('subject home keeps the math map and task queue compact', () => {

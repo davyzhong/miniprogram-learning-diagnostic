@@ -10,7 +10,7 @@
               <text class="b1-symbol workbench-eyebrow-symbol" wx:if="{{subjectSymbol}}">{{subjectSymbol}}</text>
               <text class="workbench-eyebrow">{{primaryTask.title}}</text>
             </view>
-            <text class="workbench-title">{{subject === 'english' ? '英语词汇掌握' : primaryTask.actionText}}</text>
+            <text class="workbench-title">{{heroTitle}}</text>
           </view>
         </view>
         <text class="workbench-summary">{{primaryTask.summary}}</text>
@@ -56,7 +56,7 @@
       </view>
       <text class="english-action-title">{{item.title}}</text>
       <text class="english-action-subtitle">{{item.subtitle}}</text>
-      <text class="english-action-meta">{{item.disabled ? item.disabledText : item.meta}}</text>
+      <text class="english-action-meta">{{item.disabled ? item.disabledHint : item.meta}}</text>
       <view class="english-action-button">{{item.disabled ? item.disabledText : item.actionText}}</view>
     </view>
   </view>
@@ -88,22 +88,9 @@
     <text class="arrow">›</text>
   </view>
 
-  <view class="quick-strip" wx:if="{{subject !== 'english'}}">
-    <view class="quick-cell" bindtap="onQuickStatTap" data-target="pending">
-      <text class="b1-symbol quick-symbol">{{quickSymbols.pending}}</text>
-      <text class="quick-num pending-color">{{pendingTaskCount}}</text>
-      <text class="quick-label">待处理</text>
-    </view>
-    <view class="quick-cell" bindtap="onQuickStatTap" data-target="records">
-      <text class="b1-symbol quick-symbol">{{quickSymbols.records}}</text>
-      <text class="quick-num">{{totalReports}}</text>
-      <text class="quick-label">诊断记录</text>
-    </view>
-    <view class="quick-cell" bindtap="onQuickStatTap" data-target="improved">
-      <text class="b1-symbol quick-symbol">{{quickSymbols.improved}}</text>
-      <text class="quick-num improved-color">{{improvedCount}}</text>
-      <text class="quick-label">已改善</text>
-    </view>
+  <view class="quick-stats-line" wx:if="{{subject !== 'english' && totalReports > 0}}" bindtap="onQuickStatTap" data-target="records">
+    <text>共 {{totalReports}} 份诊断记录</text>
+    <text class="quick-stats-arrow">›</text>
   </view>
 
   <view class="english-vocab-card" wx:if="{{subject === 'english'}}">

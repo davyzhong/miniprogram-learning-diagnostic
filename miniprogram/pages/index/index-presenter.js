@@ -355,12 +355,7 @@ function buildDiagnosisWorkbenches(input, profileBySubject, subjectByKey, format
         improvedCount,
         persistingCount,
         waitingCount,
-        // 变化构成堆叠条：金=待验证 / 红=持续 / 绿=改善（与孩子卡同套公共类）
-        diagnosisSegments: buildStatusSegments([
-          { key: 'waiting', label: `待验证 ${waitingCount}`, count: waitingCount, tone: 'waiting' },
-          { key: 'persisting', label: `持续 ${persistingCount}`, count: persistingCount, tone: 'destructive' },
-          { key: 'improved', label: `改善 ${improvedCount}`, count: improvedCount, tone: 'improved' }
-        ]),
+        // 状态构成堆叠条 + 图例：绿=改善 / 金=待验证 / 红=持续（计数只在图例出现一次）
         trendText,
         trendClass,
         trendSymbol: trendClass === 'improved' ? symbolOf('trendUp') : (trendClass === 'persisting' ? symbolOf('warning') : symbolOf('pending')),

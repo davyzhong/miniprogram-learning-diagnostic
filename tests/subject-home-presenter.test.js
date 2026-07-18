@@ -38,6 +38,7 @@ test('builds a subject workbench from current bottlenecks and latest reports', (
   }], relative, { subjectName: '数学' })
 
   assert.equal(view.subjectTitle, '数学工作台')
+  assert.equal(view.heroTitle, '有学习卡点等待验证')
   assert.equal(view.primaryTask.actionType, 'verification')
   assert.equal(view.primaryTask.actionText, '查看/下载验证卷')
   assert.equal(view.primaryTask.summary, '2 个学习卡点等待验证，验证卷准备好后可下载打印。')
@@ -203,6 +204,7 @@ test('Chinese workbench prioritizes concrete review items over coarse bottleneck
   }, [], relative, { subject: 'chinese', subjectName: '语文' })
 
   assert.equal(view.primaryTask.actionType, 'verification')
+  assert.equal(view.heroTitle, '有具体错项等待复测')
   assert.equal(view.primaryTask.summary, '1 个具体错项等待复测，系统会根据诊断报告自动准备语文错项复测卷。')
   assert.equal(view.pendingTaskCount, 1)
   assert.equal(view.hasChineseReviewQueue, true)
@@ -216,6 +218,7 @@ test('empty profile exposes a first-use workbench action', () => {
 
   assert.equal(view.hasDiagnosis, false)
   assert.equal(view.isFirstUse, true)
+  assert.equal(view.heroTitle, '尚未形成学科诊断')
   assert.equal(view.primaryTask.actionType, 'diagnosis')
   assert.equal(view.primaryTask.actionText, '拍照诊断')
   assert.equal(view.taskQueue.length, 0)
@@ -314,6 +317,9 @@ test('English workbench keeps learning actions primary while empty vocabulary is
   assert.match(view.primaryTask.summary, /系统会自动导入/)
   assert.deepEqual(view.englishActionCards.map(item => item.key), ['englishPractice', 'englishDictation'])
   assert.ok(view.englishActionCards.every(item => item.disabled === true))
+  // disabled 时 meta 行是说明性文案，与按钮 disabledText 不同文
+  assert.ok(view.englishActionCards.every(item => item.disabledHint && item.disabledHint !== item.disabledText))
+  assert.match(view.englishActionCards[0].disabledHint, /自动导入/)
   assert.ok(view.tools.every(item => item.key !== 'diagnosis' && item.key !== 'defaultPaper'))
   assert.ok(view.tools.some(item => item.key === 'importVocabulary'))
 })
@@ -385,12 +391,14 @@ test('english vocabulary composition bar stays empty without words', () => {
   assert.deepEqual(view.englishVocabSegments, [])
 })
 
-test('subject workbench exposes whitelist symbols for header and quick stats', () => {
+test('subject workbench exposes a whitelist subject symbol and an informative hero title', () => {
   const view = buildSubjectHomeView({ subject: 'math', currentBottlenecks: [] }, [], () => '今天', {
     subject: 'math',
     subjectName: '数学'
   })
   assert.equal(view.subjectSymbol, '🧮')
-  assert.deepEqual(Object.keys(view.quickSymbols), ['pending', 'records', 'improved'])
-  Object.values(view.quickSymbols).forEach(symbol => assert.ok(symbol.length > 0))
+  // hero 大标题是状态结论，不与主按钮 actionText 同文案
+  assert.equal(view.heroTitle, '尚未形成学科诊断')
+  assert.notEqual(view.heroTitle, view.primaryTask.actionText)
+  assert.equal(view.quickSymbols, undefined)
 })
