@@ -27,6 +27,26 @@ test('knowledge map uses text domain markers and keeps explanation generation wi
   assert.match(wxss, /\.b1-subject-math/)
 })
 
+test('knowledge-map 置顶摘要行不重复渲染 domain 列表中的同一卡点（密度契约）', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/knowledge-map/knowledge-map.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/knowledge-map/knowledge-map.wxss'), 'utf8')
+
+  // 同一卡点全页只完整渲染一次：置顶区降级为"最优先：卡点名 ›"轻量摘要行，
+  // 点击锚到 domain 条目（onPriorityAnchorTap + id="bn-lpCode"），不再整条渲染第二遍
+  assert.match(wxml, /class="priority-row"/)
+  assert.match(wxml, /catchtap="onPriorityAnchorTap"[\s\S]*?data-lp-code="\{\{view\.priorityBottleneck\.lpCode\}\}"/)
+  assert.match(wxml, /id="bn-\{\{b\.lpCode\}\}"/)
+  assert.equal((wxml.match(/view\.priorityBottleneck\.displayName/g) || []).length, 1, '优先卡点名只允许出现一次（摘要行）')
+  assert.doesNotMatch(wxml, /priority-card|priority-badge|priority-symptom|priority-action/, '整条重复的 priority 卡已删除')
+  assert.doesNotMatch(wxss, /\.priority-card|\.priority-badge|\.priority-symptom|\.priority-action/)
+
+  // 留白预算：bn 条目上下 ≤12rpx、domain header ≤18rpx；掌握度色带与置信度标签保留
+  assert.match(wxss, /\.bn-item \{[^}]*padding:\s*(?:[1-9]|1[0-2])rpx\s+(?:[1-9]|1[0-8])rpx/)
+  assert.match(wxss, /\.domain-header \{[^}]*padding:\s*(?:[1-9]|1[0-8])rpx\b/)
+  assert.match(wxml, /domain-mastery/)
+  assert.match(wxml, /bn-confidence \{\{b\.confidenceLevel\}\}/)
+})
+
 async function flushAsync(turns = 4) {
   for (let i = 0; i < turns; i += 1) {
     await Promise.resolve()

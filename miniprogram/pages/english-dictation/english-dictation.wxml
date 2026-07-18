@@ -96,19 +96,10 @@
 
     <view class="result-card" wx:if="{{dictationResults.length > 0}}">
       <text class="upload-title">AI 批改结果</text>
-      <view class="result-summary" wx:if="{{resultSummary}}">
-        <view class="result-summary-item">
-          <text class="summary-num">{{resultSummary.correct}}</text>
-          <text class="summary-label">写对</text>
-        </view>
-        <view class="result-summary-item">
-          <text class="summary-num">{{resultSummary.incorrect}}</text>
-          <text class="summary-label">待加强</text>
-        </view>
-        <view class="result-summary-item">
-          <text class="summary-num">{{resultSummary.unclear}}</text>
-          <text class="summary-label">看不清</text>
-        </view>
+      <view class="result-summary-line" wx:if="{{resultSummary}}">
+        <text class="summary-item"><text class="summary-dot dot-correct"></text>写对 {{resultSummary.correct}}</text>
+        <text class="summary-item"><text class="summary-dot dot-incorrect"></text>待加强 {{resultSummary.incorrect}}</text>
+        <text class="summary-item"><text class="summary-dot dot-unclear"></text>看不清 {{resultSummary.unclear}}</text>
       </view>
       <view class="result-row" wx:for="{{dictationResults}}" wx:key="wordId">
         <text class="result-word">{{item.targetWord}}</text>

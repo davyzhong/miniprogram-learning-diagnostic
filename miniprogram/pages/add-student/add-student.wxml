@@ -1,11 +1,11 @@
 <!--pages/add-student/add-student.wxml-->
 <view class="page b1-page">
   <view class="setup-hero">
-    <text class="setup-deco" aria-hidden="true">{{setupSymbol}}</text>
-    <view class="setup-copy">
+    <view class="setup-title-row">
+      <text class="setup-deco" aria-hidden="true">{{setupSymbol}}</text>
       <text class="setup-title">添加孩子档案</text>
-      <text class="setup-desc">先建立学生、年级和头像颜色，后面就可以按学科整理诊断、卡点和验证卷。</text>
     </view>
+    <text class="setup-desc">先建立学生、年级和头像颜色，后面就可以按学科整理诊断、卡点和验证卷。</text>
   </view>
 
   <view class="form b1-card form-card">
