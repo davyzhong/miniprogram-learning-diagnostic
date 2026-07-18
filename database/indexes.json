@@ -25,6 +25,17 @@
         "cloudfunctions/analyzePhotos/node-mastery-writer.js",
         "cloudfunctions/studentData/index.js"
       ]
+    },
+    {
+      "collection": "interventionSessions",
+      "name": "student_date",
+      "fields": [
+        { "field": "studentId", "order": "asc" },
+        { "field": "date", "order": "desc" }
+      ],
+      "requiredBy": [
+        "cloudfunctions/learningResource/intervention-session-writer.js"
+      ]
     }
   ]
 }

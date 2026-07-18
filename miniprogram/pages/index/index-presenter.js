@@ -8,6 +8,7 @@ const {
   isMainTimelinePaper
 } = require('../../utils/learning-records')
 const { buildPaperCodeMap, buildPaperDisplay } = require('../../utils/paper-display')
+const knowledgeSeed = require('../../data/math/knowledge-nodes.seed.js')
 const {
   buildBottleneckViews,
   buildBottleneckStats,
@@ -487,13 +488,38 @@ function buildReportPanel(primaryReport, student) {
   }
 }
 
-function buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowledgeMapCard, recentRecords) {
+// 到期复测行动卡（Phase C）：studentNodeMastery 中 nextReviewAt 到期的节点。
+// 有活跃卡点时直跳验证卷配置器（targetCode 预选），否则进知识地图查看状态。
+const NODE_TITLE_BY_ID = new Map((knowledgeSeed.nodes || []).map(node => [node.nodeId, node.title]))
+
+function buildDueReviewActionItem(student, dueReviews = []) {
+  if (!Array.isArray(dueReviews) || dueReviews.length === 0) return null
+  const first = dueReviews[0]
+  const titleOf = record => NODE_TITLE_BY_ID.get(record.nodeId) || '知识点'
+  const names = dueReviews.slice(0, 2).map(titleOf).join('、')
+  const firstBn = (first.activeBottleneckIds || [])[0] || ''
+  const url = firstBn
+    ? `/pages/generate-verification/generate-verification?studentId=${encodeURIComponent(student._id || '')}&subject=math&subjectName=${encodeURIComponent('数学')}&targetCode=${encodeURIComponent(firstBn)}`
+    : knowledgeMapUrl(student)
+  return {
+    key: 'dueReview',
+    symbol: symbolOf('time'),
+    title: `${dueReviews.length} 个知识点到期复测`,
+    summary: `${names}${dueReviews.length > 2 ? ' 等' : ''}到期，复测通过才算真正掌握。`,
+    actionText: '去复测',
+    url
+  }
+}
+
+function buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowledgeMapCard, recentRecords, dueReviews = []) {
   const activeCount = bottleneckStats.activeCount || bottleneckStats.pendingCount || 0
   const persistingCount = bottleneckStats.persistingCount || 0
   const improvedCount = bottleneckStats.improvedCount || 0
   const latestRecord = recentRecords && recentRecords[0]
 
-  return [{
+  const dueReviewItem = buildDueReviewActionItem(student, dueReviews)
+
+  return [...(dueReviewItem ? [dueReviewItem] : []), {
     key: 'bottleneckCenter',
     symbol: symbolOf('pin'),
     title: activeCount > 0 ? '学习卡点修复' : (improvedCount > 0 ? '已改善记录' : '学习卡点'),
@@ -725,7 +751,7 @@ function buildLearningProfileHomeView(input = {}, formatRelativeTime = () => '')
   const knowledgeMapCard = buildKnowledgeMapCard(subjects, bottleneckStats)
   const primaryActionCard = buildPrimaryActionCard(nextAction, student, canWriteActions)
   const reportPanel = buildReportPanel(primaryReport, student)
-  const personalActionQueue = buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowledgeMapCard, recentRecords)
+  const personalActionQueue = buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowledgeMapCard, recentRecords, input.dueReviews || [])
   const personalHero = {
     title: headline,
     summary: compactSummary(summary, 88),

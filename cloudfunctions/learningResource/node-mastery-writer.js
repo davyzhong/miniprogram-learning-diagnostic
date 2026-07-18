@@ -60,8 +60,9 @@ async function recordResourcePracticePassed({ db, pack, practiceResult, now = ne
     bottleneckIds: [bnId],
   }, { now })
   // unobserved + 练习通过 = 无变化不创建记录（状态机语义）
-  if (!record) return { applied: false, reason: 'no-change' }
+  if (!record) return { applied: false, reason: 'no-change', nodeId }
 
+  const beforeStatus = existing && existing.status ? existing.status : 'unobserved'
   const data = {
     status: record.status,
     confidence: record.confidence,
@@ -77,7 +78,35 @@ async function recordResourcePracticePassed({ db, pack, practiceResult, now = ne
   } else {
     await coll.add({ data: { studentId: pack.studentId, subject: 'math', nodeId, ...data, createdAt: now } })
   }
-  return { applied: true, status: record.status }
+  return { applied: true, status: record.status, beforeStatus, nextReviewAt: record.nextReviewAt || null, nodeId }
 }
 
-module.exports = { recordResourcePracticePassed, practicePassed }
+/**
+ * 家长显式"安排复测"（scheduleVerification）：把该任务包对应节点的
+ * nextReviewAt 写实到 studentNodeMastery（24h 后），今日行动据此露出到期复测。
+ * 仅更新已存在的掌握记录（不为无证据节点制造复测）。
+ * @returns {{scheduled:boolean, reason?:string, nodeId?:string, nextReviewAt?:Date}}
+ */
+async function scheduleNodeReview({ db, pack, now = new Date() } = {}) {
+  if (!pack || pack.subject !== 'math') return { scheduled: false, reason: 'non-math' }
+  const bnId = pack.bottleneckId || pack.targetId || ''
+  const nodeId = bnNodeIdMap.get(String(bnId))
+  if (!nodeId) return { scheduled: false, reason: 'no-node' }
+
+  const coll = db.collection(MASTERY_COLLECTION)
+  let existing = null
+  try {
+    const res = await coll.where({ studentId: pack.studentId, subject: 'math', nodeId }).limit(1).get()
+    existing = (res.data || [])[0] || null
+  } catch (error) {
+    if (!isMissingCollectionError(error)) throw error
+    if (db.createCollection) await db.createCollection(MASTERY_COLLECTION)
+  }
+  if (!existing) return { scheduled: false, reason: 'no-record', nodeId }
+
+  const nextReviewAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+  await coll.doc(existing._id).update({ data: { nextReviewAt, updatedAt: now } })
+  return { scheduled: true, nodeId, nextReviewAt }
+}
+
+module.exports = { recordResourcePracticePassed, practicePassed, scheduleNodeReview }

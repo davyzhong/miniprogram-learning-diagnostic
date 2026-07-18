@@ -183,7 +183,7 @@ Page({
             this._lastHomeLoadedAt = Date.now()
             return
           }
-          this._buildHomeFromDashboard(students, perStudent)
+          this._buildHomeFromDashboard(students, perStudent, await this._loadDueReviewsByStudentId(students))
           return
         } catch (error) {
           console.warn('聚合首页端点不可用，回退到 1+N 路径', error && error.message ? error.message : error)
@@ -232,11 +232,19 @@ Page({
       const diagnosesByStudentId = {}
       const papersByStudentId = {}
       const permissionsByStudentId = {}
+      const dueReviewsByStudentId = {}
 
       if (typeof cloud.getStudentDashboard === 'function') {
         await Promise.all(viewModels.map(async student => {
           try {
-            const dashboard = await cloud.getStudentDashboard(student._id)
+            // 到期复测是增强信息：读取失败时按空降级，不影响工作台主数据
+            const masteryPromise = typeof cloud.getNodeMasteryMap === 'function'
+              ? cloud.getNodeMasteryMap(student._id, 'math').catch(() => null)
+              : Promise.resolve(null)
+            const [dashboard, masteryResult] = await Promise.all([
+              cloud.getStudentDashboard(student._id),
+              masteryPromise
+            ])
             profileLists[student._id] = dashboard.subjectProfiles || profileLists[student._id] || []
             applyProfileStats(student, profileLists[student._id])
             diagnosesByStudentId[student._id] = Array.isArray(dashboard.latestDiagnosisReports)
@@ -248,6 +256,9 @@ Page({
             )
             papersByStudentId[student._id] = dashboard.recentPapers || []
             permissionsByStudentId[student._id] = dashboard.permissions || student.permissions || OWNER_PERMISSIONS
+            const masteryRecords = masteryResult && Array.isArray(masteryResult.records) ? masteryResult.records : []
+            dueReviewsByStudentId[student._id] = masteryRecords.filter(record =>
+              record.nextReviewAt && new Date(record.nextReviewAt).getTime() <= Date.now())
           } catch (error) {
             console.warn('共享档案详情不可用，回退到旧学习记录读取', error && error.message ? error.message : error)
           }
@@ -302,7 +313,8 @@ Page({
             reports,
             latestDiagnosisReports,
             papers,
-            permissions
+            permissions,
+            dueReviews: activeStudent ? (dueReviewsByStudentId[activeStudent._id] || []) : []
           }, formatRelativeTime)
         : null
 
@@ -338,8 +350,27 @@ Page({
     }
   },
 
+  // 到期复测（Phase C）：按学生拉取 studentNodeMastery 中 nextReviewAt 已到期的记录。
+  // 增强信息，任何失败都按空降级，不影响首页主数据。
+  async _loadDueReviewsByStudentId(students) {
+    const result = {}
+    if (typeof cloud.getNodeMasteryMap !== 'function') return result
+    await Promise.all((students || []).map(async student => {
+      try {
+        const res = await cloud.getNodeMasteryMap(student._id, 'math')
+        const records = res && Array.isArray(res.records) ? res.records : []
+        result[student._id] = records.filter(record =>
+          record.nextReviewAt && new Date(record.nextReviewAt).getTime() <= Date.now())
+      } catch (error) {
+        console.warn('到期复测读取失败，按空降级', error)
+        result[student._id] = []
+      }
+    }))
+    return result
+  },
+
   // 从 getHomeDashboard 聚合结果构建首页视图（单一云调用路径）
-  _buildHomeFromDashboard(students, perStudent) {
+  _buildHomeFromDashboard(students, perStudent, dueReviewsByStudentId = {}) {
     const profileLists = {}
     const reportsByStudentId = {}
     const diagnosesByStudentId = {}
@@ -402,6 +433,7 @@ Page({
           latestDiagnosisReports,
           papers,
           permissions,
+          dueReviews: dueReviewsByStudentId[activeStudent._id] || [],
           diagnosisDataUnavailable: !Array.isArray((perStudent[activeStudent._id] || {}).latestDiagnosisReports)
         }, formatRelativeTime)
       : null
