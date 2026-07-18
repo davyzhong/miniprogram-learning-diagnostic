@@ -261,6 +261,7 @@ Page({
     relatedPapers: [],
     evidenceChain: [],
     passRateSegments: [],
+    heroStatsText: '',
     visibleEvidenceChain: [],
     hiddenEvidenceCount: 0,
     showAllEvidence: false,
@@ -343,11 +344,18 @@ Page({
         { key: 'pass', label: `通过 ${confidence.passCount || 0}`, count: confidence.passCount || 0, tone: 'improved' },
         { key: 'fail', label: `未通过 ${confidence.failCount || 0}`, count: confidence.failCount || 0, tone: 'destructive' }
       ])
+      // hero 单行统计：metrics 数字已在 evidenceText（证据/错题）与通过率图例（通过/未通过）中各出现一次，这里只做行合并，不重复拼数字
+      const heroStatsText = [
+        bottleneck.parentDescription,
+        bottleneck.evidenceText,
+        bottleneck.timeText
+      ].filter(Boolean).join(' · ')
 
       this.setData({
         bottleneck,
         confidence,
         passRateSegments,
+        heroStatsText,
         relatedReports,
         relatedPapers,
         evidenceChain,
@@ -442,25 +450,6 @@ Page({
   onToggleEvidence() {
     const showAll = !this.data.showAllEvidence
     this.setData(evidenceVisibility(this.data.evidenceChain, showAll))
-  },
-
-  onMetricTap(e) {
-    const target = e.currentTarget.dataset.target || 'evidence'
-    if (target === 'papers') {
-      const firstPaper = this.data.relatedPapers && this.data.relatedPapers[0]
-      if (firstPaper && firstPaper._id) {
-        wx.navigateTo({ url: `/pages/paper-preview/paper-preview?paperId=${firstPaper._id}` })
-        return
-      }
-    }
-    if (target === 'reports') {
-      const firstReport = this.data.relatedReports && this.data.relatedReports[0]
-      if (firstReport && firstReport._id) {
-        wx.navigateTo({ url: `/pages/report/report?id=${firstReport._id}` })
-        return
-      }
-    }
-    wx.showToast({ title: '暂无对应证据', icon: 'none' })
   },
 
   onBackToCenter() {

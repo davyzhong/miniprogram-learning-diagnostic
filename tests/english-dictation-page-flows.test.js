@@ -291,9 +291,13 @@ test('English wrong words page summarizes weak vocabulary and opens practice flo
   await waitForPageLoad(page)
 
   assert.equal(page.data.studentName, '钟青羽')
-  assert.equal(page.data.summaryCards.find(item => item.key === 'weak').value, 8)
-  assert.equal(page.data.summaryCards.find(item => item.key === 'review').value, 6)
+  // 汇总卡已删除：薄弱/待复测计数只保留在分组行一处，构成条图例保留已稳定计数
+  assert.equal(page.data.summaryCards, undefined)
+  assert.equal(page.data.groups.find(item => item.key === 'highFrequency').count, 8)
+  assert.equal(page.data.groups.find(item => item.key === 'reviewDue').count, 6)
   assert.equal(page.data.weakWords.length, 2)
+  assert.equal(page.data.visibleWeakWords.length, 2)
+  assert.equal(page.data.hiddenWeakWordCount, 0)
   assert.equal(page.data.weakWords[0].displayMeaning, '星期三')
   assert.ok(page.data.groups.some(item => item.key === 'spellingWeak' && item.count === 5))
 
@@ -301,4 +305,44 @@ test('English wrong words page summarizes weak vocabulary and opens practice flo
   assert.match(wx.calls.filter(call => call.name === 'navigateTo').at(-1).payload.url, /pages\/english-practice\/english-practice/)
   page.onDictationTap()
   assert.match(wx.calls.filter(call => call.name === 'navigateTo').at(-1).payload.url, /pages\/english-dictation\/english-dictation/)
+})
+
+test('English wrong words page previews 3 weak words and expands the rest', async () => {
+  const wx = createWxMock()
+  const cloud = {
+    getEnglishVocabularySummary: async studentId => ({
+      studentId,
+      summary: {
+        totalWords: 505,
+        familiarity: { needsPracticeCount: 3, dueReviewCount: 2 },
+        spelling: { needsPracticeCount: 5, dueReviewCount: 4 },
+        overall: { masteredCount: 120 }
+      },
+      weakWords: Array.from({ length: 5 }, (_, index) => ({
+        wordId: `word-${index + 1}`,
+        word: `word${index + 1}`,
+        wrongCount: 5 - index,
+        meanings: [`词义${index + 1}`]
+      }))
+    })
+  }
+  const { page } = loadPage('miniprogram/pages/english-wrong-words/english-wrong-words.js', {
+    wx,
+    modules: { '../../utils/cloud': cloud }
+  })
+
+  page.onLoad({ studentId: 'student-1', studentName: encodeURIComponent('钟青羽'), grade: '6' })
+  await waitForPageLoad(page)
+
+  assert.equal(page.data.weakWords.length, 5)
+  assert.equal(page.data.visibleWeakWords.length, 3)
+  assert.equal(page.data.hiddenWeakWordCount, 2)
+
+  page.onExpandWeakWords()
+  assert.equal(page.data.visibleWeakWords.length, 5)
+  assert.equal(page.data.hiddenWeakWordCount, 0)
+
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-wrong-words/english-wrong-words.wxml'), 'utf8')
+  assert.doesNotMatch(wxml, /summary-grid/)
+  assert.match(wxml, /展开剩余 \{\{hiddenWeakWordCount\}\} 条错词/)
 })

@@ -73,27 +73,16 @@ function buildGroups(summary = {}) {
   ]
 }
 
-function buildSummaryCards(summary = {}) {
-  const familiarity = summary.familiarity || {}
-  const spelling = summary.spelling || {}
-  const overall = summary.overall || {}
-  return [
-    {
-      key: 'weak',
-      label: '薄弱词',
-      value: countOf(familiarity.needsPracticeCount) + countOf(spelling.needsPracticeCount)
-    },
-    {
-      key: 'review',
-      label: '待复测',
-      value: countOf(familiarity.dueReviewCount) + countOf(spelling.dueReviewCount)
-    },
-    {
-      key: 'mastered',
-      label: '已稳定',
-      value: countOf(overall.masteredCount)
-    }
-  ]
+// 高频错词默认只展示前 3 条，其余折叠为「展开剩余 N 条」（信息密度准则 §7）
+const WEAK_WORDS_PREVIEW_LIMIT = 3
+
+function weakWordsVisibility(weakWords = [], expanded = false) {
+  const visibleWeakWords = expanded ? weakWords : weakWords.slice(0, WEAK_WORDS_PREVIEW_LIMIT)
+  return {
+    visibleWeakWords,
+    hiddenWeakWordCount: Math.max(0, weakWords.length - visibleWeakWords.length),
+    weakWordsExpanded: expanded
+  }
 }
 
 Page({
@@ -106,10 +95,12 @@ Page({
     loading: false,
     error: '',
     totalWords: 0,
-    summaryCards: [],
     compositionSegments: [],
     groups: [],
     weakWords: [],
+    visibleWeakWords: [],
+    hiddenWeakWordCount: 0,
+    weakWordsExpanded: false,
     confusionCount: 0
   },
 
@@ -134,13 +125,14 @@ Page({
       const confusion = typeof cloud.getEnglishConfusionPractice === 'function'
         ? await cloud.getEnglishConfusionPractice(this.data.studentId)
         : { items: [] }
+      const weakWords = (result.weakWords || []).map(normalizeWeakWord)
       this.setData({
         loading: false,
         totalWords: countOf(summary.totalWords),
-        summaryCards: buildSummaryCards(summary),
         compositionSegments: buildCompositionSegments(summary),
         groups: buildGroups(summary),
-        weakWords: (result.weakWords || []).map(normalizeWeakWord),
+        weakWords,
+        ...weakWordsVisibility(weakWords, this.data.weakWordsExpanded),
         confusionCount: (confusion.items || []).length
       })
     } catch (error) {
@@ -152,6 +144,10 @@ Page({
     } finally {
       wx.hideLoading()
     }
+  },
+
+  onExpandWeakWords() {
+    this.setData(weakWordsVisibility(this.data.weakWords, true))
   },
 
   onPracticeTap() {

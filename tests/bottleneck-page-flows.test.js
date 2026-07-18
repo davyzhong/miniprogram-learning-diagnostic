@@ -16,6 +16,15 @@ test('bottleneck pages derive B1 subject classes while retaining task and eviden
   assert.match(detail, /b1-subject-\{\{bottleneck\.subjectClass\}\}/)
   assert.match(detail, /bindtap="onOpenLearningResource"/)
   assert.match(detailJs, /onEvidenceTap/)
+
+  // 信息密度契约：状态计数只留色带图例 + 筛选 chips（大数字格已删）
+  assert.doesNotMatch(center, /stats-grid/)
+  // 单卡状态只留 chip 一处（badge 文字块已删，左边框只表学科色）
+  assert.doesNotMatch(center, /bottleneck-status-badge/)
+  // 详情 metrics 大数字块已并入 hero 单行统计，通过率只留色带图例一处
+  assert.doesNotMatch(detail, /class="metrics"/)
+  assert.match(detail, /heroStatsText/)
+  assert.match(detailJs, /heroStatsText/)
 })
 
 test('bottleneck center loads dashboard bottlenecks and filters by status', async () => {
@@ -390,6 +399,10 @@ test('bottleneck detail builds a focused evidence workbench without repetitive r
   assert.equal(page.data.evidenceChain.length, 4)
   assert.equal(page.data.visibleEvidenceChain.length, 3)
   assert.equal(page.data.hiddenEvidenceCount, 1)
+  // hero 单行统计：证据/错题/时间合并为一行（原 metrics 大数字块与时间卡的唯一承载处）
+  assert.match(page.data.heroStatsText, /3 次证据/)
+  assert.match(page.data.heroStatsText, /最近 5 道相关错题/)
+  assert.match(page.data.heroStatsText, /首次 .* · 最近 /)
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.visibleEvidenceChain.map(item => item.category))), ['验证试卷', '验证反馈', '验证试卷'])
   assert.deepEqual(JSON.parse(JSON.stringify(page.data.visibleEvidenceChain.map(item => item.title))), ['数学-20260613-01', '验证反馈', '数学-20260612-01'])
   assert.match(page.data.visibleEvidenceChain[0].url, /pages\/paper-preview\/paper-preview\?paperId=paper-2/)
@@ -513,7 +526,7 @@ test('learning progress hides the improvement rate when there are no bottlenecks
   assert.equal(page.data.improvementRateText, '')
 })
 
-test('bottleneck center exposes a full status composition bar under the stats grid', async () => {
+test('bottleneck center exposes a full status composition bar', async () => {
   const cloud = {
     getStudentDashboard: async () => ({
       student: { name: '钟青羽' },

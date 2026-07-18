@@ -15,25 +15,6 @@
       </view>
     </view>
 
-    <view class="stats-grid">
-      <view class="stat-card" bindtap="onStatTap" data-status="all">
-        <text class="stat-value">{{stats.totalCount}}</text>
-        <text class="stat-label">全部卡点</text>
-      </view>
-      <view class="stat-card" bindtap="onStatTap" data-status="active">
-        <text class="stat-value">{{stats.activeCount}}</text>
-        <text class="stat-label">待跟进</text>
-      </view>
-      <view class="stat-card" bindtap="onStatTap" data-status="persisting">
-        <text class="stat-value">{{stats.persistingCount}}</text>
-        <text class="stat-label">持续出现</text>
-      </view>
-      <view class="stat-card" bindtap="onStatTap" data-status="improved">
-        <text class="stat-value">{{stats.improvedCount}}</text>
-        <text class="stat-label">已改善</text>
-      </view>
-    </view>
-
     <view class="stats-segments" wx:if="{{statsSegments.length > 0}}">
       <view class="b1-seg-bar">
         <view class="b1-seg b1-seg-{{item.tone}}" wx:for="{{statsSegments}}" wx:key="key" style="width: {{item.widthPercent}}%;"></view>
@@ -77,17 +58,12 @@
         data-bottleneck-id="{{item.bottleneckId}}"
         data-view-id="{{item.viewId}}"
       >
-        <view class="bottleneck-status-badge status-badge-{{item.statusClass}}">
-          <text class="b1-symbol badge-symbol" wx:if="{{item.statusSymbol}}">{{item.statusSymbol}}</text>
-          <text>{{item.statusBadgeText}}</text>
-        </view>
         <view class="bottleneck-copy">
           <view class="title-line">
             <text class="bottleneck-name">{{item.displayName}}</text>
             <text class="subject-tag">{{item.subjectName}}</text>
           </view>
-          <text class="bottleneck-desc">{{item.evidenceText}}</text>
-          <text class="bottleneck-time" wx:if="{{item.timeText}}">{{item.timeText}}</text>
+          <text class="bottleneck-desc">{{item.evidenceText}}<text wx:if="{{item.timeText}}"> · {{item.timeText}}</text></text>
           <view class="chip-row">
             <text class="chip confidence-{{item.confidenceLevel}}">{{item.confidenceText}}</text>
             <text class="chip" wx:if="{{item.category}}">{{item.category}}</text>
