@@ -84,6 +84,8 @@ The app should identify smaller repairable units, for example:
 
 ### Phase 5: Mastery Tracking
 
+> **权威实现口径（2026-07-17）**：本节六态已在 `studentNodeMastery` 集合与 `node-mastery.js` 状态机中落地，转移规则以 `docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md`（含 v1.1 修正）为准。
+
 Node states:
 
 - `unobserved`

@@ -1,6 +1,6 @@
 # Verification Task Pack Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Replace the current single verification paper target-selection flow with a task-pack model that can schedule many fine-grained bottlenecks across independently traceable pages.
 
@@ -151,7 +151,7 @@ node --test tests/verification-pack.test.js
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add cloudfunctions/generatePaper/verification-pack.js tests/verification-pack.test.js package.json
@@ -217,7 +217,7 @@ node --test --test-concurrency=1 tests/cloud-functions.test.js tests/verificatio
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add cloudfunctions/generatePaper/index.js tests/cloud-functions.test.js
@@ -278,7 +278,7 @@ node --test tests/generate-paper-pdf.test.js
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add cloudfunctions/generatePaper/pdf-renderer.js tests/generate-paper-pdf.test.js
@@ -334,7 +334,7 @@ node --test tests/verification-evidence.test.js tests/cloud-functions.test.js
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add cloudfunctions/analyzePhotos/verification-evidence.js tests/verification-evidence.test.js
@@ -389,7 +389,7 @@ node --test --test-concurrency=1 tests/cloud-functions.test.js tests/analyze-bat
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add cloudfunctions/analyzeBatch/index.js cloudfunctions/analyzePhotos/index.js tests
@@ -453,7 +453,7 @@ node --test tests/page-flows.test.js
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add miniprogram/pages/generate-verification tests/page-flows.test.js
@@ -501,7 +501,7 @@ node --test tests/paper-preview-presenter.test.js tests/learning-records.test.js
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add miniprogram/pages/paper-preview miniprogram/utils/paper-display.js tests

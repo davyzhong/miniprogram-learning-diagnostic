@@ -2,8 +2,8 @@
 // 打包安全：云函数独立上传时 data/ 目录不会随函数上传，所以把 seed 固化为 JS 镜像。
 // 数据来源：data/math/learning-resources.seed.json
 module.exports = {
-  "version": "0.1.0",
-  "updatedAt": "2026-06-17",
+  "version": "0.2.0",
+  "updatedAt": "2026-07-17",
   "subject": "math",
   "resourcePolicy": "高质量讲法优先：Khan Academy、YouTube 等资源如果在某个知识点上讲法清楚、结构严谨、置信度高，可以作为高质量锚点来源；同一知识点尽量补充 B站、小红书、公众号等国内资源，方便国内网络环境下使用、中文复述和孩子定向观看。官方资源作为准确性校验和备用。只保存链接、摘要、评价和适用场景，不搬运正文或视频。",
   "selectionPolicy": {
