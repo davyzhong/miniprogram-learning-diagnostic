@@ -5,7 +5,7 @@
 }
 
 .config-hero {
-  padding: 34rpx 28rpx 28rpx;
+  padding: 22rpx 28rpx;
   background: var(--b1-subject-math-fg);
   color: #fff;
   border-radius: 0 0 22rpx 22rpx;

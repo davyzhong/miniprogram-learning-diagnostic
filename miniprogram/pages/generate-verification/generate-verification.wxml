@@ -28,27 +28,10 @@
         <text class="task-page-scope">{{item.scopeText}}</text>
       </view>
     </view>
-    <view class="preview-stats">
-      <view class="preview-stat">
-        <text class="preview-num">{{selectedCount}}</text>
-        <text class="preview-label">{{paperConfig.targetUnitLabel || '卡点数'}}</text>
-      </view>
-      <view class="preview-stat">
-        <text class="preview-num">{{paperConfig.questionCount}}</text>
-        <text class="preview-label">题目数</text>
-      </view>
-      <view class="preview-stat">
-        <text class="preview-num">{{paperConfig.estimatedMinutes}}</text>
-        <text class="preview-label">分钟</text>
-      </view>
-      <view class="preview-stat">
-        <text class="preview-num">{{paperConfig.paperSize}}</text>
-        <text class="preview-label">{{paperConfig.pages}} 页</text>
-      </view>
-    </view>
+    <text class="preview-stats-line">{{paperConfig.statsLine}}</text>
   </view>
 
-  <view class="section-title range-title">验证范围（{{selectedCount}} 个卡点）</view>
+  <view class="section-title range-title">验证范围</view>
   <view class="bottleneck-list">
     <view
       class="bottleneck-item {{item.selected ? 'selected' : ''}}"
