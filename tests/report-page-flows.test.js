@@ -7,19 +7,22 @@ const { loadPageAndWait, flushAsync, waitForPageLoad, isThenable } = require('./
 const { createWxMock, loadPage } = require('./helpers/page-harness')
 const util = require('../miniprogram/utils/util')
 
-test('math report renders the dense quantified evidence matrix', () => {
+test('math report renders quantified evidence as a single dense stats line', () => {
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxml'), 'utf8')
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxss'), 'utf8')
 
-  assert.match(wxml, /\{\{item\.confidenceScoreLabel\}\}/)
-  assert.match(wxml, /\{\{item\.confidenceScore\}\}/)
-  assert.match(wxml, /wx:for="\{\{item\.evidenceMetrics\}\}"/)
+  // 量化证据以单行文本呈现（综合置信分 + 出现/错题/复测），不再使用大数字块矩阵
+  assert.match(wxml, /\{\{item\.statsLine\}\}/)
+  assert.match(wxml, /bottleneck-stats-line/)
+  assert.doesNotMatch(wxml, /bottleneck-evidence-grid/, '数字块矩阵已废弃，改为单行统计')
+  assert.doesNotMatch(wxml, /bottleneck-score-track/, '置信分轨道已废弃，分值内联进统计行')
   assert.match(wxml, /\{\{item\.durationText\}\}/)
   assert.doesNotMatch(wxml, /准确率/)
-  assert.match(wxss, /\.bottleneck-evidence-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,/)
+  assert.match(wxss, /\.bottleneck-stats-line\s*\{[\s\S]*?font-size:\s*21rpx/)
   assert.match(wxss, /\.bottleneck-mini-title\s*\{[\s\S]*?font-size:\s*24rpx/)
-  assert.match(wxss, /\.bottleneck-evidence-label\s*\{[\s\S]*?font-size:\s*20rpx/)
-  assert.match(wxss, /\.bottleneck-evidence-value\s*\{[\s\S]*?font-size:\s*22rpx/)
+  // 底部时间/口径/证据合并为一行，反馈入口内联
+  assert.match(wxml, /bottleneck-foot-row/)
+  assert.match(wxml, /bottleneck-foot-text/)
 })
 
 test('report uses editorial section markers and preserves its route actions', () => {
@@ -856,10 +859,10 @@ test('report bottleneck rows merge score and scope into compact lines', () => {
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxml'), 'utf8')
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxss'), 'utf8')
 
-  // 置信分轨道与分值合并为一行，不再各自独占一行
-  assert.match(wxml, /bottleneck-score-line/)
+  // 量化证据合并为单行统计，不再各自独占一行
+  assert.match(wxml, /bottleneck-stats-line/)
   assert.doesNotMatch(wxml, /bottleneck-score-row/)
-  assert.match(wxss, /\.bottleneck-score-line/)
+  assert.match(wxss, /\.bottleneck-stats-line/)
   assert.doesNotMatch(wxss, /\.bottleneck-score-row/)
   // 细颗粒度说明从页头移到卡点卡片 caption
   assert.match(wxml, /card-caption/)
