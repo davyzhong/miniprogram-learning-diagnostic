@@ -89,7 +89,7 @@ async function main() {
     const [header, firstJudgment, firstSignal, firstNext, reports] = await Promise.all([
       page.$('.top-row'),
       page.$('.b1-profile-report .diagnosis-judgment'),
-      page.$('.b1-profile-report .diagnosis-signal-line'),
+      page.$('.b1-profile-report .diagnosis-status-segments'),
       page.$('.b1-profile-report .diagnosis-next'),
       page.$$('.b1-profile-report')
     ])
