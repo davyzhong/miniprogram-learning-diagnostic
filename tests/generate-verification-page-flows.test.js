@@ -387,3 +387,29 @@ test('verification paper uses a compact B1 subject identity and waiting state', 
   assert.match(wxss, /var\(--b1-subject-math-fg\)/)
   assert.match(wxss, /var\(--b1-waiting-bg\)/)
 })
+
+test('verification preview stats are one compact line and the selected count appears only once', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/generate-verification/generate-verification.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/generate-verification/generate-verification.wxss'), 'utf8')
+
+  // 大数字块矩阵已删除，统计收敛为 presenter 拼接的单行文本
+  assert.doesNotMatch(wxml, /class="preview-stats"/)
+  assert.doesNotMatch(wxml, /class="preview-stat"/)
+  assert.doesNotMatch(wxss, /\.preview-num|\.preview-label/)
+  assert.match(wxml, /class="preview-stats-line">\{\{paperConfig\.statsLine\}\}/)
+  // selectedCount 只在 statsLine 里出现，范围标题不再重复计数
+  assert.doesNotMatch(wxml, /验证范围（/)
+  assert.match(wxml, /验证范围</)
+  // 页头留白收紧到 22rpx 以内
+  assert.doesNotMatch(wxss, /padding:\s*34rpx 28rpx 28rpx/)
+})
+
+test('verification paperConfig packs counts into a single statsLine without internal codes', () => {
+  const { page } = loadPage('miniprogram/pages/generate-verification/generate-verification.js')
+  page.setData({ subject: 'math' })
+
+  const config = page.buildPaperConfig([{ lpCode: 'LP-001', weight: 80 }], '审题理解')
+
+  assert.equal(config.statsLine, '1 个卡点 · 3 题 · 约 12 分钟 · A4 1 页')
+  assert.doesNotMatch(config.statsLine, /LP-|BN-/)
+})

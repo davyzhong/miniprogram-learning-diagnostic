@@ -22,22 +22,14 @@
       </view>
     </view>
 
-    <!-- 优先卡点 CTA：把最该处理的卡点置顶放大 -->
-    <view wx:if="{{view.priorityBottleneck}}" class="priority-card"
-          catchtap="onBottleneckTap"
-          data-lp-code="{{view.priorityBottleneck.lpCode}}"
-          data-lp-name="{{view.priorityBottleneck.displayName}}"
-          data-bottleneck-id="{{view.priorityBottleneck.bottleneckId}}"
-          data-node-id="{{view.priorityBottleneck.nodeId}}">
-      <view class="priority-badge"><text class="b1-symbol badge-symbol">{{view.prioritySymbol}}</text>最该先处理</view>
-      <view class="priority-body">
-        <text class="priority-name">{{view.priorityBottleneck.displayName}}</text>
-        <text class="priority-symptom">{{view.priorityBottleneck.symptomText}}</text>
-      </view>
-      <view class="priority-action">
-        <text class="priority-action-text">学一下</text>
-        <text class="priority-action-arrow">›</text>
-      </view>
+    <!-- 最优先摘要行：同一卡点全页只在 domain 列表完整渲染一次，这里只做锚点入口 -->
+    <view wx:if="{{view.priorityBottleneck}}" class="priority-row"
+          catchtap="onPriorityAnchorTap"
+          data-lp-code="{{view.priorityBottleneck.lpCode}}">
+      <text class="b1-symbol priority-row-symbol">{{view.prioritySymbol}}</text>
+      <text class="priority-row-label">最优先：</text>
+      <text class="priority-row-name">{{view.priorityBottleneck.displayName}}</text>
+      <text class="priority-row-arrow">›</text>
     </view>
 
     <!-- 领域分组：默认平铺所有卡点，不再折叠 -->
@@ -65,6 +57,7 @@
 
         <view class="domain-bottlenecks">
           <view class="bn-item {{b.statusClass}}"
+                id="bn-{{b.lpCode}}"
                 wx:for="{{item.bottlenecks}}"
                 wx:for-item="b"
                 wx:key="lpCode"
