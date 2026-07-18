@@ -13,7 +13,7 @@ Page({
     activeMonth: '',
     activeFilter: '',
     monthLabel: '',
-    summaryCards: [],
+    summaryText: '',
     breakdown: [],
     breakdownVisible: false,
     days: [],

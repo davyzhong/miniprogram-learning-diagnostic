@@ -38,12 +38,21 @@ function buildImprovementRate(summary = {}) {
   return `${Math.round((improved / total) * 100)}%`
 }
 
+// 综合建议卡：量化证据单行化（禁用大数字块），与热力图例互补而非重复
+function buildAdviceStatsText(summary = {}) {
+  const improved = Math.max(0, Number(summary.improvedCount) || 0)
+  const pending = Math.max(0, Number(summary.pendingCount) || 0)
+  const persisting = Math.max(0, Number(summary.persistingCount) || 0)
+  return `已改善 ${improved} · 仍需练习 ${persisting} · 待验证 ${pending}`
+}
+
 Page({
   data: {
     timeline: [],
     bottleneckMatrix: [],
     summary: { totalRounds: 0, diagnosisCount: 0, verificationCount: 0, improvedCount: 0, persistingCount: 0, pendingCount: 0 },
     improvementRateText: '',
+    adviceStatsText: '',
     overallAdvice: '',
     loading: true,
     errorText: '',
@@ -113,6 +122,7 @@ Page({
         bottleneckMatrix: matrix,
         summary: data.summary || {},
         improvementRateText: buildImprovementRate(data.summary || {}),
+        adviceStatsText: buildAdviceStatsText(data.summary || {}),
         overallAdvice: sanitizeUserText(data.overallAdvice || '', { treatAsId: true }),
         loading: false,
       })

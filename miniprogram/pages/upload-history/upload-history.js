@@ -60,7 +60,6 @@ Page({
     allDays: [],
     filters: buildFilters('', []),
     summaryText: '共 0 天 · 0 条主记录 · 0 份验证反馈',
-    summaryCards: [],
     cleanup: EMPTY_CLEANUP,
     cleaningStaleRecords: false,
     timelineLimit: INITIAL_TIMELINE_LIMIT,

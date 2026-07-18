@@ -544,18 +544,12 @@ function buildEmptyState(allCount, filteredCount, activeSubject) {
 }
 
 function buildRecordAnalytics(events = [], statusItems = []) {
+  // 计数只在单行 summaryText 出现一次（去重铁律：大数字格已删除）
   const dayCount = groupEventsByDay(events, statusItems).length
   const recordCount = events.length
-  const paperCount = events.filter(event => event.kind === 'verification-paper').length
   const feedbackCount = events.filter(event => event.kind === 'verification-report').length
   return {
-    summaryText: `共 ${dayCount} 天 · ${recordCount} 条主记录 · ${feedbackCount} 份验证反馈`,
-    summaryCards: [
-      { key: 'days', label: '学习天数', value: dayCount },
-      { key: 'records', label: '主记录', value: recordCount },
-      { key: 'papers', label: '验证试卷', value: paperCount },
-      { key: 'feedback', label: '验证反馈', value: feedbackCount }
-    ]
+    summaryText: `共 ${dayCount} 天 · ${recordCount} 条主记录 · ${feedbackCount} 份验证反馈`
   }
 }
 

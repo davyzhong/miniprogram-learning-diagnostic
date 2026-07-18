@@ -12,12 +12,6 @@
 
   <view class="filter-card">
     <view class="summary-text">{{summaryText}}</view>
-    <view class="summary-grid" wx:if="{{summaryCards.length > 0}}">
-      <view class="summary-cell" wx:for="{{summaryCards}}" wx:key="key">
-        <text class="summary-value">{{item.value}}</text>
-        <text class="summary-label">{{item.label}}</text>
-      </view>
-    </view>
     <view class="filter-bar">
       <view
         class="filter-pill filter-{{item.key || 'all'}} {{item.active ? 'is-active' : ''}}"
@@ -87,13 +81,13 @@
         <view class="event-body">
           <view class="event-topline">
             <text class="event-title">{{event.title}}</text>
+            <text class="event-status" wx:if="{{event.statusText}}" catchtap="onTraceableUrlTap" data-url="{{event.statusUrl}}">{{event.statusText}}</text>
             <view class="event-meta">
               <text class="event-time">{{event.timeText}}</text>
               <text class="paper-code" wx:if="{{event.showPaperCode}}" catchtap="onTraceableUrlTap" data-url="{{event.paperCodeUrl}}">{{event.paperCode}}</text>
             </view>
           </view>
           <text class="event-summary">{{event.summary}}</text>
-          <text class="event-status" wx:if="{{event.statusText}}" catchtap="onTraceableUrlTap" data-url="{{event.statusUrl}}">{{event.statusText}}</text>
           <view class="chips" wx:if="{{event.chipItems.length > 0}}">
             <text class="chip" wx:for="{{event.chipItems}}" wx:key="text" wx:for-item="chip" catchtap="onTraceableUrlTap" data-url="{{chip.url}}">{{chip.text}}</text>
           </view>

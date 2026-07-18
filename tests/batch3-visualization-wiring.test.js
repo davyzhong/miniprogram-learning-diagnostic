@@ -41,6 +41,7 @@ test('learning-progress maps matrix statuses to heat class + readable single-cha
     getLearningProgress: async () => ({
       success: true,
       data: {
+        summary: { improvedCount: 2, persistingCount: 3, pendingCount: 1 },
         timeline: [{ reportId: 'r1' }, { reportId: 'r2' }],
         bottleneckMatrix: [{
           lpCode: 'LP-001',
@@ -75,6 +76,30 @@ test('learning-progress maps matrix statuses to heat class + readable single-cha
   // 缺失的轮次退化为 none/中点，绝不空手
   assert.deepEqual(JSON.parse(JSON.stringify(second.statusByRound)), ['persisting', 'none'])
   assert.deepEqual(JSON.parse(JSON.stringify(second.statusMarkers)), ['持', '·'])
+
+  // 量化证据单行化：综合建议卡统计拼成一行文本（已改善 · 仍需练习 · 待验证）
+  assert.equal(page.data.adviceStatsText, '已改善 2 · 仍需练习 3 · 待验证 1')
+})
+
+test('learning-progress replaces advice stat blocks with a stats line and compacts timeline rows', () => {
+  const wxml = read('miniprogram/pages/learning-progress/learning-progress.wxml')
+  const wxss = read('miniprogram/pages/learning-progress/learning-progress.wxss')
+
+  // 禁用大数字块：单行统计文本替代 advice-stats 数字格
+  assert.match(wxml, /class="advice-stats-line">\{\{adviceStatsText\}\}<\/text>/)
+  assert.doesNotMatch(wxml, /advice-stat-num|advice-stat-label|class="advice-stats"/)
+  assert.doesNotMatch(wxss, /\.advice-stat-num|\.advice-stat-label|\.advice-stats\s*\{/)
+  assert.match(wxss, /\.advice-stats-line\s*\{[^}]*font-size:\s*24rpx/s)
+
+  // 卡片留白预算：padding ≤18rpx
+  assert.match(wxss, /\.card\s*\{[^}]*padding:\s*18rpx/s)
+
+  // 时间线条目 ≤4 行：「查看报告」并入 header 行尾，不独占一行
+  const headerBlock = wxml.match(/<view class="timeline-header">[\s\S]*?<\/view>/)
+  assert.ok(headerBlock, 'timeline-header should exist')
+  assert.match(headerBlock[0], /class="timeline-link"[^>]*>查看报告<\/text>/)
+  assert.equal(wxml.match(/timeline-link/g).length, 1, 'timeline-link 只出现在 header 行尾，不再独占一行')
+  assert.match(wxss, /\.timeline-link\s*\{[^}]*margin-left:\s*auto/s)
 })
 
 test('learning-progress wxml renders B1 heat cells and wxss carries no cold-blue residue', () => {

@@ -9,7 +9,7 @@ const {
   shiftMonth,
   formatCost,
   eventTypeName,
-  buildSummaryCards,
+  buildSummaryText,
   buildBreakdown,
   buildDays,
   buildUsageState
@@ -41,17 +41,13 @@ test('eventTypeName maps known types and falls back', () => {
   assert.equal(eventTypeName('unknown'), 'unknown')
 })
 
-test('buildSummaryCards builds 4 cards from a summary', () => {
-  const cards = buildSummaryCards({ totalTokens: 1500, totalCostCny: 0.08, callCount: 3, studentCount: 2 })
-  assert.equal(cards.length, 4)
-  assert.equal(cards[0].value, '1500')
-  assert.equal(cards[1].value, '¥0.08')
-  assert.equal(cards[2].value, '3')
-  assert.equal(cards[3].value, '2')
+test('buildSummaryText joins monthly totals into a single stats line', () => {
+  const text = buildSummaryText({ totalTokens: 1500, totalCostCny: 0.08, callCount: 3, studentCount: 2 })
+  assert.equal(text, '本月 token 1500 · 估算成本 ¥0.08 · 调用 3 次 · 涉及 2 个孩子')
 })
 
-test('buildSummaryCards returns empty array for null summary', () => {
-  assert.deepEqual(buildSummaryCards(null).length, 0)
+test('buildSummaryText returns empty string for null summary', () => {
+  assert.equal(buildSummaryText(null), '')
 })
 
 test('buildBreakdown maps byEventType into readable rows', () => {
@@ -89,7 +85,7 @@ test('buildUsageState produces full view model with estimate notice', () => {
   assert.equal(state.monthLabel, '2026年6月')
   assert.equal(state.hasEvents, true)
   assert.match(state.estimateNotice, /不代表应付款项/)
-  assert.equal(state.summaryCards.length, 4)
+  assert.equal(state.summaryText, '本月 token 800 · 估算成本 ¥0.05 · 调用 1 次 · 涉及 1 个孩子')
   assert.equal(state.breakdown.length, 1)
 })
 
@@ -117,12 +113,19 @@ test('B1 AI usage uses restrained summary and ledger color tiers without a profi
   const wxss = fs.readFileSync(path.join(root, 'miniprogram/pages/ai-usage/ai-usage.wxss'), 'utf8')
   const studentProfile = fs.readFileSync(path.join(root, 'miniprogram/pages/student-profile/student-profile.wxml'), 'utf8')
 
-  assert.match(wxml, /class="summary-card usage-summary-\{\{index\}\}"/)
+  // 汇总大数字块已单行化：summary-grid/summary-card 结构不得存在
+  assert.match(wxml, /class="summary-text" wx:if="\{\{summaryText\}\}">\{\{summaryText\}\}<\/view>/)
+  assert.doesNotMatch(wxml, /summary-grid|summary-card|summaryCards/)
+  assert.doesNotMatch(wxss, /\.summary-grid|\.summary-card|\.usage-summary-\d/)
+  assert.match(wxss, /\.summary-text\s*\{[^}]*font-size:\s*24rpx/s)
+  // 条目留白预算：event-row 上下 padding ≤12rpx；cost 区 3 行并 2 行（估算徽标内联 token 行）
+  assert.match(wxss, /\.event-row\s*\{[^}]*padding:\s*12rpx 16rpx/s)
+  assert.match(wxml, /class="cost-tokens">\{\{ev\.tokens\}\} token<text wx:if="\{\{ev\.isEstimate\}\}" class="cost-estimate">估算<\/text><\/view>/)
+  assert.match(wxss, /\.cost-estimate\s*\{[^}]*margin-left:\s*8rpx/s)
+  assert.doesNotMatch(wxss, /\.cost-estimate\s*\{[^}]*margin-top/s)
   assert.match(wxml, /class="breakdown-row usage-category-\{\{item\.key\}\}"/)
   assert.match(wxml, /class="event-status \{\{ev\.status\}\}"/)
   assert.match(wxml, /class="deletion-btn b1-destructive/)
-  assert.match(wxss, /\.usage-summary-0/)
-  assert.match(wxss, /\.usage-summary-1/)
   assert.match(wxss, /\.usage-category-photo_analysis/)
   assert.match(wxss, /var\(--b1-destructive-fg\)/)
   assert.match(wxss, /var\(--b1-destructive-bg\)/)

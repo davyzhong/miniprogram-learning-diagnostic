@@ -17,11 +17,7 @@
   <view class="card advice-card" wx:if="{{overallAdvice}}">
     <view class="section-heading"><view class="heading-icon b1-symbol">{{adviceSymbol}}</view><text>综合建议</text></view>
     <text class="advice-text">{{overallAdvice}}</text>
-    <view class="advice-stats">
-      <view class="advice-stat"><text class="advice-stat-num advice-stat-improved">{{summary.improvedCount}}</text><text class="advice-stat-label">已改善</text></view>
-      <view class="advice-stat"><text class="advice-stat-num advice-stat-pending">{{summary.pendingCount}}</text><text class="advice-stat-label">待验证</text></view>
-      <view class="advice-stat"><text class="advice-stat-num advice-stat-persisting">{{summary.persistingCount}}</text><text class="advice-stat-label">仍需练习</text></view>
-    </view>
+    <text class="advice-stats-line">{{adviceStatsText}}</text>
   </view>
 
   <view class="card timeline-card" wx:if="{{timeline.length > 0}}">
@@ -34,6 +30,7 @@
             <text class="b1-symbol timeline-type-symbol">{{item.typeSymbol}}</text>
             <text class="timeline-type">{{item.isVerification ? '验证' : '诊断'}}</text>
             <text class="timeline-date">{{item.dateText}}</text>
+            <text class="timeline-link" bindtap="onViewReport" data-report-id="{{item.reportId}}">查看报告</text>
           </view>
           <text class="timeline-summary" wx:if="{{item.summary}}">{{item.summary}}</text>
           <view class="timeline-meta">
@@ -44,7 +41,6 @@
             <text class="improved-label">改善：</text>
             <text class="improved-names">{{item.improvedBottlenecksText}}</text>
           </view>
-          <text class="timeline-link" bindtap="onViewReport" data-report-id="{{item.reportId}}">查看报告</text>
         </view>
       </view>
     </view>
