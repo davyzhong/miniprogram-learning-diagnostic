@@ -153,6 +153,21 @@ test('首页行动队列：有到期复测时置顶 dueReview 卡并直跳验证
   assert.match(first.url, /targetCode=BN-DEC-MUL-POINT-COUNT/)
 })
 
+test('首页行动队列：疑似漏洞到期优先走微验证页，其余状态走验证卷', () => {
+  const view = buildLearningProfileHomeView({
+    student: { _id: 'stu-1', name: '测试' },
+    profiles: [],
+    dueReviews: [{
+      nodeId: 'MATH-NUM-DEC-MUL-POINT', status: 'suspected_gap',
+      nextReviewAt: PAST, activeBottleneckIds: ['BN-DEC-MUL-POINT-COUNT'],
+    }],
+  })
+  const item = view.personalActionQueue.find(i => i.key === 'dueReview')
+  assert.match(item.url, /micro-validation/)
+  assert.match(item.url, /targetCode=BN-DEC-MUL-POINT-COUNT/)
+  assert.equal(item.actionText, '去微验证')
+})
+
 test('首页行动队列：无到期复测/无关联卡点时不出现 dueReview 卡或回退知识地图', () => {
   const empty = buildLearningProfileHomeView({ student: { _id: 'stu-1', name: '测试' }, profiles: [], dueReviews: [] })
   assert.ok(!empty.personalActionQueue.some(item => item.key === 'dueReview'))
