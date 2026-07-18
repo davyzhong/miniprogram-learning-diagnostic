@@ -18,13 +18,6 @@
   </view>
 
   <view wx:else class="content">
-    <view class="summary-grid">
-      <view class="summary-card" wx:for="{{summaryCards}}" wx:key="key">
-        <text class="summary-value">{{item.value}}</text>
-        <text class="summary-label">{{item.label}}</text>
-      </view>
-    </view>
-
     <view class="composition-card" wx:if="{{compositionSegments.length > 0}}">
       <text class="composition-title">词库掌握构成 · 共 {{totalWords}} 词</text>
       <view class="b1-seg-bar">
@@ -57,12 +50,15 @@
         <text class="empty-title">暂时没有高频错词</text>
         <text class="empty-desc">完成认词练习或纸面听写后，这里会自动出现需要加强的词。</text>
       </view>
-      <view class="word-card" wx:for="{{weakWords}}" wx:key="wordId">
+      <view class="word-card" wx:for="{{visibleWeakWords}}" wx:key="wordId">
         <view class="word-main">
           <text class="word-title">{{item.word}}</text>
           <text class="word-meaning">{{item.displayMeaning}}</text>
         </view>
         <text class="word-tag">{{item.tagText}}</text>
+      </view>
+      <view class="word-more" wx:if="{{hiddenWeakWordCount > 0}}" catchtap="onExpandWeakWords">
+        展开剩余 {{hiddenWeakWordCount}} 条错词
       </view>
     </view>
 

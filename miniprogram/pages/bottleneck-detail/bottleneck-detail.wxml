@@ -11,16 +11,14 @@
           <view class="kicker-row">
             <text class="b1-symbol kicker-symbol" wx:if="{{subjectSymbol}}">{{subjectSymbol}}</text>
             <text class="kicker">{{subjectName}}学习卡点</text>
+            <text class="kicker kicker-category" wx:if="{{bottleneck.category}}">· {{bottleneck.category}}</text>
           </view>
-          <text class="title">{{bottleneck.displayName}}</text>
-          <text class="summary" wx:if="{{bottleneck.parentDescription}}">{{bottleneck.parentDescription}}</text>
-          <text class="summary">{{bottleneck.evidenceText}}</text>
+          <view class="title-row">
+            <text class="title">{{bottleneck.displayName}}</text>
+            <text class="chip state-{{bottleneck.statusClass}}">{{bottleneck.statusText}}</text>
+          </view>
+          <text class="hero-stats-line" wx:if="{{heroStatsText}}">{{heroStatsText}}</text>
         </view>
-      </view>
-      <view class="chip-row">
-        <text class="chip confidence-{{bottleneck.confidenceLevel}}">{{bottleneck.confidenceText}}</text>
-        <text class="chip" wx:if="{{bottleneck.category}}">{{bottleneck.category}}</text>
-        <text class="chip state-{{bottleneck.statusClass}}">{{bottleneck.statusText}}</text>
       </view>
     </view>
 
@@ -31,25 +29,6 @@
       </view>
       <text class="confidence-detail">{{confidence.detail}}</text>
       <text class="confidence-trend" wx:if="{{bottleneck.trendText}}">趋势：{{bottleneck.trendText}}</text>
-    </view>
-
-    <view class="metrics">
-      <view class="metric" bindtap="onMetricTap" data-target="reports">
-        <text class="metric-value">{{bottleneck.evidenceCount}}</text>
-        <text class="metric-label">证据</text>
-      </view>
-      <view class="metric" bindtap="onMetricTap" data-target="reports">
-        <text class="metric-value">{{bottleneck.recentErrorCount}}</text>
-        <text class="metric-label">相关错题</text>
-      </view>
-      <view class="metric" bindtap="onMetricTap" data-target="papers">
-        <text class="metric-value">{{bottleneck.verificationPassCount}}</text>
-        <text class="metric-label">通过</text>
-      </view>
-      <view class="metric" bindtap="onMetricTap" data-target="papers">
-        <text class="metric-value">{{bottleneck.verificationFailCount}}</text>
-        <text class="metric-label">未通过</text>
-      </view>
     </view>
 
     <view class="pass-rate-card" wx:if="{{passRateSegments.length > 0}}">
@@ -63,11 +42,6 @@
           <text>{{seg.label}}</text>
         </view>
       </view>
-    </view>
-
-    <view class="time-card" wx:if="{{bottleneck.timeText}}">
-      <text class="time-title">时间线索</text>
-      <text class="time-text">{{bottleneck.timeText}}</text>
     </view>
 
     <view class="section learning-section">

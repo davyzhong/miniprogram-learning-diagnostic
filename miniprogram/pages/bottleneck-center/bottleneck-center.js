@@ -172,12 +172,6 @@ Page({
     this.applyFilters()
   },
 
-  onStatTap(e) {
-    const status = e.currentTarget.dataset.status || 'all'
-    this.setData({ activeStatus: status })
-    this.applyFilters()
-  },
-
   onBottleneckTap(e) {
     const { subject = 'math', lpCode = '', bottleneckId = '', viewId = '' } = e.currentTarget.dataset
     if (!lpCode && !bottleneckId && !viewId) return

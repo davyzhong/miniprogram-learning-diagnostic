@@ -55,7 +55,9 @@ test('bottleneck center and detail cards render the confidence tag', () => {
   const center = read('miniprogram/pages/bottleneck-center/bottleneck-center.wxml')
   const detail = read('miniprogram/pages/bottleneck-detail/bottleneck-detail.wxml')
   assert.match(center, /confidence-\{\{item\.confidenceLevel\}\}">\{\{item\.confidenceText\}\}/)
-  assert.match(detail, /confidence-\{\{bottleneck\.confidenceLevel\}\}">\{\{bottleneck\.confidenceText\}\}/)
+  // 详情页置信度只保留一处：信息更全的置信度卡（●●● 高置信（N分）+ 依据 + 趋势），hero chip 已删
+  assert.match(detail, /confidence-level \{\{confidence\.level\}\}">\{\{confidence\.dots\}\} \{\{confidence\.label\}\}/)
+  assert.doesNotMatch(detail, /confidence-\{\{bottleneck\.confidenceLevel\}\}/)
   assert.doesNotMatch(center, /weightText|priorityText/)
   assert.doesNotMatch(detail, /weightText|priorityText/)
 })

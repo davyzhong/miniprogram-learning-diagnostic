@@ -7,11 +7,11 @@
 
 .loading-state,
 .empty-state {
-  min-height: 60vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  padding: 72rpx 28rpx 56rpx;
   color: #64748b;
   font-size: 26rpx;
   text-align: center;
@@ -64,42 +64,9 @@
   margin-top: 10rpx;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10rpx;
-  margin-bottom: 18rpx;
-}
-
-.stat-card {
-  min-height: 96rpx;
-  border-radius: 16rpx;
-  background: #fff;
-  border: 1rpx solid #e2e8f0;
-  box-shadow: 0 4rpx 16rpx rgba(15, 47, 82, .05);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 0 14rpx;
-}
-
-.stat-card:active,
 .bottleneck-card:active,
 .card-action:active {
   opacity: 0.74;
-}
-
-.stat-value {
-  color: #173f6b;
-  font-size: 34rpx;
-  font-weight: 900;
-  line-height: 1.1;
-}
-
-.stat-label {
-  color: #64748b;
-  font-size: 20rpx;
-  margin-top: 5rpx;
 }
 
 .filter-row {
@@ -149,55 +116,6 @@
   box-shadow: 0 8rpx 24rpx rgba(31, 79, 130, .08);
 }
 
-.bottleneck-recurring,
-.bottleneck-persisting {
-  border-left-color: #f97316;
-}
-
-.bottleneck-improved,
-.bottleneck-declining {
-  border-left-color: #22c55e;
-}
-
-.bottleneck-status-badge {
-  width: 82rpx;
-  min-height: 72rpx;
-  padding: 8rpx 6rpx;
-  box-sizing: border-box;
-  border-radius: 18rpx;
-  background: #eff6ff;
-  color: #1d4ed8;
-  font-size: 20rpx;
-  font-weight: 900;
-  line-height: 1.18;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.bottleneck-status-badge text {
-  max-width: 4em;
-}
-
-.status-badge-recurring,
-.status-badge-persisting {
-  background: #fff7ed;
-  color: #c2410c;
-}
-
-.status-badge-pending {
-  background: #eff6ff;
-  color: #1d4ed8;
-}
-
-.status-badge-improved,
-.status-badge-declining {
-  background: #dcfce7;
-  color: #15803d;
-}
-
 .bottleneck-copy {
   flex: 1;
   min-width: 0;
@@ -227,18 +145,12 @@
   flex-shrink: 0;
 }
 
-.bottleneck-desc,
-.bottleneck-time {
+.bottleneck-desc {
   display: block;
   color: #64748b;
   font-size: 22rpx;
   line-height: 1.45;
   margin-top: 7rpx;
-}
-
-.bottleneck-time {
-  color: #8a97a8;
-  margin-top: 3rpx;
 }
 
 .chip-row {
@@ -352,7 +264,6 @@
 /* 第三批：全量状态构成条 + 操作按钮 emoji 符号 */
 .stats-segments { margin: 0 24rpx 8rpx; }
 .card-action-symbol { font-size: 28rpx; margin-right: 6rpx; }
-.badge-symbol { font-size: 28rpx; margin-right: 6rpx; }
 .title-row { display: flex; align-items: center; gap: 10rpx; }
 .title-symbol { font-size: 32rpx; }
 .empty-deco { display: block; font-size: 88rpx; line-height: 1; margin-bottom: 16rpx; }
