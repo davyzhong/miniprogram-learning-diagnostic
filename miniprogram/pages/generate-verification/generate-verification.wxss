@@ -146,36 +146,12 @@
   line-height: 1.45;
 }
 
-.preview-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12rpx;
-  margin-top: 18rpx;
-}
-
-.preview-stat {
-  min-height: 92rpx;
-  border-radius: 14rpx;
-  background: #f8fafc;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.preview-num {
+.preview-stats-line {
   display: block;
-  font-size: 32rpx;
-  font-weight: 850;
-  color: #1a365d;
-  line-height: 1.2;
-}
-
-.preview-label {
-  display: block;
-  font-size: 20rpx;
-  color: #8795a5;
-  margin-top: 4rpx;
+  margin-top: 14rpx;
+  color: #607089;
+  font-size: 22rpx;
+  line-height: 1.5;
 }
 
 .bottleneck-list {
