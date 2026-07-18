@@ -11,26 +11,25 @@
   />
   <view class="report-header {{isVerification ? 'header-verify' : 'header-diagnosis'}}" wx:if="{{report._id}}">
     <view class="report-header-inner">
-      <view class="report-header-copy">
+      <view class="report-header-meta">
         <text class="report-type"><text class="b1-symbol report-type-symbol">{{typeSymbol}}</text>{{isVerification ? '验证报告' : '诊断报告'}}</text>
         <text class="report-date">{{dateText}}</text>
-        <text class="report-date traceable-text" wx:if="{{evidenceTimeText}}" bindtap="onTraceableUrlTap" data-url="{{evidenceTimeUrl}}">证据时间：{{evidenceTimeText}}</text>
+        <text class="quality-chip quality-chip-{{qualityClass}}" wx:if="{{hasQuality}}">{{qualityLabel}}</text>
+      </view>
+      <view class="report-header-meta report-header-meta-secondary">
+        <text class="report-date traceable-text" wx:if="{{evidenceTimeText}}" bindtap="onTraceableUrlTap" data-url="{{evidenceTimeUrl}}">证据 {{evidenceTimeText}}</text>
         <text class="paper-code-chip" wx:if="{{paperCodeText}}" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">验证卷 {{paperCodeText}}</text>
-        <text class="report-headline">{{headline}}</text>
-        <text class="report-summary" wx:if="{{trendSummaryText}}">{{trendSummaryText}}</text>
-        <view class="trend-band" wx:if="{{trendSegments.length > 0}}">
-          <view class="b1-seg-bar">
-            <view class="b1-seg b1-seg-{{item.tone}}" wx:for="{{trendSegments}}" wx:key="key" style="width: {{item.widthPercent}}%;"></view>
-          </view>
-          <view class="b1-seg-legend trend-band-legend">
-            <view class="b1-seg-legend-item" wx:for="{{trendSegments}}" wx:key="key">
-              <view class="b1-seg-dot b1-seg-{{item.tone}}"></view>
-              <text>{{item.label}}</text>
-            </view>
+      </view>
+      <view class="trend-band" wx:if="{{trendSegments.length > 0}}">
+        <view class="b1-seg-bar">
+          <view class="b1-seg b1-seg-{{item.tone}}" wx:for="{{trendSegments}}" wx:key="key" style="width: {{item.widthPercent}}%;"></view>
+        </view>
+        <view class="b1-seg-legend trend-band-legend">
+          <view class="b1-seg-legend-item" wx:for="{{trendSegments}}" wx:key="key">
+            <view class="b1-seg-dot b1-seg-{{item.tone}}"></view>
+            <text>{{item.label}}</text>
           </view>
         </view>
-        <text class="report-summary" wx:if="{{reportSummaryText}}">{{reportSummaryText}}</text>
-        <view class="quality-chip quality-chip-{{qualityClass}}" wx:if="{{hasQuality}}">{{qualityLabel}}</view>
       </view>
     </view>
   </view>
@@ -79,10 +78,6 @@
       <view class="explanation-box">
         <text class="explanation-title">{{explanationTitle}}</text>
         <view class="explanation-row">
-          <text class="explanation-label">结论</text>
-          <text class="explanation-value">{{explanationConclusion}}</text>
-        </view>
-        <view class="explanation-row">
           <text class="explanation-label">依据</text>
           <text class="explanation-value">{{explanationEvidence}}</text>
         </view>
@@ -91,13 +86,6 @@
           <text class="explanation-value">{{explanationUncertainty}}</text>
         </view>
         <view class="explanation-action" wx:if="{{explanationActionText}}" bindtap="onReportExplanationAction">{{explanationActionText}}</view>
-      </view>
-      <view class="quality-box quality-box-{{qualityClass}}" wx:if="{{hasQuality}}">
-        <view class="quality-title-row">
-          <text class="quality-title">{{qualityLabel}}</text>
-          <text class="quality-sample">{{qualitySampleSummary}}</text>
-        </view>
-        <text class="quality-reason" wx:for="{{qualityReasons}}" wx:key="index">{{item}}</text>
       </view>
       <view class="report-metrics">
         <view bindtap="onTraceableUrlTap" data-url="{{metricActions.errorsUrl}}"><text>{{report.totalErrors || 0}}</text><text>相关错题</text></view>
@@ -149,6 +137,7 @@
 
     <view class="card bottleneck-group-card" wx:if="{{hasBottleneckGroups}}">
       <view class="section-heading"><view class="heading-icon">卡点</view><text>发现的学习卡点</text></view>
+      <text class="card-caption" wx:if="{{reportSummaryText}}">{{reportSummaryText}}</text>
       <view class="bottleneck-group" wx:for="{{bottleneckGroups}}" wx:for-item="group" wx:key="categoryId">
         <view class="bottleneck-group-head">
           <text class="bottleneck-group-title">{{group.title}}</text>
@@ -166,14 +155,12 @@
                 <text class="bottleneck-mini-title">{{item.displayName}}</text>
                 <text class="status-label status-label-{{item.statusClass}}">{{item.statusText}}</text>
               </view>
-              <view class="bottleneck-score-row">
-                <text class="bottleneck-score-label">{{item.confidenceScoreLabel}}</text>
-                <text class="bottleneck-score-value">{{item.confidenceScore}}</text>
+              <view class="bottleneck-score-line">
+                <view class="bottleneck-score-track">
+                  <view class="bottleneck-score-fill confidence-{{item.confidenceLevel}}" style="width: {{item.confidenceScore}}%;"></view>
+                </view>
+                <text class="bottleneck-score-value">{{item.confidenceScoreLabel}} {{item.confidenceScore}}</text>
               </view>
-              <view class="bottleneck-score-track">
-                <view class="bottleneck-score-fill confidence-{{item.confidenceLevel}}" style="width: {{item.confidenceScore}}%;"></view>
-              </view>
-              <text class="bottleneck-metric-scope" wx:if="{{item.metricScopeText}}">{{item.metricScopeText}}</text>
               <view class="bottleneck-evidence-grid" wx:if="{{item.evidenceMetrics.length > 0}}">
                 <view class="bottleneck-evidence-cell" wx:for="{{item.evidenceMetrics}}" wx:for-item="metric" wx:key="key">
                   <text class="bottleneck-evidence-value">{{metric.value}}</text>
@@ -185,7 +172,7 @@
                 <text wx:if="{{item.lastSeenText}}"> · 最近 {{item.lastSeenText}}</text>
                 <text wx:if="{{item.durationText}}"> · {{item.durationText}}</text>
               </text>
-              <text class="bottleneck-mini-meta">{{item.evidenceText || item.metaText}}</text>
+              <text class="bottleneck-mini-meta"><text wx:if="{{item.metricScopeText}}">{{item.metricScopeText}} · </text>{{item.evidenceText || item.metaText}}</text>
               <text class="feedback-link" catchtap="onOpenFeedback" data-target-type="bottleneck" data-target-id="{{item.bottleneckId || item.lpCode}}" data-type="wrong_bottleneck">反馈这个卡点</text>
             </view>
           </view>
@@ -204,12 +191,11 @@
             <text class="status-label status-label-{{item.statusClass}}">{{item.statusText}}</text>
           </view>
           <text class="bottleneck-desc">{{item.rootCause || item.suggestion || '建议结合相关错题进一步观察。'}}</text>
-          <view class="bottleneck-score-row">
-            <text class="bottleneck-score-label">{{item.confidenceScoreLabel}}</text>
-            <text class="bottleneck-score-value">{{item.confidenceScore}}</text>
-          </view>
-          <view class="bottleneck-score-track">
-            <view class="bottleneck-score-fill confidence-{{item.confidenceLevel}}" style="width: {{item.confidenceScore}}%;"></view>
+          <view class="bottleneck-score-line">
+            <view class="bottleneck-score-track">
+              <view class="bottleneck-score-fill confidence-{{item.confidenceLevel}}" style="width: {{item.confidenceScore}}%;"></view>
+            </view>
+            <text class="bottleneck-score-value">{{item.confidenceScoreLabel}} {{item.confidenceScore}}</text>
           </view>
           <view class="bottleneck-evidence-grid" wx:if="{{item.evidenceMetrics.length > 0}}">
             <view class="bottleneck-evidence-cell" wx:for="{{item.evidenceMetrics}}" wx:for-item="metric" wx:key="key">
