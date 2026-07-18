@@ -9,6 +9,7 @@ const CLI_PATH = process.env.WECHAT_DEVTOOLS_CLI
   || (process.platform === 'darwin' ? '/Applications/wechatwebdevtools.app/Contents/MacOS/cli' : 'cli')
 const OUTPUT_DIR = path.join(PROJECT_PATH, 'tmp', 'e2e', 'family-density')
 const TARGET_VIEWPORTS = new Map([
+  ['360x800', { width: 360, height: 800 }],
   ['375x812', { width: 375, height: 812 }],
   ['390x844', { width: 390, height: 844 }],
   ['430x932', { width: 430, height: 932 }]
@@ -86,7 +87,7 @@ function validateFamilyDensityMetrics(metrics = {}) {
   if (!TARGET_VIEWPORTS.has(targetKey)) {
     throw new Error(
       `incompatible simulator viewport ${targetKey}; select a simulator whose wx window is exactly `
-      + '375x812, 390x844, or 430x932, then rerun npm run test:e2e:family-density'
+      + '360x800, 375x812, 390x844, or 430x932, then rerun npm run test:e2e:family-density'
     )
   }
   if (viewport.width > MAX_VIEWPORT_WIDTH) {
@@ -324,17 +325,18 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
   const cardMetrics = []
   for (const card of cards) {
     const identity = await card.$('.child-identity-row')
-    const metric = await card.$('.child-metric-strip')
+    const header = await card.$('.child-card-header')
+    const metric = await card.$('.child-status-grid')
     const priority = await card.$('.child-priority-row')
-    if (!identity || !metric || !priority) throw new Error('required child density blocks were not rendered')
+    if (!header || !identity || !metric || !priority) throw new Error('required child density blocks were not rendered')
     const actions = [
       ...(await card.$$('.child-profile-link')),
       ...(await card.$$('.priority-action-text')),
-      ...(await card.$$('.subject-row-action')),
+      ...(await card.$$('.subject-row-status')),
       ...(await card.$$('.child-diagnosis-action'))
     ]
     const interactive = [
-      identity,
+      header,
       ...(await card.$$('.child-metric-cell')),
       priority,
       ...(await card.$$('.child-secondary-action')),
@@ -343,13 +345,13 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
       ...(await card.$$('.child-quick-link'))
     ]
     const adjacent = [
-      identity,
-      metric,
+      header,
+      ...(await card.$$('.child-diagnosis-row')),
       priority,
       ...(await card.$$('.secondary-action-grid')),
-      ...(await card.$$('.child-subject-row')),
-      ...(await card.$$('.child-diagnosis-row')),
-      ...(await card.$$('.child-quick-actions'))
+      metric,
+      ...(await card.$$('.child-status-segments')),
+      ...(await card.$$('.child-subject-list'))
     ]
     const secondaryRows = await card.$$('.child-secondary-action')
     const subjectRows = await card.$$('.child-subject-row')
@@ -359,13 +361,13 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
       ...(await collectBoundedChildren([identity], '.child-name', 'long child name')),
       ...(await collectBoundedChildren([priority], '.priority-action-text', 'priority action')),
       ...(await collectBoundedChildren(secondaryRows, '.secondary-action-title', 'secondary action label')),
-      ...(await collectBoundedChildren(subjectRows, '.subject-row-action', 'subject action label')),
+      ...(await collectBoundedChildren(subjectRows, '.subject-row-status', 'subject status label')),
       ...(await collectBoundedChildren(diagnosisRows, '.child-diagnosis-action', 'diagnosis action label')),
       ...(await collectBoundedChildren(quickLinks, '.quick-link-title', 'quick action label'))
     ]
     cardMetrics.push({
       cardRect: await elementRect(card),
-      identityRect: await elementRect(identity),
+      identityRect: await elementRect(header),
       metricRect: await elementRect(metric),
       priorityRect: await elementRect(priority),
       diagnosisRects: await rectsFor(diagnosisRows),
@@ -420,7 +422,7 @@ async function main() {
       '数学',
       '最新正式诊断',
       '三科学习状态',
-      '快捷入口',
+      '最新诊断',
       '数学-20260712-06'
     ]) assert(familyText.includes(expected), `family page missing readable text: ${expected}`)
     assertCodeHygiene(familyText, 'family page')

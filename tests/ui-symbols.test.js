@@ -4,6 +4,8 @@ const assert = require('node:assert/strict')
 const {
   UI_SYMBOLS,
   UI_SYMBOL_CATEGORIES,
+  VERIFIED_BATCH_02_SYMBOLS,
+  REJECTED_BATCH_02_IDS,
   symbolOf,
   subjectSymbolOf,
   isApprovedUiSymbol
@@ -19,14 +21,31 @@ const LEGACY_KEYS = [
   'time', 'calendar'
 ]
 
-test('UI symbols expose the full 202-item verified library plus backward-compatible aliases', () => {
+test('UI symbols expose 202 first-batch and 996 cross-platform second-batch glyphs', () => {
   const keys = Object.keys(UI_SYMBOLS)
-  assert.equal(keys.length, 205)
-  assert.equal(new Set(keys).size, 205)
+  assert.equal(keys.length, 1201)
+  assert.equal(new Set(keys).size, 1201)
+  assert.equal(Object.keys(VERIFIED_BATCH_02_SYMBOLS).length, 996)
   LEGACY_KEYS.forEach(key => {
     assert.ok(symbolOf(key).length > 0, `旧键 ${key} 必须继续可解析`)
   })
   assert.equal(symbolOf('unknown'), '')
+})
+
+test('second-batch whitelist excludes exactly the four Android tofu-box results', () => {
+  const rejected = [
+    ['B02-C01-007', '🪎'],
+    ['B02-C02-024', '▶️'],
+    ['B02-C09-031', '🛘'],
+    ['B02-C17-013', '🪊']
+  ]
+  assert.deepEqual(REJECTED_BATCH_02_IDS, rejected.map(([id]) => id))
+  rejected.forEach(([id, glyph]) => {
+    assert.equal(symbolOf(id), '')
+    assert.equal(isApprovedUiSymbol(glyph), false)
+  })
+  assert.equal(symbolOf('B02-C01-001'), '📃')
+  assert.equal(symbolOf('B02-C26-050'), '🧎🏼‍♂️‍➡️')
 })
 
 test('category structure mirrors the 14 verified candidate groups (C01: 7, C02-C14: 15)', () => {
@@ -44,11 +63,11 @@ test('category structure mirrors the 14 verified candidate groups (C01: 7, C02-C
   })
 })
 
-test('every whitelist glyph is one of the 202 device-verified candidates (C01-C14 all allowed)', () => {
+test('every first-batch glyph remains approved after the second-batch expansion', () => {
   const { EMOJI_CATEGORIES } = require('../miniprogram/pages/icon-compatibility/emoji-candidates')
   const verifiedGlyphs = new Set(EMOJI_CATEGORIES.flatMap(category => category.items.map(item => item.glyph)))
   assert.equal(verifiedGlyphs.size, 202)
-  for (const glyph of Object.values(UI_SYMBOLS)) {
+  for (const glyph of Object.values(UI_SYMBOLS).filter(glyph => verifiedGlyphs.has(glyph))) {
     assert.ok(verifiedGlyphs.has(glyph), `${glyph} 必须来自 202 项真机验证清单`)
     assert.equal(isApprovedUiSymbol(glyph), true)
   }
@@ -56,7 +75,8 @@ test('every whitelist glyph is one of the 202 device-verified candidates (C01-C1
   assert.equal(isApprovedUiSymbol('👨‍👩‍👧‍👦'), true)
   assert.equal(isApprovedUiSymbol('1️⃣'), true)
   assert.equal(isApprovedUiSymbol('👍🏽'), true)
-  assert.equal(isApprovedUiSymbol('🦄'), false)
+  assert.equal(isApprovedUiSymbol('🦄'), true)
+  assert.equal(isApprovedUiSymbol('🪎'), false)
 })
 
 test('subject symbols follow the updated design direction (abacus / open book / letters)', () => {

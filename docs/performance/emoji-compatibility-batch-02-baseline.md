@@ -1,5 +1,7 @@
 # 第二批 Emoji 兼容性测试基线
 
+> **2026-07-18 后续状态**：B02 已完成真机验收，996 个 Android/iOS 双端通过项以约 11 KB 紧凑生成表进入主包，4 个 Android 方格项被排除。当前源码主包检查为 788 KB，低于项目 800 KB 预算。结果详见 `docs/EMOJI_COMPATIBILITY_WHITELIST.md`。
+
 ## 范围
 
 - 日期：2026-07-18（Asia/Shanghai）

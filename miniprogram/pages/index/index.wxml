@@ -93,18 +93,75 @@
         data-name="{{child.name}}"
         data-grade="{{child.gradeText}}"
       >
-        <view class="child-card-top child-identity-row">
-          <view class="child-avatar">{{child.avatarText}}</view>
-          <view class="child-main">
-            <view class="child-title-line">
-              <text class="child-name">{{child.name}}</text>
-              <text class="child-status child-status-{{child.statusClass}}"><text class="child-status-dot" wx:if="{{child.statusClass === 'pending'}}"></text>{{child.statusText}}</text>
+        <view class="child-card-header">
+          <view class="child-card-top child-identity-row">
+            <view class="child-avatar">{{child.avatarText}}</view>
+            <view class="child-main">
+              <view class="child-title-line">
+                <text class="child-name">{{child.name}}</text>
+                <text class="child-status child-status-{{child.statusClass}}"><text class="child-status-dot" wx:if="{{child.statusClass === 'pending'}}"></text>{{child.statusText}}</text>
+              </view>
+              <text class="child-meta">{{child.gradeText}}<text wx:if="{{child.gradeText && child.roleText}}"> · </text>{{child.roleText}}<text wx:if="{{child.memberText}}"> · {{child.memberText}}</text></text>
+              <text class="child-meta">最近更新：{{child.recentUpdateText}}</text>
+              <text class="child-profile-link" catchtap="onTraceableUrlTap" data-url="{{child.profileUrl}}">查看档案 ›</text>
             </view>
-            <text class="child-meta">{{child.gradeText}}<text wx:if="{{child.gradeText && child.roleText}}"> · </text>{{child.roleText}}<text wx:if="{{child.memberText}}"> · {{child.memberText}}</text></text>
-            <text class="child-meta">最近更新：{{child.recentUpdateText}}</text>
-            <text class="child-profile-link" catchtap="onTraceableUrlTap" data-url="{{child.profileUrl}}">查看档案 ›</text>
           </view>
-          <text class="arrow">›</text>
+        </view>
+
+        <view class="child-quick-grid">
+          <view
+            class="child-quick-link"
+            wx:for="{{child.quickLinks}}"
+            wx:key="key"
+            catchtap="onTraceableUrlTap"
+            data-url="{{item.url}}"
+          >
+            <text class="b1-symbol quick-link-symbol" wx:if="{{item.symbol}}">{{item.symbol}}</text>
+            <text class="quick-link-title">{{item.title}}</text>
+          </view>
+        </view>
+
+        <view class="child-diagnosis-list" wx:if="{{child.diagnosisReports.length > 0}}">
+          <view class="child-diagnosis-head">
+            <text class="child-diagnosis-label">最新学科诊断</text>
+            <text class="child-diagnosis-count">{{child.diagnosisCoverageText}}</text>
+          </view>
+          <view class="child-latest-diagnosis child-diagnosis-row b1-subject-{{item.subject}}" wx:for="{{child.diagnosisReports}}" wx:key="subject" catchtap="onTraceableUrlTap" data-url="{{item.url}}">
+            <view class="child-diagnosis-copy">
+              <view class="child-diagnosis-title-line">
+                <text class="child-diagnosis-title">{{item.title}}</text>
+                <text class="child-diagnosis-date" wx:if="{{item.dateText}}">{{item.dateText}}</text>
+              </view>
+              <text class="child-diagnosis-summary">{{item.summary}}</text>
+            </view>
+            <text class="child-diagnosis-action">报告 ›</text>
+          </view>
+        </view>
+
+        <view
+          class="child-priority-action child-priority-row b1-priority priority-{{child.priorityAction.tone}}"
+          catchtap="onTraceableUrlTap"
+          data-url="{{child.priorityAction.url}}"
+        >
+          <view class="priority-copy">
+            <text class="mini-section-label">今日优先行动</text>
+            <text class="priority-title">{{child.priorityAction.title}}</text>
+            <text class="priority-summary">{{child.priorityAction.summary}}</text>
+          </view>
+          <text class="priority-action-text">{{child.priorityAction.actionText}} ›</text>
+        </view>
+
+        <view class="secondary-action-grid" wx:if="{{child.secondaryActions.length > 0}}">
+          <view
+            class="secondary-action-card child-secondary-action b1-subject-{{item.subject}}"
+            wx:for="{{child.secondaryActions}}"
+            wx:key="subject"
+            catchtap="onTraceableUrlTap"
+            data-url="{{item.url}}"
+          >
+            <text class="secondary-action-title">{{item.title}}</text>
+            <text class="secondary-action-summary">{{item.summary}}</text>
+          </view>
         </view>
 
         <view class="child-status-grid">
@@ -135,32 +192,6 @@
           </view>
         </view>
 
-        <view
-          class="child-priority-action child-priority-row b1-priority priority-{{child.priorityAction.tone}}"
-          catchtap="onTraceableUrlTap"
-          data-url="{{child.priorityAction.url}}"
-        >
-          <view class="priority-copy">
-            <text class="mini-section-label">今日优先行动</text>
-            <text class="priority-title">{{child.priorityAction.title}}</text>
-            <text class="priority-summary">{{child.priorityAction.summary}}</text>
-          </view>
-          <text class="priority-action-text">{{child.priorityAction.actionText}} ›</text>
-        </view>
-
-        <view class="secondary-action-grid" wx:if="{{child.secondaryActions.length > 0}}">
-          <view
-            class="secondary-action-card child-secondary-action b1-subject-{{item.subject}}"
-            wx:for="{{child.secondaryActions}}"
-            wx:key="subject"
-            catchtap="onTraceableUrlTap"
-            data-url="{{item.url}}"
-          >
-            <text class="secondary-action-title">{{item.title}}</text>
-            <text class="secondary-action-summary">{{item.summary}}</text>
-          </view>
-        </view>
-
         <view class="child-panel-label">三科学习状态</view>
         <view class="child-subject-list">
           <view
@@ -170,53 +201,8 @@
             catchtap="onTraceableUrlTap"
             data-url="{{item.url}}"
           >
-            <view class="subject-row-copy">
-              <view class="subject-name-line">
-                <text class="subject-row-name">{{item.name}}</text>
-                <text class="subject-row-action">{{item.actionText}}</text>
-              </view>
-              <text class="subject-row-summary">{{item.summary}}</text>
-              <view class="subject-row-segments" wx:if="{{item.statusSegments.length > 0}}">
-                <view class="b1-seg-bar">
-                  <view class="b1-seg b1-seg-{{seg.tone}}" wx:for="{{item.statusSegments}}" wx:for-item="seg" wx:key="key" style="width: {{seg.widthPercent}}%;"></view>
-                </view>
-              </view>
-            </view>
-            <text class="subject-row-status">{{item.statusText}}</text>
-          </view>
-        </view>
-
-        <view class="child-diagnosis-list" wx:if="{{child.diagnosisReports.length > 0}}">
-          <view class="child-diagnosis-head">
-            <text class="child-diagnosis-label">最新学科诊断</text>
-            <text class="child-diagnosis-count">{{child.diagnosisCoverageText}}</text>
-          </view>
-          <view class="child-latest-diagnosis child-diagnosis-row b1-subject-{{item.subject}}" wx:for="{{child.diagnosisReports}}" wx:key="subject" catchtap="onTraceableUrlTap" data-url="{{item.url}}">
-            <view class="child-diagnosis-copy">
-              <view class="child-diagnosis-title-line">
-                <text class="child-diagnosis-title">{{item.title}}</text>
-                <text class="child-diagnosis-date" wx:if="{{item.dateText}}">{{item.dateText}}</text>
-              </view>
-              <text class="child-diagnosis-summary">{{item.summary}}</text>
-            </view>
-            <text class="child-diagnosis-action">查看 ›</text>
-          </view>
-        </view>
-
-        <view class="child-panel-label">快捷入口</view>
-        <view class="child-quick-grid">
-          <view
-            class="child-quick-link"
-            wx:for="{{child.quickLinks}}"
-            wx:key="key"
-            catchtap="onTraceableUrlTap"
-            data-url="{{item.url}}"
-          >
-            <view class="quick-link-title-row">
-              <text class="b1-symbol quick-link-symbol" wx:if="{{item.symbol}}">{{item.symbol}}</text>
-              <text class="quick-link-title">{{item.title}}</text>
-            </view>
-            <text class="quick-link-summary">{{item.summary}}</text>
+            <text class="subject-row-name">{{item.name}}</text>
+            <text class="subject-row-status">{{item.statusText}} ›</text>
           </view>
         </view>
       </view>
