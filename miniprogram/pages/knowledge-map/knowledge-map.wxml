@@ -89,5 +89,33 @@
         </view>
       </view>
     </view>
+
+    <!-- 节点掌握地图：150 个知识节点的六态追踪（仅数学，未观察节点按领域汇总） -->
+    <view class="node-map" wx:if="{{view.nodeMap}}">
+      <view class="node-map-title">
+        <text>知识点掌握地图</text>
+        <text class="node-map-sub">{{view.nodeMap.observedTotal}} 个有记录 · {{view.nodeMap.gapTotal}} 待修复 · 共 {{view.nodeMap.totalCount}} 个知识点</text>
+      </view>
+      <view class="domain-card nm-card" wx:for="{{view.nodeMap.domains}}" wx:key="key">
+        <view class="domain-header">
+          <text class="domain-marker">{{item.marker}}</text>
+          <view class="domain-info">
+            <text class="domain-name">{{item.name}}</text>
+            <text class="domain-stats">{{item.observed.length}} 个有记录 · {{item.gapCount}} 待修复 · {{item.masteredCount}} 已掌握</text>
+          </view>
+        </view>
+        <view class="nm-nodes" wx:if="{{item.observed.length > 0}}">
+          <view class="nm-node nm-{{n.tone}}" wx:for="{{item.observed}}" wx:for-item="n" wx:key="nodeId">
+            <text class="nm-status">{{n.statusIcon}}</text>
+            <view class="nm-text">
+              <text class="nm-name">{{n.title}}</text>
+              <text class="nm-meta" wx:if="{{n.metaText}}">{{n.statusText}} · {{n.metaText}}</text>
+              <text class="nm-meta" wx:else>{{n.statusText}}</text>
+            </view>
+          </view>
+        </view>
+        <text class="nm-unobserved" wx:if="{{item.unobservedCount > 0}}">其余 {{item.unobservedCount}} 个知识点未观察</text>
+      </view>
+    </view>
   </view>
 </view>

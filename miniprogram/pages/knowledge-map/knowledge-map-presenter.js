@@ -1,7 +1,8 @@
-const { profileBottlenecks, expandFineBottleneckItems, buildConfidence, normalizeStatus, STATUS_META } = require('../../utils/bottleneck-view')
+const { profileBottlenecks, expandFineBottleneckItems, buildConfidence, normalizeStatus, STATUS_META, NODE_STATUS_META, NODE_STATUS_ORDER } = require('../../utils/bottleneck-view')
 const { readableNameOf, sanitizeUserText } = require('../../utils/user-facing-text')
 const { buildStatusSegments } = require('../../utils/status-segments')
 const { symbolOf } = require('../../utils/ui-symbols')
+const knowledgeSeed = require('../../data/math/knowledge-nodes.seed.js')
 
 const DOMAIN_META = [
   { key: '数与代数', marker: '01', short: '数与代数' },
@@ -27,7 +28,95 @@ function buildSymptomText(bn = {}) {
   return '点击查看讲解并练 3 道'
 }
 
-function buildKnowledgeMapPageView(profile = {}, subject = 'math') {
+// ── 节点掌握地图（150 知识节点 × 六态）──
+
+const NODE_TONE_BY_STATUS = {
+  recurring: 'risk',
+  suspected_gap: 'risk',
+  relearning: 'risk',
+  partial_mastery: 'partial',
+  mastered: 'ok',
+  unobserved: 'none',
+}
+
+function nodeMetaText(record = {}) {
+  if (record.nextReviewAt) {
+    const reviewDate = new Date(record.nextReviewAt)
+    if (!Number.isNaN(reviewDate.getTime())) {
+      return reviewDate.getTime() <= Date.now()
+        ? '复测已到期'
+        : `${reviewDate.getMonth() + 1}月${reviewDate.getDate()}日复测`
+    }
+  }
+  const bnCount = (record.activeBottleneckIds || []).length
+  return bnCount > 0 ? `关联 ${bnCount} 个卡点` : ''
+}
+
+/**
+ * 把 studentNodeMastery 记录与 150 节点镜像合并成领域分组的六态地图。
+ * 未观察节点不逐个展示（避免 150 个灰块噪音），按领域汇总计数。
+ */
+function buildNodeMapView(records = [], subject = 'math') {
+  if (subject !== 'math') return null
+  const byNode = new Map((records || []).map(item => [item.nodeId, item]))
+
+  let observedTotal = 0
+  let gapTotal = 0
+  let masteredTotal = 0
+  let totalCount = 0
+
+  const domains = DOMAIN_META.map(meta => {
+    const domainNodes = (knowledgeSeed.nodes || []).filter(node => node.domain === meta.key)
+    const observed = []
+    for (const node of domainNodes) {
+      const record = byNode.get(node.nodeId)
+      const status = record && NODE_STATUS_META[record.status] ? record.status : 'unobserved'
+      if (status === 'unobserved') continue
+      const statusMeta = NODE_STATUS_META[status]
+      observed.push({
+        nodeId: node.nodeId,
+        title: node.title,
+        status,
+        statusText: statusMeta.text,
+        statusIcon: statusMeta.icon,
+        tone: NODE_TONE_BY_STATUS[status],
+        metaText: record ? nodeMetaText(record) : '',
+        confidence: record && typeof record.confidence === 'number' ? record.confidence : 0,
+      })
+    }
+    observed.sort((a, b) => {
+      const orderDiff = NODE_STATUS_ORDER.indexOf(a.status) - NODE_STATUS_ORDER.indexOf(b.status)
+      return orderDiff !== 0 ? orderDiff : b.confidence - a.confidence
+    })
+    const gapCount = observed.filter(node => node.tone === 'risk').length
+    const masteredCount = observed.filter(node => node.status === 'mastered').length
+    observedTotal += observed.length
+    gapTotal += gapCount
+    masteredTotal += masteredCount
+    totalCount += domainNodes.length
+    return {
+      key: meta.key,
+      marker: meta.marker,
+      name: meta.short,
+      observed,
+      gapCount,
+      masteredCount,
+      unobservedCount: domainNodes.length - observed.length,
+      totalCount: domainNodes.length,
+    }
+  })
+
+  return {
+    domains,
+    observedTotal,
+    gapTotal,
+    masteredTotal,
+    totalCount,
+    hasObserved: observedTotal > 0,
+  }
+}
+
+function buildKnowledgeMapPageView(profile = {}, subject = 'math', masteryRecords = []) {
   const rawBottlenecks = profileBottlenecks(profile)
   const expanded = subject === 'math'
     ? expandFineBottleneckItems(rawBottlenecks, { expandCandidates: true })
@@ -111,9 +200,11 @@ function buildKnowledgeMapPageView(profile = {}, subject = 'math') {
     bottleneckCount: allBottlenecks.length,
     pendingCount: totalPending,
     hasData: allBottlenecks.length > 0,
+    // 节点掌握地图（150 节点 × 六态，仅数学）
+    nodeMap: buildNodeMapView(masteryRecords, subject),
     // 顶部 CTA：把最该优先处理的卡点（active 状态）拉到顶部第一个，引导用户直接学
     priorityBottleneck: allBottlenecks.find(b => b.statusClass === 'active') || allBottlenecks[0] || null,
   }
 }
 
-module.exports = { buildKnowledgeMapPageView }
+module.exports = { buildKnowledgeMapPageView, buildNodeMapView }

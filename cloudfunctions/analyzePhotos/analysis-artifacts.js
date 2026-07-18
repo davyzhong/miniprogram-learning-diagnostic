@@ -4,6 +4,7 @@ const { buildProfileSummary } = require('./profile-summary');
 const { buildReportQuality } = require('./report-quality');
 const { aggregateVerificationEvidence, aggregateChineseReviewEvidence } = require('./verification-evidence');
 const { enrichMathReport } = require('./math-learning-map-enricher');
+const { deriveMasteryEvents, applyMasteryEventsToCollection } = require('./node-mastery-writer');
 const {
   assertUsableBatchResults,
   batchFailureSummary,
@@ -185,10 +186,11 @@ function createAnalysisArtifactService(deps) {
     return {
       merged, quality, imageFiles, previousReport, comparisonSummary, verificationTargets,
       profile, profileSummary, partialSuccess, analysisWarning, failedBatches, failedImageFiles,
+      mode,
     };
   }
 
-  async function writeCompletedAnalysis({ reportId, studentId, subject, merged, quality, imageFiles, previousReport, comparisonSummary, verificationTargets, profile, profileSummary, partialSuccess, analysisWarning, failedBatches, failedImageFiles }) {
+  async function writeCompletedAnalysis({ reportId, studentId, subject, merged, quality, imageFiles, previousReport, comparisonSummary, verificationTargets, profile, profileSummary, partialSuccess, analysisWarning, failedBatches, failedImageFiles, mode }) {
     await db.collection('reports').doc(reportId).update({
       data: {
         status: 'completed',
@@ -219,6 +221,19 @@ function createAnalysisArtifactService(deps) {
     });
     if (profileSummary.isEffective) {
       await updateSubjectProfile(profile, profileSummary, reportId);
+      // 节点掌握状态闭环（仅数学）：把本次报告证据写入 studentNodeMastery。
+      // 辅助链路，失败不阻断报告完成。
+      if (subject === 'math') {
+        try {
+          const masteryEvents = deriveMasteryEvents({ subject, mode, merged, reportId });
+          const masteryResult = await applyMasteryEventsToCollection({
+            db, studentId, subject, events: masteryEvents, now: new Date(),
+          });
+          console.log('节点掌握状态更新', JSON.stringify(masteryResult));
+        } catch (masteryError) {
+          console.error('节点掌握状态更新失败（不影响报告完成）', masteryError);
+        }
+      }
       await db.collection('reports').doc(reportId).update({ data: { profileAppliedAt: new Date() } });
     } else {
       await clearSubjectProfileAnalysis(studentId, subject);

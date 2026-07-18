@@ -12,6 +12,21 @@ const STATUS_META = {
   improved: { text: '已改善', className: 'improved', icon: '改善', badgeText: '已改善', actionText: '查看证据', symbolKey: 'statusGreen' }
 }
 
+// 节点掌握状态（studentNodeMastery 六态，nodeId 粒度）的文案与样式单一来源。
+// 与瓶颈层 STATUS_META（BN/LP 粒度）并存，语义见
+// docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md
+const NODE_STATUS_META = {
+  unobserved: { text: '未观察', className: 'pending', icon: '未观察', badgeText: '未观察', symbolKey: 'pending' },
+  suspected_gap: { text: '疑似漏洞', className: 'persisting', icon: '疑似', badgeText: '疑似漏洞', symbolKey: 'statusRed' },
+  relearning: { text: '正在重学', className: 'persisting', icon: '重学', badgeText: '正在重学', symbolKey: 'statusRed' },
+  partial_mastery: { text: '部分掌握', className: 'pending', icon: '部分', badgeText: '部分掌握', symbolKey: 'pending' },
+  mastered: { text: '已掌握', className: 'improved', icon: '掌握', badgeText: '已掌握', symbolKey: 'statusGreen' },
+  recurring: { text: '复发', className: 'persisting', icon: '复发', badgeText: '复发', symbolKey: 'statusRed' }
+}
+
+// 节点状态展示优先级（越小越靠前）：风险态在前，已掌握/未观察在后
+const NODE_STATUS_ORDER = ['recurring', 'suspected_gap', 'relearning', 'partial_mastery', 'mastered', 'unobserved']
+
 // === 置信度统一口径（唯一来源，与云函数 generatePaper 的分层逻辑保持一致）===
 // 阈值：weight≥75 = 高，45-74 = 中，<45 = 低；颜色：红/黄/灰三色体系
 const CONFIDENCE_HIGH = 75
@@ -402,6 +417,8 @@ function buildConfidence(bottleneck = {}) {
 
 module.exports = {
   STATUS_META,
+  NODE_STATUS_META,
+  NODE_STATUS_ORDER,
   TREND_META,
   CONFIDENCE_LABELS,
   normalizeStatus,

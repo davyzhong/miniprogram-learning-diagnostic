@@ -26,12 +26,12 @@ const {
 const { loadLatestFormalDiagnoses } = require('./formal-diagnosis');
 const { taskFor, verdict } = require('./chinese-skill-tasks');
 const { createRecentImageFileNames } = require('./recent-image-file-names');
-
 // 验证卷续跑链每一步都会写 updatedAt；超过该阈值无写入视为调度中断（卡死）
 const VERIFICATION_STALE_MS = 10 * 60 * 1000;
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV });
 const db = cloud.database();
+const nodeMasteryService = require('./node-mastery-service').createNodeMasteryService({ db });
 
 const ACTIONS = new Set([
   'getHomeDashboard',
@@ -743,10 +743,10 @@ async function getLearningProgress(openId, studentId, subject) {
 }
 
 exports.main = async (event = {}) => {
-  const wxContext = cloud.getWXContext();
-  const openId = wxContext.OPENID;
+  const openId = cloud.getWXContext().OPENID;
   const action = event.action;
 
+  if (action === 'getNodeMasteryMap') return nodeMasteryService.getNodeMasteryMap(openId, event.studentId, event.subject);
   if (!ACTIONS.has(action)) {
     return failure('操作类型无效');
   }

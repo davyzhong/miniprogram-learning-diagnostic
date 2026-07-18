@@ -58,8 +58,10 @@ example 数据文件五态 → 六态迁移映射：`unknown→unobserved`、`we
 | --- | --- | --- |
 | `errorEvidence`（新错题指向节点） | unobserved→suspected_gap；mastered/partial_mastery→recurring | suspected_gap/relearning/recurring 不变（不重复降级） |
 | `verificationFailed`（验证/微验证失败） | suspected_gap/unobserved/recurring→relearning | mastered/partial_mastery→relearning（证据直接推翻） |
-| `resourcePracticePassed`（资源包当场练习通过） | relearning→partial_mastery | 其他状态不变（不允许跳级） |
-| `verificationPassed`（验证通过） | relearning→partial_mastery；partial_mastery→mastered | 升 mastered 需距 lastPracticedAt ≥24h（间隔复测语义；24/72h 完整调度在 Phase C） |
+| `resourcePracticePassed`（资源包当场练习通过） | relearning/suspected_gap/recurring → partial_mastery | unobserved/partial_mastery/mastered 不变（不允许无证据跳级） |
+| `verificationPassed`（验证通过） | suspected_gap → unobserved（推翻卡点假设）；relearning/recurring → partial_mastery；partial_mastery → mastered | 升 mastered 需距 lastPracticedAt ≥24h（间隔复测语义；24/72h 完整调度在 Phase C） |
+
+> **v1.1 修正（2026-07-17）**：初版转移表中 `suspected_gap` 没有任何出路（验证通过与练习通过都不改变它），形成死端。现修正为：验证通过推翻疑似（→unobserved，与"AI 假设必须经验证确认或推翻"的诊断原则一致）；练习通过与复发节点沿阶梯回到 partial_mastery。已存在记录回到 unobserved 时保留证据，不删除（"unobserved 不落库"仅指不为空状态新建记录）。
 
 原则：任何状态不得由单次 AI 判断直接置 mastered；所有降级必须带证据引用；confidence 用证据条数/强度的简单启发式（实现内给出，测试只约束 0-1 边界与单调性）。
 

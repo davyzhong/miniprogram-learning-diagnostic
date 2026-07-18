@@ -337,6 +337,7 @@ async function getSubjectDashboard(studentId, subject, options = {}) {
 
 async function getChineseSkillTask(studentId) { return callFunction('studentData', { action: 'getChineseSkillTask', studentId }) }
 async function submitChineseSkillTask(payload = {}) { return callFunction('studentData', { action: 'submitChineseSkillTask', ...payload }) }
+async function getNodeMasteryMap(studentId, subject = 'math') { return callFunction('studentData', { action: 'getNodeMasteryMap', studentId, subject }) }
 
 async function getLearningTimeline({ studentId, subject, limit, cursor } = {}) {
   return callFunction('studentData', { action: 'getLearningTimeline', studentId, subject, limit, cursor })

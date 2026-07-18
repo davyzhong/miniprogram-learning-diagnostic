@@ -23,6 +23,10 @@ const MIRROR_TARGETS = [
     seeds: ['knowledge-nodes', 'bottleneck-taxonomy-v2', 'learning-resources'],
   },
   {
+    dir: 'cloudfunctions/learningResource/math-seeds',
+    seeds: ['bottleneck-taxonomy-v2'],
+  },
+  {
     dir: 'miniprogram/data/math',
     seeds: ['knowledge-nodes', 'bottleneck-taxonomy-v2', 'learning-resources', 'bottleneck-categories'],
   },

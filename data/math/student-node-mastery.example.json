@@ -1,21 +1,22 @@
 {
-  "version": "2026-06-16",
+  "version": "2026-07-17",
   "studentId": "student-zhong-qingyu",
   "studentName": "钟青羽",
   "subject": "math",
   "grade": 6,
-  "updatedAt": "2026-06-16T20:30:00+08:00",
+  "updatedAt": "2026-07-17T00:00:00+08:00",
   "statusScale": {
-    "mastered": "稳定掌握，能在新题型中迁移",
-    "mostlyMastered": "基本掌握，偶发疏漏或需要慢一点",
-    "partial": "部分掌握，遇到变式容易断链",
-    "weak": "明显薄弱，需要重学和微验证",
-    "unknown": "证据不足，等待错题或微验证"
+    "unobserved": "未观察：暂无学习证据（默认态）",
+    "suspected_gap": "疑似漏洞：错题指向该节点，尚未微验证确认",
+    "relearning": "正在重学：验证失败确认卡点，修复进行中",
+    "partial_mastery": "部分掌握：资源学习并当场练习通过",
+    "mastered": "已掌握：24/72 小时间隔复测通过",
+    "recurring": "复发：掌握后同类错误再次出现"
   },
   "masteryRecords": [
     {
       "nodeId": "MATH-NUM-DEC-MUL-POINT",
-      "status": "partial",
+      "status": "partial_mastery",
       "confidence": 0.72,
       "evidence": [
         {
@@ -38,7 +39,7 @@
     },
     {
       "nodeId": "MATH-NUM-FRACTION-DIV-RECIPROCAL",
-      "status": "weak",
+      "status": "suspected_gap",
       "confidence": 0.81,
       "evidence": [
         {
@@ -56,7 +57,7 @@
     },
     {
       "nodeId": "MATH-MOD-RATIO-PART-WHOLE",
-      "status": "partial",
+      "status": "partial_mastery",
       "confidence": 0.68,
       "evidence": [
         {
@@ -73,7 +74,7 @@
     },
     {
       "nodeId": "MATH-GEO-CIRCLE-AREA",
-      "status": "mostlyMastered",
+      "status": "mastered",
       "confidence": 0.74,
       "evidence": [
         {
@@ -90,7 +91,7 @@
     },
     {
       "nodeId": "MATH-MEASURE-UNIT-LENGTH",
-      "status": "weak",
+      "status": "suspected_gap",
       "confidence": 0.77,
       "evidence": [
         {
@@ -107,7 +108,7 @@
     },
     {
       "nodeId": "MATH-META-ESTIMATION-CHECK",
-      "status": "partial",
+      "status": "partial_mastery",
       "confidence": 0.65,
       "evidence": [
         {
@@ -136,5 +137,6 @@
       "MATH-NUM-DEC-MUL-POINT",
       "MATH-MOD-RATIO-PART-WHOLE"
     ]
-  }
+  },
+  "statusModel": "six-state-v1.1（见 docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md）"
 }
