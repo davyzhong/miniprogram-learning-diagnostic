@@ -6,6 +6,28 @@
 
 ## [Unreleased]
 
+### 2026-07-18 可靠性、可视化与 emoji 全量接入（详细报告见 `docs/test-reports/2026-07-18-visualization-emoji-and-reliability.md`）
+
+#### Added
+
+- **202 个已验证 emoji 全量接入**：`utils/ui-symbols.js` 重构为 C01-C14 全量 205 键白名单（含 ZWJ 家庭组合、键帽、旗帜），25 个注册页面完成图标化（页头、区块标题、动作、空态装饰、时间线类型标记）；学科图标数学 🧮 / 语文 📖 / 英语 🔤；卡点五态获全局状态符号（⏳🔴🟢🔁📉）。emoji 只辅助识别，文字标签全部保留。
+- **界面可视化**：learning-progress 卡点矩阵升级为 B1 色块热力图并新增首页/学科页入口；首页孩子卡三色状态构成堆叠条与趋势 pill；报告页变化构成色带与验证通过率三段色带；英语词库构成条、知识地图掌握度条、卡点详情通过率条与点状证据时间线；共享实现 `utils/status-segments.js` 与 `.b1-seg-*` 公共类。
+- **公共状态组件** `components/status-view`（loading/empty/error+retry），knowledge-map、learning-resource、learning-progress、report 错误态统一为可重试区块。
+- **验证卷卡死恢复**：`studentData` 标记 `stale`（generating 超 10 分钟无写入），`regenerateVerificationPaper` 新增 `resume` action，前端弹窗引导家长自助重试。
+- **轻量去重读取**：`studentData?action=listRecentImageFileNames`（服务端投影），替代拉取全量历史报告。
+- **移除共同家长**：parent-management 成员行接入 owner 专属的移除入口（二次确认）。
+
+#### Changed
+
+- **性能**：报告页分析中轮询只查轻量进度（约省 90% DB 读）；验证卷轮询预算 120s→6 分钟；上传改 3 路并发，HEIF 转换 quality 80 + 限宽 1600px。
+- **一致性**：学科色收敛为 B1 token 单源（淘汰三套旧色值并加测试断言）；置信度 ●●● 标签全局执行（bottleneck-center/index/subject-home 补齐）；卡点状态文案收敛为单一来源。
+- **体验**：分析超时后 report 页通过状态总线自动刷新；字号下限收敛到 20rpx。
+- **数学**：知识节点 91→150 个，`analyzeBatch` 内置标准节点目录，nodeIds 100% 归并；节点掌握闭环（六态模型）完成设计待实现。
+
+#### Fixed
+
+- paper-preview 预览模式隐藏必失败的"上传作答照片"按钮；学习资源外链跳转逻辑（运算符优先级 + 假 appId）；语文微任务提交静默失败；英语页面真实学生名兜底文案；SETUP.md/README 补齐 `chineseSkillAttempts` 与 `englishPracticeAttempts` 集合。
+
 ### Added
 
 - **家庭工作台 B+ 紧凑界面**：家庭首页以图标化四项指标、优先行动、三科学习状态、最新正式诊断和快捷入口组织每个孩子的信息；保留原有入口并提升首屏信息密度。

@@ -23,7 +23,7 @@
 
 > 以下截图由当前版本的微信开发者工具自动生成，全部使用“学生A / 学生B”和模拟学习内容。没有真实学生姓名、账号、试卷照片、文件地址或内部编码。
 
-当前界面采用 **B1 暖色多彩信息系统**：不依赖 emoji、图标字体或额外图片资源，而是通过学科色、状态色、文字标记和紧凑色块建立视觉层级。语文使用中国红，数学使用金色，英语使用靛蓝；待验证、已改善、失败和信息提示各有独立语义色，因此在 Android 和 iOS 上都能保持稳定。
+当前界面采用 **B1 暖色多彩信息系统 + 全量 emoji 图标**：学科色（语文中国红、数学金、英语靛蓝）与状态色（待验证金、改善绿、风险红、信息蓝）建立视觉层级，同时在页头、区块标题、动作按钮、状态标记和空态中使用经过 Android 真机全量验证的 202 个 emoji（`miniprogram/utils/ui-symbols.js` 白名单，C01-C14 共 14 类）。emoji 只辅助识别，所有入口和状态都保留文字标签。
 
 <p align="center">
   <img src="docs/user-guide/images/01-family-workbench.png" alt="新版家庭学习工作台，使用学生A和学生B的脱敏示例" width="300" />
@@ -40,7 +40,7 @@
   <img src="docs/user-guide/images/13-english-confusion.png" alt="英语易混词巩固脱敏截图" width="220" />
 </p>
 
-语文以具体错项的原项复测为主，英语以“会认/会拼”双维词汇任务为主；两者都会在工作台清楚显示今天最值得完成的一件事。色彩用于区分学科和状态，不替代文字，因此低版本 Android 微信也不会因 emoji 缺字而出现方框。
+语文以具体错项的原项复测为主，英语以“会认/会拼”双维词汇任务为主；两者都会在工作台清楚显示今天最值得完成的一件事。色彩用于区分学科和状态，不替代文字；emoji 图标与文字始终成对出现，即使个别字形在某台设备上缺字也不影响理解和操作。
 
 | 视觉语义 | 使用方式 |
 |---|---|
@@ -94,13 +94,14 @@
 
 ### 当前版本验证基线
 
-- JavaScript 静态检查：275 个文件通过。
-- 单元与契约回归：845 / 845 通过。
+- JavaScript 静态检查：311 个文件通过。
+- 单元与契约回归：1006 / 1006 通过。
 - 微信开发者工具：17 个页面 + 6 个跨页场景，23 / 23 通过。
-- 主包体积：669 KB，低于 800 KB 预算，剩余 131 KB。
+- 主包体积：788 KB，低于 800 KB 预算（余量紧张，见测试报告"后续约束"）。
+- emoji 图标库：202 个候选表情（C01-C14）已通过 Android 真机全量验证并接入白名单。
 - 14 张文档截图均由匿名 mock 数据重新生成，并通过敏感文本检查。
 
-完整结果见 [B1 视觉系统验证报告](docs/test-reports/2026-07-16-b1-color-system-verification.md)。
+完整结果见 [可视化与可靠性工作报告](docs/test-reports/2026-07-18-visualization-emoji-and-reliability.md) 与 [B1 视觉系统验证报告](docs/test-reports/2026-07-16-b1-color-system-verification.md)。
 
 #### 第三步：进入学科工作台
 
@@ -398,7 +399,13 @@ flowchart LR
 - ✅ 英语词库管理：PEP 个人词库种子、批量导入、熟悉度和拼写双维度进度追踪
 - ✅ Skill / CLI P0：封装诊断、报告、卡点、验证卷、反馈和时间线能力，提供 `ldx` 本地 CLI 合同测试
 - ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 自动化测试：638 个常规用例通过，JS 语法检查 217 文件通过，AI 用量专项 DevTools E2E 5/5 通过
+- ✅ 界面可视化：卡点热力图、状态构成堆叠条、通过率色带、掌握度条、点状证据时间线（纯 WXSS 实现）
+- ✅ emoji 图标体系：202 个真机验证表情全量接入（`ui-symbols.js` 白名单 205 键），25 页全图标化，文字标签全保留
+- ✅ 公共状态组件 `status-view`：加载/空态/错误重试统一
+- ✅ 验证卷卡死恢复：stale 检测 + `resume` action + 前端自助重试
+- ✅ 家长成员移除：owner 可撤销共同家长权限
+- ✅ 数学知识节点：150 个标准节点，诊断 nodeIds 全量归并
+- ✅ 自动化测试：1006 个常规用例通过，JS 语法检查 311 文件通过，AI 用量专项 DevTools E2E 5/5 通过
 
 ### 待完善
 
@@ -428,34 +435,37 @@ flowchart LR
 ```
 miniprogram-learning-diagnostic/
 ├── miniprogram/                 # 小程序前端
-│   ├── app.js / app.json        # 全局入口与配置（20 个页面路由）
-│   ├── utils/                   # cloud.js（数据访问层）、poller.js（轮询器）、util.js
-│   └── pages/                   # 20 个页面（index / student-profile / add-student /
+│   ├── app.js / app.json        # 全局入口与配置（25 个注册页面：主包 8 + 分包 17）
+│   ├── utils/                   # cloud.js（数据访问层）、poller.js（轮询器）、ui-symbols.js（emoji 白名单）、
+│   │                            #   status-store.js / app-status.js（状态总线）、status-segments.js（构成条）、util.js
+│   ├── components/              # 公共组件：status-view（加载/空态/错误重试）
+│   └── pages/                   # 25 个页面（index / student-profile / add-student /
 │                                #   subject-home / upload / upload-history / parent-management /
 │                                #   join-student / report / bottleneck-center / bottleneck-detail /
-│                                #   knowledge-map / learning-resource / english-practice /
-│                                #   english-dictation / english-wrong-words /
+│                                #   knowledge-map / learning-resource / learning-progress /
+│                                #   english-practice / english-dictation / english-wrong-words /
+│                                #   english-confusion / chinese-review-detail / chinese-skill-task /
 │                                #   generate-verification / default-paper / paper-preview /
-│                                #   ai-usage）
+│                                #   ai-usage / icon-compatibility）
 ├── cloudfunctions/              # 云函数后端（14 个）
 │   ├── uploadAndAnalyze/        #   入口：校验 → 创建报告 → 触发分析
 │   ├── analyzePhotos/           #   主控：分批 → 串行分析 → 去重 → 合并 → 对比
-│   ├── analyzeBatch/            #   单批次 AI 分析 + 结果标准化
+│   ├── analyzeBatch/            #   单批次 AI 分析 + 结果标准化（内置 150 个标准知识节点目录）
 │   ├── getAnalysisProgress/     #   轻量进度查询
-│   ├── studentAccess/           #   家长成员、邀请和加入管理
-│   ├── studentData/             #   访问感知的学习资料聚合读取
+│   ├── studentAccess/           #   家长成员、邀请、加入和移除管理
+│   ├── studentData/             #   访问感知的学习资料聚合读取（含验证卷 stale 检测、轻量文件名读取）
 │   ├── reportFeedback/          #   家长反馈和复核线索
 │   ├── englishVocabulary/       #   英语个人词库、熟悉度练习和纸面听写
 │   ├── learningResource/        #   学习卡点任务包生成、读取和完成状态
-│   ├── regenerateVerificationPaper/ # 验证卷短任务续跑
+│   ├── regenerateVerificationPaper/ # 验证卷短任务续跑 + 卡死恢复（resume）
 │   ├── reanalyzeMathHistory/    #   历史数学报告重算维护工具
 │   ├── aiUsage/                 #   AI 用量账本、内测授权、删除请求
 │   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF（双栏布局+解题思路）
 │   └── generateReportPDF/       #   生成报告 PDF
 ├── services/skills/             # P0 Skill 能力内核
 ├── cli/ldx.js                   # 本地 CLI 入口
-├── tests/                       # 单元自动化测试（638 个用例 + 真实图片 E2E 脚本）
-├── scripts/                     # check-js.js、preview-pdf.js（PDF预览）、DevTools E2E、指标导出
+├── tests/                       # 单元自动化测试（89 个测试文件，1006 个用例 + 真实图片 E2E 脚本）
+├── scripts/                     # check-js.js、preview-pdf.js（PDF预览）、DevTools E2E、指标导出、emoji 清单校验
 ├── docs/                        # 补充文档
 ├── PRD.md                       # 产品设计文档
 ├── PROJECT_PLAN.md              # 技术架构与开发计划
@@ -521,7 +531,7 @@ cd miniprogram-learning-diagnostic
 
 | 类别 | 说明 | 命令 |
 |------|------|------|
-| **单元自动化测试** | 638 个离线用例：云函数、Presenter、工具、数据层、合同、知识库一致性和诊断回归 | `npm run test:unit` 或 `npm test` |
+| **单元自动化测试** | 1006 个离线用例（89 个测试文件）：云函数、Presenter、工具、数据层、合同、知识库一致性和诊断回归 | `npm run test:unit` 或 `npm test` |
 | **CLI E2E 核心页** | 微信开发者工具 CLI 驱动核心页面和基础跨页流程 | `npm run test:e2e:core` |
 | **CLI E2E 数学** | 数学数据驱动场景、细卡点、知识地图和学习资源链路 | `npm run test:e2e:math` |
 | **CLI E2E 语文** | 语文工作台、诊断报告、错项复测出卷轻量链路 | `npm run test:e2e:chinese` |
@@ -575,6 +585,7 @@ npm run release:check          # 部署 + 全测试 + 覆盖率
 | [docs/METRICS.md](./docs/METRICS.md) | 单个孩子运营指标：分析完成率、报告质量、验证通过率、反馈率和周趋势 |
 | [docs/RELEASE_CHECKLIST.md](./docs/RELEASE_CHECKLIST.md) | 发布门禁、云函数部署核对、真实数据烟测和回滚流程 |
 | [docs/TEST_MATRIX.md](./docs/TEST_MATRIX.md) | 测试矩阵与验收清单 |
+| [docs/EMOJI_COMPATIBILITY_WHITELIST.md](./docs/EMOJI_COMPATIBILITY_WHITELIST.md) | Android/iOS 真机 Emoji 兼容结果、1198 个双端通过字形及统一调用规则 |
 | [docs/TEST_FRAMEWORK_DESIGN.md](./docs/TEST_FRAMEWORK_DESIGN.md) | 测试框架 V2 设计：单元自动化测试 + CLI E2E 分学科测试 |
 | [docs/user-guide/README.md](./docs/user-guide/README.md) | 脱敏界面图文导览：家庭工作台、诊断、验证和学习记录 |
 | [docs/CLOUD_FUNCTIONS.md](./docs/CLOUD_FUNCTIONS.md) | 云函数 API 参考（入参/出参/错误处理/依赖关系） |

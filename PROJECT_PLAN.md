@@ -2,7 +2,7 @@
 
 **创建日期**: 2026-06-09
 **最后更新**: 2026-07-02
-**项目状态**: MVP 编码完成，常规自动化测试通过（638/638），JS 语法检查 217 文件通过，AI 用量专项 DevTools E2E 通过，待真机验收
+**项目状态**: MVP 编码完成，常规自动化测试通过（1006/1006），JS 语法检查 311 文件通过，AI 用量专项 DevTools E2E 通过；B1 视觉 + 202 个已验证 emoji 全量接入（2026-07-18），待真机验收
 **负责人**: qiming
 
 ---
@@ -75,7 +75,7 @@ miniprogram-learning-diagnostic/
 │
 ├── miniprogram/                     # 小程序前端代码
 │   ├── app.js                       # 全局入口，初始化云开发（env: cloud1-d6gneg68m5a7a3876）
-│   ├── app.json                     # 全局配置（20 个页面路由）
+│   ├── app.json                     # 全局配置（25 个页面路由：主包 8 + 分包 17）
 │   ├── app.wxss                     # 全局样式
 │   ├── sitemap.json                 # 站点地图配置
 │   │
@@ -86,7 +86,8 @@ miniprogram-learning-diagnostic/
 │   │
 │   ├── components/                  # 自定义组件目录（当前为空占位）
 │   │
-│   └── pages/                       # 20 个注册页面
+│   ├── components/                  # 公共组件（status-view 状态区块）
+│   └── pages/                       # 25 个注册页面
 │       ├── index/                   # Page 1：首页（空态/家庭工作台/单孩子分流）
 │       ├── student-profile/         # Page 1A：单孩子学习档案
 │       ├── add-student/             # 添加学生页（创建学生+三条学科档案）
@@ -161,7 +162,7 @@ miniprogram-learning-diagnostic/
     └── superpowers/plans/           # 规划辅助材料
 ```
 
-**文件总数**: 217 个 JavaScript 文件（`npm run check` 校验），638 个常规自动化测试用例（`npm test`）。另有真实图片与 DevTools E2E 脚本，需按需单独运行。
+**文件总数**: 311 个 JavaScript 文件（`npm run check` 校验），1006 个常规自动化测试用例（`npm test`，89 个测试文件）。另有真实图片与 DevTools E2E 脚本，需按需单独运行。
 
 ### 2.2 相关文件索引
 
@@ -462,7 +463,7 @@ System Prompt 包含：
 | **SETUP.md** | ✅ | 部署指南（环境配置 + 索引 + 字体 + 云函数部署） |
 | **学习卡点透出体系** | ✅ | 首页高优先级卡点、卡点中心、单卡点工作台和验证卷 `targetCode` 闭环已接通 |
 | **Skill / CLI P0** | ✅ | `services/skills` 和 `cli/ldx.js` 覆盖诊断、报告、卡点、验证卷、反馈和时间线能力 |
-| **自动化测试** | ✅ | 638 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、英语词库听写、AI 用量账本、工具函数、Skill/CLI 和覆盖缺口补全 |
+| **自动化测试** | ✅ | 1006 个常规用例全绿（`npm test`），覆盖页面流程、云函数、数据层、契约、去重、轮询、报告视图、英语词库听写、AI 用量账本、工具函数、Skill/CLI、设计系统契约和覆盖缺口补全 |
 | **端到端真实图片脚本** | ✅ | `tests/e2e-real-image.test.js` 单独运行，串通上传 → AI 分析 → 报告生成链路 |
 | **JS 语法检查** | ✅ | `npm run check` 校验 217 个文件 |
 | **学科隔离** | ✅ | 数/语/英三科独立档案，家庭页和个人页都提供可点击学科入口，单学科工作台承接具体操作 |
