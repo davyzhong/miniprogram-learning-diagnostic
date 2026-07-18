@@ -17,7 +17,7 @@
   <img alt="WeChat Mini Program" src="https://img.shields.io/badge/WeChat-Mini_Program-07C160?style=flat-square" />
   <img alt="CloudBase" src="https://img.shields.io/badge/Backend-CloudBase-2F80ED?style=flat-square" />
   <img alt="Tests" src="https://img.shields.io/badge/tests-1008_passing-2E8B57?style=flat-square" />
-  <img alt="Main package" src="https://img.shields.io/badge/main_package-791_KB-F2A900?style=flat-square" />
+  <img alt="Main package" src="https://img.shields.io/badge/main_package-789_KB-F2A900?style=flat-square" />
 </p>
 
 <p align="center">
@@ -216,13 +216,13 @@ npm run perf:baseline       # CLI 性能基线
 | --- | ---: | --- |
 | 常规自动化测试 | 1008 / 1008 通过 | `npm test` |
 | JavaScript 语法检查 | 313 个文件通过 | `npm run check` |
-| 主包体积 | 791 KB / 1200 KB（预算自 800 KB 上调） | `npm run check:size` |
+| 主包体积 | 789 KB / 1200 KB（预算自 800 KB 上调） | `npm run check:size` |
 | 注册页面 | 25 | `miniprogram/app.json` |
 | 业务云函数 | 14 | `cloudfunctions/`，不含 `_shared-templates` |
 | 测试文件 | 89 个库存，默认离线集 84 个 | `package.json` |
 | 数据库集合 | 17 | `docs/DATA_DICTIONARY.md` |
 
-包体只剩约 9 KB 预算，新增主包资源前必须先评估分包或替换空间。发布门禁、真实数据烟测和回滚流程见[发布清单](docs/RELEASE_CHECKLIST.md)。
+主包距离 1200 KB 内部预算约有 411 KB 空间，但新增大体积资源仍应优先评估分包，且不得突破微信平台 2 MB 主包限制。发布门禁、真实数据烟测和回滚流程见[发布清单](docs/RELEASE_CHECKLIST.md)。
 
 ## 文档导航
 

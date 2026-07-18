@@ -1,7 +1,9 @@
 # Prompt And Agent Design
 
 > Status: active implementation reference  
-> Updated: 2026-06-20
+> Updated: 2026-07-18
+
+> Current implementation note: Chinese generation must preserve exact-item retest targets before near-transfer items; English vocabulary recognition and spelling use their own constrained judgment contracts rather than the math bottleneck prompt.
 
 ## 1. Design Goal
 
@@ -109,4 +111,3 @@ Any prompt contract change should be covered by:
 - Cloud function tests for permission and data persistence.
 - Presenter tests for parent-facing display.
 - Regression cases for missing, blank, unclear, and duplicate evidence.
-

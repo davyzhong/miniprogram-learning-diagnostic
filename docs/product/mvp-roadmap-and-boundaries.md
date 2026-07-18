@@ -1,7 +1,9 @@
 # MVP Roadmap And Product Boundaries
 
 > Status: active planning reference  
-> Updated: 2026-06-20
+> Updated: 2026-07-18
+
+> Current delivery note: the core diagnosis and verification loop is implemented; the math knowledge map, Chinese concrete-item review, and English vocabulary mastery loop are now product capabilities rather than unstarted roadmap items. Future sections in this document remain planning references.
 
 ## 1. Current Boundary
 
@@ -91,4 +93,3 @@ The MVP is successful when a non-technical parent can:
 - New cloud function behavior must update `docs/CLOUD_FUNCTIONS.md`.
 - New test coverage should be reflected in `docs/TEST_MATRIX.md`.
 - Subject behavior changes should update `docs/subject-design/`.
-

@@ -1,7 +1,9 @@
 # English Written Diagnosis And Tech Decision
 
-> Status: active subject decision record  
-> Updated: 2026-06-20
+> Status: historical decision record; superseded by the vocabulary mastery design
+> Updated: 2026-07-18
+
+> This document explains an earlier written-diagnosis direction. The current English product boundary is the personal vocabulary loop documented in [README.md](./README.md): recognition and spelling are tracked independently, with paper dictation and ASR-assisted recognition but no pronunciation scoring.
 
 ## 1. Decision
 
@@ -60,4 +62,3 @@ More importantly, they change the product from passive diagnosis of real work to
 ## 6. Source Notes
 
 This document consolidates earlier external research and technical notes. Any API pricing, competitor feature, or WeChat platform limit should be rechecked before implementation decisions, because those facts change over time.
-

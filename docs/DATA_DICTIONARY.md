@@ -1,6 +1,6 @@
 # 数据字典
 
-> 基于实际代码实现提取，非设计文档。所有字段均来自云函数和前端代码中的真实读写操作。
+> 更新日期：2026-07-18。基于实际代码实现提取，非设计文档。当前共 17 个集合，所有字段均来自云函数和前端代码中的真实读写操作。
 
 ## 1. 集合概览
 
@@ -15,6 +15,8 @@
 | `englishImportBatches` | 英语词库候选导入批次 | 导入 PEP 单词表图片或结构化候选时 | englishVocabulary 云函数 |
 | `studentEnglishWords` | 单个孩子的个人英语单词库 | 家长确认英语导入批次后 | englishVocabulary 云函数 |
 | `englishPracticeSessions` | 英语单词熟悉度、纸面听写会话和逐题/照片证据记录 | 开始英语练习时 | englishVocabulary 云函数 |
+| `englishPracticeAttempts` | 英语认词/拼写的逐次作答证据，避免会话数组无限增长 | 提交单词作答时 | englishVocabulary 云函数 |
+| `chineseSkillAttempts` | 语文阅读表达微任务的逐次提交证据 | 提交语文能力任务时 | englishVocabulary 云函数的语文 action |
 | `learningResourcePacks` | 数学学习卡点任务包 | 点击“学一下”生成或读取时 | learningResource 云函数 |
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
 | `analysisTasks` | 异步分析任务进度追踪 | analyzePhotos 启动时 | analyzePhotos 云函数 |
@@ -430,6 +432,14 @@ MVP 数学卡点当前包含：
 **熟悉度规则**：默认每轮 20 词；错词本轮稍后重现并更新 `familiarity`；正确词按 1 天、3 天、7 天进入复测，完成连续复测后进入 `mastered`。
 
 **纸面听写规则**：先创建 `functionType=spelling` 的听写会话并保存 `photoFileIds` 作为答案证据；随后用本次 `wordItems` 作为候选词做约束 OCR，只有 `correct/incorrect` 更新 `spelling`，`unclear` 只记录证据、不计正误、不更新 `familiarity`。
+
+#### englishPracticeAttempts
+
+逐次作答采用独立集合保存，核心字段包括 `studentId`、`sessionId`、`wordId`、`functionType`、`recognizedText`、`judgment`、`durationMs`、`createdAt`。会话文档保留汇总和队列状态，明细集合保留可追溯证据；用户界面不得展示其内部 ID。
+
+#### chineseSkillAttempts
+
+语文能力微任务提交记录包含 `studentId`、任务类型、题目摘要、学生作答、判定结果、反馈和时间。它服务于阅读表达能力型卡点，不替代 `reports.chineseErrorItems` 与 `subjectProfiles.chineseReviewItems` 的具体错项追踪。
 
 ---
 

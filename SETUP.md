@@ -1,5 +1,7 @@
 # 部署指南（SETUP）
 
+> 更新日期：2026-07-18。当前部署单元为 25 个注册页面、14 个业务云函数和 17 个数据库集合；完整发布门禁见 [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md)。
+
 ## 一、云开发环境配置
 
 ### 1. 开通云开发

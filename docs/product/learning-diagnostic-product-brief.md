@@ -1,12 +1,14 @@
 # Learning Diagnostic Product Brief
 
 > Status: active implementation reference  
-> Updated: 2026-06-20  
+> Updated: 2026-07-18
 > Product: Learning Diagnostic Mini Program
 
 ## 1. One Sentence
 
-Learning Diagnostic helps parents photograph a child's paper homework or exam, receive an AI-assisted learning bottleneck report, generate targeted verification papers, and track whether the bottleneck improves.
+Learning Diagnostic helps parents photograph a child's paper homework or exam, receive an AI-assisted learning bottleneck report, follow a concrete learning action, generate targeted verification papers, and track whether the bottleneck improves.
+
+The current product applies subject-specific evidence rules: math verifies transfer with related questions, Chinese retests the exact wrong character or word before near transfer, and English tracks recognition and spelling separately inside a personal vocabulary loop.
 
 ## 2. Product Positioning
 
@@ -105,4 +107,3 @@ The current mini program is not:
 - A replacement for school instruction.
 
 Those broader ideas belong to the total project knowledge base, not this implementation repository.
-
