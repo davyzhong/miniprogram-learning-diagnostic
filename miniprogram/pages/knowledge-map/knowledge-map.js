@@ -93,6 +93,15 @@ Page({
     }
   },
 
+  onPriorityAnchorTap(e) {
+    const lpCode = e.currentTarget.dataset.lpCode
+    if (!lpCode) return
+    wx.pageScrollTo({
+      selector: `#bn-${lpCode}`,
+      duration: 250,
+    })
+  },
+
   // 空状态：引导用户上传试卷
   onUploadTap() {
     const { studentId, studentName, subject } = this.data

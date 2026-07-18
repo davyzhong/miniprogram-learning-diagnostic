@@ -38,15 +38,11 @@
     </view>
 
     <block wx:elif="{{dictationPhase === 'running' || dictationPhase === 'paused'}}">
-      <view class="progress-card">
-        <text class="progress-label">纸面听写进行中</text>
-        <text class="progress-value">第 {{currentIndex + 1}} / {{queue.length}} 题</text>
-      </view>
-
       <view class="prompt-card">
         <view class="prompt-top">
           <text class="prompt-pill">{{currentItem.promptTypeText}}</text>
           <text class="state-pill state-{{playbackState}}">{{playbackStateText}}</text>
+          <text class="prompt-progress">第 {{currentIndex + 1}} / {{queue.length}} 题</text>
         </view>
         <text class="prompt-title" wx:if="{{currentItem.promptType === 'chinese'}}">{{currentItem.meaningText}}</text>
         <text class="prompt-title" wx:else>请听英文发音，并在纸上写出这个单词</text>
