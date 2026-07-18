@@ -152,6 +152,24 @@ test('English dictation keeps B1 styling hooks and dictation state controls', ()
   assert.match(source, /bindtap="onVoiceNextTap"/)
 })
 
+test('English dictation packs progress inline and grading summary into one line', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-dictation/english-dictation.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/english-dictation/english-dictation.wxss'), 'utf8')
+
+  // 进度不再独占卡片，内联到 prompt-top 行
+  assert.doesNotMatch(wxml, /progress-card/)
+  assert.doesNotMatch(wxss, /\.progress-value|\.progress-label/)
+  assert.match(wxml, /class="prompt-progress">第 \{\{currentIndex \+ 1\}\} \/ \{\{queue\.length\}\} 题/)
+  // 批改结果 3 数字块收敛为单行（色点 + 文字标签保留）
+  assert.doesNotMatch(wxml, /result-summary-item|summary-num|summary-label/)
+  assert.match(wxml, /写对 \{\{resultSummary\.correct\}\}/)
+  assert.match(wxml, /待加强 \{\{resultSummary\.incorrect\}\}/)
+  assert.match(wxml, /看不清 \{\{resultSummary\.unclear\}\}/)
+  // 留白预算：卡片 ≤18rpx、页头 ≤22rpx
+  assert.doesNotMatch(wxss, /padding:\s*30rpx/)
+  assert.doesNotMatch(wxss, /padding:\s*42rpx 28rpx 34rpx/)
+})
+
 test('English dictation page auto-plays after start and advances on OK style commands', async () => {
   const spoken = []
   const timers = []

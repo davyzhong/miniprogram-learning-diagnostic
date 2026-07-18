@@ -69,7 +69,6 @@
 /* 第三批：hero emoji 符号（28-32rpx，标题文字保留） */
 .hero-title-row { display: flex; align-items: center; gap: 10rpx; }
 .hero-symbol { font-size: 32rpx; }
-.badge-symbol { font-size: 28rpx; margin-right: 6rpx; }
 .empty-deco { display: block; font-size: 88rpx; line-height: 1; margin-bottom: 16rpx; }
 
 /* 节点掌握地图（150 节点六态） */

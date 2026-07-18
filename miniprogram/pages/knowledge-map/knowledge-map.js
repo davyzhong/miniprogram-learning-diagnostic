@@ -53,6 +53,13 @@ Page({
     }
   },
 
+  // 置顶"最优先"摘要行：锚到 domain 列表中的对应条目（同一卡点全页只完整渲染一次）
+  onPriorityAnchorTap(e) {
+    const { lpCode } = e.currentTarget.dataset || {}
+    if (!lpCode) return
+    wx.pageScrollTo({ selector: `#bn-${lpCode}`, duration: 200 })
+  },
+
   // 点击卡点：直跳 learning-resource（跳过 bottleneck-detail 中间页）
   // 与 report 页的 onBottleneckSnapshotTap 保持一致的快捷路径。
   async onBottleneckTap(e) {

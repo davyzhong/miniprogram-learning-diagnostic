@@ -7,7 +7,7 @@
 .hero {
   background: var(--b1-subject-english-fg);
   color: #fff;
-  padding: 42rpx 28rpx 34rpx;
+  padding: 22rpx 28rpx;
   display: flex;
   flex-direction: column;
   gap: 18rpx;
@@ -50,7 +50,6 @@
 }
 
 .state-card,
-.progress-card,
 .prompt-card,
 .upload-card,
 .result-card,
@@ -102,22 +101,11 @@
   gap: 22rpx;
 }
 
-.progress-card {
-  padding: 22rpx 26rpx;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.progress-label {
+.prompt-progress {
+  margin-left: auto;
   color: #64748b;
-  font-size: 24rpx;
-}
-
-.progress-value {
-  color: var(--b1-subject-english-fg);
-  font-size: 30rpx;
-  font-weight: 800;
+  font-size: 22rpx;
+  font-weight: 700;
 }
 
 .prompt-card,
@@ -126,7 +114,7 @@
 .ready-card,
 .finished-card,
 .fold-card {
-  padding: 30rpx;
+  padding: 18rpx;
 }
 
 .ready-title {
@@ -302,33 +290,33 @@
   line-height: 1.4;
 }
 
-.result-summary {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12rpx;
-  margin-top: 18rpx;
-  padding: 14rpx;
-  border-radius: 16rpx;
-  background: #f8fafc;
+.result-summary-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18rpx;
+  margin-top: 12rpx;
 }
 
-.result-summary-item {
-  text-align: center;
+.summary-item {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  color: #475569;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1.4;
 }
 
-.summary-num {
-  display: block;
-  color: var(--b1-subject-english-fg);
-  font-size: 30rpx;
-  font-weight: 800;
+.summary-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.summary-label {
-  display: block;
-  color: #64748b;
-  font-size: 21rpx;
-  margin-top: 2rpx;
-}
+.dot-correct { background: #15803d; }
+.dot-incorrect { background: #c2410c; }
+.dot-unclear { background: #94a3b8; }
 
 .result-row {
   margin-top: 18rpx;
@@ -378,7 +366,7 @@
 .hero, .primary-btn { background: #4f46e5; }
 .state-card { background: #eef2ff; border-color: #c7d2fe; }
 .state-card.error { background: #fff1f2; border-color: #fecdd3; }
-.progress-value, .prompt-pill, .voice-next-btn, .fold-action, .word-order, .summary-num { color: #4338ca; }
+.prompt-pill, .voice-next-btn, .fold-action, .word-order { color: #4338ca; }
 .prompt-pill, .voice-next-btn, .word-order { background: #eef2ff; border-color: #c7d2fe; }
 .state-speaking { background: #e0e7ff; color: #4338ca; }
 .state-writing { background: #fff7e6; color: #9a6700; }

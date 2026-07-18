@@ -477,6 +477,40 @@ async function knowledgeMapStates() {
   ]
 }
 
+async function microValidationStates() {
+  const { buildMicroValidationView, buildMicroValidationResultView } = require('../../miniprogram/pages/micro-validation/micro-validation-presenter')
+  const questions = [
+    { index: 1, content: '8.5×3.16 = ?', answer: '26.86', observation: '小数点位置是否正确' },
+    { index: 2, content: '0.85×3.16 = ?', answer: '2.686', observation: '位数累计是否正确' },
+    { index: 3, content: '先估算再计算 1.25×0.8', answer: '1', observation: '是否有数量级估算' },
+  ]
+  const build = (verdicts, status) => ({
+    loading: false,
+    submitting: false,
+    errorText: '',
+    view: buildMicroValidationView({ bnTitle: '小数乘法中小数位数判断错误', questions, verdicts, status }),
+    resultView: null,
+  })
+  return [
+    state('normal', build([], 'in_progress')),
+    state('answered', build(['correct', 'incorrect', 'correct'], 'in_progress')),
+    state('completed', {
+      ...build(['correct', 'correct', 'correct'], 'completed'),
+      resultView: buildMicroValidationResultView({ passVerdict: 'passed', correctCount: 3, totalCount: 3, bnTitle: '小数乘法中小数位数判断错误' }),
+    }),
+    state('legacy-id-only', {
+      ...build([], 'in_progress'),
+      targetCode: 'BN-AUDIT-LEAK-01',
+    }),
+    state('error', await runController('miniprogram/pages/micro-validation/micro-validation.js', {
+      generateMicroValidation: async () => { throw new Error(BACKEND_ERROR) }
+    }, async page => {
+      page.setData({ studentId: 'student-route-id', targetCode: 'BN-DEC-MUL-POINT-COUNT' })
+      await page.generate()
+    }))
+  ]
+}
+
 async function learningResourceStates() {
   const { buildLearningResourceView } = require('../../miniprogram/pages/learning-resource/learning-resource-presenter')
   const build = pack => ({
@@ -874,6 +908,7 @@ const RAW_PAGE_AUDIT_REGISTRY = {
   'pages/bottleneck-center/bottleneck-center': controllerAdapter('miniprogram/pages/bottleneck-center/bottleneck-center.js', bottleneckCenterStates),
   'pages/bottleneck-detail/bottleneck-detail': controllerAdapter('miniprogram/pages/bottleneck-detail/bottleneck-detail.js', bottleneckDetailStates),
   'pages/knowledge-map/knowledge-map': presenterAdapter('miniprogram/pages/knowledge-map/knowledge-map-presenter.js', knowledgeMapStates, true),
+  'pages/micro-validation/micro-validation': presenterAdapter('miniprogram/pages/micro-validation/micro-validation-presenter.js', microValidationStates, true),
   'pages/english-practice/english-practice': controllerAdapter('miniprogram/pages/english-practice/english-practice.js', englishPracticeStates),
   'pages/english-dictation/english-dictation': controllerAdapter('miniprogram/pages/english-dictation/english-dictation.js', () => englishSessionStates('miniprogram/pages/english-dictation/english-dictation.js', 'generateSession', 'generateEnglishPaperDictationSession')),
   'pages/english-wrong-words/english-wrong-words': controllerAdapter('miniprogram/pages/english-wrong-words/english-wrong-words.js', wrongWordsStates),
