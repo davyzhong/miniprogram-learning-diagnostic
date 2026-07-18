@@ -23,6 +23,10 @@
       "pages": ["knowledge-map"]
     },
     {
+      "root": "pages/micro-validation",
+      "pages": ["micro-validation"]
+    },
+    {
       "root": "pages/english-practice",
       "pages": ["english-practice"]
     },

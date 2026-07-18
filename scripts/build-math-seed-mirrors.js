@@ -25,6 +25,10 @@ const TARGETS = [
     dir: 'cloudfunctions/learningResource/math-seeds',
     seeds: ['bottleneck-taxonomy-v2'],
   },
+  {
+    dir: 'cloudfunctions/microValidation/math-seeds',
+    seeds: ['bottleneck-taxonomy-v2'],
+  },
 ];
 
 for (const target of TARGETS) {

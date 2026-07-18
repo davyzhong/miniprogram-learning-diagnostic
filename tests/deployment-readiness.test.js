@@ -25,6 +25,7 @@ const REQUIRED_CLOUD_FUNCTIONS = [
   'reportFeedback',
   'englishVocabulary',
   'learningResource',
+  'microValidation',
   'aiUsage'
 ]
 

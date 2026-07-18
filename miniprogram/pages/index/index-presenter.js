@@ -493,15 +493,19 @@ function buildDueReviewActionItem(student, dueReviews = []) {
   const titleOf = record => NODE_TITLE_BY_ID.get(record.nodeId) || '知识点'
   const names = dueReviews.slice(0, 2).map(titleOf).join('、')
   const firstBn = (first.activeBottleneckIds || [])[0] || ''
-  const url = firstBn
-    ? `/pages/generate-verification/generate-verification?studentId=${encodeURIComponent(student._id || '')}&subject=math&subjectName=${encodeURIComponent('数学')}&targetCode=${encodeURIComponent(firstBn)}`
-    : knowledgeMapUrl(student)
+  // 疑似漏洞优先走微验证（3-6 题快速确认/推翻）；其余状态走验证卷间隔复测
+  const url = first.status === 'suspected_gap' && firstBn
+    ? `/pages/micro-validation/micro-validation?studentId=${encodeURIComponent(student._id || '')}&studentName=${encodeURIComponent(student.name || '')}&targetCode=${encodeURIComponent(firstBn)}`
+    : firstBn
+      ? `/pages/generate-verification/generate-verification?studentId=${encodeURIComponent(student._id || '')}&subject=math&subjectName=${encodeURIComponent('数学')}&targetCode=${encodeURIComponent(firstBn)}`
+      : knowledgeMapUrl(student)
+  const actionText = first.status === 'suspected_gap' ? '去微验证' : '去复测'
   return {
     key: 'dueReview',
     symbol: symbolOf('time'),
     title: `${dueReviews.length} 个知识点到期复测`,
     summary: `${names}${dueReviews.length > 2 ? ' 等' : ''}到期，复测通过才算真正掌握。`,
-    actionText: '去复测',
+    actionText,
     url
   }
 }
