@@ -1001,7 +1001,8 @@ module.exports = {
         "未知总量问题"
       ],
       "commonBottlenecks": [
-        "BN-MODEL-EQUATION-AVOIDANCE"
+        "BN-MODEL-EQUATION-AVOIDANCE",
+        "BN-APP-EQUATION-MODEL-MISSING"
       ],
       "masteryCriteria": {
         "immediatePractice": "能为未知总量设 x 并解释 x 的含义。",
@@ -1032,7 +1033,8 @@ module.exports = {
       ],
       "commonBottlenecks": [
         "BN-META-ESTIMATION-MISSING",
-        "BN-META-INVERSE-CHECK-MISSING"
+        "BN-META-INVERSE-CHECK-MISSING",
+        "BN-PROCESS-FINAL-COPY"
       ],
       "masteryCriteria": {
         "immediatePractice": "做完题能主动说出答案大概范围。",
@@ -2575,7 +2577,9 @@ module.exports = {
         "99 × 78 + 78",
         "156 - 37 - 63"
       ],
-      "commonBottlenecks": [],
+      "commonBottlenecks": [
+        "BN-OP-LAWS-MISAPPLY"
+      ],
       "masteryCriteria": {
         "immediatePractice": "3 道简便计算能正确选择运算律。",
         "transferPractice": "能把 102 × 45 拆成 (100+2) × 45 并说明依据。",
@@ -2689,7 +2693,9 @@ module.exports = {
         "0.36 扩大到原来的 100 倍",
         "把 7.2 缩小到原来的 1/1000"
       ],
-      "commonBottlenecks": [],
+      "commonBottlenecks": [
+        "BN-DEC-MOVE-POINT-DIRECTION"
+      ],
       "masteryCriteria": {
         "immediatePractice": "小数点移动方向与倍数对应 3 题全对。",
         "transferPractice": "能解释向右移两位为什么等于乘 100。",
@@ -2835,7 +2841,9 @@ module.exports = {
         "把 3 ÷ 7 写成分数",
         "3 米长的绳子平均分成 5 段每段几分之几米"
       ],
-      "commonBottlenecks": [],
+      "commonBottlenecks": [
+        "BN-FRACTION-UNIT-LABEL-CONFUSE"
+      ],
       "masteryCriteria": {
         "immediatePractice": "除法与分数互写 3 题全对。",
         "transferPractice": "能区分“每段是全长的几分之几”和“每段长几分之几米”。",
@@ -2924,7 +2932,8 @@ module.exports = {
         "药水按 1:50 配制药液"
       ],
       "commonBottlenecks": [
-        "BN-RATIO-PART-WHOLE-REFERENCE"
+        "BN-RATIO-PART-WHOLE-REFERENCE",
+        "BN-RATIO-ALLOCATE-PART"
       ],
       "masteryCriteria": {
         "immediatePractice": "按比分配 3 题全对，会化归成分数乘法。",
@@ -3445,7 +3454,9 @@ module.exports = {
         "用一根铁丝围长方形求的是周长还是面积",
         "周长相等的长方形面积一定相等吗"
       ],
-      "commonBottlenecks": [],
+      "commonBottlenecks": [
+        "BN-GEO-RECT-PERIM-AREA-CONFUSE"
+      ],
       "masteryCriteria": {
         "immediatePractice": "辨析题 3 题能正确区分求周长还是求面积。",
         "transferPractice": "能举出周长相等但面积不同的例子。",
@@ -3556,7 +3567,9 @@ module.exports = {
         "外圆半径 5cm 内圆半径 3cm 求圆环面积",
         "环形小路的面积"
       ],
-      "commonBottlenecks": [],
+      "commonBottlenecks": [
+        "BN-GEO-CIRCLE-RING-FORMULA"
+      ],
       "masteryCriteria": {
         "immediatePractice": "圆环面积 2 题全对，能用 π(R²-r²) 简算。",
         "transferPractice": "能解释为什么不能先减半径再平方。",
@@ -3672,7 +3685,8 @@ module.exports = {
         "两个正方体拼成长方体表面积减少多少"
       ],
       "commonBottlenecks": [
-        "BN-SOLID-SURFACE-EXPOSED-FACES-OMIT"
+        "BN-SOLID-SURFACE-EXPOSED-FACES-OMIT",
+        "BN-GEO-SURFACE-CUT-CHANGE"
       ],
       "masteryCriteria": {
         "immediatePractice": "切割增面、拼接减面各 1 题全对。",
@@ -3812,7 +3826,9 @@ module.exports = {
         "已知 4 人平均身高求总身高",
         "去掉一个数据后平均数变化求原数据"
       ],
-      "commonBottlenecks": [],
+      "commonBottlenecks": [
+        "BN-STAT-AVERAGE-REVERSE"
+      ],
       "masteryCriteria": {
         "immediatePractice": "总数反推与移多补少各 1 题全对。",
         "transferPractice": "能解释平均数为什么不代表某一个具体数据。",
@@ -3956,7 +3972,8 @@ module.exports = {
         "判断图中水平线段表示什么"
       ],
       "commonBottlenecks": [
-        "BN-UNIFORM-CHANGE-INTERVAL-DIFF"
+        "BN-UNIFORM-CHANGE-INTERVAL-DIFF",
+        "BN-STAT-GRAPH-SPEED-READ"
       ],
       "masteryCriteria": {
         "immediatePractice": "读图求速度 3 题全对。",

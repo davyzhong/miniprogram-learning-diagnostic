@@ -2,8 +2,8 @@
 // 细颗粒度学习卡点库（前端版）。内容与 data/math/bottleneck-taxonomy-v2.seed.json 保持一致；
 // 这里改用 module.exports，符合 miniprogram/data 下 *.seed.js 的前端加载约定。
 module.exports = {
-  "version": "0.1.0",
-  "updatedAt": "2026-06-17",
+  "version": "0.2.0",
+  "updatedAt": "2026-07-17",
   "subject": "math",
   "scope": "钟青羽小学数学细颗粒度学习卡点首批种子库。",
   "sourceDocs": [
@@ -1543,6 +1543,669 @@ module.exports = {
         "方向标注",
         "中点先行",
         "语义对照"
+      ]
+    },
+    {
+      "bottleneckId": "BN-INT-DIV-QUOTIENT-PLACE",
+      "legacyLpCode": "LP-OP",
+      "subject": "math",
+      "title": "长除法中商位与 0 占位错误",
+      "nodeId": "MATH-NUM-INT-DIV-LONG",
+      "priority": "high",
+      "repairCost": "low",
+      "impact": "high",
+      "categoryPath": [
+        "计算规则",
+        "长除法试商与商位",
+        "商位与 0 占位"
+      ],
+      "symptomPatterns": [
+        "除到某一位不够除时商里漏写 0",
+        "商的数字写串位，百位商写到十位上"
+      ],
+      "rootCauseSignals": [
+        "会试商但不追踪当前商的是哪一位",
+        "竖式中数位对不齐，凭感觉写商",
+        "不用乘法回验商是否正确"
+      ],
+      "microValidationRules": [
+        "给 3 道含中间或末尾 0 的长除法，要求标出每一位商对应的数位。",
+        "做错后用 商×除数+余数 回验是否等于被除数。"
+      ],
+      "repairStrategy": [
+        "竖式中先用占位线标出商的位置再动笔",
+        "不够除先写 0 再继续，做完回验一次"
+      ],
+      "masteryEvidence": [
+        "含 0 商的长除法连续 3 题全对",
+        "能主动用乘法回验",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "《Learning_Diagnostic_MVP_诊断报告》计算类错题复核：长除法商位错误（TODO 27 首批必覆盖清单）"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-LONG-DIVISION",
+      "familyTitle": "长除法试商与商位",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "步骤拆解",
+        "数位标记",
+        "错例对比"
+      ]
+    },
+    {
+      "bottleneckId": "BN-GEO-RECT-PERIM-AREA-CONFUSE",
+      "legacyLpCode": "LP-GEO",
+      "subject": "math",
+      "title": "长方形周长与面积公式混用",
+      "nodeId": "MATH-GEO-PERIMETER-AREA-DISTINCT",
+      "priority": "high",
+      "repairCost": "low",
+      "impact": "high",
+      "categoryPath": [
+        "图形与空间",
+        "周长与面积辨析",
+        "公式混用"
+      ],
+      "symptomPatterns": [
+        "求面积时长宽相加乘 2，求周长时长乘宽",
+        "单位写成 cm 与 cm² 不分"
+      ],
+      "rootCauseSignals": [
+        "周长是边界长度、面积是覆盖面大小的概念不清",
+        "记公式不理解意义，看到长和宽就套",
+        "不用单位自检答案求的是什么"
+      ],
+      "microValidationRules": [
+        "同一个长方形分别求周长和面积，并说出两个答案分别表示什么。",
+        "给 3 道情境题只判断求周长还是面积，不计算。"
+      ],
+      "repairStrategy": [
+        "用手指描边界理解周长，用铺方格理解面积",
+        "写答案前先写单位，用单位自检公式选择"
+      ],
+      "masteryEvidence": [
+        "周长面积辨析题 3 题全对",
+        "能举出周长相等但面积不同的例子",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "taxonomy 变体归并记录：BN-GEO-RECT-AREA-CONFUSE 等 5 个 AI 变体长期归入圆周长面积混淆，实际为长方形场景独立卡点"
+      ],
+      "categoryId": "MATH-CAT-GEOMETRY",
+      "categoryTitle": "图形与空间",
+      "familyId": "MATH-FAM-PERIMETER-AREA",
+      "familyTitle": "周长与面积辨析",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "概念辨析",
+        "实物演示",
+        "错例对比"
+      ]
+    },
+    {
+      "bottleneckId": "BN-OP-LAWS-MISAPPLY",
+      "legacyLpCode": "LP-OP",
+      "subject": "math",
+      "title": "简便计算中运算律误用（乱凑整、错拆分）",
+      "nodeId": "MATH-NUM-OP-LAWS",
+      "priority": "medium",
+      "repairCost": "medium",
+      "impact": "high",
+      "categoryPath": [
+        "计算规则",
+        "运算律与简便计算",
+        "运算律误用"
+      ],
+      "symptomPatterns": [
+        "把 25 × 44 拆成 25 × 40 + 4 而不是 25 × (40 + 4)",
+        "减法凑整时 156 - 98 算成 156 - 100 - 2",
+        "为了简算改变运算顺序导致结果错误"
+      ],
+      "rootCauseSignals": [
+        "知道要凑整但不检查变形前后是否相等",
+        "分配律与结合律混用，括号处理随意",
+        "做完不回代验证简算结果"
+      ],
+      "microValidationRules": [
+        "给 3 道可简算题，要求写出每一步用了哪条运算律。",
+        "把简算结果与直接计算结果对照，不一致时找出错在哪一步。"
+      ],
+      "repairStrategy": [
+        "先写原式=变形式的等号链再计算",
+        "每用一次运算律说出名字",
+        "简算后抽一题直接算对照"
+      ],
+      "masteryEvidence": [
+        "简便计算 3 题方法正确且结果一致",
+        "能解释 99 × 78 + 78 为什么是 78 × 100",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "《钟青羽_学习卡点诊断报告_第二版》运算顺序与简便计算类错题复核"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-OP-LAWS",
+      "familyTitle": "运算律与简便计算",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "步骤拆解",
+        "凑整策略",
+        "错例对比"
+      ]
+    },
+    {
+      "bottleneckId": "BN-DEC-MOVE-POINT-DIRECTION",
+      "legacyLpCode": "LP-FD",
+      "subject": "math",
+      "title": "小数点移动方向与倍数对应错误",
+      "nodeId": "MATH-NUM-DEC-MOVE-POINT",
+      "priority": "medium",
+      "repairCost": "low",
+      "impact": "medium",
+      "categoryPath": [
+        "计算规则",
+        "小数点定位与移动",
+        "移动方向与倍数"
+      ],
+      "symptomPatterns": [
+        "乘 100 小数点向左移两位",
+        "除以 10 结果反而扩大 10 倍"
+      ],
+      "rootCauseSignals": [
+        "机械背移动位数但方向感缺失",
+        "不理解向左移动数变小、向右移动数变大",
+        "不用数量级估算检查移动结果"
+      ],
+      "microValidationRules": [
+        "给 3 道乘除 10/100/1000 的题，要求先说数会变大还是变小再写答案。",
+        "用估算检查 0.36 × 100 的结果应该比 0.36 大多少。"
+      ],
+      "repairStrategy": [
+        "先判断大小变化方向，再移动小数点",
+        "移动后用数量级估算自检"
+      ],
+      "masteryEvidence": [
+        "移动方向判断 3 题全对",
+        "能解释向右移两位等于乘 100",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "小数位值与数量级类错题复核（TODO 27 小数位值卡点族拆分）"
+      ],
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "categoryTitle": "计算规则",
+      "familyId": "MATH-FAM-DECIMAL-POINT",
+      "familyTitle": "小数点定位与移动",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "步骤拆解",
+        "数轴演示",
+        "错例对比"
+      ]
+    },
+    {
+      "bottleneckId": "BN-FRACTION-UNIT-LABEL-CONFUSE",
+      "legacyLpCode": "LP-FD",
+      "subject": "math",
+      "title": "分数带单位与不带单位（分率与具体量）混淆",
+      "nodeId": "MATH-NUM-FRACTION-DIVISION-LINK",
+      "priority": "medium",
+      "repairCost": "medium",
+      "impact": "high",
+      "categoryPath": [
+        "数感与数量级",
+        "分数意义与单位归属",
+        "分率与具体量"
+      ],
+      "symptomPatterns": [
+        "3 米平均分成 5 段，每段是全长的 1/5 写成 3/5 米",
+        "每段长几分之几米答成 1/5（漏单位）"
+      ],
+      "rootCauseSignals": [
+        "分率（部分占整体的几分之几）与具体量（带单位的数）不分",
+        "看到分数就约分，不看问题问的是率还是量",
+        "不会用单位检验答案合理性"
+      ],
+      "microValidationRules": [
+        "同一情境连续两问：每段是全长的几分之几？每段长几分之几米？",
+        "判断答案 2/5 和 2/5 米各自对应哪个问题。"
+      ],
+      "repairStrategy": [
+        "先写问题求的是率还是量，再列式",
+        "答案必带单位或注明分率，用单位自检"
+      ],
+      "masteryEvidence": [
+        "率与量两问对比题 3 组全对",
+        "能解释 1/5 和 3/5 米的区别",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "《Learning_Diagnostic_MVP_诊断报告》分数意义类错题复核"
+      ],
+      "categoryId": "MATH-CAT-NUMBER-SENSE",
+      "categoryTitle": "数感与数量级",
+      "familyId": "MATH-FAM-FRACTION-UNIT",
+      "familyTitle": "分数意义与单位归属",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "概念辨析",
+        "情境对比",
+        "图示建模"
+      ]
+    },
+    {
+      "bottleneckId": "BN-RATIO-ALLOCATE-PART",
+      "legacyLpCode": "LP-RP",
+      "subject": "math",
+      "title": "按比分配中份数与总量对应错误",
+      "nodeId": "MATH-NUM-RATIO-ALLOCATE",
+      "priority": "high",
+      "repairCost": "medium",
+      "impact": "high",
+      "categoryPath": [
+        "数量关系建模",
+        "比的意义与参照系",
+        "按比分配"
+      ],
+      "symptomPatterns": [
+        "按 2:3 分 45，直接用 45×2/3 而不是 45×2/5",
+        "已知部分量求总量时份数对应错"
+      ],
+      "rootCauseSignals": [
+        "比的前项后项对应哪两个量不清",
+        "不把比转化成分率（部分占总数的几分之几）",
+        "不检查分配结果之和是否等于总量"
+      ],
+      "microValidationRules": [
+        "给 2 道按比分配题，要求先写总份数再列式。",
+        "分配完成后把两份加起来核对是否等于总量。"
+      ],
+      "repairStrategy": [
+        "先算总份数，把比化成分率再乘总量",
+        "做完回加验证"
+      ],
+      "masteryEvidence": [
+        "按比分配 3 题全对",
+        "能说明 2:3 对应 2/5 和 3/5",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "《钟青羽_学习卡点诊断报告_第二版》比例应用题复核：剩余与已运之比 5:3 类问题"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-RATIO-MEANING",
+      "familyTitle": "比的意义与参照系",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "数量关系图",
+        "份数模型",
+        "错例对比"
+      ]
+    },
+    {
+      "bottleneckId": "BN-GEO-CIRCLE-RING-FORMULA",
+      "legacyLpCode": "LP-GEO",
+      "subject": "math",
+      "title": "圆环面积误算为 (R-r)² 乘 π",
+      "nodeId": "MATH-GEO-CIRCLE-RING",
+      "priority": "medium",
+      "repairCost": "low",
+      "impact": "medium",
+      "categoryPath": [
+        "图形与空间",
+        "圆周长与圆面积公式边界",
+        "圆环面积"
+      ],
+      "symptomPatterns": [
+        "圆环面积算成 π(R-r)²",
+        "先减半径再平方，而不是分别算两个圆面积相减"
+      ],
+      "rootCauseSignals": [
+        "把 R²-r² 与 (R-r)² 混为一谈",
+        "不理解圆环是两个圆面积的差",
+        "不用估算检查（圆环面积应小于外圆面积）"
+      ],
+      "microValidationRules": [
+        "给 2 道圆环面积题，要求分别写出外圆和内圆面积再相减。",
+        "判断 π(R²-r²) 与 π(R-r)² 哪个大，并说明理由。"
+      ],
+      "repairStrategy": [
+        "固定写法：圆环 = 大圆面积 - 小圆面积",
+        "用平方差公式前先展开核对"
+      ],
+      "masteryEvidence": [
+        "圆环面积 2 题全对",
+        "能解释 R²-r² ≠ (R-r)²",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "圆与扇形类错题复核（几何公式边界卡点族拆分）"
+      ],
+      "categoryId": "MATH-CAT-GEOMETRY",
+      "categoryTitle": "图形与空间",
+      "familyId": "MATH-FAM-CIRCLE-FORMULA",
+      "familyTitle": "圆周长与圆面积公式边界",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "图示推导",
+        "公式对比",
+        "错例对比"
+      ]
+    },
+    {
+      "bottleneckId": "BN-GEO-SURFACE-CUT-CHANGE",
+      "legacyLpCode": "LP-GEO",
+      "subject": "math",
+      "title": "切割拼接后表面积增减方向与数量错误",
+      "nodeId": "MATH-GEO-SURFACE-CUT-CHANGE",
+      "priority": "high",
+      "repairCost": "medium",
+      "impact": "high",
+      "categoryPath": [
+        "图形与空间",
+        "立体图形体积与表面积",
+        "切割拼接表面积变化"
+      ],
+      "symptomPatterns": [
+        "把长方体切成两段，以为表面积不变",
+        "两个正方体拼成长方体，表面积减少量算错面数"
+      ],
+      "rootCauseSignals": [
+        "不知道切一刀多两个面、拼一次少两个面",
+        "不画图标出新增或消失的面的尺寸",
+        "增减方向判断凭感觉"
+      ],
+      "microValidationRules": [
+        "给 2 道切割题和 1 道拼接题，要求先画图标出变化的面。",
+        "说出切一刀后表面积增加的是哪两个面、各多大。"
+      ],
+      "repairStrategy": [
+        "切拼题先画图标出变化面，再算增减",
+        "用 增加=两个切面、减少=两个接触面 的口诀自检"
+      ],
+      "masteryEvidence": [
+        "切割拼接表面积题 3 题全对",
+        "能解释增减的面从哪来",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "《Learning_Diagnostic_MVP_诊断报告》立体图形表面积增减理解不足（TODO 27 首批必覆盖清单）"
+      ],
+      "categoryId": "MATH-CAT-GEOMETRY",
+      "categoryTitle": "图形与空间",
+      "familyId": "MATH-FAM-SOLID-GEOMETRY",
+      "familyTitle": "立体图形体积与表面积",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "实物切割演示",
+        "图示标记",
+        "错例对比"
+      ]
+    },
+    {
+      "bottleneckId": "BN-STAT-AVERAGE-REVERSE",
+      "legacyLpCode": "LP-MOD",
+      "subject": "math",
+      "title": "由平均数反推总数或个别数据时关系颠倒",
+      "nodeId": "MATH-STAT-AVERAGE-APP",
+      "priority": "medium",
+      "repairCost": "medium",
+      "impact": "medium",
+      "categoryPath": [
+        "数量关系建模",
+        "平均数应用与反推",
+        "反推关系颠倒"
+      ],
+      "symptomPatterns": [
+        "已知平均身高求总身高时用除法",
+        "去掉一个数据后求原数据，增减方向搞反"
+      ],
+      "rootCauseSignals": [
+        "总数=平均数×个数的关系不牢",
+        "不理解平均数变动与个别数据变动的方向关系",
+        "不用移多补少的直观检验"
+      ],
+      "microValidationRules": [
+        "给 2 道反推题：由平均数求总数、去掉一个数据求新平均数。",
+        "用移多补少方法解释答案为什么合理。"
+      ],
+      "repairStrategy": [
+        "先写 总数=平均数×个数 再变形",
+        "用移多补少画图检验方向"
+      ],
+      "masteryEvidence": [
+        "平均数反推 3 题全对",
+        "能解释平均数为什么不代表具体某个数据",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "《钟青羽_学习卡点诊断报告_第二版》统计与平均数类错题复核"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-AVERAGE-APP",
+      "familyTitle": "平均数应用与反推",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "数量关系图",
+        "移多补少演示",
+        "错例对比"
+      ]
+    },
+    {
+      "bottleneckId": "BN-STAT-GRAPH-SPEED-READ",
+      "legacyLpCode": "LP-LANG",
+      "subject": "math",
+      "title": "距离-时间图读取速度时用错线段或时间轴",
+      "nodeId": "MATH-STAT-COORDINATE-SPEED",
+      "priority": "medium",
+      "repairCost": "medium",
+      "impact": "high",
+      "categoryPath": [
+        "数学语言与审题",
+        "统计图表读取与误读",
+        "行程图读取"
+      ],
+      "symptomPatterns": [
+        "用总路程除以局部线段的时间",
+        "水平线段（停留）也读出速度",
+        "读数时横轴纵轴看反"
+      ],
+      "rootCauseSignals": [
+        "不知道速度对应线段的倾斜程度",
+        "读图不先看横纵轴含义和单位",
+        "水平段含义（停留）不理解"
+      ],
+      "microValidationRules": [
+        "给一张距离-时间图，读出指定线段的速度并写出用的是哪段路程哪段时间。",
+        "解释图中水平线段表示什么。"
+      ],
+      "repairStrategy": [
+        "读图先标出横轴纵轴和单位",
+        "速度=该线段路程差÷时间差，逐线段计算"
+      ],
+      "masteryEvidence": [
+        "读图求速度 3 题全对",
+        "能解释线段越陡速度越快",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "《Learning_Diagnostic_MVP_诊断报告》距离-时间图读取速度错误（TODO 27 首批必覆盖清单）"
+      ],
+      "categoryId": "MATH-CAT-LANGUAGE",
+      "categoryTitle": "数学语言与审题",
+      "familyId": "MATH-FAM-CHART-READING",
+      "familyTitle": "统计图表读取与误读",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "读图步骤",
+        "单位标注",
+        "误导案例辨析"
+      ]
+    },
+    {
+      "bottleneckId": "BN-APP-EQUATION-MODEL-MISSING",
+      "legacyLpCode": "LP-MOD",
+      "subject": "math",
+      "title": "复杂应用题缺少方程建模意识",
+      "nodeId": "MATH-MOD-EQUATION-WORD-PROBLEM",
+      "priority": "high",
+      "repairCost": "high",
+      "impact": "high",
+      "categoryPath": [
+        "数量关系建模",
+        "方程建模意识",
+        "设未知数列方程"
+      ],
+      "symptomPatterns": [
+        "逆思维题用算术法反复试，思路混乱",
+        "不会设未知数，或设了但数量关系写错"
+      ],
+      "rootCauseSignals": [
+        "习惯算术正向思维，不会把所求设为 x",
+        "找不准等量关系，文字条件翻译不成等式",
+        "解完不回代原题检验"
+      ],
+      "microValidationRules": [
+        "给 2 道逆思维应用题，要求写出 设、列、解、答 四步完整过程。",
+        "把解代回原题验证条件全部成立。"
+      ],
+      "repairStrategy": [
+        "固定四步：设未知数、找等量关系、列方程、回代检验",
+        "用线段图先把数量关系画出来再写方程"
+      ],
+      "masteryEvidence": [
+        "方程建模 2 题过程完整",
+        "能说出等量关系是什么",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "《Learning_Diagnostic_MVP_诊断报告》方程建模意识不足（TODO 27 首批必覆盖清单）；1/a=3/b 求 a:b 类字母关系题复核"
+      ],
+      "categoryId": "MATH-CAT-MODEL",
+      "categoryTitle": "数量关系建模",
+      "familyId": "MATH-FAM-EQUATION-MODELING",
+      "familyTitle": "方程建模意识",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "建模示范",
+        "数量关系图",
+        "算术与方程对比"
+      ]
+    },
+    {
+      "bottleneckId": "BN-PROCESS-FINAL-COPY",
+      "legacyLpCode": "LP-PRE",
+      "subject": "math",
+      "title": "过程正确但最终答案誊写或收尾错误",
+      "nodeId": "MATH-META-ESTIMATION-CHECK",
+      "priority": "medium",
+      "repairCost": "low",
+      "impact": "medium",
+      "categoryPath": [
+        "验算与学习习惯",
+        "过程收尾与誊写",
+        "誊写收尾"
+      ],
+      "symptomPatterns": [
+        "草稿算对但答题纸上抄错数",
+        "多步题最后一步忘了写或漏单位、漏答"
+      ],
+      "rootCauseSignals": [
+        "做完不核对誊写结果与草稿",
+        "没有答完回读题目的习惯",
+        "时间紧张时收尾仓促"
+      ],
+      "microValidationRules": [
+        "给 2 道多步计算题，要求做完后单独核对誊写答案与草稿一致并写答。",
+        "对照题目问题检查答案是否真正回答了所问。"
+      ],
+      "repairStrategy": [
+        "固定收尾三步：核对誊写、补单位、写答句",
+        "答完回读题目一遍"
+      ],
+      "masteryEvidence": [
+        "多步题誊写零失误连续 3 题",
+        "能主动回读题目确认所答即所问",
+        "72 小时后复测稳定"
+      ],
+      "sourceEvidence": [
+        "《Learning_Diagnostic_MVP_诊断报告》过程正确但最终答案抄写或收尾错误（TODO 27 首批必覆盖清单）"
+      ],
+      "categoryId": "MATH-CAT-META",
+      "categoryTitle": "验算与学习习惯",
+      "familyId": "MATH-FAM-PROCESS-FINISH",
+      "familyTitle": "过程收尾与誊写",
+      "verificationGrain": "fine_bottleneck",
+      "recommendedPageTypes": [
+        "same_family",
+        "same_node",
+        "mixed_review"
+      ],
+      "resourceStyleHints": [
+        "检查清单",
+        "过程管理示范",
+        "错例对比"
       ]
     }
   ]
