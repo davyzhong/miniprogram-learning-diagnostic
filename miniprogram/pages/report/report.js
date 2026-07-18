@@ -214,6 +214,16 @@ Page({
       // 传 profile 给 presenter，让诊断报告展示全量合并卡点（而非单次报告的卡点）
       const view = buildReportView(reportWithContext, { profile: detail.profile || detail.subjectProfile || null })
 
+      // 页头去重：证据时间与报告生成时间同一天时，不再单独显示证据时间
+      const msPerDay = 24 * 60 * 60 * 1000
+      const beijingDayOf = value => {
+        const t = value ? new Date(value).getTime() : NaN
+        return isNaN(t) ? '' : Math.floor((t + 8 * 60 * 60 * 1000) / msPerDay)
+      }
+      if (beijingDayOf(report.evidenceTime) === beijingDayOf(report.createdAt)) {
+        view.evidenceTimeText = ''
+      }
+
       // 待验证卡点数优先来自报告详情，避免报告页再拉整套学科 Dashboard。
       var pendingCount = typeof detail.pendingCount === 'number'
         ? detail.pendingCount
