@@ -420,15 +420,19 @@ Page({
     const questionCount = this.questionCountForSelection(selectedItems)
     const isChinese = this.data.subject === 'chinese'
     const taskPages = this.buildTaskPages(selectedItems)
+    const estimatedMinutes = Math.max(0, Math.round(questionCount * 4))
+    const pages = Math.max(1, Math.ceil(questionCount / 10))
+    const targetUnitLabel = isChinese ? '错项数' : '卡点数'
     return {
       scopeText: selectedSummary || '未选择学习卡点',
       questionCount,
-      estimatedMinutes: Math.max(0, Math.round(questionCount * 4)),
-      pages: Math.max(1, Math.ceil(questionCount / 10)),
+      estimatedMinutes,
+      pages,
       taskPageCount: taskPages.length,
       taskPages,
       paperSize: 'A4',
-      targetUnitLabel: isChinese ? '错项数' : '卡点数',
+      targetUnitLabel,
+      statsLine: `${selectedCount} 个${isChinese ? '错项' : '卡点'} · ${questionCount} 题 · 约 ${estimatedMinutes} 分钟 · A4 ${pages} 页`,
       strategyText: isChinese
         ? '每个错项至少直接复测一次，并补充语境迁移题'
         : '按置信度分层：高置信3题、中置信2题、低置信1题'
