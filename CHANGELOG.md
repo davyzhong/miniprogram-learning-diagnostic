@@ -17,6 +17,7 @@
 - **干预会话与复测调度**：completePack 自动沉淀 `interventionSessions`（资源使用、当场练习、掌握前后状态、24h/72h 复测安排）；scheduleVerification 写实 nextReviewAt；首页个人行动队列置顶"到期复测"卡并直跳验证卷配置器
 - **数据库索引声明**：studentNodeMastery（studentId+subject+nodeId）、interventionSessions（studentId+date）
 - 知识节点数据扩充 v0.4.0：91→150 节点（四大领域 1-6 年级主干，8 个节点挂接现有细卡点）；掌握状态 example 数据迁移为六态
+- 细卡点库扩充 v0.2.0：28→40 个 BN（新增长除法商位、周长面积辨析、运算律误用、小数点移动方向、分率与具体量、按比分配、圆环面积、切割拼接表面积、平均数反推、行程图读取、方程建模、誊写收尾），同步新增 7 个卡点家族；长方形周长面积混淆的 AI 变体别名改挂专属 BN（不再归入圆类）
 
 #### Fixed
 

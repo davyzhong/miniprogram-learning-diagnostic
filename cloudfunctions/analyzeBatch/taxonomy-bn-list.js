@@ -1,6 +1,6 @@
 // 自动同步的数学细卡点标准库（打包安全：云函数独立上传时 data/ 目录不会随函数上传，
 // 所以把 taxonomy 的 bottleneckId/title/symptom 固化在此 JS 模块里）。
-// 数据来源：data/math/bottleneck-taxonomy-v2.seed.json（28 个 BN）
+// 数据来源：data/math/bottleneck-taxonomy-v2.seed.json（40 个 BN，v0.2.0 起含首批 12 个扩充卡点）
 // 同步原则：新增/修改 taxonomy seed 后，同步更新此文件并跑 tests/analyze-batch-normalizer.test.js
 
 /**
@@ -35,6 +35,18 @@ const TAXONOMY_BN_LIST = [
   { id: 'BN-META-ESTIMATION-MISSING', legacyLpCode: 'LP-001', title: '缺少答案数量级估算检查', symptom: '明显不合理答案未停下来检查，小数点错位未自查' },
   { id: 'BN-META-INVERSE-CHECK-MISSING', legacyLpCode: 'LP-001', title: '缺少逆运算回代验算', symptom: '除法比例百分数反推题做完不回代' },
   { id: 'BN-AXIS-FOLD-MIDPOINT-DIRECTION', legacyLpCode: 'LP-006', title: '数轴折叠与延长语义中的方向倍数判断错误', symptom: '数轴折叠对称点方向错，延长倍数理解为等长而非加倍' },
+  { id: 'BN-INT-DIV-QUOTIENT-PLACE', legacyLpCode: 'LP-001', title: '长除法中商位与 0 占位错误', symptom: '不够除时商里漏写 0，商的数字写串位' },
+  { id: 'BN-GEO-RECT-PERIM-AREA-CONFUSE', legacyLpCode: 'LP-006', title: '长方形周长与面积公式混用', symptom: '求面积时长宽相加乘 2，求周长时长乘宽，单位 cm/cm² 不分' },
+  { id: 'BN-OP-LAWS-MISAPPLY', legacyLpCode: 'LP-001', title: '简便计算中运算律误用（乱凑整、错拆分）', symptom: '拆分配律丢括号，减法凑整方向错，简算后结果与直算不一致' },
+  { id: 'BN-DEC-MOVE-POINT-DIRECTION', legacyLpCode: 'LP-002', title: '小数点移动方向与倍数对应错误', symptom: '乘 100 向左移，除以 10 结果反而扩大' },
+  { id: 'BN-FRACTION-UNIT-LABEL-CONFUSE', legacyLpCode: 'LP-002', title: '分数带单位与不带单位（分率与具体量）混淆', symptom: '每段是全长的几分之几与每段长几分之几米混答' },
+  { id: 'BN-RATIO-ALLOCATE-PART', legacyLpCode: 'LP-005', title: '按比分配中份数与总量对应错误', symptom: '按 2:3 分直接用 45×2/3 而不是先算总份数' },
+  { id: 'BN-GEO-CIRCLE-RING-FORMULA', legacyLpCode: 'LP-006', title: '圆环面积误算为 (R-r)² 乘 π', symptom: 'R²-r² 与 (R-r)² 混淆，先减半径再平方' },
+  { id: 'BN-GEO-SURFACE-CUT-CHANGE', legacyLpCode: 'LP-006', title: '切割拼接后表面积增减方向与数量错误', symptom: '切一刀不知道多两个面，拼一次少两个面的面数算错' },
+  { id: 'BN-STAT-AVERAGE-REVERSE', legacyLpCode: 'LP-005', title: '由平均数反推总数或个别数据时关系颠倒', symptom: '已知平均数求总数用除法，数据变动方向搞反' },
+  { id: 'BN-STAT-GRAPH-SPEED-READ', legacyLpCode: 'LP-008', title: '距离-时间图读取速度时用错线段或时间轴', symptom: '用总路程除以局部时间，水平段也读出速度' },
+  { id: 'BN-APP-EQUATION-MODEL-MISSING', legacyLpCode: 'LP-005', title: '复杂应用题缺少方程建模意识', symptom: '逆思维题算术法乱试，不会设未知数列方程' },
+  { id: 'BN-PROCESS-FINAL-COPY', legacyLpCode: 'LP-010', title: '过程正确但最终答案誊写或收尾错误', symptom: '草稿算对答题纸抄错，漏单位漏答句' },
 ];
 
 /**
@@ -67,13 +79,13 @@ const BN_VARIANT_ALIASES = {
   'BN-AREA-CONVERSION-RATE': 'BN-UNIT-AREA-VOLUME-DIMENSION',
   'BN-AREA-UNIT-MIX': 'BN-UNIT-AREA-VOLUME-DIMENSION',
 
-  // 长方形周长面积公式混淆 → 归入 BN-CIRCLE-CIRCUMFERENCE-AREA-MIX 的同类
-  // （周长面积混淆本质相同，taxonomy 目前只有圆的版本，归入最接近的）
-  'BN-GEO-RECT-AREA-CONFUSE': 'BN-CIRCLE-CIRCUMFERENCE-AREA-MIX',
-  'BN-RECT-PERIM-AREA-CONFUSE': 'BN-CIRCLE-CIRCUMFERENCE-AREA-MIX',
-  'BN-GEO-RECT-FORMULA-CONFUSE': 'BN-CIRCLE-CIRCUMFERENCE-AREA-MIX',
-  'BN-GEO-RECTANGLE-FORMULA-CONFUSE': 'BN-CIRCLE-CIRCUMFERENCE-AREA-MIX',
-  'BN-RECT-AREA-PERIM-CONFUSE': 'BN-CIRCLE-CIRCUMFERENCE-AREA-MIX',
+  // 长方形周长面积公式混淆 → BN-GEO-RECT-PERIM-AREA-CONFUSE
+  // （v0.2.0 起 taxonomy 已有长方形专属卡点，不再归入圆周长面积混淆）
+  'BN-GEO-RECT-AREA-CONFUSE': 'BN-GEO-RECT-PERIM-AREA-CONFUSE',
+  'BN-RECT-PERIM-AREA-CONFUSE': 'BN-GEO-RECT-PERIM-AREA-CONFUSE',
+  'BN-GEO-RECT-FORMULA-CONFUSE': 'BN-GEO-RECT-PERIM-AREA-CONFUSE',
+  'BN-GEO-RECTANGLE-FORMULA-CONFUSE': 'BN-GEO-RECT-PERIM-AREA-CONFUSE',
+  'BN-RECT-AREA-PERIM-CONFUSE': 'BN-GEO-RECT-PERIM-AREA-CONFUSE',
 
   // 小数乘法小数点位置（BN-DEC-MUL-POINT-COUNT 的变体）
   'BN-DEC-MUL-POINT': 'BN-DEC-MUL-POINT-COUNT',

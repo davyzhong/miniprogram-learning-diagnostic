@@ -16,8 +16,8 @@
 <p align="center">
   <img alt="WeChat Mini Program" src="https://img.shields.io/badge/WeChat-Mini_Program-07C160?style=flat-square" />
   <img alt="CloudBase" src="https://img.shields.io/badge/Backend-CloudBase-2F80ED?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/tests-1008_passing-2E8B57?style=flat-square" />
-  <img alt="Main package" src="https://img.shields.io/badge/main_package-789_KB-F2A900?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-1058_passing-2E8B57?style=flat-square" />
+  <img alt="Main package" src="https://img.shields.io/badge/main_package-817_KB-F2A900?style=flat-square" />
 </p>
 
 <p align="center">
@@ -128,7 +128,7 @@ flowchart TB
     end
     subgraph Cloud[微信云开发 CloudBase]
       Functions[14 个业务云函数]
-      Database[17 个数据库集合]
+      Database[19 个数据库集合]
       Storage[试卷图片与 PDF]
       AI[混元视觉与文本生成模型]
     end
@@ -165,7 +165,7 @@ miniprogram-learning-diagnostic/
 ├── data/                     # 数学知识节点、卡点体系和脱敏示例数据
 ├── cli/                      # ldx 本地命令入口
 ├── scripts/                  # 构建、校验、性能、截图和 DevTools E2E
-├── tests/                    # 89 个测试文件，默认离线集执行其中 84 个
+├── tests/                    # 95 个测试文件，默认离线集执行其中 90 个
 ├── docs/                     # 产品、学科、架构、测试和图文文档
 ├── database/                 # 数据库索引声明
 ├── README.md                 # GitHub 项目主页
@@ -197,8 +197,8 @@ npm run check:size
 ### 常用命令
 
 ```bash
-npm test                    # 1008 个常规自动化测试
-npm run check               # 检查 313 个 JavaScript 文件
+npm test                    # 1058 个常规自动化测试
+npm run check               # 检查 327 个 JavaScript 文件
 npm run check:size          # 主包体积预算检查
 npm run test:coverage       # 覆盖率门禁
 npm run test:e2e:doctor     # 检查微信开发者工具 CLI 环境
@@ -214,9 +214,9 @@ npm run perf:baseline       # CLI 性能基线
 
 | 指标 | 当前结果 | 复现命令 |
 | --- | ---: | --- |
-| 常规自动化测试 | 1008 / 1008 通过 | `npm test` |
-| JavaScript 语法检查 | 313 个文件通过 | `npm run check` |
-| 主包体积 | 789 KB / 1200 KB（预算自 800 KB 上调） | `npm run check:size` |
+| 常规自动化测试 | 1058 / 1058 通过 | `npm test` |
+| JavaScript 语法检查 | 327 个文件通过 | `npm run check` |
+| 主包体积 | 817 KB / 1200 KB（预算自 800 KB 上调） | `npm run check:size` |
 | 注册页面 | 25 | `miniprogram/app.json` |
 | 业务云函数 | 14 | `cloudfunctions/`，不含 `_shared-templates` |
 | 测试文件 | 89 个库存，默认离线集 84 个 | `package.json` |

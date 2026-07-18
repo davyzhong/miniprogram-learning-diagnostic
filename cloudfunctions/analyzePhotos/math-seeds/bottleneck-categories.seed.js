@@ -3,7 +3,7 @@
 // 数据来源：data/math/bottleneck-categories.seed.json
 module.exports = {
   "version": "0.1.0",
-  "updatedAt": "2026-06-17",
+  "updatedAt": "2026-07-17",
   "subject": "math",
   "scope": "小学数学学习卡点粗类与卡点家族治理库。粗类用于展示、调度和资源讲法选择；细卡点仍是诊断与修复原子。",
   "categories": [
@@ -402,6 +402,109 @@ module.exports = {
         "方向标注",
         "中点先行",
         "语义对照"
+      ]
+    },
+    {
+      "familyId": "MATH-FAM-PERIMETER-AREA",
+      "categoryId": "MATH-CAT-GEOMETRY",
+      "title": "周长与面积辨析",
+      "nodeIds": [
+        "MATH-GEO-PERIMETER-AREA-DISTINCT"
+      ],
+      "verificationTemplate": "给出同一图形，分别求周长和面积，并要求说明两者含义差别。",
+      "resourceStyleHints": [
+        "概念辨析",
+        "实物演示",
+        "错例对比"
+      ]
+    },
+    {
+      "familyId": "MATH-FAM-OP-LAWS",
+      "categoryId": "MATH-CAT-CALC-RULE",
+      "title": "运算律与简便计算",
+      "nodeIds": [
+        "MATH-NUM-OP-LAWS"
+      ],
+      "verificationTemplate": "给出必须也能简算的式子，要求写出用了哪条运算律。",
+      "resourceStyleHints": [
+        "步骤拆解",
+        "凑整策略",
+        "错例对比"
+      ]
+    },
+    {
+      "familyId": "MATH-FAM-FRACTION-UNIT",
+      "categoryId": "MATH-CAT-NUMBER-SENSE",
+      "title": "分数意义与单位归属",
+      "nodeIds": [
+        "MATH-NUM-FRACTION-DIVISION-LINK",
+        "MATH-NUM-FRACTION-MEANING"
+      ],
+      "verificationTemplate": "同一情境分别回答带单位与不带单位两问，并说明区别。",
+      "resourceStyleHints": [
+        "概念辨析",
+        "情境对比",
+        "图示建模"
+      ]
+    },
+    {
+      "familyId": "MATH-FAM-AVERAGE-APP",
+      "categoryId": "MATH-CAT-MODEL",
+      "title": "平均数应用与反推",
+      "nodeIds": [
+        "MATH-STAT-AVERAGE-APP",
+        "MATH-STAT-AVERAGE"
+      ],
+      "verificationTemplate": "由平均数反推总数，再变动一个数据求新平均数。",
+      "resourceStyleHints": [
+        "数量关系图",
+        "移多补少演示",
+        "错例对比"
+      ]
+    },
+    {
+      "familyId": "MATH-FAM-CHART-READING",
+      "categoryId": "MATH-CAT-LANGUAGE",
+      "title": "统计图表读取与误读",
+      "nodeIds": [
+        "MATH-STAT-COORDINATE-SPEED",
+        "MATH-STAT-DATA-MISLEAD",
+        "MATH-STAT-COORDINATE-READING"
+      ],
+      "verificationTemplate": "给出距离-时间图，读出指定线段的速度并解释水平段含义。",
+      "resourceStyleHints": [
+        "读图步骤",
+        "单位标注",
+        "误导案例辨析"
+      ]
+    },
+    {
+      "familyId": "MATH-FAM-EQUATION-MODELING",
+      "categoryId": "MATH-CAT-MODEL",
+      "title": "方程建模意识",
+      "nodeIds": [
+        "MATH-MOD-EQUATION-WORD-PROBLEM",
+        "MATH-ALG-EQUATION-WORD"
+      ],
+      "verificationTemplate": "给一道逆思维应用题，要求先设未知数列方程再求解。",
+      "resourceStyleHints": [
+        "建模示范",
+        "数量关系图",
+        "算术与方程对比"
+      ]
+    },
+    {
+      "familyId": "MATH-FAM-PROCESS-FINISH",
+      "categoryId": "MATH-CAT-META",
+      "title": "过程收尾与誊写",
+      "nodeIds": [
+        "MATH-META-ESTIMATION-CHECK"
+      ],
+      "verificationTemplate": "给多步计算题，要求最后单独核对誊写的最终答案与草稿一致。",
+      "resourceStyleHints": [
+        "检查清单",
+        "过程管理示范",
+        "错例对比"
       ]
     }
   ]
