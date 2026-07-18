@@ -24,13 +24,14 @@ const SHARED_FILES = {
   'access.js': [
     'aiUsage', 'englishVocabulary', 'generatePaper', 'generateReportPDF',
     'getAnalysisProgress', 'learningResource', 'reportFeedback',
-    'studentAccess', 'studentData', 'uploadAndAnalyze',
+    'studentAccess', 'studentData', 'uploadAndAnalyze', 'microValidation',
     // regenerateVerificationPaper 有独立的 access.js（有意例外），不同步
   ],
-  'pricing.js': ['aiUsage', 'analyzeBatch', 'englishVocabulary', 'generatePaper', 'learningResource'],
-  'usage-ledger.js': ['aiUsage', 'analyzeBatch', 'englishVocabulary', 'generatePaper', 'learningResource'],
+  'pricing.js': ['aiUsage', 'analyzeBatch', 'englishVocabulary', 'generatePaper', 'learningResource', 'microValidation'],
+  'usage-ledger.js': ['aiUsage', 'analyzeBatch', 'englishVocabulary', 'generatePaper', 'learningResource', 'microValidation'],
   'constants.js': ['analyzeBatch', 'generatePaper', 'generateReportPDF'],
   'bottleneck-name.js': ['analyzeBatch', 'generatePaper'],
+  'node-mastery.js': ['studentData', 'analyzePhotos', 'learningResource', 'microValidation'],
 }
 
 function readFileSync(filePath) {

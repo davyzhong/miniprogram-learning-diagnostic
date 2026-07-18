@@ -36,6 +36,17 @@
       "requiredBy": [
         "cloudfunctions/learningResource/intervention-session-writer.js"
       ]
+    },
+    {
+      "collection": "microValidations",
+      "name": "student_created_desc",
+      "fields": [
+        { "field": "studentId", "order": "asc" },
+        { "field": "createdAt", "order": "desc" }
+      ],
+      "requiredBy": [
+        "cloudfunctions/microValidation/index.js"
+      ]
     }
   ]
 }

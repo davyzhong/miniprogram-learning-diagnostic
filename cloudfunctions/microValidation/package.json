@@ -1,0 +1,10 @@
+{
+  "name": "microValidation",
+  "version": "1.0.0",
+  "description": "微验证：围绕单个细卡点生成 3-6 道小题，当场确认或推翻疑似卡点，并写入掌握状态",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "@cloudbase/node-sdk": "^3.16.0"
+  }
+}

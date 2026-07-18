@@ -1,0 +1,31 @@
+.page { min-height: 100vh; background: #f4f7fa; padding: 24rpx; box-sizing: border-box; }
+.loading { padding: 120rpx 0; text-align: center; color: #718096; font-size: 26rpx; }
+.empty { padding: 120rpx 40rpx; text-align: center; color: #718096; font-size: 26rpx; }
+.empty-cta { margin: 32rpx auto 0; width: 200rpx; padding: 16rpx 0; background: #3182ce; color: #fff; border-radius: 32rpx; font-size: 26rpx; }
+.hero { padding: 24rpx 8rpx 16rpx; }
+.hero-title { font-size: 34rpx; font-weight: 600; color: #2d3748; }
+.hero-summary { margin-top: 8rpx; font-size: 24rpx; color: #718096; line-height: 1.5; }
+.q-list { display: flex; flex-direction: column; gap: 16rpx; }
+.q-card { background: #fff; border-radius: 16rpx; padding: 24rpx; }
+.q-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12rpx; }
+.q-index { font-size: 22rpx; color: #a0aec0; }
+.q-verdict { font-size: 22rpx; padding: 2rpx 12rpx; border-radius: 8rpx; }
+.q-verdict-correct { color: #276749; background: #c6f6d5; }
+.q-verdict-incorrect { color: #c53030; background: #fed7d7; }
+.q-content { font-size: 28rpx; color: #2d3748; line-height: 1.6; }
+.q-actions { display: flex; gap: 16rpx; margin-top: 20rpx; }
+.q-btn { flex: 1; text-align: center; padding: 16rpx 0; border-radius: 12rpx; font-size: 26rpx; }
+.q-btn-correct { background: #c6f6d5; color: #276749; }
+.q-btn-wrong { background: #fed7d7; color: #c53030; }
+.q-answer { margin-top: 16rpx; padding: 16rpx; background: #f7fafc; border-radius: 12rpx; }
+.q-answer-text { display: block; font-size: 24rpx; color: #2d3748; }
+.q-observation { display: block; margin-top: 6rpx; font-size: 22rpx; color: #718096; }
+.submit-bar { margin-top: 24rpx; display: flex; align-items: center; justify-content: space-between; }
+.progress { font-size: 24rpx; color: #718096; }
+.submit-btn { padding: 18rpx 48rpx; background: #3182ce; color: #fff; border-radius: 32rpx; font-size: 28rpx; }
+.submit-btn-disabled { background: #cbd5e0; }
+.result-card { margin-top: 32rpx; background: #fff; border-radius: 16rpx; padding: 40rpx 32rpx; text-align: center; }
+.result-icon { font-size: 64rpx; }
+.result-title { display: block; margin-top: 16rpx; font-size: 32rpx; font-weight: 600; color: #2d3748; }
+.result-summary { display: block; margin-top: 12rpx; font-size: 24rpx; color: #718096; line-height: 1.6; }
+.result-action { margin: 32rpx auto 0; width: 280rpx; padding: 18rpx 0; background: #3182ce; color: #fff; border-radius: 32rpx; font-size: 28rpx; }

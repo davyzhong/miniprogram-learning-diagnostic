@@ -1,0 +1,49 @@
+<view class="page b1-page">
+  <view wx:if="{{loading}}" class="loading">正在准备微验证...</view>
+
+  <view wx:elif="{{errorText}}" class="empty">
+    <text>{{errorText}}</text>
+    <view class="empty-cta" bindtap="onRetry">重试</view>
+  </view>
+
+  <block wx:elif="{{view}}">
+    <view class="hero">
+      <view class="hero-title">微验证 · {{view.bnTitle}}</view>
+      <view class="hero-summary">当场做 {{view.totalCount}} 道小题，确认孩子是否真的卡在这里。家长陪同判定对错。</view>
+    </view>
+
+    <view class="q-list">
+      <view class="q-card" wx:for="{{view.questions}}" wx:key="index">
+        <view class="q-head">
+          <text class="q-index">第 {{item.index}} 题</text>
+          <text class="q-verdict q-verdict-{{item.verdict}}" wx:if="{{item.verdictText}}">{{item.verdictText}}</text>
+        </view>
+        <text class="q-content">{{item.content}}</text>
+
+        <view class="q-actions" wx:if="{{!item.verdict && !view.completed}}">
+          <view class="q-btn q-btn-correct" catchtap="onVerdictTap" data-index="{{index}}" data-verdict="correct">答对了</view>
+          <view class="q-btn q-btn-wrong" catchtap="onVerdictTap" data-index="{{index}}" data-verdict="incorrect">答错了</view>
+        </view>
+
+        <view class="q-answer" wx:if="{{item.showAnswer}}">
+          <text class="q-answer-text">参考答案：{{item.answer}}</text>
+          <text class="q-observation" wx:if="{{item.observation}}">观察点：{{item.observation}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="submit-bar" wx:if="{{!view.completed}}">
+      <text class="progress">{{view.progressText}}</text>
+      <view class="submit-btn {{view.canSubmit ? '' : 'submit-btn-disabled'}}" catchtap="onSubmit">
+        {{submitting ? '提交中…' : '提交判定'}}
+      </view>
+    </view>
+
+    <view class="result-card" wx:if="{{resultView}}">
+      <text class="result-icon">{{resultView.icon}}</text>
+      <text class="result-title">{{resultView.title}}</text>
+      <text class="result-summary">{{resultView.summary}}</text>
+      <view class="result-action" catchtap="onResultActionTap">{{resultView.actionText}} ›</view>
+    </view>
+  </block>
+</view>
