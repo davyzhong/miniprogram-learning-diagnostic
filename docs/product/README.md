@@ -1,21 +1,20 @@
 # Product Documentation
 
 > Scope: product and implementation-facing documents for the Learning Diagnostic WeChat Mini Program.  
-> Updated: 2026-07-15
+> Updated: 2026-07-18
 
 This directory contains the curated product documents that are directly useful for building, maintaining, testing, and extending the mini program.
 
 ## Recommended Reading Order
 
-1. [Learning Diagnostic Product Brief](./learning-diagnostic-product-brief.md)
-2. [MVP Roadmap And Product Boundaries](./mvp-roadmap-and-boundaries.md)
-3. [Family Learning Workflow](./family-learning-workflow.md)
-4. [Family And Personal Workbenches Design](../superpowers/specs/2026-06-20-actionable-family-and-personal-workbenches-design.md)
-5. [Prompt And Agent Design](./prompt-and-agent-design.md)
-6. [Architecture](../ARCHITECTURE.md)
-7. [Data Dictionary](../DATA_DICTIONARY.md)
-8. [Subject Design Index](../subject-design/README.md)
-9. [Visual User Guide](../user-guide/README.md)
+1. [当前 PRD](../../PRD.md)
+2. [Learning Diagnostic Product Brief](./learning-diagnostic-product-brief.md)
+3. [MVP Roadmap And Product Boundaries](./mvp-roadmap-and-boundaries.md)
+4. [Family Learning Workflow](./family-learning-workflow.md)
+5. [Subject Design Index](../subject-design/README.md)
+6. [Prompt And Agent Design](./prompt-and-agent-design.md)
+7. [Architecture](../ARCHITECTURE.md) 与 [Data Dictionary](../DATA_DICTIONARY.md)
+8. [Visual User Guide](../user-guide/README.md)
 
 ## Product Screens
 
@@ -25,7 +24,16 @@ This directory contains the curated product documents that are directly useful f
   <img src="../user-guide/images/07-learning-records.png" alt="脱敏学习记录" width="220" />
 </p>
 
-当前产品以“正式诊断报告 → 验证试卷 → 作答反馈 → 学习记录”为主线。家庭工作台优先显示每个孩子的最新正式诊断和行动，验证卷编号使用可读的“学科 + 日期 + 序号”，内部数据编码不面向家长展示。
+当前产品以“正式诊断报告 → 学习行动 → 验证试卷 → 作答反馈 → 学习记录”为主线。家庭工作台先展示快捷操作和每个孩子的最新正式诊断，再展示行动、统计和紧凑学科状态；个人学习档案展开诊断证据，AI 用量只在家庭首页保留统一入口。验证卷编号使用可读的“学科 + 日期 + 序号”，内部数据编码不面向家长展示。
+
+## Current Delivery Status
+
+| 模块 | 当前状态 |
+| --- | --- |
+| 数学 | 最完整：照片诊断、150 节点知识地图、细卡点、任务包、验证卷和反馈闭环 |
+| 语文 | 已落地具体错项原项复测、相似迁移题与阅读表达微任务 |
+| 英语 | 已落地个人词库、认词、纸面听写、双维掌握、易混词和错词本 |
+| 家庭工作台 | 多孩子卡片、最新正式诊断、行动建议、学习统计与统一 AI 用量入口 |
 
 ## Document Boundary
 

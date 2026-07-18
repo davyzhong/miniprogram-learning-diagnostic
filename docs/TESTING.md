@@ -33,7 +33,7 @@ CLI E2E 使用：
 | `npm test` | 1008 / 1008 通过（默认执行 84 个测试文件） |
 | 测试文件库存 | 89 个 `.test.js` |
 | `npm run check` | 313 个 JavaScript 文件通过 |
-| `npm run check:size` | 主包 791 KB / 1200 KB（预算 2026-07-18 由 800 KB 上调） |
+| `npm run check:size` | 主包 789 KB / 1200 KB（预算 2026-07-18 由 800 KB 上调） |
 
 未纳入默认离线集的 5 个文件是 `e2e-real-cloud.test.js`、`e2e-real-image.test.js`、`math-bottleneck-hierarchy.test.js`、`math-history-reanalysis.test.js` 和 `math-learning-map-pipeline.test.js`；前两项需要显式环境，后三项按数学专项变更单独回归。
 

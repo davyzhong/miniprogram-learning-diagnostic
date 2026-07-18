@@ -1,7 +1,11 @@
 # Math Subject Design
 
 > Scope: math-specific diagnosis, verification, knowledge map, resource, and mastery-state design.  
-> Updated: 2026-06-20
+> Updated: 2026-07-18
+
+## Current Implementation
+
+数学是当前最完整的学科闭环：照片诊断会归并到 150 个标准知识节点和细粒度卡点；报告与卡点页展示出现频次、证据指标和置信度；知识地图、学习任务包和验证卷共同承接下一步行动。历史数据迁移与节点掌握六态仍应按各自路线文档审慎执行，不把“设计完成”误写成“数据已全量迁移”。
 
 ## Active Documents
 
@@ -24,4 +28,3 @@
 ## Implementation Rule
 
 Raw student papers, real photos, and identifiable diagnosis reports should remain outside GitHub. The repository should contain only desensitized examples, structured seed data, and implementation documents.
-

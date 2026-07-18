@@ -13,8 +13,25 @@ function loadAutomator() {
 const automator = loadAutomator()
 
 const projectPath = path.resolve(__dirname, '..')
-const cliPath = '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
+const cliPath = process.env.WECHAT_CLI_PATH || '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
 const outputDir = path.resolve(projectPath, 'docs/user-guide/images')
+const allowedMockNames = Object.freeze(['学生示例', '孩子A', '家长A'])
+const forbiddenNames = Object.freeze([
+  '钟青羽',
+  '钟筱雨',
+  ...String(process.env.README_SCREENSHOT_FORBIDDEN_NAMES || '').split(',').map(value => value.trim()).filter(Boolean),
+])
+const sensitivePatterns = Object.freeze([
+  /open_?id/i,
+  /真实姓名|身份证|手机号|学校|班级|微信号|账号/,
+  /cloud:\/\//i,
+  /wxfile:\/\//i,
+  /\b(?:LP|BN)-[A-Z0-9-]+\b/,
+  /\b[0-9a-f]{24}\b/i,
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/i,
+  /\b1[3-9]\d{9}\b/,
+  ...forbiddenNames.map(name => new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))),
+])
 
 const screenshots = [
   {
@@ -568,11 +585,21 @@ async function assertNoSensitiveText(page, id) {
   const root = await page.$('.page')
   if (!root) return
   const text = await root.text()
-  const forbidden = ['openid', 'openId', '真实姓名', '身份证', '手机号']
-  for (const item of forbidden) {
-    if (text.includes(item)) {
-      throw new Error(`sensitive text "${item}" found in screenshot page ${id}`)
+  for (const pattern of sensitivePatterns) {
+    if (pattern.test(text)) {
+      throw new Error(`sensitive or internal text ${pattern} found in screenshot page ${id}`)
     }
+  }
+}
+
+function assertSafeRoute(item) {
+  const decodedRoute = decodeURIComponent(item.route)
+  for (const pattern of sensitivePatterns) {
+    if (pattern.test(decodedRoute)) throw new Error(`sensitive or internal route value found for screenshot ${item.id}`)
+  }
+  const studentName = new URL(`https://mock.invalid${item.route}`).searchParams.get('studentName')
+  if (studentName && !allowedMockNames.includes(studentName)) {
+    throw new Error(`unapproved mock name "${studentName}" found in screenshot route ${item.id}`)
   }
 }
 
@@ -591,6 +618,7 @@ async function main() {
 
     const outputs = []
     for (const item of screenshots.filter(item => selectedScreenshotIds.size === 0 || selectedScreenshotIds.has(item.id))) {
+      assertSafeRoute(item)
       const page = await relaunch(miniProgram, item.route, item.wait)
       await assertNoSensitiveText(page, item.id)
       const outputPath = path.join(outputDir, `${item.id}.png`)

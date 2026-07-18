@@ -1,6 +1,6 @@
 # 系统架构文档
 
-> 基于实际代码实现生成，非设计文档。
+> 更新日期：2026-07-18。基于实际代码实现生成，非设计文档。
 
 ## 1. 系统概览
 
@@ -16,7 +16,7 @@
 | 后端服务 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
 | AI 模型（图像分析） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
 | AI 模型（题目生成） | CloudBase AI `deepseek-v4-flash` | 用于 generatePaper 生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 15 个集合：students / studentMembers / studentInvites / subjectProfiles / reports / papers / analysisTasks / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / learningResourcePacks / aiUsageEvents / dataDeletionRequests / userConsents |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 17 个集合：students / studentMembers / studentInvites / subjectProfiles / reports / papers / analysisTasks / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / englishPracticeAttempts / chineseSkillAttempts / learningResourcePacks / aiUsageEvents / dataDeletionRequests / userConsents |
 | 文件存储 | 云开发云存储 | 试卷照片、生成的 PDF 文件 |
 | PDF 生成 | pdfkit（Node.js） | 云函数内生成 A4 试卷/报告 PDF |
 | 中文字体 | 内置 Noto CJK 字体 | `generatePaper` / `generateReportPDF` 随函数部署字体文件，不依赖环境变量 |
@@ -63,7 +63,7 @@
 │  ┌──────────────────┐                                               │
 │  │generateReportPDF │    ┌──────────────┐  ┌────────────────────┐   │
 │  │报告PDF生成        │    │ 云数据库      │  │ 云存储              │   │
-│  └──────────────────┘    │ 15 个集合      │  │ photos/ papers/    │   │
+│  └──────────────────┘    │ 17 个集合      │  │ photos/ papers/    │   │
 │                           │              │  │ reports/           │   │
 │                           └──────────────┘  └────────────────────┘   │
 │  ┌──────────────────┐    ┌──────────────────┐                       │

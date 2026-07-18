@@ -1,7 +1,9 @@
 # Family Learning Workflow
 
 > Status: active product reference  
-> Updated: 2026-06-20
+> Updated: 2026-07-18
+
+> Current implementation note: the family home now places one-row quick actions and each subject's latest formal diagnosis before priority actions, compact metrics, and subject status. The personal profile expands diagnosis evidence; AI usage remains a family-home-level entry only.
 
 ## 1. Workflow Goal
 
@@ -59,4 +61,3 @@ The mini program needs to make these actions easy:
 - Keep page and target identifiers traceable.
 - Let parents upload only the completed page.
 - Record blank, unclear, wrong, partial, and correct evidence separately.
-

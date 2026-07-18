@@ -1,7 +1,9 @@
 # Math Learning Map Roadmap
 
-> Status: active subject roadmap  
-> Updated: 2026-06-20
+> Status: partially implemented subject roadmap
+> Updated: 2026-07-18
+
+> The 150-node catalog, node normalization, externalized map, bottleneck hierarchy, confidence metrics, and learning-resource entry points are implemented. Treat remaining mastery-loop and historical migration items as roadmap work until verified by current tests and data migration records.
 
 ## 1. Direction
 
@@ -106,4 +108,3 @@ Estimation and inverse-check habit
 ```
 
 These are cross-topic skills that improve many paper outcomes at once.
-

@@ -1,7 +1,9 @@
 # English Subject Design
 
 > Scope: 钟青羽英语学科的个人词库、认词练习、纸面听写、错词本和学习记录。
-> Updated: 2026-06-20
+> Updated: 2026-07-18
+
+> Current status: 个人词库、认词练习、纸面听写、双维掌握状态、易混词巩固、错词本和学习记录均已接入当前产品；真机语音和真实照片 OCR 仍需按发布清单回归。
 
 ## Read First
 

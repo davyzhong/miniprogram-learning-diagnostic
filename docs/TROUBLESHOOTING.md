@@ -1,6 +1,6 @@
 # 故障排查手册（TROUBLESHOOTING）
 
-> 更新日期：2026-06-14
+> 更新日期：2026-07-18
 > 配套文档：`SETUP.md`、`docs/TESTING.md`、`docs/TEST_MATRIX.md`
 > 索引方式：按症状关键词查找；每个问题包含「症状 / 可能原因 / 排查步骤 / 解决方案」四段
 

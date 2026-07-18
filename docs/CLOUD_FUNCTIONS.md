@@ -1,6 +1,6 @@
 # 云函数 API 参考文档
 
-> 本文档基于项目 `cloudfunctions/` 目录下各云函数的实际实现整理，包含入参、出参、错误处理、依赖与调用关系。所有云函数均部署在微信云开发环境，通过 `wx.cloud.callFunction` 调用。
+> 更新日期：2026-07-18。本文档基于项目 `cloudfunctions/` 目录下 14 个业务云函数的实际实现整理，包含入参、出参、错误处理、依赖与调用关系。`_shared-templates` 是模板目录，不计作业务云函数。所有云函数均部署在微信云开发环境，通过 `wx.cloud.callFunction` 调用。
 
 > **目录结构说明（2026-06-17 重构后）**
 > 微信开发者工具上传云函数时会跳过下划线前缀的子目录（如 `_shared/`），导致云端 `require('./_shared/...')` 失败、预览/真机空白。因此所有共享文件（`access.js`、`constants.js`、`bottleneck-name.js`、`math-bottleneck-hierarchy.js`）现在直接放在各云函数根目录下，用 `require('./access')` 引用。顶层 `cloudfunctions/_shared/` 已删除。守护测试 `cloudfunctions 下不再有 _shared 目录` 防止回退。
