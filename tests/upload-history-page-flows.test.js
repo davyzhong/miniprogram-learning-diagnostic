@@ -1021,3 +1021,34 @@ test('timeline events mark record types with whitelist emoji icons', () => {
   assert.equal(byKind['verification-report'], '✅')
   assert.equal(byKind['verification-paper'], '📄')
 })
+
+test('learning records keep counts on a single summary line and inline status into the title row', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload-history/upload-history.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload-history/upload-history.wxss'), 'utf8')
+  const presenter = require('../miniprogram/pages/upload-history/upload-history-presenter')
+
+  // 去重铁律：计数只在 summaryText 单行出现（筛选 pill 计数算导航同一处），大数字格结构不得存在
+  assert.doesNotMatch(wxml, /summary-grid|summaryCards/)
+  assert.doesNotMatch(wxss, /\.summary-(?:grid|cell|value|label)/)
+  const { events, statusItems } = presenter.buildTimelineEvents(
+    [{ _id: 'r-diag', subject: 'math', type: 'diagnosis', status: 'completed', createdAt: '2026-07-01', bottlenecks: [] }],
+    [],
+    new Map(),
+    'math',
+    '数学'
+  )
+  const state = presenter.buildHistoryState(events, 'math', statusItems)
+  assert.equal(state.summaryCards, undefined)
+  assert.match(state.summaryText, /^共 \d+ 天 · \d+ 条主记录 · \d+ 份验证反馈$/)
+
+  // 条目 ≤4 行：状态文字标签内联到标题行（topline 内、summary 之前），不独占一行
+  const toplineToSummary = wxml.match(/<view class="event-topline">([\s\S]*?)<text class="event-summary">/)
+  assert.ok(toplineToSummary, 'event-topline should be followed by event-summary')
+  assert.match(toplineToSummary[1], /class="event-status"[^>]*>\{\{event\.statusText\}\}/)
+  assert.match(wxss, /\.event-status\s*\{[^}]*white-space:\s*nowrap/s)
+
+  // 留白预算：空态 padding ≤40rpx，条目上下 padding ≤12rpx
+  assert.match(wxss, /\.loading,\s*\.empty\s*\{[^}]*padding:\s*40rpx 24rpx/s)
+  assert.doesNotMatch(wxss, /padding:\s*110rpx/)
+  assert.match(wxss, /\.record-card\s*\{[^}]*padding:\s*12rpx 16rpx/s)
+})

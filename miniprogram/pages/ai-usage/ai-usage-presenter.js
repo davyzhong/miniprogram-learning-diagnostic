@@ -63,15 +63,10 @@ function eventTypeName(eventType) {
   return EVENT_TYPE_NAMES[eventType] || eventType || '其它'
 }
 
-// 汇总卡片：本月总 token、估算成本、调用次数、涉及孩子
-function buildSummaryCards(summary) {
-  if (!summary) return []
-  return [
-    { label: '本月 token', value: String(summary.totalTokens || 0) },
-    { label: '平台估算成本', value: `¥${formatCost(summary.totalCostCny)}`, hint: '内测估算' },
-    { label: 'AI 调用次数', value: String(summary.callCount || 0) },
-    { label: '涉及孩子', value: String(summary.studentCount || 0) }
-  ]
+// 汇总单行化：本月总 token、估算成本、调用次数、涉及孩子（去重铁律：禁用大数字块矩阵）
+function buildSummaryText(summary) {
+  if (!summary) return ''
+  return `本月 token ${summary.totalTokens || 0} · 估算成本 ¥${formatCost(summary.totalCostCny)} · 调用 ${summary.callCount || 0} 次 · 涉及 ${summary.studentCount || 0} 个孩子`
 }
 
 // 功能拆分：按事件类型聚合（来自 summary.byEventType）
@@ -133,7 +128,7 @@ function buildEventItem(item) {
 // 主入口：events（明细）+ summary（聚合）+ activeMonth + activeFilter → 完整视图
 function buildUsageState(events, summary, activeMonth, activeFilter = '') {
   const monthLabel = buildMonthLabel(activeMonth)
-  const summaryCards = buildSummaryCards(summary)
+  const summaryText = buildSummaryText(summary)
   const breakdown = buildBreakdown(summary)
   const filteredEvents = activeFilter
     ? (Array.isArray(events) ? events.filter(item => item.eventType === activeFilter) : [])
@@ -146,7 +141,7 @@ function buildUsageState(events, summary, activeMonth, activeFilter = '') {
     chartSymbol: symbolOf('report'),
     activeMonth: activeMonth || currentMonth(),
     monthLabel,
-    summaryCards,
+    summaryText,
     breakdown,
     breakdownVisible: breakdown.length > 0,
     days,
@@ -170,7 +165,7 @@ module.exports = {
   shiftMonth,
   formatCost,
   eventTypeName,
-  buildSummaryCards,
+  buildSummaryText,
   buildBreakdown,
   buildDays,
   buildEventItem,

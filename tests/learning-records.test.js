@@ -314,7 +314,8 @@ test('upload history presenter builds analytics summary and cleanup prompt state
     permissions: { canManageParents: true }
   })
 
-  assert.deepEqual(state.summaryCards.map(item => item.value), [2, 3, 1, 1])
+  // 计数只出现一次：单行 summaryText，不再输出大数字格数据
+  assert.equal(state.summaryCards, undefined)
   assert.equal(state.summaryText, '共 2 天 · 3 条主记录 · 1 份验证反馈')
   assert.equal(state.cleanup.hasCandidates, true)
   assert.equal(state.cleanup.title, '发现 2 条可清理的中断记录')

@@ -9,15 +9,8 @@
   <!-- 内测估算提示（设计文档强制） -->
   <view class="notice-bar">{{estimateNotice}}</view>
 
-  <!-- 汇总卡片 -->
-  <view class="summary-grid">
-    <view class="summary-card usage-summary-{{index}}" wx:for="{{summaryCards}}" wx:key="label">
-      <view class="summary-value">{{item.value}}</view>
-      <view class="summary-label">
-        {{item.label}}<text wx:if="{{item.hint}}" class="summary-hint">{{item.hint}}</text>
-      </view>
-    </view>
-  </view>
+  <!-- 汇总单行统计（去重铁律：月度总计只出现一次） -->
+  <view class="summary-text" wx:if="{{summaryText}}">{{summaryText}}</view>
 
   <!-- 功能拆分 -->
   <view class="section" wx:if="{{breakdownVisible}}">
@@ -56,8 +49,7 @@
         </view>
         <view class="event-cost">
           <view class="cost-value">{{ev.costText}}</view>
-          <view class="cost-tokens">{{ev.tokens}} token</view>
-          <view class="cost-estimate" wx:if="{{ev.isEstimate}}">估算</view>
+          <view class="cost-tokens">{{ev.tokens}} token<text wx:if="{{ev.isEstimate}}" class="cost-estimate">估算</text></view>
         </view>
       </view>
     </view>

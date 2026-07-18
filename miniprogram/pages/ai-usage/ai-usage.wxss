@@ -40,41 +40,17 @@
   line-height: 1.5;
 }
 
-/* 汇总卡片 */
-.summary-grid {
-  display: flex;
-  flex-wrap: wrap;
-  padding: 24rpx 16rpx 0;
-}
-.summary-card {
-  width: 50%;
-  box-sizing: border-box;
-  padding: 8rpx;
-}
-.summary-card .summary-value {
+/* 汇总单行统计 */
+.summary-text {
   background: var(--b1-surface);
   border: 1rpx solid var(--b1-border);
   border-radius: 10rpx;
-  padding: 20rpx;
-  font-size: 40rpx;
-  font-weight: 700;
-  color: var(--b1-ink-strong);
-}
-.summary-card .summary-label {
-  padding: 8rpx 24rpx 0;
-  font-size: 24rpx;
   color: var(--b1-ink-muted);
+  font-size: 24rpx;
+  line-height: 1.5;
+  margin: 16rpx 24rpx 0;
+  padding: 14rpx 18rpx;
 }
-.summary-hint {
-  margin-left: 8rpx;
-  font-size: 20rpx;
-  color: var(--b1-waiting-fg);
-}
-
-.usage-summary-0 .summary-value { border-left: 6rpx solid var(--b1-improved-fg); }
-.usage-summary-1 .summary-value { border-left: 6rpx solid var(--b1-subject-math-fg); }
-.usage-summary-2 .summary-value { border-left: 6rpx solid var(--b1-subject-english-fg); }
-.usage-summary-3 .summary-value { border-left: 6rpx solid var(--b1-neutral-fg); }
 
 /* 功能拆分 */
 .section {
@@ -155,7 +131,7 @@
   background: var(--b1-surface);
   border: 1rpx solid var(--b1-border);
   border-radius: 10rpx;
-  padding: 24rpx;
+  padding: 12rpx 16rpx;
   margin-bottom: 12rpx;
 }
 .event-main {
@@ -215,7 +191,7 @@
 }
 .cost-estimate {
   display: inline-block;
-  margin-top: 4rpx;
+  margin-left: 8rpx;
   font-size: 20rpx;
   color: var(--b1-waiting-fg);
   background: var(--b1-waiting-bg);

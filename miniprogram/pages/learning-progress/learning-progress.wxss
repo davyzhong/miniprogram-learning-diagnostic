@@ -2,19 +2,13 @@
 .progress-header { padding: 40rpx 32rpx 20rpx; }
 .progress-title { font-size: 36rpx; font-weight: 600; color: #1a202c; display: block; }
 .progress-subtitle { font-size: 26rpx; color: #718096; margin-top: 8rpx; display: block; }
-.card { margin: 16rpx 24rpx; background: #fff; border-radius: 16rpx; padding: 28rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
+.card { margin: 16rpx 24rpx; background: #fff; border-radius: 16rpx; padding: 18rpx; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.04); }
 .section-heading { display: flex; align-items: center; gap: 12rpx; margin-bottom: 20rpx; }
 .heading-icon { font-size: 32rpx; color: #6366f1; }
 .section-heading text { font-size: 30rpx; font-weight: 600; color: #1a202c; }
 
-.advice-text { font-size: 28rpx; color: #2d3748; line-height: 1.6; display: block; margin-bottom: 24rpx; }
-.advice-stats { display: flex; gap: 32rpx; }
-.advice-stat { text-align: center; }
-.advice-stat-num { font-size: 40rpx; font-weight: 700; display: block; }
-.advice-stat-label { font-size: 22rpx; color: #718096; }
-.advice-stat-improved { color: #22c55e; }
-.advice-stat-pending { color: #f59e0b; }
-.advice-stat-persisting { color: #ef4444; }
+.advice-text { font-size: 28rpx; color: #2d3748; line-height: 1.6; display: block; margin-bottom: 12rpx; }
+.advice-stats-line { font-size: 24rpx; color: #4a5568; display: block; line-height: 1.5; }
 
 .timeline { position: relative; }
 .timeline-node { display: flex; gap: 20rpx; padding-bottom: 32rpx; position: relative; }
@@ -32,7 +26,7 @@
 .timeline-improved { margin-top: 8rpx; display: flex; align-items: flex-start; gap: 8rpx; }
 .improved-label { font-size: 24rpx; color: #22c55e; flex-shrink: 0; }
 .improved-names { font-size: 24rpx; color: #2d3748; }
-.timeline-link { font-size: 24rpx; color: #6366f1; margin-top: 12rpx; display: inline-block; text-decoration: underline; }
+.timeline-link { font-size: 24rpx; color: #6366f1; flex-shrink: 0; margin-left: auto; text-decoration: underline; }
 
 .matrix-row { display: flex; align-items: center; padding: 12rpx 0; border-bottom: 1rpx solid #f0f0f0; }
 .matrix-row:last-child { border-bottom: none; }
