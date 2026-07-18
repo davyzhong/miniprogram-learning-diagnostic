@@ -6,6 +6,23 @@
 
 ## [Unreleased]
 
+### 2026-07-17 数学学习地图 V3：节点目录、掌握状态闭环与复测调度
+
+#### Added
+
+- **标准知识节点目录进诊断管线**：91→150 节点固化目录注入 analyzeBatch prompt（nodeIds 必须从目录选取），`canonicalizeNodeId` 五层归并（标准/别名/前缀/标题/丢弃并记录 unmatchedNodeIds）；`math-learning-map-enricher` 接入实时管线兜底，报告与画像写入同一份数据
+- **种子镜像统一**：`scripts/build-math-seed-mirrors.js` 一次生成云函数与前端全部 seed 镜像（修复 generatePaper taxonomy 静默缺失的死代码问题）；同步测试防漂移
+- **掌握状态闭环（六态）**：`studentNodeMastery` 集合 + 纯函数状态机（unobserved/suspected_gap/relearning/partial_mastery/mastered/recurring，四事件驱动，mastered 需 ≥24h 间隔复测）。诊断报告→疑似漏洞、验证卷通过/失败→重学或部分掌握、资源包完成→部分掌握、同类错误再现→复发
+- **知识地图页升级**：150 个知识节点按四领域六态展示（风险态优先，未观察按领域汇总计数），与既有卡点行动卡并存
+- **干预会话与复测调度**：completePack 自动沉淀 `interventionSessions`（资源使用、当场练习、掌握前后状态、24h/72h 复测安排）；scheduleVerification 写实 nextReviewAt；首页个人行动队列置顶"到期复测"卡并直跳验证卷配置器
+- **数据库索引声明**：studentNodeMastery（studentId+subject+nodeId）、interventionSessions（studentId+date）
+- 知识节点数据扩充 v0.4.0：91→150 节点（四大领域 1-6 年级主干，8 个节点挂接现有细卡点）；掌握状态 example 数据迁移为六态
+
+#### Fixed
+
+- enricher 读取已改名的 selectionPolicy 字段导致资源角色分类失效（conceptAnchor/jumpable/authoritative 重新映射）
+- 知识地图页双请求并行时同步抛错会造成另一 Promise unhandledRejection
+
 ### 2026-07-18 文档与 GitHub 项目主页重制
 
 #### Changed

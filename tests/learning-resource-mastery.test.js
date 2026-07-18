@@ -92,7 +92,7 @@ test('completePack：非数学/未知卡点/未通过/无记录 均安全跳过'
   // 无既有记录 + 练习通过：unobserved 不落库
   const empty = fakeDb()
   const noChange = await recordResourcePracticePassed({ db: empty.db, pack: MATH_PACK, now: T0 })
-  assert.deepEqual(noChange, { applied: false, reason: 'no-change' })
+  assert.deepEqual(noChange, { applied: false, reason: 'no-change', nodeId: 'MATH-NUM-DEC-MUL-POINT' })
   assert.equal(empty.docs.size, 0)
   // 前面的跳过用例都没有改动既有记录
   assert.equal(docs.get('m1').status, 'relearning')
@@ -103,7 +103,7 @@ test('completePack：studentNodeMastery 集合缺失时自动建集合并继续'
   const { db, docs, state } = fakeDb({ missingOnce: true })
   const result = await recordResourcePracticePassed({ db, pack: MATH_PACK, now: T0 })
   assert.equal(state.createCollectionCalls, 1)
-  assert.deepEqual(result, { applied: false, reason: 'no-change' })
+  assert.deepEqual(result, { applied: false, reason: 'no-change', nodeId: 'MATH-NUM-DEC-MUL-POINT' })
   assert.equal(docs.size, 0)
 })
 

@@ -8,7 +8,8 @@ const {
   isMissingCollectionError
 } = require('./access')
 const { recordUsageStart, recordUsageSuccess, recordUsageFailure } = require('./usage-ledger')
-const { recordResourcePracticePassed } = require('./node-mastery-writer')
+const { recordResourcePracticePassed, scheduleNodeReview } = require('./node-mastery-writer')
+const { createInterventionSession } = require('./intervention-session-writer')
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
@@ -334,13 +335,27 @@ async function completePack(event, openId) {
   })
   // 节点掌握状态闭环（仅数学）：资源学习 + 当场练习通过 → studentNodeMastery。
   // 辅助链路，失败不阻断任务包完成。
+  let masteryResult = null
   try {
-    const masteryResult = await recordResourcePracticePassed({
+    masteryResult = await recordResourcePracticePassed({
       db, pack, practiceResult: event.practiceResult, now: completedAt,
     })
     console.log('节点掌握状态更新(completePack)', JSON.stringify(masteryResult))
   } catch (masteryError) {
     console.error('节点掌握状态更新失败（不影响任务包完成）', masteryError)
+  }
+  // 家庭干预会话沉淀：资源使用、当场练习、掌握变化、24h/72h 复测安排。
+  // 同样失败不阻断任务包完成。
+  try {
+    const bnNodeId = masteryResult && masteryResult.nodeId ? masteryResult.nodeId : ''
+    if (bnNodeId) {
+      const sessionResult = await createInterventionSession({
+        db, pack, practiceResult: event.practiceResult, masteryResult, nodeId: bnNodeId, now: completedAt,
+      })
+      console.log('干预会话记录(completePack)', JSON.stringify({ created: sessionResult.created, sessionId: sessionResult.session && sessionResult.session.sessionId }))
+    }
+  } catch (sessionError) {
+    console.error('干预会话记录失败（不影响任务包完成）', sessionError)
   }
   return { success: true, completedAt }
 }
@@ -355,7 +370,21 @@ async function scheduleVerification(event, openId) {
     verificationScheduledAt: scheduledAt,
     updatedAt: scheduledAt
   })
-  return { success: true, scheduledAt }
+  // 写实复测调度：把节点 nextReviewAt 写入 studentNodeMastery（24h 后），
+  // 今日行动/行动队列据此露出到期复测。辅助链路，失败不影响任务包标记。
+  let reviewSchedule = null
+  try {
+    reviewSchedule = await scheduleNodeReview({ db, pack, now: scheduledAt })
+    console.log('复测调度(scheduleVerification)', JSON.stringify(reviewSchedule))
+  } catch (scheduleError) {
+    console.error('复测调度失败（不影响任务包标记）', scheduleError)
+  }
+  return {
+    success: true,
+    scheduledAt,
+    review24At: reviewSchedule && reviewSchedule.nextReviewAt ? reviewSchedule.nextReviewAt : null,
+    reviewNodeId: reviewSchedule && reviewSchedule.nodeId ? reviewSchedule.nodeId : '',
+  }
 }
 
 exports.main = async (event = {}) => {
