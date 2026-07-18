@@ -1,6 +1,6 @@
 # 测试指南（TESTING）
 
-> 更新日期：2026-07-15
+> 更新日期：2026-07-18
 > 适用对象：本项目的开发者与后续维护 agent
 > 配套文档：`docs/TEST_FRAMEWORK_DESIGN.md`、`docs/TEST_STRATEGY_V2.md`、`docs/TEST_MATRIX.md`
 
@@ -25,6 +25,17 @@ CLI E2E 使用：
 - 微信开发者工具 CLI
 - `miniprogram-automator`
 - 页面内 cloud mock 或真实 CloudBase 数据
+
+### 当前可复现基线
+
+| 检查 | 结果 |
+| --- | ---: |
+| `npm test` | 1008 / 1008 通过（默认执行 84 个测试文件） |
+| 测试文件库存 | 89 个 `.test.js` |
+| `npm run check` | 313 个 JavaScript 文件通过 |
+| `npm run check:size` | 主包 791 KB / 1200 KB（预算 2026-07-18 由 800 KB 上调） |
+
+未纳入默认离线集的 5 个文件是 `e2e-real-cloud.test.js`、`e2e-real-image.test.js`、`math-bottleneck-hierarchy.test.js`、`math-history-reanalysis.test.js` 和 `math-learning-map-pipeline.test.js`；前两项需要显式环境，后三项按数学专项变更单独回归。
 
 ## 2. 常用命令
 

@@ -10,10 +10,10 @@ The WechatSI plugin (`"WechatSI":{"version":"0.3.5","provider":"wx069ba97219f66d
 
 ### Product scope & priorities (decide before adding features)
 
-Authoritative in `docs/product/mvp-roadmap-and-boundaries.md`. Current priorities: **P0 traceable verification** → **P1 math knowledge map** → **P2 English written diagnosis** → **P3 Chinese review**.
+Authoritative in `PRD.md` and `docs/subject-design/README.md`. Current priorities are a traceable verification loop, math knowledge map and resources, Chinese concrete-item review, and the English vocabulary mastery loop.
 
 - **Math is the deepest diagnostic loop** — the photo→diagnosis→bottleneck→verification-paper→feedback chain is fully built for math first. Other subjects scaffold on top.
-- **English = written diagnosis only** (拼写/语法/阅读/书写). 口语/听力 are **exploratory, not in the MVP main path** — do not wire oral/listening scoring into the core reports/bottlenecks/papers chain. The WechatSI plugin transcribes but **does not score**; treat ASR output as candidate text requiring parent/AI judgment.
+- **English = vocabulary mastery loop**. Recognition and spelling are independent evidence dimensions. WechatSI provides TTS for paper dictation and ASR candidate text for recognition practice; ASR does not score pronunciation. Grammar, reading, writing, listening assessment and pronunciation scoring remain outside the current scope.
 - **Chinese focuses on concrete review items, not broad labels** — preserve item-level evidence and follow-up status.
 - This repo implements the **Learning Diagnostic** product, NOT the full AI Learning OS platform. Whitepapers, fundraising narratives, public-article drafts, raw student materials, and external paid-course notes are **out of scope** for this repo (see `docs/product/mvp-roadmap-and-boundaries.md` §3).
 
@@ -35,7 +35,7 @@ The test framework is **V2 (two categories)** — see `docs/TEST_STRATEGY_V2.md`
 | Pre-deployment readiness | `npm run check:deployment` |
 | Full pre-release gate | `npm run release:check` (deployment + verify + coverage) |
 
-`npm test` is now an **alias** of `npm run test:unit`; it no longer enumerates files inline. The `tests/` directory holds 89 `.test.js` files; `test:unit` currently passes **1006 unit tests** in the local baseline (311 JS files checked by `npm run check`). To add a new test file you still must list it in **both** `test:unit` and `test:coverage` in `package.json` (no glob).
+`npm test` is an alias of `npm run test:unit`. The repository holds 89 `.test.js` files; the default offline script explicitly runs 84 of them and currently passes **1008 tests** (313 JS files checked by `npm run check`). The five excluded files are real-cloud, real-image, and three specialized math pipeline suites. Add new default tests to both `test:unit` and `test:coverage` in `package.json`.
 
 **CLI E2E** (WeChat DevTools CLI + `miniprogram-automator`, organized **by subject**, output → `tmp/e2e/<suite>/report.json`). Not in `npm test`; require a running DevTools instance. Run `npm run test:e2e:doctor` first to verify the environment.
 
@@ -61,7 +61,7 @@ Mini Program (25 pages + status-view component, WXML/WXSS/JS)
     ▼
 CloudBase (serverless, 14 cloud functions)
     ├─ uploadAndAnalyze   → creates report record, fire-and-forget starts analyzePhotos
-    ├─ analyzePhotos      → splits into batches of 5, calls analyzeBatch serially, dedups, merges, writes report/profile
+    ├─ analyzePhotos      → splits into single-image batches, calls analyzeBatch, dedups, merges, writes report/profile
     │                        (also triggers auto-verification-paper record creation on report completion)
     ├─ analyzeBatch       → downloads images, calls CloudBase AI vision model (qwen3.5-plus + enable_thinking:false)
     ├─ getAnalysisProgress→ lightweight read on analysisTasks
@@ -107,7 +107,7 @@ Collections: `englishImportBatches`, `studentEnglishWords` (personal word librar
 - **Subject constants**: `miniprogram/utils/constants.js` and `cloudfunctions/*/constants.js` define the three subjects (math / chinese / english), their display names, codes, and colors. **B1 color tokens in `app.wxss` are the single source of truth for subject/status colors** — page WXSS must use `var(--b1-*)`; retired hex values (`#1f4f82`, `#2b6cb0`, `#9c4f24`, `#c05621`) are asserted absent by tests. Frontend `SUBJECT_COLORS` mirrors B1 values for JS-side consumers.
 - **Emoji whitelist**: `miniprogram/utils/ui-symbols.js` is the ONLY source of UI emoji — 205 keys (202 verified candidates across C01–C14 + subject aliases), all verified displayable on the target Android device via the `pages/icon-compatibility` lab. Pages inject symbols through presenters via `symbolOf()`/`subjectSymbolOf()` and render with `{{}}` — never write emoji literals into WXML. Anything outside the whitelist is rejected by `bplus-design-system.test.js`. Bottom line: emoji assist recognition only; every entry and status keeps its text label (body icons 28–32rpx, empty-state decorations 64–96rpx).
 - **Common status component**: `miniprogram/components/status-view/` (loading/empty/error + retry event) — use it for page-level async states instead of hand-rolled dead-end error text.
-- **Status segments**: `miniprogram/utils/status-segments.js` (`buildStatusSegments`) + `.b1-seg-*` classes in `app.wxss` render stacked status-composition bars (child cards, family hero, vocab stats, mastery bars). Pure WXSS, no chart libs — main-package budget is tight (≤800 KB, currently ~12 KB headroom).
+- **Status segments**: `miniprogram/utils/status-segments.js` (`buildStatusSegments`) + `.b1-seg-*` classes in `app.wxss` render stacked status-composition bars (child cards, family hero, vocab stats, mastery bars). Pure WXSS, no chart libs — main-package budget is 1200 KB (raised from 800 KB on 2026-07-18; WeChat platform hard limit is 2 MB).
 - **Presenter split**: Heavy pages keep UI in `<page>.js` and extract testable logic into a plain-JS module with no `wx` dependency so it can be unit-tested directly. Page-specific presenters: `index-presenter`, `report-presenter`, `paper-preview-presenter`, `subject-home-presenter`, `upload-history-presenter`, `knowledge-map-presenter`, `learning-resource-presenter`. Shared view-model modules (no `-presenter` suffix but same role): `utils/child-workbench.js` (family), `utils/bottleneck-view.js`, `utils/paper-display.js`.
 - **Data access layer**: `miniprogram/utils/cloud.js` wraps `wx.cloud.callFunction` (expecting a `{success, data, error}` envelope — `success === false` throws) and also exposes direct DB reads. Pages and other utils call through it rather than hitting `wx.cloud` directly.
 - **PDF generation**: `pdfkit` runs inside cloud functions using a bundled `NotoSansCJKsc-Regular.otf`. A missing font must fail loudly, not produce garbled Chinese.
@@ -263,7 +263,7 @@ When the user asks to sync / pull / align with GitHub, **GitHub is the source of
 - A bottleneck is marked "improved" when a verification upload surfaces no errors for it — the system does not yet distinguish correct answers from blank/ambiguous/OCR-missed responses (this is a **forward constraint**, see 证据与状态判定 above — evidence must be recorded as blank/unclear/wrong/partial/correct separately).
 - WechatSI ASR transcribes but does not score — English oral scoring relies on parent/paper-OCR judgment, not voice confidence.
 - `getAnalysisProgress` does not return `updatedAt`; analyses legitimately running >10 min fall into the frontend timeout branch (mitigated: report page auto-refreshes on the operation-completed event via the status bus).
-- **Main-package headroom is only ~12 KB** (788/800 KB). Math seed data (`miniprogram/data/math/`, now 150 nodes) is pulled into the main package via a top-level require in `miniprogram/utils/math-learning-map.js` — moving the knowledge-node lookup into the subpackage recovers ~70 KB and is the planned next optimization.
+- Main-package budget was raised from 800 KB to **1200 KB** on 2026-07-18 (WeChat platform hard limit is 2 MB). Math seed data (`miniprogram/data/math/`, now 150 nodes) is still pulled into the main package via a top-level require in `miniprogram/utils/math-learning-map.js` — moving the knowledge-node lookup into the subpackage recovers ~70 KB and remains good hygiene, but is no longer urgent.
 - All page hero illustrations (`miniprogram/assets/images/*-hero.*`) were added then deleted in `57821ed`; `miniprogram/utils/page-illustrations.js` still exists but carries only `alt` text, no image paths. Do not reintroduce static page hero assets into the miniprogram main package without re-checking the 2MB preview limit.
 - Math node mastery loop (six-state model: `unobserved / suspected_gap / relearning / partial_mastery / mastered / recurring`) is designed but not yet implemented — see `docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md`.
 
