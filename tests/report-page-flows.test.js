@@ -836,3 +836,31 @@ test('report page exposes compact layered navigation without hiding report secti
   assert.match(wxss, /\.report-layer-nav/)
   assert.match(wxss, /\.report-layer-item/)
 })
+
+test('report header stays compact without duplicating the conclusion', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxml'), 'utf8')
+
+  // 结论全文只允许出现一次（01 区块的 conclusion-text），页头不再重复渲染
+  const headlineCount = (wxml.match(/{{headline}}/g) || []).length
+  assert.equal(headlineCount, 1, '结论 headline 只能在页面出现一次，页头与结论区块不得重复')
+  assert.doesNotMatch(wxml, /report-headline/, '页头不再保留大标题区块')
+  assert.doesNotMatch(wxml, /quality-box/, 'quality-box 已并入页头 chip 与"注意"行，不再单独成卡')
+
+  // 页头保留关键信息：报告类型、日期、质量 chip、证据时间、变化色带
+  assert.match(wxml, /report-header-meta/)
+  assert.match(wxml, /quality-chip quality-chip-/)
+  assert.match(wxml, /trend-band/)
+})
+
+test('report bottleneck rows merge score and scope into compact lines', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxml'), 'utf8')
+  const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/report/report.wxss'), 'utf8')
+
+  // 置信分轨道与分值合并为一行，不再各自独占一行
+  assert.match(wxml, /bottleneck-score-line/)
+  assert.doesNotMatch(wxml, /bottleneck-score-row/)
+  assert.match(wxss, /\.bottleneck-score-line/)
+  assert.doesNotMatch(wxss, /\.bottleneck-score-row/)
+  // 细颗粒度说明从页头移到卡点卡片 caption
+  assert.match(wxml, /card-caption/)
+})
