@@ -295,7 +295,7 @@ test('family child card exposes actionable dashboard sections without long verif
   assert.ok(card.subjectRows.every(item => item.url))
 })
 
-test('family workbench hero turns the household overview into a real action entry', () => {
+test('family workbench summary exposes compact household snapshot totals', () => {
   const cards = buildChildWorkbenchCards({
     students: [{
       _id: 'student-qingyu',
@@ -319,12 +319,39 @@ test('family workbench hero turns the household overview into a real action entr
 
   const hero = buildFamilyWorkbenchHero(cards)
 
-  assert.equal(hero.imageSrc, undefined)
-  assert.match(hero.title, /钟青羽/)
-  assert.match(hero.summary, /2 个学习卡点/)
-  assert.equal(hero.actionText, '处理今日优先行动')
-  assert.match(hero.url, /pages\/generate-verification\/generate-verification|pages\/subject-home\/subject-home/)
-  assert.deepEqual(hero.stats.map(item => item.key), ['children', 'pendingActions', 'improvements', 'formalDiagnoses'])
+  assert.equal(hero.label, '家庭今日')
+  assert.equal(hero.idleText, '')
+  assert.deepEqual(hero.metrics, [
+    { key: 'pending', label: '待处理', value: 2, displayValue: '2', tone: 'waiting' }
+  ])
+  assert.equal(hero.ariaLabel, '家庭今日，2项待处理')
+  for (const obsolete of ['title', 'summary', 'actionText', 'url', 'kickerSymbol', 'statusSegments']) {
+    assert.equal(hero[obsolete], undefined)
+  }
+})
+
+test('family workbench summary hides zero metrics, exposes idle state, and caps display values', () => {
+  const card = values => ({
+    statusItems: Object.entries(values).map(([key, value]) => ({ key, value }))
+  })
+  const cases = [
+    [{ analyzing: 2 }, '', ['pending']],
+    [{ pendingUpload: 1 }, '', ['pendingUpload']],
+    [{ improved: 3 }, '今日无待办', ['improved']],
+    [{}, '今日无待办', []]
+  ]
+
+  for (const [values, idleText, keys] of cases) {
+    const summary = buildFamilyWorkbenchHero([card(values)])
+    assert.equal(summary.idleText, idleText)
+    assert.deepEqual(summary.metrics.map(item => item.key), keys)
+  }
+
+  const overflow = buildFamilyWorkbenchHero([card({ pendingVerification: 100 })])
+  assert.equal(overflow.metrics[0].value, 100)
+  assert.equal(overflow.metrics[0].displayValue, '99+')
+  assert.equal(buildFamilyWorkbenchHero([]), null)
+  assert.equal(buildFamilyWorkbenchHero(null), null)
 })
 
 test('family workbench uses stable Chinese markers for every semantic', () => {
@@ -403,13 +430,13 @@ test('family workbench exposes a compact icon contract without leaking internal 
   assert.match(card.latestDiagnosis.url, /report-route-id/)
 
   const hero = buildFamilyWorkbenchHero(cards)
-  assert.deepEqual(hero.stats.map(item => item.key), [
-    'children',
-    'pendingActions',
-    'improvements',
-    'formalDiagnoses'
+  assert.deepEqual(hero.metrics.map(item => item.key), [
+    'pending',
+    'pendingUpload',
+    'improved'
   ])
-  assert.ok(hero.stats.every(item => item.marker && item.shortLabel && item.value !== undefined))
+  assert.deepEqual(hero.metrics.map(item => item.label), ['待处理', '待上传', '已改善'])
+  assert.deepEqual(hero.metrics.map(item => item.displayValue), ['2', '1', '1'])
 })
 
 test('child workbench never displays an opaque-only paper fallback code', () => {
@@ -526,8 +553,6 @@ test('family workbench counts formal diagnosis records separately from subject c
 
   assert.equal(card.diagnosisCoverageCount, 2)
   assert.equal(card.formalDiagnosisCount, 3)
-  const formalDiagnoses = buildFamilyWorkbenchHero([card]).stats.find(item => item.key === 'formalDiagnoses')
-  assert.equal(formalDiagnoses.value, '3')
 })
 
 test('child workbench cards put sixth-grade Qingyu before Xiaoyu regardless source order', () => {

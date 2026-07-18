@@ -223,7 +223,14 @@ test('index family workbench renders the restored compact functional sections', 
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
 
-  assert.match(wxml, /family-workbench-hero/)
+  assert.match(wxml, /family-summary-strip/)
+  assert.equal((wxml.match(/family-summary-label/g) || []).length, 1)
+  assert.match(wxml, /aria-label="{{familyHero\.ariaLabel}}"/)
+  assert.match(wxml, /familyHero\.metrics/)
+  assert.match(wxml, /item\.displayValue/)
+  assert.match(wxml, /family-summary-separator[^>]*wx:if="{{familyHero\.idleText && familyHero\.metrics\.length > 0}}">·</)
+  assert.doesNotMatch(wxml, /家庭今日总览|处理今日优先行动|可以从这里直接进入最需要处理的一步/)
+  assert.doesNotMatch(wxml, /familyHero\.(?:title|summary|actionText|url|kickerSymbol|statusSegments)/)
   assert.match(wxml, /icon-compatibility-entry/)
   assert.match(wxml, /图标兼容性测试/)
   assert.match(wxml, /1202 项候选 · 2 批次/)
@@ -245,7 +252,7 @@ test('index family workbench renders the restored compact functional sections', 
   assert.match(wxss, /\.child-priority-action/)
   assert.match(wxss, /\.secondary-action-card/)
   assert.match(wxss, /\.child-quick-link/)
-  assert.match(wxss, /\.family-workbench-hero/)
+  assert.match(wxss, /\.family-summary-strip/)
   assert.match(wxss, /\.icon-compatibility-entry/)
   assert.doesNotMatch(wxss, /\.icon-compatibility-grid/)
 })
@@ -262,8 +269,8 @@ test('icon compatibility test entry stays visible in every home mode', () => {
 test('family workbench exposes the B1 hierarchy without removing dense learning content', () => {
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
 
-  assert.match(wxml, /class="[^"]*b1-family-summary/)
-  assert.match(wxml, /class="[^"]*b1-metric[^"]*b1-metric-\{\{item\.tone\}\}/)
+  assert.match(wxml, /class="family-summary-strip"/)
+  assert.match(wxml, /class="child-status-segments"[\s\S]*?b1-seg-bar/)
   assert.match(wxml, /class="[^"]*b1-priority/)
   assert.match(wxml, /class="[^"]*b1-subject-\{\{item\.subject\}\}/)
   assert.equal((wxml.match(/\/pages\/ai-usage\/ai-usage/g) || []).length, 1)
@@ -273,9 +280,9 @@ test('family workbench keeps every dense section without requiring icon bindings
   const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
 
   for (const marker of [
-    'family-hero-stats',
+    'family-summary-strip',
     'child-card-top',
-    'child-status-grid',
+    'child-status-segments',
     'child-priority-action',
     'child-subject-list',
     'child-latest-diagnosis',
@@ -285,7 +292,7 @@ test('family workbench keeps every dense section without requiring icon bindings
   }
 
   for (const preservedSection of [
-    /child\.statusItems/,
+    /child\.statusSegments/,
     /child\.priorityAction/,
     /child\.secondaryActions/,
     /child\.subjectRows/,
@@ -306,7 +313,7 @@ test('family workbench keeps every dense section without requiring icon bindings
   assert.doesNotMatch(wxml, /paperDisplayCode|paperCode/)
 })
 
-test('family workbench CSS keeps compact dimensions and four-column metrics', () => {
+test('family workbench CSS keeps compact dimensions and a single composition bar', () => {
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxss'), 'utf8')
   const rule = selector => {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -315,12 +322,18 @@ test('family workbench CSS keeps compact dimensions and four-column metrics', ()
     return matches[matches.length - 1][1]
   }
 
-  assert.match(rule('.child-status-grid'), /grid-template-columns:\s*repeat\(4,\s*1fr\)/)
+  assert.match(rule('.child-status-segments'), /margin-top\s*:/)
+  assert.match(rule('.family-summary-strip'), /height:\s*68rpx/)
+  assert.match(rule('.family-summary-strip'), /overflow:\s*hidden/)
+  assert.match(rule('.family-summary-strip'), /border-radius:\s*8rpx/)
+  assert.match(rule('.family-summary-metrics'), /min-width:\s*0/)
+  assert.match(rule('.family-summary-metrics'), /white-space:\s*nowrap/)
+  assert.doesNotMatch(wxss, /\.family-summary-strip:active/)
   assert.match(rule('.child-card'), /padding:\s*16rpx 18rpx/)
   assert.match(rule('.child-card'), /border-radius:\s*12rpx/)
-  assert.match(rule('.child-status-cell'), /min-height:\s*60rpx/)
   assert.match(rule('.child-avatar'), /width:\s*62rpx/)
   assert.match(rule('.child-avatar'), /height:\s*62rpx/)
+  assert.doesNotMatch(wxss, /\.child-status-grid|\.child-status-cell|\.child-status-num|\.child-status-label|\.family-hero-stat/)
 
   assert.match(rule('.child-subject-list'), /grid-template-columns:\s*repeat\(3,\s*1fr\)/)
   assert.match(rule('.child-subject-row'), /min-height:\s*48rpx/)
@@ -341,7 +354,7 @@ test('family child card follows the approved B information hierarchy', () => {
     'child-diagnosis-list',
     'child-priority-action',
     'secondary-action-grid',
-    'child-status-grid',
+    'child-status-segments',
     'child-subject-list'
   ]
   const positions = markers.map(marker => card.indexOf(marker))
@@ -362,7 +375,7 @@ test('family workbench uses compact grouped rows on the restored visual baseline
   }
 
   for (const selector of [
-    '.child-status-cell',
+    '.child-status-segments',
     '.child-priority-action',
     '.secondary-action-card',
     '.child-subject-row',
@@ -385,18 +398,15 @@ test('family actions keep traceable taps on every compact section', () => {
   }
 
   const [childCardTag] = tagsFor('child-card')
-  const [childMetricTag] = tagsFor('child-status-cell')
   const [childProfileTag] = tagsFor('child-profile-link')
-  const [familyHeroTag] = tagsFor('family-workbench-hero')
+  const [familySummaryTag] = tagsFor('family-summary-strip')
   assert.match(childCardTag, /bindtap="onStudentTap"/)
   assert.match(childCardTag, /data-id="{{child\.id}}"/)
-  assert.match(familyHeroTag, /catchtap="onTraceableUrlTap"/)
+  assert.match(familySummaryTag, /aria-label="{{familyHero\.ariaLabel}}"/)
+  assert.doesNotMatch(familySummaryTag, /(?:bindtap|catchtap|data-url)=/)
   assert.match(childProfileTag, /catchtap="onTraceableUrlTap"/)
-  assert.match(childMetricTag, /catchtap="onTraceableUrlTap"/)
-  assert.match(childMetricTag, /data-url="{{item\.url}}"/)
 
   for (const className of [
-    'child-status-cell',
     'child-priority-action',
     'secondary-action-card',
     'child-subject-row',
@@ -441,7 +451,7 @@ test('family page renders all three subjects and four quick actions exactly once
   assert.equal(card.quickLinks.length, 4)
   assert.equal(occurrences(/wx:for="{{child\.subjectRows}}"/g), 1)
   assert.equal(occurrences(/wx:for="{{child\.quickLinks}}"/g), 1)
-  assert.equal(occurrences(/wx:for="{{child\.statusItems}}"/g), 1)
+  assert.equal(occurrences(/class="child-status-segments"/g), 1)
   assert.equal(occurrences(/wx:for="{{child\.secondaryActions}}"/g), 1)
   assert.equal(occurrences(/wx:for="{{child\.diagnosisReports}}"/g), 1)
   assert.equal(occurrences(/child\.priorityAction\.title/g), 1)
@@ -467,16 +477,24 @@ test('index and student profile use one identity and action hierarchy without le
   for (const wxml of [indexWxml, profileWxml]) {
     assert.match(wxml, /diagnosis-workbench-section/)
     assert.match(wxml, /diagnosis-workbench/)
-    assert.match(wxml, /diagnosis-signal-line/)
+    assert.match(wxml, /diagnosis-status-segments/)
     assert.match(wxml, /diagnosis-next/)
     assert.match(wxml, /personal-action-queue/)
     assert.match(wxml, /personal-subject-list/)
     assert.match(wxml, /profile-summary-line/)
+    // 密度去重：signal-line 文字行删除，计数只保留在色带图例；证据数并入日期行
+    assert.doesNotMatch(wxml, /diagnosis-signal-line/)
+    assert.doesNotMatch(wxml, /diagnosisSegments/)
+    assert.match(wxml, /正式诊断 · \{\{item\.evidenceCount\}\} 条证据/)
     assert.doesNotMatch(wxml, /personal-hero-card/)
     assert.doesNotMatch(wxml, /personal-primary-action/)
     assert.doesNotMatch(wxml, /personal-report-card/)
     assert.doesNotMatch(wxml, /\/assets\/images\//)
   }
+
+  // 每张诊断卡只渲染一条构成色带（图例带计数）
+  assert.equal((indexWxml.match(/diagnosis-status-segments/g) || []).length, 1)
+  assert.equal((profileWxml.match(/diagnosis-status-segments/g) || []).length, 1)
 
   assert.doesNotMatch(profileWxml, /coverage-card/)
   assert.doesNotMatch(profileWxml, /metric-strip/)
@@ -486,7 +504,8 @@ test('index and student profile use one identity and action hierarchy without le
   assert.doesNotMatch(profileWxml, /subject-grid/)
 
   assert.match(wxss, /\.diagnosis-workbench-section/)
-  assert.match(wxss, /\.diagnosis-signal-line/)
+  assert.match(wxss, /\.diagnosis-status-segments/)
+  assert.doesNotMatch(wxss, /\.diagnosis-signal-line/)
   assert.match(wxss, /\.diagnosis-next/)
   assert.match(wxss, /\.personal-action-card/)
   assert.match(wxss, /\.personal-subject-row/)
@@ -991,7 +1010,7 @@ test('child card improved metric falls back to bottleneck center without improve
   assert.match(improvedItem.url, /pages\/bottleneck-center\/bottleneck-center/)
 })
 
-test('family hero exposes a kicker symbol and an aggregated status bar', () => {
+test('family summary exposes compact aggregated metrics without action chrome', () => {
   const cards = buildChildWorkbenchCards({
     students: [
       { _id: 'student-a', name: '钟青羽', grade: 6 },
@@ -1006,9 +1025,11 @@ test('family hero exposes a kicker symbol and an aggregated status bar', () => {
   })
   const hero = buildFamilyWorkbenchHero(cards)
 
-  assert.equal(hero.kickerSymbol, '🎯')
-  assert.deepEqual(hero.statusSegments.map(item => item.key), ['pending', 'improved'])
-  assert.equal(hero.statusSegments.reduce((sum, item) => sum + item.widthPercent, 0), 100)
+  assert.equal(hero.label, '家庭今日')
+  assert.deepEqual(hero.metrics.map(item => item.key), ['pending', 'improved'])
+  assert.equal(hero.ariaLabel, '家庭今日，2项待处理，1项已改善')
+  assert.equal(hero.kickerSymbol, undefined)
+  assert.equal(hero.url, undefined)
 })
 
 test('single-profile home exposes subject symbols, mini bars and a trend pill class', () => {

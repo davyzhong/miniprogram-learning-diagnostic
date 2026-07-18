@@ -14,10 +14,20 @@ function validMetrics(width, height) {
   const isCompact = width <= 390
   const firstTop = 178
   const secondTop = isCompact ? 650 : 660
+  const summaryHeight = 68 * width / 750
+  const summaryTop = 72
+  const lineHeight = 24 * width / 750
+  const lineTop = summaryTop + (summaryHeight - lineHeight) / 2
   return {
     viewport: { width, height },
     pageWidth: width,
-    householdSummaryRect: rect(14, 72, width - 28, 92),
+    householdSummaryRect: rect(14, summaryTop, width - 28, summaryHeight),
+    householdSummaryLabelRect: rect(24, lineTop, 48, lineHeight),
+    householdSummaryItemRects: [
+      rect(96, lineTop, 54, lineHeight),
+      rect(158, lineTop, 54, lineHeight),
+      rect(220, lineTop, 54, lineHeight)
+    ],
     cards: [
       {
         cardRect: rect(14, firstTop, width - 28, 458),
@@ -95,6 +105,38 @@ test('rejects horizontal page and card overflow', () => {
   const cardMetrics = validMetrics(390, 844)
   cardMetrics.cards[0].cardRect.width = 390
   assert.throws(() => validateFamilyDensityMetrics(cardMetrics), /card.*viewport/i)
+})
+
+test('rejects a family summary taller than 72rpx', () => {
+  const metrics = validMetrics(390, 844)
+  metrics.householdSummaryRect.height = 50
+  assert.throws(() => validateFamilyDensityMetrics(metrics), /summary height/i)
+})
+
+test('rejects clipped or zero-size family summary content', () => {
+  const clipped = validMetrics(390, 844)
+  clipped.householdSummaryItemRects[0].left = 370
+  assert.throws(() => validateFamilyDensityMetrics(clipped), /summary item.*clipped/i)
+
+  const zero = validMetrics(390, 844)
+  zero.householdSummaryLabelRect.height = 0
+  assert.throws(() => validateFamilyDensityMetrics(zero), /summary label.*clipped/i)
+})
+
+test('rejects a family summary with no rendered metric or idle content', () => {
+  const metrics = validMetrics(390, 844)
+  metrics.householdSummaryItemRects = []
+  assert.throws(() => validateFamilyDensityMetrics(metrics), /no metric or idle content/i)
+})
+
+test('rejects wrapped or vertically displaced family summary items', () => {
+  const wrapped = validMetrics(390, 844)
+  wrapped.householdSummaryItemRects[0].height = 20
+  assert.throws(() => validateFamilyDensityMetrics(wrapped), /wraps beyond one line/i)
+
+  const displaced = validMetrics(390, 844)
+  displaced.householdSummaryItemRects[0].top += 5
+  assert.throws(() => validateFamilyDensityMetrics(displaced), /not vertically aligned/i)
 })
 
 test('rejects a clipped priority action', () => {
