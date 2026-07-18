@@ -123,7 +123,7 @@
 
 .batch-tab-status,
 .batch-tab-id {
-  font-size: 18rpx;
+  font-size: 20rpx;
   white-space: nowrap;
 }
 
@@ -265,7 +265,7 @@
   margin-top: 5rpx;
   overflow: hidden;
   color: var(--b1-informational-fg);
-  font-size: 14rpx;
+  font-size: 20rpx;
   font-weight: 700;
   line-height: 1.2;
   text-align: center;

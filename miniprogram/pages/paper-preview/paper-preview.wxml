@@ -26,24 +26,7 @@
         <text class="step-text">{{item.text}}</text>
       </view>
     </view>
-    <view class="meta-grid">
-      <view class="meta-cell traceable-block" wx:if="{{paperDate}}" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
-        <text class="meta-label">试卷日期</text>
-        <text class="meta-value date-strong">{{paperDate}}</text>
-      </view>
-      <view class="meta-cell traceable-block" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
-        <text class="meta-label">题目数量</text>
-        <text class="meta-value">{{questionCount}} 题</text>
-      </view>
-      <view class="meta-cell traceable-block" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}">
-        <text class="meta-label">页数</text>
-        <text class="meta-value">{{pageSummary}}</text>
-      </view>
-      <view class="meta-cell" wx:if="{{estimatedMinutes > 0}}">
-        <text class="meta-label">预计用时</text>
-        <text class="meta-value">约 {{estimatedMinutes}} 分钟</text>
-      </view>
-    </view>
+    <text class="meta-line traceable-block" bindtap="onTraceableUrlTap" data-url="{{paperCodeUrl}}"><text wx:if="{{paperDate}}">{{paperDate}} · </text>共 {{questionCount}} 题 · {{pageSummary}}<text wx:if="{{estimatedMinutes > 0}}"> · 约 {{estimatedMinutes}} 分钟</text></text>
   </view>
 
   <view class="chinese-review-card card" wx:if="{{hasChineseReviewCoverage}}">

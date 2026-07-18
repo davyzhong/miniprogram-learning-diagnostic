@@ -162,7 +162,7 @@
   color: var(--b1-ink-subtle);
 }
 
-/* 第四批：emoji 符号 */
-.setup-deco { font-size: 72rpx; line-height: 1; margin-bottom: 12rpx; }
+/* 第四批：emoji 符号（setup-deco 内联进标题行，≤64rpx） */
+.setup-deco { font-size: 40rpx; line-height: 1; }
 .eyebrow-symbol, .section-symbol { font-size: 28rpx; margin-right: 6rpx; }
 .state-icon.b1-symbol { font-size: 56rpx; }
