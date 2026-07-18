@@ -242,38 +242,15 @@
   background: #b8c4d2;
 }
 
-.meta-grid {
+.meta-line {
   border-top: 1rpx solid #eef3f8;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 18rpx 22rpx;
-  margin-top: 24rpx;
-  padding-top: 24rpx;
-}
-
-.meta-cell {
-  min-width: 0;
-}
-
-.meta-label {
-  color: #8794a6;
   display: block;
-  font-size: 21rpx;
-  margin-bottom: 6rpx;
-}
-
-.meta-value {
-  color: #1f2937;
-  display: block;
-  font-size: 25rpx;
-  font-weight: 680;
-  line-height: 1.35;
-}
-
-.date-strong {
+  margin-top: 18rpx;
+  padding-top: 16rpx;
   color: #17365d;
-  font-size: 30rpx;
-  font-weight: 850;
+  font-size: 22rpx;
+  font-weight: 700;
+  line-height: 1.5;
 }
 
 .coverage-card {
