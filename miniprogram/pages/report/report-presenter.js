@@ -466,6 +466,13 @@ function buildReportView(report, options = {}) {
         ? { key: 'verification', label: '复测', value: `通过 ${confidence.passCount} / 未过 ${confidence.failCount}` }
         : null
     ].filter(Boolean)
+    // 高密度单行统计：替代数字块矩阵，一行展示置信分与全部量化证据
+    const statsParts = [`${confidence.scoreLabel} ${confidence.score}`]
+    if (confidence.occurrenceCount > 0) statsParts.push(`出现 ${confidence.occurrenceCount} 次`)
+    if (confidence.cumulativeErrorCount > 0) statsParts.push(`错题 ${confidence.cumulativeErrorCount} 道`)
+    if (confidence.recentErrorCount > 0) statsParts.push(`近期 ${confidence.recentErrorCount} 道`)
+    if (verificationSummary) statsParts.push(`复测 ${confidence.passCount}/${confidence.failCount}`)
+    const statsLine = statsParts.join(' · ')
     return {
       ...item,
       displayName,
@@ -482,6 +489,7 @@ function buildReportView(report, options = {}) {
       verificationFailCount: confidence.failCount,
       verificationSummary,
       evidenceMetrics,
+      statsLine,
       metaText: item.fineBottleneck && item.evidenceText
         ? item.evidenceText
         : `${item.errorCount || 0} 道相关错题 · ${displayName}`,
