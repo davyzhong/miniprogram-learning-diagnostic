@@ -1,8 +1,8 @@
-// 全局 UI emoji 白名单（唯一来源，202 项全量）。
+// 全局 UI emoji 白名单（唯一入口：首批 202 项 + 第二批双端通过 996 项）。
 // 2026-07-18 更新：icon-compatibility 202 项候选（C01-C14 全 14 类）已在 Android 真机
 // 全部验证可显示，ZWJ/VS16/键帽/旗帜不再排除，全量解禁。
-// 体积说明：候选清单在分包页面目录，主包不能直接 require；本文件以纯 [key, glyph]
-// 元组内置全量字形（不含 sequence/riskNote 等冗余字段）。
+// 2026-07-18 更新：第二批 1000 项完成 Android/iOS 真机测试，996 项双端通过。
+// 通过项按稳定测试 ID 调用；4 个 Android 方格项由生成数据明确排除。
 // 规则：emoji 只辅助识别，所有入口必须同时保留文字；页面通过 symbolOf() 注入、
 // 经 {{}} 渲染，不在 WXML 写 emoji 字面量（扫描测试按本白名单放行）。
 const CATEGORY_TABLES = {
@@ -21,6 +21,11 @@ const CATEGORY_TABLES = {
   C13: [['plus','➕'],['minus','➖'],['multiply','✖️'],['divide','➗'],['equals','🟰'],['infinity','♾️'],['numbers','🔢'],['letters','🔤'],['lettersLower','🔡'],['lettersUpper','🔠'],['circle','⭕'],['triangleUp','🔺'],['triangleDown','🔻'],['diamondBlue','🔷'],['diamondOrange','🔶']],
   C14: [['heart','❤️'],['heartText','❤'],['faceSmileColor','☺️'],['faceSmileText','☺'],['womanTone','👩🏽'],['thumbUpTone','👍🏽'],['teacherWoman','👩‍🏫'],['teacherMan','👨‍🏫'],['techWoman','👩‍💻'],['techMan','👨‍💻'],['familyFull','👨‍👩‍👧‍👦'],['flagRainbow','🏳️‍🌈'],['flagChina','🇨🇳'],['keycap1','1️⃣'],['keycapHash','#️⃣']],
 }
+
+const {
+  VERIFIED_BATCH_02_SYMBOLS,
+  REJECTED_BATCH_02_IDS
+} = require('./ui-symbols-batch-02')
 
 Object.values(CATEGORY_TABLES).forEach(Object.freeze)
 Object.freeze(CATEGORY_TABLES)
@@ -42,7 +47,8 @@ const SUBJECT_SYMBOL_KEYS = Object.freeze({
 const UI_SYMBOLS = Object.freeze(Object.assign(
   {},
   ...Object.values(CATEGORY_TABLES).map(Object.fromEntries),
-  SYMBOL_ALIASES
+  SYMBOL_ALIASES,
+  VERIFIED_BATCH_02_SYMBOLS
 ))
 
 // 类目结构视图：{ C01: [keys...], ..., C14: [keys...] }，供测试与调试断言
@@ -70,6 +76,8 @@ function isApprovedUiSymbol(value) {
 module.exports = {
   UI_SYMBOLS,
   UI_SYMBOL_CATEGORIES,
+  VERIFIED_BATCH_02_SYMBOLS,
+  REJECTED_BATCH_02_IDS,
   symbolOf,
   subjectSymbolOf,
   isApprovedUiSymbol

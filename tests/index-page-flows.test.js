@@ -299,7 +299,9 @@ test('family workbench keeps every dense section without requiring icon bindings
   assert.match(wxml, />[^<]*添加孩子</)
   assert.match(wxml, /最新学科诊断/)
   assert.match(wxml, /priority-summary">{{child\.priorityAction\.summary}}/)
-  assert.match(wxml, /quick-link-summary">{{item\.summary}}/)
+  assert.doesNotMatch(wxml, /quick-link-summary">{{item\.summary}}/)
+  assert.doesNotMatch(wxml, /subject-row-summary">{{item\.summary}}/)
+  assert.doesNotMatch(wxml, /subject-row-segments/)
   assert.doesNotMatch(wxml, /item\.icon|priorityAction\.icon|latestDiagnosis\.icon/)
   assert.doesNotMatch(wxml, /paperDisplayCode|paperCode/)
 })
@@ -316,12 +318,38 @@ test('family workbench CSS keeps compact dimensions and four-column metrics', ()
   assert.match(rule('.child-status-grid'), /grid-template-columns:\s*repeat\(4,\s*1fr\)/)
   assert.match(rule('.child-card'), /padding:\s*16rpx 18rpx/)
   assert.match(rule('.child-card'), /border-radius:\s*12rpx/)
-  assert.match(rule('.child-status-cell'), /min-height:\s*72rpx/)
+  assert.match(rule('.child-status-cell'), /min-height:\s*60rpx/)
   assert.match(rule('.child-avatar'), /width:\s*62rpx/)
   assert.match(rule('.child-avatar'), /height:\s*62rpx/)
 
-  assert.match(rule('.child-subject-row'), /min-height:\s*58rpx/)
-  assert.match(rule('.child-quick-link'), /min-height:\s*76rpx/)
+  assert.match(rule('.child-subject-list'), /grid-template-columns:\s*repeat\(3,\s*1fr\)/)
+  assert.match(rule('.child-subject-row'), /min-height:\s*48rpx/)
+  assert.match(rule('.child-quick-grid'), /grid-template-columns:\s*repeat\(4,\s*1fr\)/)
+  assert.match(rule('.child-quick-link'), /min-height:\s*56rpx/)
+  assert.doesNotMatch(rule('.quick-link-title'), /text-overflow:\s*ellipsis/)
+})
+
+test('family child card follows the approved B information hierarchy', () => {
+  const wxml = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/index/index.wxml'), 'utf8')
+  const start = wxml.indexOf('class="child-card child-card-')
+  const end = wxml.indexOf('<block wx:if="{{homeMode === \'single-profile\'}}">', start)
+  const card = wxml.slice(start, end)
+  const markers = [
+    'child-card-header',
+    'child-card-top',
+    'child-quick-grid',
+    'child-diagnosis-list',
+    'child-priority-action',
+    'secondary-action-grid',
+    'child-status-grid',
+    'child-subject-list'
+  ]
+  const positions = markers.map(marker => card.indexOf(marker))
+
+  positions.forEach((position, index) => assert.ok(position >= 0, `${markers[index]} should be present`))
+  for (let index = 1; index < positions.length; index += 1) {
+    assert.ok(positions[index] > positions[index - 1], `${markers[index]} should follow ${markers[index - 1]}`)
+  }
 })
 
 test('family workbench uses compact grouped rows on the restored visual baseline', () => {
@@ -413,6 +441,10 @@ test('family page renders all three subjects and four quick actions exactly once
   assert.equal(card.quickLinks.length, 4)
   assert.equal(occurrences(/wx:for="{{child\.subjectRows}}"/g), 1)
   assert.equal(occurrences(/wx:for="{{child\.quickLinks}}"/g), 1)
+  assert.equal(occurrences(/wx:for="{{child\.statusItems}}"/g), 1)
+  assert.equal(occurrences(/wx:for="{{child\.secondaryActions}}"/g), 1)
+  assert.equal(occurrences(/wx:for="{{child\.diagnosisReports}}"/g), 1)
+  assert.equal(occurrences(/child\.priorityAction\.title/g), 1)
   assert.doesNotMatch(wxml, /child\.(?:subjectRows|quickLinks)\.(?:slice|filter)/)
 })
 

@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "batchId": "B02",
+  "testedAt": "2026-07-18",
+  "candidateCount": 1000,
+  "resultPolicy": "all-except-failed",
+  "environments": [
+    {
+      "platform": "Android",
+      "client": "WeChat Mini Program",
+      "result": "996 passed, 4 rendered as tofu boxes"
+    },
+    {
+      "platform": "iOS",
+      "client": "WeChat Mini Program",
+      "result": "1000 passed"
+    }
+  ],
+  "productionPolicy": "Require both Android and iOS to pass",
+  "failedIds": [
+    "B02-C01-007",
+    "B02-C02-024",
+    "B02-C09-031",
+    "B02-C17-013"
+  ],
+  "approvedCount": 996
+}

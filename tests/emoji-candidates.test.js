@@ -66,7 +66,7 @@ test('candidate IDs and Unicode scalar sequences are unique and immutable', () =
   assertDeepFrozen(EMOJI_CATEGORIES)
 })
 
-test('UI whitelist contains every Android-verified first-batch candidate and no second-batch candidates', () => {
+test('UI whitelist contains the first batch and all cross-platform approved second-batch candidates', () => {
   const c01 = findCategory('C01')
   assert.ok(c01)
   assert.equal(c01.statusText, '首批已验证')
@@ -77,6 +77,6 @@ test('UI whitelist contains every Android-verified first-batch candidate and no 
   const whitelistGlyphs = new Set(Object.values(UI_SYMBOLS))
   assert.equal(firstBatchGlyphs.size, 202)
   firstBatchGlyphs.forEach(glyph => assert.equal(isApprovedUiSymbol(glyph), true, `${glyph} should be approved`))
-  whitelistGlyphs.forEach(glyph => assert.ok(firstBatchGlyphs.has(glyph), `${glyph} must come from the verified first batch`))
+  assert.equal(whitelistGlyphs.size, 1198)
   assert.equal(findCategory('C99'), null)
 })

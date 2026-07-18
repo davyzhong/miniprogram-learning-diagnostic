@@ -1,6 +1,6 @@
 # 学习卡点诊断小程序测试矩阵
 
-> 更新日期：2026-07-17
+> 更新日期：2026-07-18
 > 范围：当前小程序 MVP + 数学学习地图升级 + 语文具体错项复习 + 英语词库闭环
 > 当前单元自动化基线：`npm test` / `npm run test:unit` 共 916 个用例通过
 
@@ -37,7 +37,7 @@ npm run test:e2e:ai-usage   # AI 用量与内测授权专项 E2E
 | 数据归属、参数白名单、无堆栈返回 | `contracts.test.js`、`student-access.test.js`、`student-data-access.test.js` | 第二微信账号需人工验收 | 已覆盖主要入口 |
 | E2E 命令和输出目录契约 | `contracts.test.js` | `scripts/e2e-report-aggregator.js` 聚合 | 已覆盖 |
 | AI 用量账本、成本估算、内测授权、删除请求 | `ai-usage-ledger.test.js`、`ai-usage-presenter.test.js`、`cloud-functions.test.js`、`learning-resource-cloud.test.js`、`index-page-flows.test.js` | `test:e2e:ai-usage` 覆盖账单页、首页入口、上传授权和 aiUsage 云函数结构 | 已覆盖；含三态记账、真实/估算优先级、北京时间月份聚合、服务端授权门禁、账单视图模型 |
-| B1 设计系统、emoji 白名单、可视化接线（热力格 / 三色堆叠条 / 通过率条 / 掌握度条 / 词库构成 / 趋势文案 / learning-progress 入口） | `bplus-design-system.test.js`、`ui-symbols.test.js`、`emoji-candidates.test.js`、`batch3-visualization-wiring.test.js` | DevTools 360/390px 截图人工核对 | 已覆盖；C01–C06 已验证 emoji 为白名单唯一来源，C09/C14 等高风险字形仍拦截，页面字号下限 20rpx |
+| B1 设计系统、emoji 白名单、可视化接线（热力格 / 三色堆叠条 / 通过率条 / 掌握度条 / 词库构成 / 趋势文案 / learning-progress 入口） | `bplus-design-system.test.js`、`ui-symbols.test.js`、`emoji-candidates.test.js`、`emoji-batch-02.test.js`、`batch3-visualization-wiring.test.js` | Android/iOS 真机兼容测试 + DevTools 360/390px 截图人工核对 | 已覆盖；B01 202 项和 B02 996 项双端通过字形进入白名单，B02 四个 Android 方格项强制排除，详见 `docs/EMOJI_COMPATIBILITY_WHITELIST.md` |
 
 ## 3. 人工验收清单
 

@@ -2,12 +2,17 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 
 const manifest = require('../scripts/emoji-compatibility/batch-02-manifest.json')
+const deviceResults = require('../scripts/emoji-compatibility/device-results-2026-07-18.json')
 const {
   EMOJI_BATCH_02,
   EMOJI_BATCH_02_COUNT,
   findBatch02Category,
   unicodeSequence
 } = require('../miniprogram/pages/icon-compatibility/emoji-candidates-batch-02')
+const {
+  VERIFIED_BATCH_02_SYMBOLS,
+  REJECTED_BATCH_02_IDS
+} = require('../miniprogram/utils/ui-symbols-batch-02')
 
 function flattenRuntime(batch) {
   return batch.categories.flatMap(category => category.items.map(item => ({
@@ -62,4 +67,21 @@ test('runtime helpers preserve exact public IDs and Unicode sequences', () => {
   flattenRuntime(EMOJI_BATCH_02).forEach(item => {
     assert.equal(unicodeSequence(item.glyph), item.sequence, item.id)
   })
+})
+
+test('production whitelist exactly reflects the Android and iOS device result snapshot', () => {
+  const manifestById = new Map(manifest.items.map(item => [item.id, item]))
+  assert.equal(deviceResults.resultPolicy, 'all-except-failed')
+  assert.equal(deviceResults.approvedCount, 996)
+  assert.deepEqual(REJECTED_BATCH_02_IDS, deviceResults.failedIds)
+  assert.equal(Object.keys(VERIFIED_BATCH_02_SYMBOLS).length, 996)
+
+  manifest.items.forEach(item => {
+    if (deviceResults.failedIds.includes(item.id)) {
+      assert.equal(VERIFIED_BATCH_02_SYMBOLS[item.id], undefined)
+    } else {
+      assert.equal(VERIFIED_BATCH_02_SYMBOLS[item.id], item.glyph)
+    }
+  })
+  REJECTED_BATCH_02_IDS.forEach(id => assert.ok(manifestById.has(id)))
 })

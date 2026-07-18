@@ -1936,3 +1936,219 @@
 .family-hero-deco { position: absolute; top: 18rpx; right: 22rpx; font-size: 64rpx; opacity: 0.9; line-height: 1; }
 .family-hero-copy { position: relative; }
 .empty-deco-symbol { display: block; font-size: 96rpx; line-height: 1; margin-bottom: 20rpx; }
+
+/* Family child card B: upper actions, diagnosis-first body, compact subjects. */
+.child-card-header {
+  display: block;
+}
+
+.child-card-header .child-card-top {
+  min-width: 0;
+}
+
+.child-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6rpx;
+  margin-top: 8rpx;
+}
+
+.child-quick-link {
+  min-width: 0;
+  min-height: 56rpx;
+  padding: 7rpx 4rpx;
+  border-radius: 6rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+  overflow: hidden;
+}
+
+.quick-link-symbol {
+  flex-shrink: 0;
+  font-size: 24rpx;
+}
+
+.quick-link-title {
+  min-width: 0;
+  color: var(--b1-informational-fg);
+  font-size: 20rpx;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.child-diagnosis-list {
+  margin-top: 9rpx;
+  padding-top: 8rpx;
+}
+
+.child-diagnosis-head {
+  margin-bottom: 2rpx;
+}
+
+.child-latest-diagnosis {
+  min-height: 54rpx;
+  margin-top: 4rpx;
+  padding: 7rpx 10rpx;
+  border-left: 5rpx solid var(--b1-border);
+  border-radius: 0 6rpx 6rpx 0;
+  gap: 8rpx;
+}
+
+.child-diagnosis-title {
+  font-size: 21rpx;
+}
+
+.child-diagnosis-date,
+.child-diagnosis-action,
+.child-diagnosis-count,
+.child-diagnosis-label {
+  font-size: 18rpx;
+}
+
+.child-diagnosis-summary {
+  margin-top: 1rpx;
+  font-size: 18rpx;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.child-priority-action {
+  margin-top: 8rpx;
+  padding: 10rpx 12rpx;
+  border-radius: 8rpx;
+  gap: 10rpx;
+}
+
+.priority-title {
+  margin-top: 3rpx;
+  font-size: 23rpx;
+}
+
+.priority-summary {
+  margin-top: 3rpx;
+  font-size: 18rpx;
+  line-height: 1.3;
+}
+
+.priority-action-text {
+  font-size: 19rpx;
+}
+
+.secondary-action-grid {
+  gap: 6rpx;
+  margin-top: 6rpx;
+}
+
+.secondary-action-card {
+  min-height: 58rpx;
+  padding: 7rpx 9rpx;
+  border-radius: 7rpx;
+}
+
+.secondary-action-title {
+  font-size: 19rpx;
+}
+
+.secondary-action-summary {
+  margin-top: 2rpx;
+  font-size: 18rpx;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.child-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6rpx;
+  margin-top: 8rpx;
+}
+
+.child-status-cell {
+  min-width: 0;
+  min-height: 60rpx;
+  padding: 6rpx 4rpx;
+  border-radius: 7rpx;
+  text-align: center;
+}
+
+.child-status-num {
+  font-size: 24rpx;
+}
+
+.child-status-label-row {
+  gap: 3rpx;
+  margin-top: 2rpx;
+}
+
+.child-status-symbol {
+  font-size: 22rpx;
+}
+
+.child-status-label {
+  min-width: 0;
+  margin-top: 0;
+  font-size: 17rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.child-status-segments {
+  margin-top: 7rpx;
+}
+
+.child-status-segments .b1-seg-legend {
+  margin-top: 4rpx;
+}
+
+.child-panel-label {
+  margin-top: 8rpx;
+  font-size: 18rpx;
+}
+
+.child-subject-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6rpx;
+  margin-top: 5rpx;
+}
+
+.child-subject-row {
+  min-width: 0;
+  min-height: 48rpx;
+  margin-top: 0;
+  padding: 6rpx 8rpx;
+  border-radius: 6rpx;
+  gap: 4rpx;
+  box-sizing: border-box;
+}
+
+.child-subject-row .subject-row-name {
+  margin-right: 0;
+  font-size: 19rpx;
+}
+
+.child-subject-row .subject-row-status {
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 16rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 360px) {
+  .quick-link-title,
+  .child-status-label,
+  .child-subject-row .subject-row-status {
+    font-size: 18rpx;
+  }
+}

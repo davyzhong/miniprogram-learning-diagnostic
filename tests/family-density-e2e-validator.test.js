@@ -11,7 +11,7 @@ function rect(left, top, width, height) {
 }
 
 function validMetrics(width, height) {
-  const isCompact = width === 390
+  const isCompact = width <= 390
   const firstTop = 178
   const secondTop = isCompact ? 650 : 660
   return {
@@ -59,6 +59,10 @@ function validMetrics(width, height) {
 
 test('accepts the 390x844 family-density target fixture', () => {
   assert.equal(validateFamilyDensityMetrics(validMetrics(390, 844)), true)
+})
+
+test('accepts the 360x800 narrow family-density target fixture', () => {
+  assert.equal(validateFamilyDensityMetrics(validMetrics(360, 800)), true)
 })
 
 test('accepts the 430x932 family-density target fixture', () => {
