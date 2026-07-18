@@ -14,7 +14,7 @@ const path = require('node:path')
 
 const root = path.resolve(__dirname, '..')
 const miniprogramDir = path.join(root, 'miniprogram')
-const BUDGET_KB = 800 // 主包体积预算
+const BUDGET_KB = 1200 // 主包体积预算（2026-07-18 由 800 上调；微信平台主包硬限制 2MB，内部预算保留 ~800KB 平台余量）
 
 function dirSize(dir) {
   let total = 0

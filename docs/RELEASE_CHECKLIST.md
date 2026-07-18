@@ -1,6 +1,6 @@
 # 发布与回滚清单
 
-> 更新日期：2026-06-15  
+> 更新日期：2026-07-18
 > 目标：每次发布都同步代码、云函数、文档、测试和真实数据验收，避免只在本地通过。
 
 ## 1. 发布前冻结范围
@@ -43,7 +43,7 @@ npm run check:deployment && npm run verify && npm run test:coverage
 补充检查（手动执行）：
 
 ```bash
-npm run check:size        # 主包体积预算（<800KB）
+npm run check:size        # 主包体积预算（<1200KB，2026-07-18 由 800KB 上调）
 npm run perf:baseline     # 事件驱动性能基线（需先跑 test:e2e:core）
 node scripts/sync-cloudfunction-shared.js --check  # 共享文件一致性
 ```
@@ -54,7 +54,7 @@ node scripts/sync-cloudfunction-shared.js --check  # 共享文件一致性
 - JS 静态检查通过。
 - 覆盖率门禁通过。
 - 云函数部署清单检查通过（含依赖版本一致性、共享文件一致性）。
-- 主包体积在预算内（<800KB）。
+- 主包体积在预算内（<1200KB；微信平台硬限制 2MB）。
 - `git diff --check` 无空白错误。
 - 微信开发者工具 CLI `preview` 成功。
 

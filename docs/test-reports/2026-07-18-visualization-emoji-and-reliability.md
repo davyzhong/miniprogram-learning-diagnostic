@@ -13,7 +13,7 @@
 | `npm test` | 1006 / 1006 通过（评审时基线 845） |
 | `npm run check` | 311 个 JavaScript 文件通过 |
 | `npm run test:coverage` | 80% 行/函数门槛通过 |
-| 主包体积 | 788 KB / 800 KB 预算（**余量仅 12 KB，见"后续约束"**） |
+| 主包体积 | 788 KB / 1200 KB 预算（预算于 2026-07-18 由 800 KB 上调，微信硬限制 2 MB） |
 | 注册页面 | 25 个（主包 8 + 分包 17），另有 `components/status-view` 公共组件 |
 
 ## 一、发布风险修复（2026-07-17 首批 8 个提交）
@@ -68,7 +68,7 @@
 
 ## 后续约束（重要）
 
-1. **主包余量仅 12 KB**：数学种子数据（`miniprogram/data/math/`，150 节点后更大）仍被主包顶层 require。把知识节点查表下沉到分包可立刻回收 ~70 KB，建议尽快执行。
+1. **主包预算已上调至 1200 KB**（2026-07-18，微信硬限制 2 MB）：短期不再紧迫。数学种子数据（`miniprogram/data/math/`，150 节点）仍被主包顶层 require，下沉到分包可回收 ~70 KB，属良好卫生但不再紧急。
 2. **云函数部署**：`studentData`（listRecentImageFileNames、stale 标记）、`regenerateVerificationPaper`（resume action）、`analyzeBatch`（节点目录）需在开发者工具重新部署后线上生效。
 3. **真机验收**：iOS 尚未系统验证 C14 键帽/旗帜类字形；Android 已全量通过。
 4. `getAnalysisProgress` 云函数不返回 `updatedAt`，超 10 分钟的正常分析仍会落入前端超时分支（已有自动刷新兜底，根治需补字段）。

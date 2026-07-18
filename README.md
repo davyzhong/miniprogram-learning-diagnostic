@@ -1,598 +1,253 @@
-# 学习卡点诊断小程序（Learning Diagnostic Mini Program）
-
-面向家长的 AI 学习诊断工具——拍照上传试卷，自动分析错题并定位学习卡点。
+# 学习卡点诊断小程序
 
 <p align="center">
-  <img src="brand-assets/app-logo.png" alt="学习卡点诊断小程序 Logo" width="96" />
+  <img src="brand-assets/app-logo.png" alt="学习卡点诊断小程序 Logo" width="104" />
 </p>
-
----
-
-## 项目简介
-
-小学家长在辅导孩子时，往往只能看到"这道题做错了"，却难以判断错误背后的学习卡点是什么、是否已经改善。这个小程序把拍照、AI 诊断、验证试卷、作答反馈和学习记录串成一条清晰的闭环，让家长在手机上知道：现在最该帮孩子做什么。
-
-**目标用户**：小学孩子的家长（主操作者），孩子是被诊断对象。
-
-**核心价值**：
-- 拍照即诊断：上传试卷照片，AI 自动识别错题并归类到 10 大卡点体系
-- 闭环验证：针对历史卡点生成验证试卷，打印作答后再次上传，对比改善情况
-- 零门槛使用：微信内完成全流程，无需注册登录，无需专业知识
-
-## 最新界面速览
-
-> 以下截图由当前版本的微信开发者工具自动生成，全部使用“学生A / 学生B”和模拟学习内容。没有真实学生姓名、账号、试卷照片、文件地址或内部编码。
-
-当前界面采用 **B1 暖色多彩信息系统 + 全量 emoji 图标**：学科色（语文中国红、数学金、英语靛蓝）与状态色（待验证金、改善绿、风险红、信息蓝）建立视觉层级，同时在页头、区块标题、动作按钮、状态标记和空态中使用经过 Android 真机全量验证的 202 个 emoji（`miniprogram/utils/ui-symbols.js` 白名单，C01-C14 共 14 类）。emoji 只辅助识别，所有入口和状态都保留文字标签。
 
 <p align="center">
-  <img src="docs/user-guide/images/01-family-workbench.png" alt="新版家庭学习工作台，使用学生A和学生B的脱敏示例" width="300" />
-  <img src="docs/user-guide/images/07-learning-records.png" alt="新版学习记录时间线，使用脱敏的数学验证示例" width="300" />
+  <strong>把“这道题做错了”，变成家长看得懂、孩子做得到、结果可验证的下一步行动。</strong>
 </p>
-
-| 家庭学习工作台 | 学习记录 |
-|---|---|
-| 一屏先看全家待办、改善、诊断和孩子的优先行动。 | 诊断、验证卷和验证反馈按时间串联，证据保持紧凑。 |
 
 <p align="center">
-  <img src="docs/user-guide/images/09-chinese-workbench.png" alt="语文工作台脱敏截图，展示字词原项复测" width="220" />
-  <img src="docs/user-guide/images/12-english-workbench.png" alt="英语工作台脱敏截图，展示今日词汇任务" width="220" />
-  <img src="docs/user-guide/images/13-english-confusion.png" alt="英语易混词巩固脱敏截图" width="220" />
+  面向小学家庭的 AI 学习诊断微信小程序。拍照上传试卷后，系统定位学习卡点、生成正式诊断报告，<br />
+  再把学习任务、验证试卷和作答反馈串成一条持续改善闭环。
 </p>
-
-语文以具体错项的原项复测为主，英语以“会认/会拼”双维词汇任务为主；两者都会在工作台清楚显示今天最值得完成的一件事。色彩用于区分学科和状态，不替代文字；emoji 图标与文字始终成对出现，即使个别字形在某台设备上缺字也不影响理解和操作。
-
-| 视觉语义 | 使用方式 |
-|---|---|
-| 语文红 / 数学金 / 英语靛蓝 | 标识学科身份、报告入口和任务范围 |
-| 等待金 | 待验证、生成中、等待上传 |
-| 改善绿 | 已完成、已掌握、验证通过 |
-| 风险红 | 失败、持续出现、需要优先处理 |
-| 信息蓝 | 可查看详情、普通说明和辅助入口 |
-
-更多脱敏界面与完整操作说明见 [图文用户导览](docs/user-guide/README.md)。
-
----
-
-## 图文使用说明书
-
-> 隐私说明：本文档中的界面截图由自动化脚本使用匿名 mock 数据生成，只展示“学生示例”“孩子A”“家长A”等脱敏信息，不包含真实学生姓名、真实试卷照片、真实诊断报告或任何可识别个人身份的信息。正式使用时，也建议在对外分享截图前遮挡孩子姓名、头像、学校、班级、微信号和原始试卷照片。
-
-### 界面截图版快速上手
-
-#### 第一步：进入家庭学习工作台
-
-多个孩子时，首页会显示家庭学习工作台；只有一个孩子时，会直接进入该孩子的个人学习工作台。家庭页顶部先给出家庭行动总览，再按孩子展示四项状态、优先行动、三科学习状态、最新正式诊断和快捷入口。页面使用紧凑的文字标记和彩色信息块，让两个孩子的信息能更早进入视野。
 
 <p align="center">
-  <img src="docs/user-guide/images/01-family-workbench.png" alt="家庭学习工作台截图，使用匿名学生示例数据" width="320" />
+  <img alt="WeChat Mini Program" src="https://img.shields.io/badge/WeChat-Mini_Program-07C160?style=flat-square" />
+  <img alt="CloudBase" src="https://img.shields.io/badge/Backend-CloudBase-2F80ED?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-1008_passing-2E8B57?style=flat-square" />
+  <img alt="Main package" src="https://img.shields.io/badge/main_package-791_KB-F2A900?style=flat-square" />
 </p>
-
-| 你看到的内容 | 怎么操作 |
-|--------------|----------|
-| 孩子身份行 | 点击进入该孩子学习档案 |
-| 分析中 / 待验证 / 待上传 / 已改善 | 点击状态块进入对应任务或记录 |
-| 数学 / 语文 / 英语 | 点击学科行进入该学科学习工作台 |
-| 今日优先行动 | 点击进入当前最需要处理的试卷、验证卷或上传任务 |
-| 快捷入口 | 点击最新诊断、当前试卷、知识地图、学习记录 |
-
-#### 第二步：查看孩子学习档案
-
-个人学习工作台是单个孩子的行动页，最重要的是看“今天先做什么”和“最新学科诊断”。每个已有正式诊断的学科只展示最新一份，并同时给出诊断结论、证据数量和下一步行动；没有正式诊断的学科不会占用报告区域。
 
 <p align="center">
-  <img src="docs/user-guide/images/02-student-profile.png" alt="孩子学习档案截图，姓名已匿名化为学生示例" width="320" />
+  <img src="docs/user-guide/images/01-family-workbench.png" alt="脱敏家庭学习工作台" width="300" />
+  <img src="docs/user-guide/images/04-report.png" alt="脱敏诊断报告" width="300" />
 </p>
 
-| 区域 | 用途 |
-|------|------|
-| 个人行动摘要 | 点击进入今天的主行动 |
-| 今日行动 | 生成验证卷、上传新试卷或查看学习记录 |
-| 最新诊断报告 | 查看最近一次 AI 诊断结论、照片数和相关错题数 |
-| 接下来可以做什么 | 进入学习卡点、上传新作业、数学知识地图或学习记录 |
-| 三科学习入口 | 进入数学、语文、英语的具体工作台 |
+> 截图全部由自动化脚本使用匿名 mock 数据生成，不含真实学生姓名、账号、学校、试卷照片、云文件地址或内部编码。完整界面与操作说明见[图文用户导览](docs/user-guide/README.md)。
 
-### 当前版本验证基线
+## 为什么做这个项目
 
-- JavaScript 静态检查：311 个文件通过。
-- 单元与契约回归：1006 / 1006 通过。
-- 微信开发者工具：17 个页面 + 6 个跨页场景，23 / 23 通过。
-- 主包体积：788 KB，低于 800 KB 预算（余量紧张，见测试报告"后续约束"）。
-- emoji 图标库：202 个候选表情（C01-C14）已通过 Android 真机全量验证并接入白名单。
-- 14 张文档截图均由匿名 mock 数据重新生成，并通过敏感文本检查。
+家长看到错题时，通常知道“错了什么”，却不容易判断：这是偶然失误，还是稳定存在的学习卡点？应该先讲知识、做相似题，还是直接复测？过几天以后又该如何确认孩子真的掌握了？
 
-完整结果见 [可视化与可靠性工作报告](docs/test-reports/2026-07-18-visualization-emoji-and-reliability.md) 与 [B1 视觉系统验证报告](docs/test-reports/2026-07-16-b1-color-system-verification.md)。
-
-#### 第三步：进入学科工作台
-
-学科工作台只回答一个问题：这个学科现在下一步该做什么。常见操作包括拍照诊断、生成验证试卷、查看学习记录、阅读完整报告。
-
-<p align="center">
-  <img src="docs/user-guide/images/03-subject-workbench.png" alt="数学学科工作台截图" width="320" />
-</p>
-
-| 操作入口 | 适合什么时候用 |
-|----------|----------------|
-| 拍照诊断 | 手上有新的试卷、练习或作业照片 |
-| 生成验证试卷 | 已经发现学习卡点，需要复测是否改善 |
-| 默认试卷 | 暂时没有现成试卷，希望先用标准题做一次诊断 |
-| 学习记录 | 回看诊断报告、验证试卷、作答上传和历史证据 |
-
-#### 第四步：阅读诊断报告
-
-诊断报告是产品的核心价值页，也是学习档案和家庭工作台最优先展示的信息。先看标题和摘要，再看学习卡点，最后再展开错题详情。家长不需要先看内部编号，也不需要逐张翻原始照片。
-
-<p align="center">
-  <img src="docs/user-guide/images/04-report.png" alt="诊断报告截图，内容为匿名示例" width="320" />
-</p>
-
-| 重点 | 判断方式 |
-|------|----------|
-| 报告是否最新 | 看报告生成时间和证据时间 |
-| 结论是否可靠 | 看照片数、相关错题数和本次证据 |
-| 先处理什么 | 看高优先级学习卡点 |
-| 下一步做什么 | 有待验证卡点时，优先生成验证试卷 |
-
-#### 第五步：生成验证试卷
-
-验证试卷用于确认学习卡点是否真实存在、是否已经改善。当前规则是覆盖待验证细卡点（BN/CHI），按置信度分层出题：高置信 3 题、中置信 2 题、低置信 1 题。页面会按粗类/卡点组展示覆盖范围，避免把几十个细卡点挤成一整段文字。
-
-<p align="center">
-  <img src="docs/user-guide/images/05-generate-verification.png" alt="生成验证试卷页面截图" width="320" />
-</p>
-
-| 配置项 | 当前规则 |
-|--------|----------|
-| 选择卡点 | 自动覆盖待验证细卡点；手动兜底最多 80 个目标 |
-| 覆盖范围 | 按粗类、卡点组和细卡点分层展示 |
-| 每个目标 | 按置信度 1-3 道题 |
-| 题目结构 | 核心验证题为主，高/中置信目标补迁移延展题 |
-| 输出格式 | A4 PDF，包含学生卷和答案页 |
-
-#### 第六步：下载、打印并上传验证反馈
-
-每份验证试卷都有唯一编号，例如“数学-20260614-01”。打印给孩子作答后，请回到同一份试卷工作台上传作答照片，避免反馈关联错试卷。
-
-<p align="center">
-  <img src="docs/user-guide/images/06-paper-preview.png" alt="验证试卷预览和上传反馈入口截图" width="320" />
-</p>
-
-| 你要做什么 | 点击哪里 |
-|------------|----------|
-| 看试卷内容 | 查看页面中的试卷内容预览 |
-| 看覆盖卡点 | 查看“覆盖卡点”层级卡片，先看粗类和组名，再展开细卡点 |
-| 打印 | 点击下载 PDF 或分享打印 |
-| 完成作答后上传 | 点击“作答完成，上传验证” |
-| 查看反馈 | 上传后回到试卷工作台或学习记录查看验证反馈 |
-
-#### 第七步：用学习记录追溯完整证据链
-
-学习记录按时间整理“诊断报告、验证试卷、验证反馈、原始照片/OCR”。每份验证卷保留可读的“学科 + 日期 + 序号”编号，方便家长区分打印件；内部卡点、资源和数据库编号不会显示。照片证据只展开少量预览，其余以数量提示收起。
-
-<p align="center">
-  <img src="docs/user-guide/images/07-learning-records.png" alt="学习记录时间线截图" width="320" />
-</p>
-
-| 记录类型 | 作用 |
-|----------|------|
-| 诊断报告 | 说明本次发现了什么学习卡点 |
-| 验证试卷 | 记录生成了哪一份试卷、编号是什么 |
-| 验证反馈 | 说明哪些卡点改善了，哪些仍需观察 |
-| 原始照片/OCR | 作为证据保留，默认不抢占主线 |
-
-#### 第八步：邀请另一位家长共同查看
-
-一个孩子档案可以开放给多个家长。档案创建者可以邀请共同家长；共同家长可以查看资料、上传试卷、生成验证卷和重试分析，但不能管理家庭成员。
-
-<p align="center">
-  <img src="docs/user-guide/images/08-parent-management.png" alt="家长管理页面截图，家长名称已匿名化" width="320" />
-</p>
-
-| 角色 | 权限 |
-|------|------|
-| 档案创建者 | 管理家庭成员、上传、出卷、查看报告 |
-| 共同家长 | 上传、出卷、查看报告、重试分析 |
-| 未加入家长 | 无法查看孩子学习资料 |
-
-#### 语文：先复测具体错项，再练阅读表达
-
-<p align="center">
-  <img src="docs/user-guide/images/09-chinese-workbench.png" alt="语文工作台脱敏截图" width="210" />
-  <img src="docs/user-guide/images/10-chinese-review-detail.png" alt="语文错项详情脱敏截图" width="210" />
-  <img src="docs/user-guide/images/11-chinese-skill-task.png" alt="语文阅读表达微任务脱敏截图" width="210" />
-</p>
-
-字词、拼音和古诗文等具体错项会先回到原字、原词或原句复测；只有通过后，才会进入易混字词的举一反三。没有待复测错项时，工作台才会推荐“找依据、概括、写具体”等短小的阅读表达任务。
-
-#### 英语：先完成今天的词汇任务
-
-<p align="center">
-  <img src="docs/user-guide/images/12-english-workbench.png" alt="英语工作台脱敏截图" width="210" />
-  <img src="docs/user-guide/images/13-english-confusion.png" alt="英语易混词巩固脱敏截图" width="210" />
-  <img src="docs/user-guide/images/14-english-wrong-words.png" alt="英语错词本脱敏截图" width="210" />
-</p>
-
-英语工作台会优先安排 5 或 10 个“会认不会写”、到期复测或不熟的单词。易混词小题只帮助理解区别，不替代认词或纸面听写的正式掌握证据。
-
-### 1. 一句话理解这个工具
-
-这个小程序不是单纯“讲错题”，而是帮助家长完成一个学习诊断闭环：
+本项目把这些判断变成一套可追踪的产品流程：
 
 ```mermaid
 flowchart LR
-  A["上传试卷照片"] --> B["AI 识别错题"]
-  B --> C["形成诊断报告"]
-  C --> D["提取学习卡点"]
-  D --> E["生成验证试卷"]
-  E --> F["打印作答"]
-  F --> G["上传作答照片"]
-  G --> H["判断是否改善"]
-  H --> I["更新学习档案"]
+    A[拍照上传试卷] --> B[AI 识别错题与证据]
+    B --> C[生成正式诊断报告]
+    C --> D[定位学习卡点]
+    D --> E[学习任务与针对性练习]
+    E --> F[生成验证试卷]
+    F --> G[上传作答反馈]
+    G --> H[更新掌握状态与学习档案]
+    H --> D
 ```
 
-家长最终要看的不是“这道题错了”，而是：
+产品不止给出一份报告，而是持续回答三个问题：
 
-- 哪些学习卡点正在影响作答。
-- 这些卡点来自多少张试卷、多少道相关错题。
-- 最近是否通过验证卷出现改善。
-- 下一步应该上传新试卷，还是先复测验证卷。
+1. **现在发生了什么**：哪些错误重复出现，证据来自哪里，结论可信到什么程度。
+2. **接下来做什么**：优先处理哪个卡点，学习、练习和复测如何衔接。
+3. **是否真的改善**：验证结果如何，哪些问题已经改善，哪些仍需观察或再次处理。
 
-> **验证卷自动生成**：诊断报告完成后，系统先创建验证卷生成记录；家长点击查看时由前端驱动分批生成，避免云函数超时。验证卷以细卡点（BN/CHI）为出题单位，按置信度生成 1-3 题，并附含解题思路；任一批次失败会标记失败而不是伪装成 ready。
+## 核心体验
 
-> **学习任务包**：学习卡点中心和卡点详情页的“学一下”入口按细卡点生成小程序内任务包。同一个粗卡点下面的不同细卡点必须使用不同 `targetId`，避免进入同一份学习内容。
+### 家庭学习工作台
 
-### 2. 第一次使用
+家庭首页按孩子组织信息，并把最重要的动作提前：快捷入口、每门学科的最新正式诊断、优先行动、四项学习统计和紧凑学科状态。没有正式诊断的学科不会占据诊断区空间；AI 用量与成本估算只在家庭首页提供统一入口。
 
-| 步骤 | 操作 | 结果 |
-|------|------|------|
-| 1 | 打开小程序，点击「添加第一个孩子」 | 创建一个孩子的学习档案 |
-| 2 | 填写孩子昵称或姓名、年级 | 自动创建数学、语文、英语三科学科档案 |
-| 3 | 如果只有一个孩子 | 首页会直接进入该孩子的学习档案 |
-| 4 | 如果有多个孩子 | 首页会显示家庭学习工作台，方便切换不同孩子 |
+<p align="center">
+  <img src="docs/user-guide/images/01-family-workbench.png" alt="家庭学习工作台，展示快捷操作、最新诊断和行动建议" width="270" />
+  <img src="docs/user-guide/images/02-student-profile.png" alt="个人学习档案，展开各学科最新诊断" width="270" />
+  <img src="docs/user-guide/images/07-learning-records.png" alt="学习记录时间线" width="270" />
+</p>
 
-建议录入名称时使用家里容易识别的称呼即可；如果后续需要截图给他人看，优先使用昵称或遮挡真实姓名。
+### 从诊断到验证
 
-### 3. 上传试卷照片做诊断
+报告页把错误证据、学习卡点、出现频次、置信度分数和下一步行动放在同一条阅读路径上。验证卷使用家长可读的“学科 + 日期 + 序号”，内部学习卡点编码和数据库 ID 不会直接透传到界面。
 
-| 步骤 | 操作 | 注意事项 |
-|------|------|----------|
-| 1 | 进入孩子学习档案，选择学科，例如「数学」 | 当前阶段数学链路最完整 |
-| 2 | 点击「拍照诊断」 | 可拍照，也可从相册选择 |
-| 3 | 一次最多选择 20 张 | 后台会按图片串行异步分析，不需要停留在上传页等待 |
-| 4 | 如果是 iPhone HEIF/HEIC 图片 | 小程序会尽量转成 JPEG；无法转换时会提示 |
-| 5 | 上传完成后回到学科页或学习记录 | 分析完成后会生成诊断报告 |
+<p align="center">
+  <img src="docs/user-guide/images/04-report.png" alt="正式诊断报告" width="220" />
+  <img src="docs/user-guide/images/05-generate-verification.png" alt="验证卷生成与选择" width="220" />
+  <img src="docs/user-guide/images/06-paper-preview.png" alt="验证试卷预览与反馈入口" width="220" />
+</p>
 
-拍照建议：
+## 三个学科，三种诊断逻辑
 
-- 试卷尽量铺平，避免折痕遮挡题目。
-- 光线均匀，不要有大面积阴影。
-- 老师批改痕迹、孩子原始作答、订正内容都尽量拍清楚。
-- 如果一张卷子有黑色和蓝色笔迹，系统会按“黑色原始作答、蓝色订正”来辅助判断。
+同一套闭环不能机械套用到所有学科。本项目为数学、语文和英语保留不同的证据模型和行动方式。
 
-### 4. 阅读诊断报告
+| 学科 | 诊断重点 | 下一步行动 | 验证方式 |
+| --- | --- | --- | --- |
+| **数学** | 错题背后的知识节点、细粒度卡点、出现频次与置信度 | 知识地图、任务包、同类题迁移练习 | 围绕同一卡点生成新的相似题，验证能否举一反三 |
+| **语文** | 具体错字、错词、读音、释义等记忆型错项，以及阅读表达能力型卡点 | 原项复习优先，再补充同音、同形、形近或多义迁移 | 必须把原来识别错误的字词再次放入验证卷，同时加入有限迁移题 |
+| **英语** | 个人词库中的“会认”和“会写”两条独立掌握状态 | 今日词汇、认词练习、纸面听写、易混词巩固和错词本 | 口头识别与纸面拼写分别留存证据、分别更新状态 |
 
-诊断报告是产品的核心价值页。报告里重点看四件事：
+<p align="center">
+  <img src="docs/user-guide/images/03-subject-workbench.png" alt="数学工作台" width="210" />
+  <img src="docs/user-guide/images/09-chinese-workbench.png" alt="语文工作台" width="210" />
+  <img src="docs/user-guide/images/12-english-workbench.png" alt="英语工作台" width="210" />
+</p>
 
-| 区域 | 看什么 | 怎么理解 |
-|------|--------|----------|
-| 报告标题 | 本次主要结论和生成时间 | 先判断这份报告是不是最新、是不是本次上传产生的 |
-| 证据摘要 | 照片数、相关错题数、证据时间 | 判断结论依据是否足够 |
-| 学习卡点 | 例如“计算基础”“审题理解” | 看影响作答的根本问题，不看内部 LP 编号 |
-| 错题详情 | 题目、学生答案、根因分析 | 需要复盘时再展开看细节 |
+更多学科规则见[学科设计索引](docs/subject-design/README.md)。
 
-示例口径：
+## 已实现能力
+
+### 诊断与报告
+
+- 手机拍照或从相册选择试卷，支持批量上传、图片压缩和重复文件轻量检查。
+- 云端异步分批分析，页面通过轻量进度接口轮询，超时后可恢复状态。
+- 结构化保存错题、OCR 摘要、卡点层级、证据指标、置信度和报告质量。
+- 正式报告支持家长纠错反馈，并可生成 PDF。
+- 用户界面统一隐藏内部 LP/BN 编码、数据库 ID、云文件地址和后端错误细节。
+
+### 学习与验证
+
+- 数学知识地图覆盖 150 个知识节点，支持卡点层级、资源任务包和掌握状态视图。
+- 验证卷按细粒度目标组织，支持多页任务包、打印预览、断点恢复和作答反馈。
+- 语文保存具体错项，组卷时先复测原项，再进行受约束的相似迁移。
+- 英语提供个人词库、认词练习、纸面听写、错词本、易混词巩固和学习时间线。
+- 家庭首页、学习档案和学习记录共同呈现最新结论与可执行行动，避免重复罗列同一信息。
+
+### 家庭与治理
+
+- 一个家长可管理多个孩子，也可通过邀请共同管理同一份学习档案。
+- 所有孩子数据读写均经过服务端成员权限校验。
+- AI 调用以追加账本记录 token、图片数和估算成本，支持按月汇总。
+- 内测授权、数据删除申请、脱敏截图和用户可见编码规则均有独立约束。
+- Android 与 iOS emoji 真机结果已固化为[兼容白名单](docs/EMOJI_COMPATIBILITY_WHITELIST.md)，实验页与正式业务调用隔离。
+
+## 工程架构
+
+```mermaid
+flowchart TB
+    subgraph Client[微信小程序]
+      Pages[25 个注册页面]
+      Presenters[Presenter 与状态组件]
+      Services[数据层与 P0 Skills]
+    end
+    subgraph Cloud[微信云开发 CloudBase]
+      Functions[14 个业务云函数]
+      Database[17 个数据库集合]
+      Storage[试卷图片与 PDF]
+      AI[混元视觉与文本生成模型]
+    end
+    subgraph Quality[质量体系]
+      Unit[Node.js 单元与合同测试]
+      CLI[微信开发者工具 CLI E2E]
+      Perf[性能与包体基线]
+    end
+    Pages --> Presenters --> Services --> Functions
+    Functions --> Database
+    Functions --> Storage
+    Functions --> AI
+    Unit --> Services
+    CLI --> Pages
+    Perf --> Client
+```
+
+| 层级 | 主要技术 |
+| --- | --- |
+| 客户端 | 微信小程序原生 WXML / WXSS / JavaScript，按需注入与 17 个独立分包 |
+| 云端 | 微信云开发 CloudBase，14 个业务云函数、云数据库、云存储 |
+| AI | `hy3-preview` 多模态识别，`deepseek-v4-flash` 题目与内容生成 |
+| 文档与 PDF | pdfkit、内置 Noto CJK 字体、结构化报告与验证卷 |
+| 测试 | Node.js `node:test`、自研页面 harness、`miniprogram-automator` CLI E2E |
+
+详细设计见[系统架构](docs/ARCHITECTURE.md)、[云函数 API](docs/CLOUD_FUNCTIONS.md)和[数据字典](docs/DATA_DICTIONARY.md)。
+
+## 项目结构
 
 ```text
-最新数学诊断报告
-证据时间：6月14日 20:03
-主要发现：计算基础再次出现
-本次依据：20 张照片，9 道相关错题
-```
-
-这类摘要会尽量在学习档案、学习记录和报告详情中透出，让家长不用层层点击才能知道最新诊断结果。
-
-### 5. 理解“学习卡点”
-
-“学习卡点”是比“错误”“缺陷”更柔和的表达，指孩子在某类题目上反复出现的阻碍点。
-
-| 状态 | 含义 | 建议动作 |
-|------|------|----------|
-| 待跟进 | 新发现或证据还不够，需要验证 | 生成验证试卷 |
-| 持续出现 | 多次诊断中仍然出现 | 优先复测和专项练习 |
-| 已改善 | 验证卷中完整作答且通过 | 继续观察一段时间 |
-| 复发 | 曾经改善，后来又出现 | 提高优先级，重新验证 |
-
-小程序对家长默认展示文字摘要，例如“计算基础”“审题理解”“分数计算”，不会把内部编号作为主要展示内容。
-
-### 6. 生成验证试卷
-
-当报告发现学习卡点后，可以生成 A4 纸验证试卷。
-
-| 项目 | 当前规则 |
-|------|----------|
-| 出题对象 | 自动覆盖待验证细卡点；手动兜底最多 80 个目标 |
-| 每个目标题量 | 按置信度 1-3 道题 |
-| 题目结构 | 核心验证题为主，高/中置信目标补迁移延展题 |
-| PDF 内容 | 学生卷 + 答案页 |
-| 唯一编号 | 使用“学科 + 日期 + 序号”，例如“数学-20260614-01” |
-
-为什么要有迁移延展题：
-
-- 核心题用于确认当前学习卡点是否还存在。
-- 迁移题用于观察孩子能不能举一反三。
-- 如果迁移题暴露了新的问题，后续会形成新的学习卡点线索。
-
-### 7. 打印作答并上传反馈
-
-数学题建议保留纸笔作答过程，因为中间演算过程本身就是重要证据。
-
-```mermaid
-flowchart LR
-  A["下载 PDF"] --> B["打印学生卷"]
-  B --> C["孩子纸笔作答"]
-  C --> D["拍照上传作答卷"]
-  D --> E["AI 分析作答过程"]
-  E --> F["生成验证反馈"]
-```
-
-上传作答卷时，请回到对应编号的验证试卷工作台。例如看到纸面编号是“数学-20260614-01”，就回到同一份试卷页面上传，避免把反馈关联到错误试卷。
-
-### 8. 查看学习记录
-
-学习记录按时间线整理所有证据：
-
-| 记录类型 | 展示内容 | 是否主记录 |
-|----------|----------|------------|
-| 诊断报告 | 结论摘要、卡点、照片数、错题数 | 是 |
-| 验证试卷 | 试卷编号、题量、覆盖卡点、上传状态 | 是 |
-| 验证反馈 | 是否改善、关联试卷编号 | 是 |
-| 原始照片/OCR | 原图、识别摘要、疑似重复 | 折叠为证据 |
-| 分析中/失败 | 中间状态或异常状态 | 紧凑显示，可重试 |
-
-学习记录的目标不是堆列表，而是保留“上传了什么 → 得到什么结论 → 做了哪份验证卷 → 是否改善”的证据链。
-
-### 9. 多孩子和共同家长
-
-| 场景 | 使用方式 |
-|------|----------|
-| 一个孩子 | 打开首页后直接进入该孩子学习档案 |
-| 两到三个孩子 | 首页显示家庭学习工作台，每个孩子一张高密度卡片 |
-| 另一个家长也要看 | owner 在家长管理里生成邀请，对方扫码或输入邀请码加入 |
-| 共同家长权限 | 可以查看、上传、生成试卷、重试分析；不能管理家庭成员 |
-
-这样设计是为了适应真实家庭：孩子数量通常不多，但多个家长可能都需要看同一份学习资料。
-
-### 10. 隐私与安全注意事项
-
-- README 和项目文档不得放真实学生姓名、学校、班级、微信号、原始试卷照片。
-- 对外演示截图请使用匿名孩子名，例如“孩子A”“学生示例”。
-- 真机测试中产生的真实报告不要提交到 Git。
-- 上传到云端的学习数据通过 openID 和家庭成员权限隔离。
-- 邀请共同家长时，只向可信微信账号分享邀请链接或邀请码。
-
----
-
-## 功能特性
-
-### 已实现
-
-- ✅ 学生管理：添加/选择学生，每人独立档案
-- ✅ 家庭学习工作台：0 个孩子显示空态，1 个孩子直接进入个人学习工作台，多个孩子显示高密度家庭行动工作台
-- ✅ 家长共享：孩子档案支持 owner / viewer 家长成员，共同家长除家庭成员管理外可查看、上传、生成试卷和重试分析
-- ✅ 个人学习工作台：个人行动摘要、今日行动、最新诊断报告、行动队列和三科学科入口均可点击操作
-- ✅ 学习卡点透出：首页展示当前高优先级卡点，支持进入卡点中心和单卡点工作台
-- ✅ 学习卡点中心：按学科和状态筛选待验证、持续出现、复发和已改善卡点
-- ✅ 学科工作台：数学/语文/英语三科独立，学科页只承载待处理队列、主任务和工具入口
-- ✅ 拍照诊断：支持最多 20 张照片批量上传，HEIF 自动转 JPEG 或给出可读提示，后台按图片串行异步分析
-- ✅ 诊断报告：卡点排行条形图 + 错题详情折叠列表 + 改善状态标注
-- ✅ 验证试卷出卷配置：基于待验证细卡点生成任务包，按置信度 1-3 题分层出题，生成 A4 PDF 下载打印
-- ✅ 默认诊断试卷：按年级动态生成标准诊断卷（1-6 年级 A/B 卷），无需预存题库
-- ✅ 试卷预览与打印：A4 预览 + PDF 下载 + 分享打印
-- ✅ 试卷下载状态：同一份 PDF 下载后显示「已下载」，避免重复下载
-- ✅ 学习记录：按天整理诊断报告、验证试卷、验证作答上传和原始照片，形成学习证据链
-- ✅ 照片去重：跨批次 + 跨历史报告的 OCR 指纹比对，避免重复计入
-- ✅ AI 结果标准化：字段截断、严重度归一、结构化校验
-- ✅ 验证报告对比：标注改善 / 加重 / 新增 / 持续四种状态
-- ✅ 分析进度轮询：学科主页和报告页每 10s 轮询，支持手动重试
-- ✅ 报告 PDF 生成与下载
-- ✅ 英语学科：工作台 + 单词熟悉度练习 + AI 语音判定 + 纸面听写 + OCR 批改 + 学习记录证据链
-- ✅ 英语词库管理：PEP 个人词库种子、批量导入、熟悉度和拼写双维度进度追踪
-- ✅ Skill / CLI P0：封装诊断、报告、卡点、验证卷、反馈和时间线能力，提供 `ldx` 本地 CLI 合同测试
-- ✅ 数据归属校验：openID 隔离 + 参数白名单
-- ✅ 界面可视化：卡点热力图、状态构成堆叠条、通过率色带、掌握度条、点状证据时间线（纯 WXSS 实现）
-- ✅ emoji 图标体系：202 个真机验证表情全量接入（`ui-symbols.js` 白名单 205 键），25 页全图标化，文字标签全保留
-- ✅ 公共状态组件 `status-view`：加载/空态/错误重试统一
-- ✅ 验证卷卡死恢复：stale 检测 + `resume` action + 前端自助重试
-- ✅ 家长成员移除：owner 可撤销共同家长权限
-- ✅ 数学知识节点：150 个标准节点，诊断 nodeIds 全量归并
-- ✅ 自动化测试：1006 个常规用例通过，JS 语法检查 311 文件通过，AI 用量专项 DevTools E2E 5/5 通过
-
-### 待完善
-
-- ⚠️ 微信订阅消息推送（`sendNotification` 当前为空实现，待申请模板）
-- ✅ 上传与分析解耦：创建报告后服务端 fire-and-forget 启动分析，客户端提交后即可返回
-- ⚠️ 默认试卷跨学生共享模板（当前仅同学生复用）
-- ⬜ 真机端到端验收
-
----
-
-## 技术栈
-
-| 层级 | 技术 | 说明 |
-|------|------|------|
-| 前端 | 微信小程序原生 | WXML / WXSS / JS，不使用第三方框架 |
-| 后端 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
-| AI（图像） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
-| AI（文本） | CloudBase AI `deepseek-v4-flash` | 用于生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 17 个核心集合：students / subjectProfiles / reports / papers / analysisTasks / studentMembers / studentInvites / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / englishPracticeAttempts / chineseSkillAttempts / learningResourcePacks / aiUsageEvents / dataDeletionRequests / userConsents |
-| PDF 生成 | pdfkit | 云函数内生成 A4 试卷/报告 PDF |
-| 测试 | Node.js 内置 test runner | `node --test`，无外部测试框架依赖 |
-
----
-
-## 目录结构
-
-```
 miniprogram-learning-diagnostic/
-├── miniprogram/                 # 小程序前端
-│   ├── app.js / app.json        # 全局入口与配置（25 个注册页面：主包 8 + 分包 17）
-│   ├── utils/                   # cloud.js（数据访问层）、poller.js（轮询器）、ui-symbols.js（emoji 白名单）、
-│   │                            #   status-store.js / app-status.js（状态总线）、status-segments.js（构成条）、util.js
-│   ├── components/              # 公共组件：status-view（加载/空态/错误重试）
-│   └── pages/                   # 25 个页面（index / student-profile / add-student /
-│                                #   subject-home / upload / upload-history / parent-management /
-│                                #   join-student / report / bottleneck-center / bottleneck-detail /
-│                                #   knowledge-map / learning-resource / learning-progress /
-│                                #   english-practice / english-dictation / english-wrong-words /
-│                                #   english-confusion / chinese-review-detail / chinese-skill-task /
-│                                #   generate-verification / default-paper / paper-preview /
-│                                #   ai-usage / icon-compatibility）
-├── cloudfunctions/              # 云函数后端（14 个）
-│   ├── uploadAndAnalyze/        #   入口：校验 → 创建报告 → 触发分析
-│   ├── analyzePhotos/           #   主控：分批 → 串行分析 → 去重 → 合并 → 对比
-│   ├── analyzeBatch/            #   单批次 AI 分析 + 结果标准化（内置 150 个标准知识节点目录）
-│   ├── getAnalysisProgress/     #   轻量进度查询
-│   ├── studentAccess/           #   家长成员、邀请、加入和移除管理
-│   ├── studentData/             #   访问感知的学习资料聚合读取（含验证卷 stale 检测、轻量文件名读取）
-│   ├── reportFeedback/          #   家长反馈和复核线索
-│   ├── englishVocabulary/       #   英语个人词库、熟悉度练习和纸面听写
-│   ├── learningResource/        #   学习卡点任务包生成、读取和完成状态
-│   ├── regenerateVerificationPaper/ # 验证卷短任务续跑 + 卡死恢复（resume）
-│   ├── reanalyzeMathHistory/    #   历史数学报告重算维护工具
-│   ├── aiUsage/                 #   AI 用量账本、内测授权、删除请求
-│   ├── generatePaper/           #   生成验证/默认试卷 + A4 PDF（双栏布局+解题思路）
-│   └── generateReportPDF/       #   生成报告 PDF
-├── services/skills/             # P0 Skill 能力内核
-├── cli/ldx.js                   # 本地 CLI 入口
-├── tests/                       # 单元自动化测试（89 个测试文件，1006 个用例 + 真实图片 E2E 脚本）
-├── scripts/                     # check-js.js、preview-pdf.js（PDF预览）、DevTools E2E、指标导出、emoji 清单校验
-├── docs/                        # 补充文档
-├── PRD.md                       # 产品设计文档
-├── PROJECT_PLAN.md              # 技术架构与开发计划
-├── SETUP.md                     # 部署指南
-└── package.json                 # npm scripts
+├── miniprogram/              # 小程序页面、组件、服务和本地数据
+├── cloudfunctions/           # 14 个业务云函数与共享模板
+├── data/                     # 数学知识节点、卡点体系和脱敏示例数据
+├── cli/                      # ldx 本地命令入口
+├── scripts/                  # 构建、校验、性能、截图和 DevTools E2E
+├── tests/                    # 89 个测试文件，默认离线集执行其中 84 个
+├── docs/                     # 产品、学科、架构、测试和图文文档
+├── database/                 # 数据库索引声明
+├── README.md                 # GitHub 项目主页
+├── PRD.md                    # 当前产品需求基线
+└── SETUP.md                  # 本地与云开发配置
 ```
-
----
 
 ## 快速开始
 
 ### 环境要求
 
-- [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)（最新稳定版）
-- Node.js ≥ 18（运行测试和语法检查）
-- 微信云开发环境（已在 `project.config.json` 中配置 `cloudbaseRoot`）
+- Node.js 18 或更高版本
+- npm
+- 微信开发者工具
+- 已开通云开发的微信小程序账号
 
-### 克隆与打开
+### 本地检查
 
 ```bash
-git clone <repo-url>
+git clone <repository-url>
 cd miniprogram-learning-diagnostic
+npm install
+npm run verify
+npm run check:size
 ```
 
-用微信开发者工具打开项目根目录，等待编译完成。
+使用微信开发者工具导入项目根目录，确认 `project.config.json` 中的 AppID 和云开发环境配置，再按[部署指南](SETUP.md)创建集合、索引并部署云函数。
 
-### 部署云函数
-
-1. 在云开发控制台开通 `hy3-preview` 和 `deepseek-v4-flash` 两个 AI 模型
-2. 对 `cloudfunctions/` 下每个云函数目录右键 → "上传并部署：云端安装依赖"
-3. 云函数执行超时保持在微信平台允许的 **60 秒以内**；`uploadAndAnalyze` 负责快速创建报告并启动后台分析，长耗时场景通过进度轮询和手动重试恢复
-4. `generatePaper` 和 `generateReportPDF` 已内置 Noto 中文字体，不需要配置 `FONT_FILE_ID`
-
-### 配置数据库
-
-在云开发控制台创建以下集合，安全规则设为 `doc._openid == auth.openid`：
-
-- `students`
-- `subjectProfiles`
-- `reports`
-- `papers`
-- `analysisTasks`
-- `studentMembers`
-- `studentInvites`
-- `reportFeedback`
-- `englishImportBatches`
-- `studentEnglishWords`
-- `englishPracticeSessions`
-- `englishPracticeAttempts`
-- `chineseSkillAttempts`
-- `learningResourcePacks`
-- `aiUsageEvents`
-- `dataDeletionRequests`
-- `userConsents`
-
-详细步骤参见 [SETUP.md](./SETUP.md)。
-
----
-
-## 测试
-
-本项目测试体系分为两大类：本地可重复的**单元自动化测试**，以及通过微信开发者工具 CLI 驱动的**页面级 E2E 测试**。单元层全部基于 Node.js 内置 runner（`node --test`），零第三方测试框架依赖。
-
-| 类别 | 说明 | 命令 |
-|------|------|------|
-| **单元自动化测试** | 1006 个离线用例（89 个测试文件）：云函数、Presenter、工具、数据层、合同、知识库一致性和诊断回归 | `npm run test:unit` 或 `npm test` |
-| **CLI E2E 核心页** | 微信开发者工具 CLI 驱动核心页面和基础跨页流程 | `npm run test:e2e:core` |
-| **CLI E2E 数学** | 数学数据驱动场景、细卡点、知识地图和学习资源链路 | `npm run test:e2e:math` |
-| **CLI E2E 语文** | 语文工作台、诊断报告、错项复测出卷轻量链路 | `npm run test:e2e:chinese` |
-| **CLI E2E 英语** | 英语工作台、词库、熟悉度、纸面听写和学习记录 | `npm run test:e2e:english` |
-| **CLI E2E AI 用量** | AI 用量账单页、首页入口、上传授权检查和 aiUsage 云函数结构 | `npm run test:e2e:ai-usage` |
-| **CLI E2E 家庭首页** | 双孩子首屏密度、操作区边界、可见文本编码和脱敏截图 | `npm run test:e2e:family-density` |
-| **CLI E2E 学习记录** | 紧凑时间线、可读验证卷编号、证据预览上限和窄屏截图 | `npm run test:e2e:upload-history-layout` |
-| **真实数据/真实图片** | 真实学生数据页面烟测、真实图片诊断、真实云函数可用性 | `npm run test:e2e:real-data` / `npm run test:e2e:real-image` / `npm run test:e2e:real-cloud` |
+### 常用命令
 
 ```bash
-# 日常开发：运行全部单元自动化测试
-npm test
-
-# 带覆盖率报告（行/函数 80% 门槛）
-npm run test:coverage
-
-# 完整本地验证（单元自动化 + JS 语法检查）
-npm run verify
-
-# PDF 格式本地预览（不用上传云函数）
-node scripts/preview-pdf.js
-open tmp/preview-verification.pdf
-
-# CLI E2E（需先打开微信开发者工具并开启服务端口）
-npm run test:e2e:doctor       # 环境探测
-npm run test:e2e:core         # 核心页面回归
-npm run test:e2e:math         # 数学专项 E2E（当前最完整）
-npm run test:e2e:chinese      # 语文轻量专项 E2E
-npm run test:e2e:english      # 英语专项 E2E
-npm run test:e2e:ai-usage     # AI 用量账本专项 E2E
-npm run test:e2e:family-density       # 家庭首页密度和脱敏截图
-npm run test:e2e:upload-history-layout # 学习记录窄屏布局和截图
-npm run test:e2e:all           # 聚合所有 E2E + 报告
-
-# 发布前
-npm run release:check          # 部署 + 全测试 + 覆盖率
+npm test                    # 1008 个常规自动化测试
+npm run check               # 检查 313 个 JavaScript 文件
+npm run check:size          # 主包体积预算检查
+npm run test:coverage       # 覆盖率门禁
+npm run test:e2e:doctor     # 检查微信开发者工具 CLI 环境
+npm run test:e2e:all        # 主要页面与学科 CLI E2E
+npm run perf:baseline       # CLI 性能基线
 ```
 
-> 完整测试框架设计见 [docs/TEST_FRAMEWORK_DESIGN.md](./docs/TEST_FRAMEWORK_DESIGN.md)，本次 V2 计划见 [docs/TEST_STRATEGY_V2.md](./docs/TEST_STRATEGY_V2.md)。
+真实云环境、真实图片和真机测试默认与离线测试隔离，避免误调用 AI 或写入真实数据。完整说明见[测试指南](docs/TESTING.md)。
 
----
+## 当前质量基线
 
-## 项目文档索引
+以下数字来自 2026-07-18 的 `main` 分支本地验证：
 
-| 文档 | 说明 |
-|------|------|
-| [PRD.md](./PRD.md) | 产品设计文档 v2.9：多孩子工作台、学习档案、卡点透出体系、英语个人词库听写、页面职责边界、异步架构、学习记录、实现状态总览 |
-| [PROJECT_PLAN.md](./PROJECT_PLAN.md) | 技术架构、目录结构、AI 分析流程、部署步骤、版本规划 |
-| [SETUP.md](./SETUP.md) | 部署指南：环境配置、云函数部署、字体配置、数据库索引、真机验收 |
-| [docs/SKILL_AND_CLI_DESIGN.md](./docs/SKILL_AND_CLI_DESIGN.md) | Skill / CLI 设计与 P0 实现说明 |
-| [docs/METRICS.md](./docs/METRICS.md) | 单个孩子运营指标：分析完成率、报告质量、验证通过率、反馈率和周趋势 |
-| [docs/RELEASE_CHECKLIST.md](./docs/RELEASE_CHECKLIST.md) | 发布门禁、云函数部署核对、真实数据烟测和回滚流程 |
-| [docs/TEST_MATRIX.md](./docs/TEST_MATRIX.md) | 测试矩阵与验收清单 |
-| [docs/EMOJI_COMPATIBILITY_WHITELIST.md](./docs/EMOJI_COMPATIBILITY_WHITELIST.md) | Android/iOS 真机 Emoji 兼容结果、1198 个双端通过字形及统一调用规则 |
-| [docs/TEST_FRAMEWORK_DESIGN.md](./docs/TEST_FRAMEWORK_DESIGN.md) | 测试框架 V2 设计：单元自动化测试 + CLI E2E 分学科测试 |
-| [docs/user-guide/README.md](./docs/user-guide/README.md) | 脱敏界面图文导览：家庭工作台、诊断、验证和学习记录 |
-| [docs/CLOUD_FUNCTIONS.md](./docs/CLOUD_FUNCTIONS.md) | 云函数 API 参考（入参/出参/错误处理/依赖关系） |
-| [CHANGELOG.md](./CHANGELOG.md) | 版本变更记录 |
+| 指标 | 当前结果 | 复现命令 |
+| --- | ---: | --- |
+| 常规自动化测试 | 1008 / 1008 通过 | `npm test` |
+| JavaScript 语法检查 | 313 个文件通过 | `npm run check` |
+| 主包体积 | 791 KB / 1200 KB（预算自 800 KB 上调） | `npm run check:size` |
+| 注册页面 | 25 | `miniprogram/app.json` |
+| 业务云函数 | 14 | `cloudfunctions/`，不含 `_shared-templates` |
+| 测试文件 | 89 个库存，默认离线集 84 个 | `package.json` |
+| 数据库集合 | 17 | `docs/DATA_DICTIONARY.md` |
 
----
+包体只剩约 9 KB 预算，新增主包资源前必须先评估分包或替换空间。发布门禁、真实数据烟测和回滚流程见[发布清单](docs/RELEASE_CHECKLIST.md)。
+
+## 文档导航
+
+| 想了解什么 | 从这里开始 |
+| --- | --- |
+| 产品定位与当前范围 | [PRD](PRD.md) · [产品文档索引](docs/product/README.md) |
+| 看图了解完整使用流程 | [图文用户导览](docs/user-guide/README.md) |
+| 数学、语文、英语为什么不同 | [学科设计索引](docs/subject-design/README.md) |
+| 前后端如何协作 | [系统架构](docs/ARCHITECTURE.md) · [云函数 API](docs/CLOUD_FUNCTIONS.md) |
+| 数据存在哪里 | [数据字典](docs/DATA_DICTIONARY.md) |
+| 如何配置和部署 | [部署指南](SETUP.md) · [部署与烟测](docs/DEPLOYMENT.md) |
+| 如何测试和发布 | [测试指南](docs/TESTING.md) · [测试矩阵](docs/TEST_MATRIX.md) · [发布清单](docs/RELEASE_CHECKLIST.md) |
+| 遇到问题如何处理 | [故障排查](docs/TROUBLESHOOTING.md) |
+| 全部当前文档与历史资料 | [文档中心](docs/README.md) |
+
+## 隐私与数据边界
+
+本仓库只应包含脱敏示例、结构化种子数据和实现文档。真实孩子姓名、学校、班级、账号、试卷原图、诊断报告、PDF 输出和任何可识别个人身份的数据不得提交到 GitHub。对外分享截图前应再次检查头像、姓名、原始作答和云文件信息。
+
+## 项目状态
+
+当前项目处于**私有内测和持续迭代阶段**。数学诊断与验证闭环最完整；语文具体错项复测和英语词汇双维闭环已经落地，仍需要更多真实样本和真机回归来校准内容质量、兼容范围与长期学习效果。
+
+项目的重要变化记录在 [CHANGELOG](CHANGELOG.md)。
 
 ## License
 
-[Apache License 2.0](./LICENSE)
+Private project. All rights reserved.
