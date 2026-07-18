@@ -30,8 +30,22 @@ Page({
     }
     this.setData({ loading: true })
     try {
-      const profile = await cloud.getSubjectProfile(this.data.studentId, this.data.subject)
-      const view = buildKnowledgeMapPageView(profile || {}, this.data.subject)
+      // 两个请求各自先挂 rejection 处理再 Promise.all：
+      // 任何一个同步抛错（如 mock 缺失方法）都不会让另一个 Promise 悬而未决。
+      // 掌握状态地图是增强信息，读取失败时降级为空记录，不影响卡点主视图。
+      const profilePromise = Promise.resolve()
+        .then(() => cloud.getSubjectProfile(this.data.studentId, this.data.subject))
+      const masteryPromise = Promise.resolve()
+        .then(() => (typeof cloud.getNodeMasteryMap === 'function'
+          ? cloud.getNodeMasteryMap(this.data.studentId, this.data.subject)
+          : null))
+        .catch(error => {
+          console.warn('节点掌握地图读取失败，按空记录降级', error)
+          return null
+        })
+      const [profile, masteryResult] = await Promise.all([profilePromise, masteryPromise])
+      const masteryRecords = masteryResult && Array.isArray(masteryResult.records) ? masteryResult.records : []
+      const view = buildKnowledgeMapPageView(profile || {}, this.data.subject, masteryRecords)
       this.setData({ loading: false, view, errorText: '' })
     } catch (err) {
       console.error('知识地图加载失败', err)

@@ -79,3 +79,30 @@
 .hero-symbol { font-size: 32rpx; }
 .badge-symbol { font-size: 28rpx; margin-right: 6rpx; }
 .empty-deco { display: block; font-size: 88rpx; line-height: 1; margin-bottom: 16rpx; }
+
+/* 节点掌握地图（150 节点六态） */
+.node-map { margin-top: 24rpx; }
+.node-map-title { display: flex; align-items: baseline; gap: 12rpx; padding: 16rpx 8rpx; font-size: 28rpx; font-weight: 600; color: #2d3748; }
+.node-map-sub { font-size: 22rpx; font-weight: 400; color: #718096; }
+.nm-card { padding-bottom: 8rpx; }
+.nm-nodes { display: flex; flex-direction: column; gap: 8rpx; padding: 8rpx 0; }
+.nm-node {
+  display: flex; align-items: center; gap: 12rpx;
+  padding: 12rpx 16rpx; background: #fff; border-radius: 12rpx;
+  border-left: 6rpx solid transparent;
+}
+.nm-node.nm-risk { border-left-color: #f87171; }
+.nm-node.nm-partial { border-left-color: #fbbf24; }
+.nm-node.nm-ok { border-left-color: #34d399; }
+.nm-node.nm-none { border-left-color: #cbd5e0; }
+.nm-status {
+  flex-shrink: 0; font-size: 20rpx; padding: 4rpx 10rpx; border-radius: 8rpx;
+  color: #4a5568; background: #edf2f7; min-width: 72rpx; text-align: center;
+}
+.nm-node.nm-risk .nm-status { color: #c53030; background: #fed7d7; }
+.nm-node.nm-partial .nm-status { color: #b7791f; background: #fefcbf; }
+.nm-node.nm-ok .nm-status { color: #276749; background: #c6f6d5; }
+.nm-text { flex: 1; min-width: 0; }
+.nm-name { display: block; font-size: 24rpx; color: #2d3748; }
+.nm-meta { display: block; font-size: 20rpx; color: #718096; margin-top: 2rpx; }
+.nm-unobserved { display: block; font-size: 20rpx; color: #a0aec0; padding: 8rpx 16rpx; }

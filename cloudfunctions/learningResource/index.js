@@ -8,6 +8,7 @@ const {
   isMissingCollectionError
 } = require('./access')
 const { recordUsageStart, recordUsageSuccess, recordUsageFailure } = require('./usage-ledger')
+const { recordResourcePracticePassed } = require('./node-mastery-writer')
 
 cloud.init({ env: cloud.SYMBOL_CURRENT_ENV })
 const db = cloud.database()
@@ -331,6 +332,16 @@ async function completePack(event, openId) {
     },
     updatedAt: completedAt
   })
+  // 节点掌握状态闭环（仅数学）：资源学习 + 当场练习通过 → studentNodeMastery。
+  // 辅助链路，失败不阻断任务包完成。
+  try {
+    const masteryResult = await recordResourcePracticePassed({
+      db, pack, practiceResult: event.practiceResult, now: completedAt,
+    })
+    console.log('节点掌握状态更新(completePack)', JSON.stringify(masteryResult))
+  } catch (masteryError) {
+    console.error('节点掌握状态更新失败（不影响任务包完成）', masteryError)
+  }
   return { success: true, completedAt }
 }
 

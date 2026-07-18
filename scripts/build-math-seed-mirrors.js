@@ -21,6 +21,10 @@ const TARGETS = [
     dir: 'cloudfunctions/generatePaper/math-seeds',
     seeds: ['knowledge-nodes', 'bottleneck-taxonomy-v2', 'learning-resources'],
   },
+  {
+    dir: 'cloudfunctions/learningResource/math-seeds',
+    seeds: ['bottleneck-taxonomy-v2'],
+  },
 ];
 
 for (const target of TARGETS) {

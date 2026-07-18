@@ -12,6 +12,19 @@
         "cloudfunctions/getAnalysisProgress/index.js",
         "cloudfunctions/analyzePhotos/index.js"
       ]
+    },
+    {
+      "collection": "studentNodeMastery",
+      "name": "student_subject_node",
+      "fields": [
+        { "field": "studentId", "order": "asc" },
+        { "field": "subject", "order": "asc" },
+        { "field": "nodeId", "order": "asc" }
+      ],
+      "requiredBy": [
+        "cloudfunctions/analyzePhotos/node-mastery-writer.js",
+        "cloudfunctions/studentData/index.js"
+      ]
     }
   ]
 }
