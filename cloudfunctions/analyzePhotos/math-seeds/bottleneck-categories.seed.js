@@ -2,7 +2,7 @@
 // 打包安全：云函数独立上传时 data/ 目录不会随函数上传，所以把 seed 固化为 JS 镜像。
 // 数据来源：data/math/bottleneck-categories.seed.json
 module.exports = {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "updatedAt": "2026-07-17",
   "subject": "math",
   "scope": "小学数学学习卡点粗类与卡点家族治理库。粗类用于展示、调度和资源讲法选择；细卡点仍是诊断与修复原子。",

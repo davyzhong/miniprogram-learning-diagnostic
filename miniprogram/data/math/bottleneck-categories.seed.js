@@ -2,7 +2,7 @@
 // 小学数学学习卡点粗类与卡点家族治理库（前端版）。内容与 data/math/bottleneck-categories.seed.json 保持一致；
 // 这里改用 module.exports，符合 miniprogram/data 下 *.seed.js 的前端加载约定。
 module.exports = {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "updatedAt": "2026-07-17",
   "subject": "math",
   "scope": "小学数学学习卡点粗类与卡点家族治理库。粗类用于展示、调度和资源讲法选择；细卡点仍是诊断与修复原子。",

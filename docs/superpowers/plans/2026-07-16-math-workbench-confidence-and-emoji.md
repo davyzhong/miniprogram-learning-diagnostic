@@ -1,6 +1,8 @@
 # Math Workbench Confidence and Emoji Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+>
+> **状态（2026-07-17 补记）：checkbox 当时未维护，不作为进度依据。** 实现情况以代码与测试为准（置信度单一来源见 `miniprogram/utils/bottleneck-view.js`、emoji 兼容性批次见后续 commits）。逐项核对前请勿补勾。
 
 **Goal:** Restore a small Android/iOS-safe symbol whitelist, compact the math workbench, and present each math bottleneck with traceable numeric evidence and a clearly named composite confidence score.
 

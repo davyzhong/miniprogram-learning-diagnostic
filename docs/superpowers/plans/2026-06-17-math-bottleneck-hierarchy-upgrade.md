@@ -1,6 +1,8 @@
 # Math Bottleneck Hierarchy Upgrade Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
+>
+> **状态（2026-07-17 补记）：已全部完成。** 实现验收见 `docs/test-reports/2026-06-17-math-bottleneck-hierarchy-upgrade.md`（61 个相关测试通过、回填版本 math-full-reanalysis-v2.2-hierarchy）；当时未维护 checkbox，现按验收报告统一补勾。
 
 **Goal:** Upgrade the math learning bottleneck system from flat fine-grained items into a hierarchy that supports diagnosis, parent-facing display, resource recommendation, verification task scheduling, and mastery tracking.
 
@@ -72,7 +74,7 @@
 - Produces family records with `familyId`, `categoryId`, `title`, `nodeIds`, `verificationTemplate`, and `resourceStyleHints`.
 - Produces fine bottlenecks with `categoryId`, `familyId`, and readable titles.
 
-- [ ] **Step 1: Write failing seed integrity tests**
+- [x] **Step 1: Write failing seed integrity tests**
 
 Add tests:
 
@@ -112,7 +114,7 @@ test('every fine math bottleneck is linked to category and family', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -122,7 +124,7 @@ npm test -- tests/math-bottleneck-hierarchy.test.js
 
 Expected: fail because `bottleneck-categories.seed.json` does not exist.
 
-- [ ] **Step 3: Add seed file and extend fine bottleneck records**
+- [x] **Step 3: Add seed file and extend fine bottleneck records**
 
 Create the seed file with at least these categories:
 
@@ -168,7 +170,7 @@ Extend every fine bottleneck with:
 }
 ```
 
-- [ ] **Step 4: Run seed integrity test**
+- [x] **Step 4: Run seed integrity test**
 
 Run:
 
@@ -178,7 +180,7 @@ npm test -- tests/math-bottleneck-hierarchy.test.js
 
 Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add data/math/bottleneck-categories.seed.json data/math/bottleneck-taxonomy-v2.seed.json tests/math-bottleneck-hierarchy.test.js
@@ -199,7 +201,7 @@ git commit -m "feat(math): add bottleneck hierarchy seed data"
 - Produces `groupBottlenecksByHierarchy(items)`.
 - Produces `categoryTitleOf(categoryId)` and `familyTitleOf(familyId)`.
 
-- [ ] **Step 1: Add failing helper tests**
+- [x] **Step 1: Add failing helper tests**
 
 Append:
 
@@ -232,7 +234,7 @@ test('groups bottlenecks by category then family', () => {
 })
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -242,7 +244,7 @@ npm test -- tests/math-bottleneck-hierarchy.test.js
 
 Expected: fail because helper module is missing.
 
-- [ ] **Step 3: Implement Mini Program helper**
+- [x] **Step 3: Implement Mini Program helper**
 
 Implement exports:
 
@@ -318,7 +320,7 @@ module.exports = {
 
 Create the cloud helper with the same public interface and cloud-safe require paths.
 
-- [ ] **Step 4: Run helper tests**
+- [x] **Step 4: Run helper tests**
 
 Run:
 
@@ -328,7 +330,7 @@ npm test -- tests/math-bottleneck-hierarchy.test.js
 
 Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add miniprogram/utils/math-bottleneck-hierarchy.js cloudfunctions/_shared/math-bottleneck-hierarchy.js tests/math-bottleneck-hierarchy.test.js
@@ -349,7 +351,7 @@ git commit -m "feat(math): add bottleneck hierarchy helpers"
 - Consumes `normalizeFineBottleneck(candidate)` from `cloudfunctions/_shared/math-bottleneck-hierarchy.js`.
 - Produces candidate payloads with `categoryId`, `categoryTitle`, `familyId`, and `familyTitle`.
 
-- [ ] **Step 1: Add failing enrichment assertion**
+- [x] **Step 1: Add failing enrichment assertion**
 
 In `tests/math-learning-map-enricher.test.js`, assert:
 
@@ -360,7 +362,7 @@ assert.equal(candidate.familyId, 'MATH-FAM-DECIMAL-POINT')
 assert.equal(candidate.familyTitle, '小数点定位与移动')
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run:
 
@@ -370,7 +372,7 @@ npm test -- tests/math-learning-map-enricher.test.js
 
 Expected: fail because candidate payload does not include explicit hierarchy fields.
 
-- [ ] **Step 3: Normalize candidates in `candidatePayload`**
+- [x] **Step 3: Normalize candidates in `candidatePayload`**
 
 Update `candidatePayload`:
 
@@ -396,11 +398,11 @@ function candidatePayload(candidate, evidenceStrength, resourceIds) {
 }
 ```
 
-- [ ] **Step 4: Ensure backfill marks hierarchy version**
+- [x] **Step 4: Ensure backfill marks hierarchy version**
 
 Set `BACKFILL_VERSION` to a new value such as `math-learning-map-v2.2-hierarchy` and ensure `scripts/backfill-math-learning-map.js` uses the updated enricher.
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run:
 
@@ -410,7 +412,7 @@ npm test -- tests/math-learning-map-enricher.test.js tests/math-history-reanalys
 
 Expected: pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add cloudfunctions/analyzePhotos/math-learning-map-enricher.js scripts/backfill-math-learning-map.js tests/math-learning-map-enricher.test.js tests/math-history-reanalysis.test.js
@@ -434,7 +436,7 @@ git commit -m "feat(math): enrich reports with bottleneck hierarchy"
 - Report view exposes `bottleneckGroups`.
 - Subject home view exposes `taskQueueGroups`.
 
-- [ ] **Step 1: Add grouped view tests**
+- [x] **Step 1: Add grouped view tests**
 
 Add:
 
@@ -458,7 +460,7 @@ test('math bottleneck views group by category and family without losing fine ite
 })
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run:
 
@@ -468,7 +470,7 @@ npm test -- tests/bottleneck-view.test.js tests/report-presenter.test.js tests/s
 
 Expected: fail because grouped view model is missing.
 
-- [ ] **Step 3: Implement grouped view builder**
+- [x] **Step 3: Implement grouped view builder**
 
 In `miniprogram/utils/bottleneck-view.js`, import hierarchy helper and export:
 
@@ -489,7 +491,7 @@ function buildGroupedBottleneckViews(items = [], options = {}) {
 }
 ```
 
-- [ ] **Step 4: Wire report and subject home presenters**
+- [x] **Step 4: Wire report and subject home presenters**
 
 `report-presenter.js` should return:
 
@@ -505,7 +507,7 @@ hasTaskQueueGroups: subject === 'math' && taskQueueGroups.length > 0,
 taskQueueGroups
 ```
 
-- [ ] **Step 5: Run presenter tests**
+- [x] **Step 5: Run presenter tests**
 
 Run:
 
@@ -515,7 +517,7 @@ npm test -- tests/bottleneck-view.test.js tests/report-presenter.test.js tests/s
 
 Expected: pass.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add miniprogram/utils/bottleneck-view.js miniprogram/pages/report/report-presenter.js miniprogram/pages/subject-home/subject-home-presenter.js tests/bottleneck-view.test.js tests/report-presenter.test.js tests/subject-home-presenter.test.js
@@ -537,7 +539,7 @@ git commit -m "feat(math): group bottlenecks by hierarchy in views"
 - Resource view includes `displayTitle`, `typeLabel`, `actionText`, `url`, `hasUrl`, and `usageText`.
 - Report page renders grouped bottleneck sections before or alongside flat fallback list.
 
-- [ ] **Step 1: Add resource view assertions**
+- [x] **Step 1: Add resource view assertions**
 
 Assert report learning map resource cards expose:
 
@@ -548,7 +550,7 @@ assert.equal(resource.hasUrl, true)
 assert.match(resource.actionText, /链接/)
 ```
 
-- [ ] **Step 2: Run report test to verify failure if fields are missing**
+- [x] **Step 2: Run report test to verify failure if fields are missing**
 
 Run:
 
@@ -558,7 +560,7 @@ npm test -- tests/report-presenter.test.js
 
 Expected: fail only if resource cards are incomplete.
 
-- [ ] **Step 3: Update WXML resource card**
+- [x] **Step 3: Update WXML resource card**
 
 Render resource metadata with action:
 
@@ -576,7 +578,7 @@ Render resource metadata with action:
 </view>
 ```
 
-- [ ] **Step 4: Add copy/open handler if missing**
+- [x] **Step 4: Add copy/open handler if missing**
 
 In `report.js`, add:
 
@@ -594,7 +596,7 @@ onCopyResourceUrl(e) {
 }
 ```
 
-- [ ] **Step 5: Run tests and DevTools smoke**
+- [x] **Step 5: Run tests and DevTools smoke**
 
 Run:
 
@@ -611,7 +613,7 @@ Manual check:
 确认按钮能复制链接
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add miniprogram/pages/report/report.js miniprogram/pages/report/report.wxml miniprogram/pages/report/report.wxss miniprogram/utils/math-learning-map.js tests/report-presenter.test.js
@@ -636,7 +638,7 @@ git commit -m "feat(math): render grouped bottlenecks and resource links"
 - Cloud function accepts optional `targetPlan.pages[]`.
 - `verificationPack.pages[]` carries `pageType`, `categoryId`, `categoryTitle`, `familyIds`, `nodeIds`, and `targetIds`.
 
-- [ ] **Step 1: Add verification pack tests**
+- [x] **Step 1: Add verification pack tests**
 
 Add a test that builds a pack from two same-family fine targets:
 
@@ -646,7 +648,7 @@ assert.equal(pack.pages[0].categoryTitle, '计算规则')
 assert.deepEqual(pack.pages[0].targetIds, ['BN-DEC-MUL-POINT-COUNT', 'BN-DEC-MUL-POINT-ESTIMATE'])
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run:
 
@@ -656,7 +658,7 @@ npm test -- tests/verification-pack.test.js tests/generate-paper-pdf.test.js
 
 Expected: fail because scheduled hierarchy pages are not represented.
 
-- [ ] **Step 3: Build client scheduling model**
+- [x] **Step 3: Build client scheduling model**
 
 In `generate-verification.js`, add:
 
@@ -676,7 +678,7 @@ function buildScheduledTaskPages(selectedItems = []) {
 }
 ```
 
-- [ ] **Step 4: Pass `targetPlan` to cloud function**
+- [x] **Step 4: Pass `targetPlan` to cloud function**
 
 Update generate and preview calls:
 
@@ -687,13 +689,13 @@ targetPlan: {
 }
 ```
 
-- [ ] **Step 5: Update cloud pack builder**
+- [x] **Step 5: Update cloud pack builder**
 
 `generatePaper/index.js` should read `event.targetPlan` and pass it into `buildVerificationPack`.
 
 `verification-pack.js` should preserve page metadata and decorate questions by page.
 
-- [ ] **Step 6: Run tests**
+- [x] **Step 6: Run tests**
 
 Run:
 
@@ -703,7 +705,7 @@ npm test -- tests/verification-pack.test.js tests/generate-paper-pdf.test.js
 
 Expected: pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add miniprogram/pages/generate-verification/generate-verification.js miniprogram/pages/generate-verification/generate-verification.wxml miniprogram/pages/generate-verification/generate-verification.wxss cloudfunctions/generatePaper/verification-pack.js cloudfunctions/generatePaper/index.js tests/verification-pack.test.js tests/generate-paper-pdf.test.js
@@ -723,7 +725,7 @@ git commit -m "feat(math): schedule verification pages by bottleneck hierarchy"
 - Backfill adds hierarchy fields to existing reports without deleting old fields.
 - Current full math snapshot uses fine bottlenecks plus category/family grouping.
 
-- [ ] **Step 1: Add migration dry-run assertions**
+- [x] **Step 1: Add migration dry-run assertions**
 
 Add assertions that dry-run output counts:
 
@@ -732,7 +734,7 @@ assert.ok(result.hierarchyBackfilledCount >= 0)
 assert.ok(result.reportPreview.bottlenecks[0].candidateBottlenecks[0].categoryId)
 ```
 
-- [ ] **Step 2: Run migration tests**
+- [x] **Step 2: Run migration tests**
 
 Run:
 
@@ -742,7 +744,7 @@ npm test -- tests/math-history-reanalysis.test.js
 
 Expected: fail until hierarchy count is implemented.
 
-- [ ] **Step 3: Update backfill output**
+- [x] **Step 3: Update backfill output**
 
 Backfill should report:
 
@@ -756,7 +758,7 @@ Backfill should report:
 }
 ```
 
-- [ ] **Step 4: Run migration tests**
+- [x] **Step 4: Run migration tests**
 
 Run:
 
@@ -766,7 +768,7 @@ npm test -- tests/math-history-reanalysis.test.js
 
 Expected: pass.
 
-- [ ] **Step 5: Manual dry-run**
+- [x] **Step 5: Manual dry-run**
 
 Run:
 
@@ -776,7 +778,7 @@ node scripts/backfill-math-learning-map.js --dry-run
 
 Expected: prints changed report count and sample category/family fields.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/backfill-math-learning-map.js cloudfunctions/reanalyzeMathHistory/index.js tests/math-history-reanalysis.test.js
@@ -797,7 +799,7 @@ git commit -m "feat(math): backfill bottleneck hierarchy into history"
 - Documentation explains category/family/fine bottleneck relationships.
 - Smoke report records DevTools checks and cloud deployment status.
 
-- [ ] **Step 1: Run full relevant tests**
+- [x] **Step 1: Run full relevant tests**
 
 Run:
 
@@ -807,7 +809,7 @@ npm test -- tests/math-bottleneck-hierarchy.test.js tests/math-learning-map-enri
 
 Expected: all pass.
 
-- [ ] **Step 2: Deploy changed cloud functions**
+- [x] **Step 2: Deploy changed cloud functions**
 
 Deploy:
 
@@ -819,7 +821,7 @@ reanalyzeMathHistory
 
 Expected: cloud functions upload without dependency errors.
 
-- [ ] **Step 3: WeChat DevTools smoke test**
+- [x] **Step 3: WeChat DevTools smoke test**
 
 Manual test cases:
 
@@ -834,7 +836,7 @@ Manual test cases:
 8. Confirm evidence updates fine bottleneck and knowledge node, not only category.
 ```
 
-- [ ] **Step 4: Update docs**
+- [x] **Step 4: Update docs**
 
 Update `DATA_DICTIONARY.md` with:
 
@@ -849,7 +851,7 @@ papers.verificationPack.pages[].categoryId
 
 Update `CLOUD_FUNCTIONS.md` with the new `targetPlan` request field for `generatePaper`.
 
-- [ ] **Step 5: Write smoke test report**
+- [x] **Step 5: Write smoke test report**
 
 Create `docs/test-reports/2026-06-17-math-bottleneck-hierarchy-upgrade.md` with:
 
@@ -873,7 +875,7 @@ Create `docs/test-reports/2026-06-17-math-bottleneck-hierarchy-upgrade.md` with:
 记录还未覆盖的真实数据样本或资源链接审核问题。
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add docs/CLOUD_FUNCTIONS.md docs/DATA_DICTIONARY.md docs/subject-design/README.md docs/test-reports/2026-06-17-math-bottleneck-hierarchy-upgrade.md
