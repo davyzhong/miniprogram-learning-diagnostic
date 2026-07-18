@@ -17,6 +17,9 @@ const TARGET_VIEWPORTS = new Map([
 const MAX_VIEWPORT_WIDTH = 430
 const MIN_INTERACTIVE_HEIGHT = 43
 const EDGE_TOLERANCE = 1
+const MAX_SUMMARY_HEIGHT_RPX = 72
+const MAX_SUMMARY_LINE_HEIGHT_RPX = 30
+const SUMMARY_CENTER_TOLERANCE = 2
 
 const INTERNAL_CODE_PATTERN = /(?:\b(?:(?:BN|LP|ERR|NODE|RES)-[A-Z0-9_-]+|CHI-(?!\d{8}-\d+\b)[A-Z0-9_-]+|MATH-(?!(?:\d{8}-\d+|\d{2,3})\b)[A-Z0-9_-]+|(?:TASK|PAGE|VER)-[A-Z0-9_-]+)\b|(?:cloud|wxfile|file|db):\/\/[^\s，。；！？、]+|\b[a-f0-9]{24}\b|\b[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\b|\b(?=[A-Z0-9_-]{20,}\b)(?=[A-Z0-9_-]*[A-Z])(?=[A-Z0-9_-]*\d)[A-Z0-9_-]+\b)/gi
 
@@ -98,6 +101,31 @@ function validateFamilyDensityMetrics(metrics = {}) {
   }
 
   assertHorizontallyContained(metrics.householdSummaryRect, viewport.width, 'household summary')
+  const summaryRect = normalizedRect(metrics.householdSummaryRect)
+  const summaryHeightLimit = MAX_SUMMARY_HEIGHT_RPX * viewport.width / 750 + EDGE_TOLERANCE
+  if (summaryRect.height <= 0 || summaryRect.height > summaryHeightLimit) {
+    throw new Error(`household summary height ${summaryRect.height}px exceeds ${summaryHeightLimit}px`)
+  }
+  const summaryLabelRect = normalizedRect(metrics.householdSummaryLabelRect)
+  assertContainedBy(summaryLabelRect, summaryRect, 'household summary label')
+  const summaryLineHeightLimit = MAX_SUMMARY_LINE_HEIGHT_RPX * viewport.width / 750 + EDGE_TOLERANCE
+  if (summaryLabelRect.height > summaryLineHeightLimit) {
+    throw new Error(`household summary label wraps beyond one line: ${summaryLabelRect.height}px`)
+  }
+  const labelCenter = summaryLabelRect.top + summaryLabelRect.height / 2
+  const summaryItemRects = metrics.householdSummaryItemRects || []
+  if (summaryItemRects.length === 0) throw new Error('household summary rendered no metric or idle content')
+  for (const [index, itemRectInput] of summaryItemRects.entries()) {
+    const itemRect = normalizedRect(itemRectInput)
+    assertContainedBy(itemRect, summaryRect, `household summary item ${index + 1}`)
+    if (itemRect.height > summaryLineHeightLimit) {
+      throw new Error(`household summary item ${index + 1} wraps beyond one line: ${itemRect.height}px`)
+    }
+    const itemCenter = itemRect.top + itemRect.height / 2
+    if (Math.abs(itemCenter - labelCenter) > SUMMARY_CENTER_TOLERANCE) {
+      throw new Error(`household summary item ${index + 1} is not vertically aligned with label`)
+    }
+  }
   const cards = Array.isArray(metrics.cards) ? metrics.cards : []
   if (cards.length !== 2) throw new Error(`expected exactly 2 child cards, got ${cards.length}`)
 
@@ -316,17 +344,24 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
   const [systemInfo, pageSize, household, cards] = await Promise.all([
     miniProgram.systemInfo(),
     page.size(),
-    page.$('.family-workbench-hero'),
+    page.$('.family-summary-strip'),
     page.$$('.child-card')
   ])
   if (!household) throw new Error('household summary was not rendered')
   if (cards.length !== 2) throw new Error(`expected 2 child cards, got ${cards.length}`)
+  const householdLabel = await household.$('.family-summary-label')
+  const householdItems = [
+    ...(await household.$$('.family-summary-metric')),
+    ...(await household.$$('.family-summary-idle')),
+    ...(await household.$$('.family-summary-separator'))
+  ]
+  if (!householdLabel) throw new Error('household summary label was not rendered')
 
   const cardMetrics = []
   for (const card of cards) {
     const identity = await card.$('.child-identity-row')
     const header = await card.$('.child-card-header')
-    const metric = await card.$('.child-status-grid')
+    const metric = await card.$('.child-status-segments')
     const priority = await card.$('.child-priority-row')
     if (!header || !identity || !metric || !priority) throw new Error('required child density blocks were not rendered')
     const actions = [
@@ -337,7 +372,6 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
     ]
     const interactive = [
       header,
-      ...(await card.$$('.child-metric-cell')),
       priority,
       ...(await card.$$('.child-secondary-action')),
       ...(await card.$$('.child-subject-row')),
@@ -350,7 +384,6 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
       priority,
       ...(await card.$$('.secondary-action-grid')),
       metric,
-      ...(await card.$$('.child-status-segments')),
       ...(await card.$$('.child-subject-list'))
     ]
     const secondaryRows = await card.$$('.child-secondary-action')
@@ -383,6 +416,8 @@ async function collectFamilyDensityMetrics(miniProgram, page) {
     simulator: { model: systemInfo.model, platform: systemInfo.platform, SDKVersion: systemInfo.SDKVersion },
     pageWidth: numberOf(pageSize.width),
     householdSummaryRect: await elementRect(household),
+    householdSummaryLabelRect: await elementRect(householdLabel),
+    householdSummaryItemRects: await rectsFor(householdItems),
     cards: cardMetrics
   }
 }
@@ -417,6 +452,10 @@ async function main() {
     const familyText = await renderedPageText(familyPage)
     for (const expected of [
       '家庭学习工作台',
+      '家庭今日',
+      '6 待处理',
+      '2 待上传',
+      '4 已改善',
       '学生A的超长学习档案示例',
       '学生B的第二个学习档案示例',
       '数学',
@@ -425,6 +464,13 @@ async function main() {
       '最新诊断',
       '数学-20260712-06'
     ]) assert(familyText.includes(expected), `family page missing readable text: ${expected}`)
+    assert.equal((familyText.match(/家庭今日/g) || []).length, 1, 'compact family summary should render exactly once')
+    for (const obsolete of [
+      '家庭今日总览',
+      '处理今日优先行动',
+      '可以从这里直接进入最需要处理的一步'
+    ]) assert(!familyText.includes(obsolete), `family page still renders obsolete summary copy: ${obsolete}`)
+    assert(!/今天先看.*学习行动/.test(familyText), 'family page still renders the old priority hero title')
     assertCodeHygiene(familyText, 'family page')
     const metrics = await collectFamilyDensityMetrics(miniProgram, familyPage)
     const familyScreenshot = path.join(OUTPUT_DIR, 'family.png')
