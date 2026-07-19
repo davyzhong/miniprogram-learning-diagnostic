@@ -551,8 +551,9 @@ async function runAnalyzeBatches({ batches, batchOffset = 0, totalBatches, subje
     }
     // 设计说明：每批完成即更新 completedBatches，供前端轮询展示实时进度。
     // 用当前批次的 globalIndex+1 作为绝对值（而非 inc），避免续跑恢复后重复计数。
+    // 同时刷新 updatedAt：前端 analysis-poller 用 updatedAt 判活，长任务不被误判超时。
     await db.collection('analysisTasks').doc(taskId).update({
-      data: { completedBatches: globalIndex + 1 },
+      data: { completedBatches: globalIndex + 1, updatedAt: new Date() },
     }).catch(err => {
       console.error('更新分析进度失败：', err);
     });
