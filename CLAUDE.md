@@ -261,12 +261,10 @@ When the user asks to sync / pull / align with GitHub, **GitHub is the source of
 
 - `analyzePhotos/sendNotification()` is a no-op; the WeChat subscribe-message template has not been applied for, so users get no push on completion (rely on polling + manual retry).
 - Default-paper caching (`default-paper.js`) is keyed per-student; cross-student reuse of the same grade/A-B template is not implemented.
-- A bottleneck is marked "improved" when a verification upload surfaces no errors for it — the system does not yet distinguish correct answers from blank/ambiguous/OCR-missed responses (this is a **forward constraint**, see 证据与状态判定 above — evidence must be recorded as blank/unclear/wrong/partial/correct separately).
+- "improved" is now gated by verification evidence sub-states: `analyzePhotos/verification-evidence.js` (`evidenceStatusOf`) marks a target `passed` only when every expected question was attempted, complete, and correct — blank→`incomplete`, unclear→`unclear`, missing→`missing`, wrong→`failed`; only `passed` codes reach `comparison.js` as `improved`, so blank/ambiguous/OCR-missed answers no longer flip a bottleneck to improved. **Residual dependency:** the counts rely on the `analyzeBatch` vision prompt classifying attempted/blank/unclear accurately — structurally closed, AI-reliability-dependent.
 - WechatSI ASR transcribes but does not score — English oral scoring relies on parent/paper-OCR judgment, not voice confidence.
-- `getAnalysisProgress` does not return `updatedAt`; analyses legitimately running >10 min fall into the frontend timeout branch (mitigated: report page auto-refreshes on the operation-completed event via the status bus).
 - Main-package budget was raised from 800 KB to **1200 KB** on 2026-07-18 (WeChat platform hard limit is 2 MB). Math seed data (`miniprogram/data/math/`, now 150 nodes) is still pulled into the main package via a top-level require in `miniprogram/utils/math-learning-map.js` — moving the knowledge-node lookup into the subpackage recovers ~70 KB and remains good hygiene, but is no longer urgent.
 - All page hero illustrations (`miniprogram/assets/images/*-hero.*`) were added then deleted in `57821ed`; `miniprogram/utils/page-illustrations.js` still exists but carries only `alt` text, no image paths. Do not reintroduce static page hero assets into the miniprogram main package without re-checking the 2MB preview limit.
-- Math node mastery loop (six-state model: `unobserved / suspected_gap / relearning / partial_mastery / mastered / recurring`) is designed but not yet implemented — see `docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md`.
 
 ## Reference docs
 
