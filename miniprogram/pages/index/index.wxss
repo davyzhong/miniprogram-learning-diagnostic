@@ -215,6 +215,17 @@
   margin-right: 12rpx;
 }
 
+.subject-row-head {
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  min-width: 0;
+}
+
+.subject-row-symbol {
+  font-size: 28rpx;
+}
+
 .subject-row-summary {
   color: #64748b;
   font-size: 21rpx;
