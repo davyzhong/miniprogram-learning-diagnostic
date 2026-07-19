@@ -12,6 +12,7 @@ const { createWxMock, loadPage } = require('./helpers/page-harness')
 const { buildTraceableUrl } = require('../miniprogram/utils/traceable-actions')
 const { buildStatusSegments } = require('../miniprogram/utils/status-segments')
 const { buildKnowledgeMapPageView } = require('../miniprogram/pages/knowledge-map/knowledge-map-presenter')
+const { buildChildWorkbenchCards } = require('../miniprogram/utils/child-workbench')
 const { symbolOf, subjectSymbolOf } = require('../miniprogram/utils/ui-symbols')
 
 const RAW_ID = /(?:^|\s)(?:LP|BN|CHI|ERR|MATH)-/
@@ -224,4 +225,23 @@ test('curated emoji resolve from ui-symbols by semantic key (no raw literals nee
   assert.equal(symbolOf('warning'), '⚠️')
   assert.equal(symbolOf('unknown-key'), '')
   assert.equal(subjectSymbolOf('math'), '🧮')
+})
+
+// ---------- 学科前导 emoji 标记（家庭孩子卡的三科行）----------
+test('child-workbench subject rows carry the subject marker as a leading adjunct beside the text name', () => {
+  const cards = buildChildWorkbenchCards({
+    students: [{ _id: 's1', name: '钟青羽', grade: '6' }],
+    profilesByStudentId: { s1: [{ subject: 'math', currentBottlenecks: [] }] }
+  })
+  const rows = cards[0].subjectRows
+  const bySubject = Object.fromEntries(rows.map(r => [r.key, r]))
+  assert.equal(bySubject.math.symbol, '🧮')
+  assert.equal(bySubject.chinese.symbol, '📖')
+  assert.equal(bySubject.english.symbol, '🔤')
+  // 文字学科名必须保留（emoji 只是识别辅助，不替代文字）
+  assert.equal(bySubject.math.name, '数学')
+
+  const wxml = read('miniprogram/pages/index/index.wxml')
+  assert.match(wxml, /subject-row-symbol/)
+  assert.match(wxml, /class="subject-row-name">\{\{item\.name\}\}/)
 })

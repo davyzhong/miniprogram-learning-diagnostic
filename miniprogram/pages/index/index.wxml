@@ -165,7 +165,10 @@
             catchtap="onTraceableUrlTap"
             data-url="{{item.url}}"
           >
-            <text class="subject-row-name">{{item.name}}</text>
+            <view class="subject-row-head">
+              <text class="b1-symbol subject-row-symbol" wx:if="{{item.symbol}}">{{item.symbol}}</text>
+              <text class="subject-row-name">{{item.name}}</text>
+            </view>
             <text class="subject-row-status">{{item.statusText}} ›</text>
           </view>
         </view>

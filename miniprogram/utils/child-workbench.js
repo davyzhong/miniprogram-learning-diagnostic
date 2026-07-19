@@ -8,7 +8,7 @@ const {
 } = require('./constants')
 const { buildTraceableUrl } = require('./traceable-actions')
 const { sanitizeUserText, compactReadableTargets } = require('./user-facing-text')
-const { symbolOf } = require('./ui-symbols')
+const { symbolOf, subjectSymbolOf } = require('./ui-symbols')
 const { buildStatusSegments } = require('./status-segments')
 
 const SUBJECT_MARKERS = { math: '数学', chinese: '语文', english: '英语' }
@@ -195,6 +195,8 @@ function buildSubjectRows(student, profilesBySubject) {
       name: subject.name,
       shortName: subject.shortName,
       marker: SUBJECT_MARKERS[key] || subject.shortName,
+      // 学科 emoji 前导标记（🧮/📖/🔤）——只辅助识别，文字学科名始终保留
+      symbol: subjectSymbolOf(key),
       summary: visibleText(summary),
       statusText: hidden ? '隐藏' : (active.length > 0 ? `${active.length} 待办` : (improved.length > 0 ? '有改善' : `${profile.totalReports || 0} 记录`)),
       // 迷你状态条：金=待跟进，绿=已改善（隐藏学科不展示）
