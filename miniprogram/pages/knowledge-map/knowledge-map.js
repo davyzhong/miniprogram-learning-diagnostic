@@ -53,11 +53,14 @@ Page({
     }
   },
 
-  // 置顶"最优先"摘要行：锚到 domain 列表中的对应条目（同一卡点全页只完整渲染一次）
+  // 置顶"最优先"摘要行：锚到 domain 列表中对应卡点（同一卡点全页只完整渲染一次）
   onPriorityAnchorTap(e) {
-    const { lpCode } = e.currentTarget.dataset || {}
+    const lpCode = e.currentTarget.dataset.lpCode
     if (!lpCode) return
-    wx.pageScrollTo({ selector: `#bn-${lpCode}`, duration: 200 })
+    wx.pageScrollTo({
+      selector: `#bn-${lpCode}`,
+      duration: 250,
+    })
   },
 
   // 点击卡点：直跳 learning-resource（跳过 bottleneck-detail 中间页）
@@ -98,15 +101,6 @@ Page({
     } finally {
       this.setData({ generatingLpCode: '' })
     }
-  },
-
-  onPriorityAnchorTap(e) {
-    const lpCode = e.currentTarget.dataset.lpCode
-    if (!lpCode) return
-    wx.pageScrollTo({
-      selector: `#bn-${lpCode}`,
-      duration: 250,
-    })
   },
 
   // 空状态：引导用户上传试卷
