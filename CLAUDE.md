@@ -35,7 +35,7 @@ The test framework is **V2 (two categories)** — see `docs/TEST_STRATEGY_V2.md`
 | Pre-deployment readiness | `npm run check:deployment` |
 | Full pre-release gate | `npm run release:check` (deployment + verify + coverage) |
 
-`npm test` is an alias of `npm run test:unit`. The repository holds 89 `.test.js` files; the default offline script explicitly runs 84 of them and currently passes **1008 tests** (313 JS files checked by `npm run check`). The five excluded files are real-cloud, real-image, and three specialized math pipeline suites. Add new default tests to both `test:unit` and `test:coverage` in `package.json`.
+`npm test` is an alias of `npm run test:unit`. The repository holds 97 `.test.js` files; the default offline script explicitly runs 92 of them and currently passes **1082 tests** (341 JS files checked by `npm run check`). The five excluded files are real-cloud, real-image, and three specialized math pipeline suites. Add new default tests to both `test:unit` and `test:coverage` in `package.json`.
 
 **CLI E2E** (WeChat DevTools CLI + `miniprogram-automator`, organized **by subject**, output → `tmp/e2e/<suite>/report.json`). Not in `npm test`; require a running DevTools instance. Run `npm run test:e2e:doctor` first to verify the environment.
 
@@ -59,7 +59,7 @@ Deferred (not yet done): Chinese subject-specific DevTools scripts beyond the ba
 Mini Program (25 pages + status-view component, WXML/WXSS/JS)
     │  wx.cloud.callFunction()  /  direct wx.cloud.database() reads
     ▼
-CloudBase (serverless, 14 cloud functions)
+CloudBase (serverless, 15 cloud functions)
     ├─ uploadAndAnalyze   → creates report record, fire-and-forget starts analyzePhotos
     ├─ analyzePhotos      → splits into single-image batches, calls analyzeBatch, dedups, merges, writes report/profile
     │                        (also triggers auto-verification-paper record creation on report completion)
