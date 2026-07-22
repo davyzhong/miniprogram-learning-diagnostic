@@ -10,10 +10,12 @@ const outputDir = path.resolve(projectPath, 'docs/user-guide/images/real')
 // 确保输出目录存在
 fs.mkdirSync(outputDir, { recursive: true })
 
-// 真实学生 ID（用于导航到真实数据页面）
-const STUDENT_ID = '966151a66a29599400006aca3e38ffaf'
-const REPORT_ID = '76ec3f156a523e4a0006774e7e009e7f'
-const VERIFICATION_REPORT_ID = '786aa83e6a51c77100b805dc3103c97b'
+// 真实学生 ID（用于导航到真实数据页面）。
+// 可通过环境变量覆盖，避免在代码里硬编码生产文档 ID：
+//   REAL_STUDENT_ID=xxx REAL_REPORT_ID=yyy REAL_VERIFICATION_REPORT_ID=zzz node scripts/capture-real-screenshots.js
+const STUDENT_ID = process.env.REAL_STUDENT_ID || '966151a66a29599400006aca3e38ffaf'
+const REPORT_ID = process.env.REAL_REPORT_ID || '76ec3f156a523e4a0006774e7e009e7f'
+const VERIFICATION_REPORT_ID = process.env.REAL_VERIFICATION_REPORT_ID || '786aa83e6a51c77100b805dc3103c97b'
 
 const screenshots = [
   {
