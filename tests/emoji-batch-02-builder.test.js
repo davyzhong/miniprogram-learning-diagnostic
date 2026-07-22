@@ -507,7 +507,13 @@ test('normative manifest freezes exact metadata, quotas, rows, and public mappin
   })))
 })
 
-test('all manifest rows are source-backed and do not overlap the frozen first batch', () => {
+test('all manifest rows are source-backed and do not overlap the frozen first batch', {
+  skip: ![
+    'emoji-test.txt',
+    'emoji-variation-sequences.txt',
+    'cldr-common-48.2.zip'
+  ].every(fileName => fs.existsSync(path.join(REAL_SOURCE_CACHE, fileName)))
+}, () => {
   const manifest = readManifest()
   const { parseEmojiTest, parseVariationSequences, parseCldrZip, validateManifestAgainstSources } = loadValidator()
   const emojiTest = parseEmojiTest(fs.readFileSync(path.join(REAL_SOURCE_CACHE, 'emoji-test.txt'), 'utf8'))
