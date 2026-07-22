@@ -23,8 +23,11 @@ const MAX_CONCURRENT_BATCHES = 1;
 const MAX_BATCHES_PER_INVOCATION = 3;
 // 增加重试次数：超时是最常见失败原因，3 次尝试（含指数退避）覆盖大部分瞬时抖动
 const MAX_BATCH_ATTEMPTS = 3;
-// 指数退避：600ms → 3000ms → 8000ms（第 1 次重试等 600ms，第 2 次等 3s，第 3 次等 8s）
-const BATCH_RETRY_DELAYS_MS = [600, 3000, 8000];
+// 指数退避：600ms → 3000ms → 8000ms；测试可用 ANALYSIS_BATCH_RETRY_DELAYS_MS 覆盖（逗号分隔毫秒）
+const BATCH_RETRY_DELAYS_MS = (String(process.env.ANALYSIS_BATCH_RETRY_DELAYS_MS || '')
+  .split(',').map(p => p.trim()).filter(Boolean).map(Number)
+  .filter(n => Number.isFinite(n) && n >= 0));
+if (BATCH_RETRY_DELAYS_MS.length === 0) BATCH_RETRY_DELAYS_MS.push(600, 3000, 8000);
 // analyzeBatch 调用超时：留 5s 缓冲到 60s 函数超时，避免云函数自身被杀
 const ANALYZE_BATCH_TIMEOUT_MS = 55000;
 const REANALYSIS_TOKEN = process.env.MATH_REANALYSIS_TOKEN || '';
@@ -540,8 +543,8 @@ async function runAnalyzeBatches({ batches, batchOffset = 0, totalBatches, subje
           break;
         }
       }
-      // 指数退避：第 1 次重试等 600ms，第 2 次等 3s，第 3 次等 8s
-      const delayMs = BATCH_RETRY_DELAYS_MS[attempt - 1] || 8000;
+      // 指数退避：600ms → 3s → 8s；用 ?? 而非 ||，测试注入的 0ms 退避也是有效值
+      const delayMs = BATCH_RETRY_DELAYS_MS[attempt - 1] ?? 8000;
       console.log(`第 ${globalIndex + 1} 批等待 ${delayMs}ms 后重试（第 ${attempt}/${MAX_BATCH_ATTEMPTS} 次）`);
       await wait(delayMs);
     }
