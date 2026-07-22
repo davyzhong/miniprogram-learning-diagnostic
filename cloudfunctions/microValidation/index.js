@@ -187,6 +187,26 @@ async function submitMicroValidation(event, openId) {
   const { correctCount, passed } = passRule(verdicts, total)
 
   const now = new Date()
+  // 并发/重试保护：先在事务里把 in_progress 占位为 completing，
+  // 只有占位成功的提交才会继续写 mastery 事件，避免双击/重试导致掌握状态双倍计数
+  let claimed = false
+  await db.runTransaction(async ({ collection }) => {
+    const snapshot = await collection(SESSIONS_COLLECTION).doc(sessionId).get()
+    const current = snapshot.data
+    if (!current || current.status !== 'in_progress') return
+    await collection(SESSIONS_COLLECTION).doc(sessionId).update({
+      data: { status: 'completing', updatedAt: now },
+    })
+    claimed = true
+  })
+  if (!claimed) {
+    const latest = await getSession(sessionId)
+    if (latest && latest.status === 'completed') {
+      return { success: true, alreadyCompleted: true, passVerdict: latest.passVerdict, correctCount: latest.correctCount, totalCount: latest.questions.length }
+    }
+    throw new Error('这份微验证正在提交中，请稍候')
+  }
+
   // 掌握状态事件：验证通过/失败 → studentNodeMastery（疑似卡点被确认或推翻）
   let masteryResult = null
   try {

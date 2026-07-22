@@ -137,3 +137,24 @@ test('结果视图：通过与未通过的文案与动作', () => {
   const failed = buildMicroValidationResultView({ passVerdict: 'failed', correctCount: 1, totalCount: 4, bnTitle: 'X' })
   assert.equal(failed.actionText, '去重学')
 })
+
+test('submitMicroValidation：并发占位保护，completing 状态拒绝重复提交', async () => {
+  const db = createDatabase({
+    students: [STUDENT],
+    microValidations: [{
+      _id: 'mv-race', studentId: 'stu-1', subject: 'math',
+      bottleneckId: 'BN-DEC-MUL-POINT-COUNT', nodeId: 'MATH-NUM-DEC-MUL-POINT',
+      bnTitle: '小数乘法中积的小数位数判断错误',
+      questions: AI_QUESTIONS, status: 'completing', verdicts: [], passVerdict: '',
+    }],
+  })
+  const handler = loadMicroValidation(db)
+  const result = await handler.main({
+    action: 'submitMicroValidation', sessionId: 'mv-race',
+    verdicts: ['correct', 'correct', 'correct', 'correct'],
+  })
+  assert.equal(result.success, false)
+  assert.match(result.error, /正在提交中/)
+  const masteryDocs = (await db.collection('studentNodeMastery').where({}).limit(10).get()).data
+  assert.equal(masteryDocs.length, 0, '占位失败的提交不得写入 mastery 事件')
+})
