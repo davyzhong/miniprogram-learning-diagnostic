@@ -1,12 +1,12 @@
 {
   "version": "0.2.0",
   "updatedAt": "2026-07-17",
-  "studentName": "钟青羽",
+  "studentName": "学生A",
   "subject": "math",
   "purpose": "把历史错题回放到知识节点和细颗粒度卡点，用于验证新体系是否比旧粗卡点更可操作。v0.3.1 扩充至第二版报告细卡点。",
   "sourceDocs": [
     "数学试卷分析/Learning_Diagnostic_MVP_诊断报告.md",
-    "数学试卷分析/钟青羽_学习卡点诊断报告_第二版.md"
+    "数学试卷分析/学习卡点诊断报告_第二版.md"
   ],
   "items": [
     {

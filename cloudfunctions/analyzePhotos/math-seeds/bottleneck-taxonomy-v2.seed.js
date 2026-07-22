@@ -5,10 +5,10 @@ module.exports = {
   "version": "0.2.0",
   "updatedAt": "2026-07-17",
   "subject": "math",
-  "scope": "钟青羽小学数学细颗粒度学习卡点首批种子库。",
+  "scope": "小学数学细颗粒度学习卡点首批种子库（个人样本，已脱敏）。",
   "sourceDocs": [
     "数学试卷分析/Learning_Diagnostic_MVP_诊断报告.md",
-    "数学试卷分析/钟青羽_学习卡点诊断报告_第二版.md",
+    "数学试卷分析/学习卡点诊断报告_第二版.md",
     "26-数学学习地图与资源库升级计划.md"
   ],
   "bottlenecks": [
@@ -1694,7 +1694,7 @@ module.exports = {
         "72 小时后复测稳定"
       ],
       "sourceEvidence": [
-        "《钟青羽_学习卡点诊断报告_第二版》运算顺序与简便计算类错题复核"
+        "《学习卡点诊断报告_第二版》运算顺序与简便计算类错题复核"
       ],
       "categoryId": "MATH-CAT-CALC-RULE",
       "categoryTitle": "计算规则",
@@ -1859,7 +1859,7 @@ module.exports = {
         "72 小时后复测稳定"
       ],
       "sourceEvidence": [
-        "《钟青羽_学习卡点诊断报告_第二版》比例应用题复核：剩余与已运之比 5:3 类问题"
+        "《学习卡点诊断报告_第二版》比例应用题复核：剩余与已运之比 5:3 类问题"
       ],
       "categoryId": "MATH-CAT-MODEL",
       "categoryTitle": "数量关系建模",
@@ -2024,7 +2024,7 @@ module.exports = {
         "72 小时后复测稳定"
       ],
       "sourceEvidence": [
-        "《钟青羽_学习卡点诊断报告_第二版》统计与平均数类错题复核"
+        "《学习卡点诊断报告_第二版》统计与平均数类错题复核"
       ],
       "categoryId": "MATH-CAT-MODEL",
       "categoryTitle": "数量关系建模",

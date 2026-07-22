@@ -12,7 +12,7 @@
 | `bottleneck-taxonomy-v2.seed.json` | 细颗粒度学习卡点库 |
 | `learning-resources.seed.json` | 全网学习资源链接、评价和推荐等级 |
 | `historical-error-replay.seed.json` | 历史错题到知识节点和细卡点的回放标注 |
-| `student-node-mastery.example.json` | 钟青羽数学节点掌握状态样例 |
+| `student-node-mastery.example.json` | 数学节点掌握状态样例（脱敏） |
 | `intervention-sessions.example.json` | 家庭干预会话样例 |
 | `resource-review-template.md` | 资源评价模板 |
 | `intervention-session-template.md` | 单次家庭干预记录模板 |
