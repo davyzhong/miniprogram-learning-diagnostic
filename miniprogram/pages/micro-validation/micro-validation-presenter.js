@@ -1,5 +1,7 @@
 // 微验证页视图模型：围绕单个细卡点的 3-6 道小题，家长陪同当场判定对错。
 // 判定数据全部在客户端流转，提交时一次性把 verdicts 发给云函数。
+const { symbolOf } = require('../../utils/ui-symbols')
+
 function buildQuestionViews(questions = [], verdicts = []) {
   return questions.map((question, index) => {
     const verdict = verdicts[index] || ''
@@ -37,7 +39,7 @@ function buildMicroValidationResultView({ passVerdict = '', correctCount = 0, to
   const passed = passVerdict === 'passed'
   return {
     passed,
-    icon: passed ? '✅' : '📌',
+    icon: passed ? symbolOf('complete') : symbolOf('pin'),
     title: passed ? '已排除这个疑似卡点' : '确认这是一个真实卡点',
     summary: passed
       ? `${correctCount}/${totalCount} 题正确。这个节点已回到未观察状态，后续有新证据再跟踪。`
