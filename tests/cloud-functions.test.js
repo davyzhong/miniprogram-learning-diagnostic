@@ -2117,6 +2117,8 @@ test('uploadAndAnalyze rejects paper mode without a paperId', async () => {
 })
 
 test('analyzePhotos marks task and profile as failed when a batch returns failure', async () => {
+  // 重试退避改为 0，避免测试做 3.6s 真实等待（生产默认 600/3000/8000 不变）
+  process.env.ANALYSIS_BATCH_RETRY_DELAYS_MS = '0,0,0'
   const db = createDatabase({
     reports: [{
       _id: 'report-1',
@@ -2162,4 +2164,5 @@ test('analyzePhotos marks task and profile as failed when a batch returns failur
   assert.equal(profile.analysisStatus, null)
   assert.equal(profile.currentAnalysisId, '')
   assert.deepEqual(profile.pendingBottlenecks, [{ lpCode: 'LP-001', lpName: '计算' }])
+  delete process.env.ANALYSIS_BATCH_RETRY_DELAYS_MS
 })
