@@ -38,8 +38,7 @@
         <text class="meta-item">{{item.questionCount}} 题</text>
         <text class="meta-dot">·</text>
         <text class="meta-item">约{{item.estimatedMinutes}}分钟</text>
-      </view>
-      <view class="paper-meta">
+        <text class="meta-dot">·</text>
         <text class="meta-item">A4 {{item.pages}} 页</text>
       </view>
 

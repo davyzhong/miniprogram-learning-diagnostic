@@ -86,8 +86,8 @@
 .paper-card {
   background: #ffffff;
   border-radius: 16rpx;
-  padding: 24rpx;
-  margin-bottom: 16rpx;
+  padding: 18rpx;
+  margin-bottom: 12rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
 }
 
