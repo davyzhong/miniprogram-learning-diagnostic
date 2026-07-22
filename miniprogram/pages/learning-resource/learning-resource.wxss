@@ -18,7 +18,7 @@
 }
 
 .hero {
-  padding: 32rpx;
+  padding: 22rpx;
   border-radius: 22rpx;
   background: linear-gradient(135deg, #eaf5ff, #fff7e8);
   box-shadow: 0 12rpx 30rpx rgba(26, 54, 93, 0.08);
@@ -67,8 +67,8 @@
 }
 
 .block {
-  margin-top: 24rpx;
-  padding: 28rpx;
+  margin-top: 14rpx;
+  padding: 18rpx;
   border-radius: 18rpx;
   background: #ffffff;
   box-shadow: 0 10rpx 24rpx rgba(26, 54, 93, 0.06);
@@ -147,8 +147,8 @@
 
 /* 外部参考区 */
 .external-resources {
-  margin-top: 24rpx;
-  padding: 24rpx;
+  margin-top: 14rpx;
+  padding: 18rpx;
   background: #ffffff;
   border-radius: 16rpx;
 }

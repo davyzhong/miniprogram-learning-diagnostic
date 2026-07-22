@@ -70,8 +70,8 @@
 }
 
 .card {
-  margin-top: 24rpx;
-  padding: 28rpx;
+  margin-top: 14rpx;
+  padding: 18rpx;
 }
 
 .section-title {
@@ -82,7 +82,7 @@
 .member {
   display: flex;
   align-items: center;
-  padding: 24rpx 0;
+  padding: 12rpx 0;
   border-bottom: 1rpx solid var(--b1-border);
 }
 
