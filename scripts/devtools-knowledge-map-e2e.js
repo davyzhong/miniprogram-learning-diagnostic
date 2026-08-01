@@ -5,7 +5,7 @@
  * 专门验收近一轮改动的设计目标：
  *   1. student-profile 页能看到个人工作台与切换孩子入口
  *   2. subject-home 页点击知识地图入口能进入 knowledge-map 页（页面可达）
- *   3. knowledge-map 默认平铺卡点（不再折叠），看到"最该先处理"
+ *   3. knowledge-map 默认平铺卡点（不再折叠），看到"最优先"
  *   4. 点击卡点能直跳 learning-resource（跳过 bottleneck-detail 中间页）
  *   5. 空数据状态显示"去上传试卷"CTA
  *   6. 学科工作台 subject-home 也有"知识地图"入口
@@ -73,6 +73,15 @@ const reports = [{
   imageFiles: []
 }]
 
+const papers = [{
+  _id: 'paper-km', studentId: student._id, subject: 'math', type: 'verification',
+  createdAt: NOW, generatedAt: NOW, paperDate: '2026-06-18',
+  paperCode: 'MATH-20260618-01', paperDisplayCode: '数学-20260618-01',
+  questions: [{}, {}, {}], questionCount: 3,
+  bottleneckTargets: ['LP-FD', 'LP-FRAC'], bottleneckSummaries: ['小数运算', '分数运算'],
+  studentPages: 1, answerPages: 1, totalPages: 2, pdfFileId: 'cloud://mock/paper.pdf',
+}]
+
 const members = [
   { _id: 'm1', studentId: student._id, ownerOpenId: 'o1', memberOpenId: 'o1', role: 'owner', status: 'active', displayName: '钟青羽家长', createdAt: NOW }
 ]
@@ -92,7 +101,7 @@ const checks = [
     route: `/pages/knowledge-map/knowledge-map?${studentQ}&subject=math`,
     wait: 2000,
     expect: {
-      text: ['学习地图', '最该先处理', '积的小数位数判断错误', '通分错误'],
+      text: ['学习地图', '最优先', '积的小数位数判断错误', '通分错误'],
       // 不应再出现折叠箭头文案
       notText: ['加载知识地图']
     }
@@ -138,12 +147,11 @@ const checks = [
   },
   {
     // 诊断报告页展示全量卡点（profile 级别），而非单次报告卡点
-    name: 'C3: 诊断报告页展示全量卡点（profile 级别 8 个，非单次报告）',
+    name: 'C3: 诊断报告页展示 profile 级全量卡点',
     route: `/pages/report/report?id=117e1a7d6a310042002821a336df13a8&studentId=${student._id}&subject=math`,
     wait: 3000,
     expect: {
-      // 报告页应展示全量卡点（profile 有 8 个），而不是单次报告的 7 个
-      // 关键：报告页应包含"学习卡点"板块标题和卡点数量
+      // 关键：报告页应包含 profile 级"学习卡点"板块。
       text: ['学习卡点'],
     }
   }
@@ -158,15 +166,15 @@ const scenarios = [
       { action: 'tapByText', selector: '.map-entry', text: '知识地图', wait: 3000, expect: { path: 'pages/knowledge-map/knowledge-map' } },
       // 进入后应直接看到卡点（不需要再点展开）；多等一会儿让 onLoad + setData 完成
       { action: 'waitFor', wait: 2000 },
-      { action: 'assertText', text: ['最该先处理', '积的小数位数判断错误'] }
+      { action: 'assertText', text: ['最优先', '积的小数位数判断错误'] }
     ]
   },
   {
     name: 'B2: knowledge-map → 点卡点 → 直跳 learning-resource（不经过 bottleneck-detail）',
     steps: [
-      { route: `/pages/knowledge-map/knowledge-map?${studentQ}&subject=math`, wait: 3000, expect: { text: ['最该先处理', '积的小数位数'] } },
-      // 点优先卡点
-      { action: 'tapByText', selector: '.priority-card', text: '积的小数位数', wait: 3000, expect: { path: 'pages/learning-resource/learning-resource' } },
+      { route: `/pages/knowledge-map/knowledge-map?${studentQ}&subject=math`, wait: 3000, expect: { text: ['最优先', '积的小数位数'] } },
+      // 置顶摘要只负责锚定；点完整卡点条目进入学习资源。
+      { action: 'tapByText', selector: '.bn-item', text: '积的小数位数', wait: 3000, expect: { path: 'pages/learning-resource/learning-resource' } },
       // 进入后验证内容深度（板块标题可见，答案默认折叠）
       { action: 'waitFor', wait: 2000 },
       { action: 'assertText', text: ['这个卡点是什么', '为什么会这样错', '容易踩的坑', '练三道', '想一想后点开看答案'] }
@@ -216,7 +224,7 @@ async function tapByText(page, selector, text) {
 
 async function installCloudMocks(miniProgram) {
   await miniProgram.evaluate((cfg) => {
-    const { student, permissions, subjectProfiles, reports, members } = cfg
+    const { student, permissions, subjectProfiles, reports, papers, members } = cfg
     globalThis.__pageErrors = []
     globalThis.__consoleErrors = []
     const origErr = console.error
@@ -236,6 +244,8 @@ async function installCloudMocks(miniProgram) {
           const a = data && data.action
           if (a === 'getStudentDashboard') return { result: { success: true, student, permissions, subjectProfiles, recentReports: reports, recentPapers: [] } }
           if (a === 'getSubjectDashboard') return { result: { success: true, student, permissions, profile: subjectProfiles[0], reports, papers: [] } }
+          if (a === 'getReportDetail') return { result: { success: true, student, permissions, profile: subjectProfiles[0], report: reports.find(item => item._id === data.reportId) || reports[0] } }
+          if (a === 'getPaperDetail') return { result: { success: true, student, permissions, paper: papers.find(item => item._id === data.paperId) || papers[0] } }
         }
         // learningResource.generatePack：模拟成功生成 pack（不真调 LLM，避免超时）
         if (name === 'learningResource' && data.action === 'generatePack') {
@@ -283,7 +293,7 @@ async function installCloudMocks(miniProgram) {
       },
       serverDate() { return new Date() }
     })
-  }, { student, permissions: ownerPermissions, subjectProfiles, reports, members })
+  }, { student, permissions: ownerPermissions, subjectProfiles, reports, papers, members })
 }
 
 async function runCheck(check, miniProgram) {

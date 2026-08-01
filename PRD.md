@@ -1,6 +1,6 @@
 # Learning Diagnostic MVP 产品设计文档（PRD）
 
-> 版本：v3.1 | 日期：2026-07-18 | 状态：私有内测持续迭代；数学诊断闭环、语文具体错项复测、英语词汇双维闭环已落地。常规自动化测试 1008/1008 通过，JS 语法检查 313 个文件通过，主包 789 KB/1200 KB；B01 202 项与 B02 996 项 emoji 已完成 Android/iOS 目标设备验证
+> 版本：v3.2 | 日期：2026-08-01 | 状态：私有内测持续迭代；数学节点掌握六态与微验证、语文具体错项复测、英语词汇双维闭环均已落地。常规自动化测试 1089/1089 通过，JS 语法检查 342 个文件通过，主包 809 KB/1200 KB；本周期 15 个业务云函数已确认部署，真机主流程验收无重大问题，DevTools E2E 全套通过并刷新 14 张用户导览图
 >
 > 历史版本：v2.9（2026-07-02，638 测试基线）
 
@@ -36,7 +36,7 @@
 学科主页（三个入口）
   │
   ├─ 路径 A：拍照诊断
-  │   上传已有试卷照片 → AI 异步分析 → 推送通知 → 查看诊断报告
+  │   上传已有试卷照片 → AI 异步分析 → 页面状态刷新 → 查看诊断报告
   │
   ├─ 路径 B：验证试卷
   │   选历史卡点 → AI 生成验证试卷(A4 PDF) → 打印答题 → 拍照上传 → AI 分析 → 验证报告
@@ -47,7 +47,7 @@
 
 ---
 
-## 3. 页面设计（当前 app.json 注册 20 页，以下按业务页面组说明）
+## 3. 页面设计（当前 app.json 注册 26 页，以下按业务页面组说明）
 
 ### Page 1：首页 / 家庭学习工作台
 
@@ -158,7 +158,7 @@
 
 ### Page 5：（已移除）
 
-原来的"AI 分析中"独立页面已移除。上传完成后用户直接返回 Page 3，分析结果通过微信订阅消息推送。
+原来的"AI 分析中"独立页面已移除。上传完成后用户直接返回 Page 3，分析结果通过轻量轮询和全局状态刷新回到页面；微信订阅消息发送链路尚未实现。
 
 ---
 
@@ -458,7 +458,7 @@
 cloudfunctions/
   uploadAndAnalyze/    # 入口：校验参数、创建 reports、更新 subjectProfiles、fire-and-forget 启动 analyzePhotos
   analyzePhotos/       # 主控：拆分批次、串行调用 analyzeBatch、去重、合并、对比、落库
-  analyzeBatch/        # 单批次分析（≤5张），调 CloudBase AI hy3-preview，返回结构化 pageResults
+  analyzeBatch/        # 单图分析，调 CloudBase AI qwen3.5-plus，返回结构化 pageResults
   getAnalysisProgress/ # 轻量查询 analysisTasks 进度
   generatePaper/       # 生成验证/默认试卷题目 + A4 PDF（支持 preview 模式）
   generateReportPDF/   # 生成报告 PDF，回写 reports.pdfFileId
@@ -500,25 +500,20 @@ cloudfunctions/
     "pages/subject-home/subject-home",
     "pages/upload/upload",
     "pages/upload-history/upload-history",
-    "pages/parent-management/parent-management",
-    "pages/join-student/join-student",
     "pages/report/report",
-    "pages/bottleneck-center/bottleneck-center",
-    "pages/bottleneck-detail/bottleneck-detail",
-    "pages/knowledge-map/knowledge-map",
-    "pages/learning-resource/learning-resource",
-    "pages/english-practice/english-practice",
-    "pages/english-dictation/english-dictation",
-    "pages/english-wrong-words/english-wrong-words",
-    "pages/generate-verification/generate-verification",
-    "pages/default-paper/default-paper",
-    "pages/paper-preview/paper-preview",
-    "pages/ai-usage/ai-usage"
+    "pages/learning-progress/learning-progress"
+  ],
+  "subPackages": [
+    "bottleneck-center", "bottleneck-detail", "knowledge-map", "micro-validation",
+    "english-practice", "english-dictation", "english-wrong-words", "english-confusion",
+    "chinese-review-detail", "chinese-skill-task", "learning-resource",
+    "generate-verification", "default-paper", "paper-preview",
+    "parent-management", "join-student", "ai-usage", "icon-compatibility"
   ]
 }
 ```
 
-共 25 个注册页面（主包 8 + 分包 17）。`app.json` 中已按上述顺序注册。
+共 26 个注册页面（主包 8 + 分包 18）。`app.json` 中已按上述顺序注册。
 
 ---
 
@@ -568,7 +563,7 @@ cloudfunctions/
 
 | 能力 | 状态 | 备注 |
 |------|------|------|
-| 25 个页面 + 四件套文件 | ✅ | `deployment-readiness.test.js` 校验 |
+| 26 个页面 + 四件套文件 | ✅ | `deployment-readiness.test.js` 校验 |
 | 家庭工作台 + 个人学习工作台 | ✅ | `index` 处理 0/1/多孩子分流；多孩子显示家庭行动总览和孩子行动卡，单孩子与 `student-profile` 共享个人工作台 |
 | 家长成员管理 | ✅ | owner 可邀请/移除共同家长，viewer 除成员管理外可参与学习流程 |
 | 添加学生并同步创建三条学科档案 | ✅ | `cloud.createStudentWithProfiles()` |
@@ -593,11 +588,12 @@ cloudfunctions/
 | 学习卡点短名称展示 | ✅ | `utils/util.js` 将 LP 编号转为家长可读的短摘要，如“小数分数”“单位换算” |
 | Skill / CLI P0 | ✅ | `services/skills` 与 `cli/ldx.js` 封装诊断、报告、卡点、验证卷、反馈和时间线能力 |
 | 数据归属校验（openID）+ 参数白名单 | ✅ | 各云函数入口 |
-| 自动化测试覆盖（1008 个默认离线用例全绿） | ✅ | `npm test`；真实图片、真实云和 DevTools E2E 按需单独运行 |
-| JS 语法检查 | ✅ | `npm run check`（313 个文件） |
-| 主包体积预算 | ✅ | `npm run check:size`（789 KB / 1200 KB，预算 2026-07-18 由 800 KB 上调） |
+| 自动化测试覆盖（1089 个默认离线用例全绿） | ✅ | `npm test`；真实图片、真实云按需单独运行 |
+| DevTools E2E | ✅ | 核心 23/23、数学 4/4 + 10/10、语文 3/3、英语 7/7、家庭密度与上传历史布局通过 |
+| JS 语法检查 | ✅ | `npm run check`（342 个文件） |
+| 主包体积预算 | ✅ | `npm run check:size`（809 KB / 1200 KB） |
 | 微信订阅消息推送 | ⚠️ | `sendNotification()` 仍为空实现，待申请模板 |
 | 上传与分析解耦 | ✅ | `uploadAndAnalyze` 不等待 `analyzePhotos` 完成 |
 | 默认试卷跨学生共享模板 | ⚠️ | 仅同学生复用 |
 | 验证结论区分答对/空白/OCR 漏识别 | ⚠️ | 当前按"未识别出错题"判定改善 |
-| 真机验收（相机、CloudBase AI、打印、订阅消息） | ⬜ | 见 SETUP.md 第七章 |
+| 真机主流程验收（不含订阅消息） | ✅ | 2026-08-01 项目负责人确认无重大问题；见 SETUP.md 第七章 |

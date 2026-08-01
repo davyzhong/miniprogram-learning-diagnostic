@@ -47,6 +47,16 @@ test('knowledge-map 置顶摘要行不重复渲染 domain 列表中的同一卡�
   assert.match(wxml, /bn-confidence \{\{b\.confidenceLevel\}\}/)
 })
 
+test('知识地图 DevTools E2E 跟随当前置顶摘要与详情接口契约', () => {
+  const source = fs.readFileSync(path.join(ROOT, 'scripts/devtools-knowledge-map-e2e.js'), 'utf8')
+
+  assert.doesNotMatch(source, /最该先处理/, 'E2E 不应继续断言旧版置顶文案')
+  assert.doesNotMatch(source, /selector:\s*['"]\.priority-card['"]/, '置顶摘要已是锚点，资源跳转应点击完整卡点条目')
+  assert.match(source, /selector:\s*['"]\.bn-item['"]/, 'E2E 应点击当前卡点条目进入学习资源')
+  assert.match(source, /a\s*===\s*['"]getReportDetail['"]/, '报告页 mock 必须覆盖 getReportDetail')
+  assert.match(source, /a\s*===\s*['"]getPaperDetail['"]/, '试卷页 mock 必须覆盖 getPaperDetail')
+})
+
 async function flushAsync(turns = 4) {
   for (let i = 0; i < turns; i += 1) {
     await Promise.resolve()

@@ -73,7 +73,7 @@ const pages = [
   {
     name: '语文工作台',
     route: `/pages/subject-home/subject-home?${studentQ}&subject=chinese&subjectName=${encodeURIComponent('语文')}&grade=6`,
-    text: ['下一步建议', '拍照诊断', '下载验证卷', '知识地图'],
+    text: ['开始语文小任务', '最新语文诊断', '待处理队列', '知识地图'],
   },
   {
     name: '语文诊断报告',
@@ -83,7 +83,7 @@ const pages = [
   {
     name: '语文错项复测出卷页',
     route: `/pages/generate-verification/generate-verification?${studentQ}&subject=chinese&subjectName=${encodeURIComponent('语文')}`,
-    text: ['验证卷状态', '纸面验证卷', '查看/下载验证卷'],
+    text: ['自动准备', '纸面验证卷', '查看/下载验证卷'],
   },
 ]
 

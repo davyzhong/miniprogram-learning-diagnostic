@@ -149,12 +149,12 @@ function validateFamilyDensityMetrics(metrics = {}) {
         `child ${cardIndex + 1} ${bounded.label || 'label/action'}`
       )
     }
-    for (const interactiveRect of card.interactiveRects || []) {
+    for (const [interactiveIndex, interactiveRect] of (card.interactiveRects || []).entries()) {
       const rect = normalizedRect(interactiveRect)
-      assertHorizontallyContained(rect, viewport.width, `child ${cardIndex + 1} interactive row`)
+      assertHorizontallyContained(rect, viewport.width, `child ${cardIndex + 1} interactive row ${interactiveIndex + 1}`)
       if (rect.height + EDGE_TOLERANCE < MIN_INTERACTIVE_HEIGHT) {
         throw new Error(
-          `child ${cardIndex + 1} interactive row is below practical height: `
+          `child ${cardIndex + 1} interactive row ${interactiveIndex + 1} is below practical height: `
           + `${rect.height}px < ${MIN_INTERACTIVE_HEIGHT}px`
         )
       }
@@ -459,7 +459,6 @@ async function main() {
       '学生A的超长学习档案示例',
       '学生B的第二个学习档案示例',
       '数学',
-      '最新正式诊断',
       '三科学习状态',
       '最新诊断',
       '数学-20260712-06'
@@ -489,13 +488,16 @@ async function main() {
     const historyScreenshot = path.join(OUTPUT_DIR, 'learning-records.png')
     await miniProgram.screenshot({ path: historyScreenshot })
 
-    console.log(JSON.stringify({
+    const report = {
       status: 'PASS',
+      summary: { total: 1, passed: 1, failed: 0 },
       viewport: metrics.viewport,
       simulator: metrics.simulator,
       screenshots: { family: familyScreenshot, learningRecords: historyScreenshot },
       metrics
-    }, null, 2))
+    }
+    fs.writeFileSync(path.join(OUTPUT_DIR, 'report.json'), JSON.stringify(report, null, 2))
+    console.log(JSON.stringify(report, null, 2))
   } finally {
     if (miniProgram) await miniProgram.close()
   }

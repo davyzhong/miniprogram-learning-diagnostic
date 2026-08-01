@@ -1,5 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const {
   ENGLISH_FEATURE_KEYS,
@@ -39,4 +41,23 @@ test('English DevTools test cases persist end-to-end interaction and data assert
   const allSteps = library.cases.flatMap(item => item.steps)
   assert.ok(allSteps.some(step => step.action === 'tapText'), 'English E2E should include simulator tap interactions')
   assert.ok(allSteps.some(step => step.action === 'callMethod'), 'English E2E should include page method interactions for voice/OCR flows')
+})
+
+test('English DevTools fixtures follow the compact vocabulary segments and current learning-view APIs', () => {
+  const library = loadEnglishDevtoolsTestCases()
+  const workbench = library.cases.find(item => item.id === 'ENG-WB-001')
+  const autoImport = library.cases.find(item => item.id === 'ENG-IMPORT-001')
+  const runner = fs.readFileSync(path.join(__dirname, '..', 'scripts/devtools-english-e2e.js'), 'utf8')
+
+  assert.deepEqual(
+    ['掌握 140', '待练 18', '待复习 16', '未测 120'].filter(text => !workbench.expectedTexts.includes(text)),
+    [],
+    '工作台应断言当前词库构成色带文案'
+  )
+  assert.ok(!workbench.expectedTexts.includes('今日待练'))
+  assert.ok(autoImport.expectedTexts.includes('505 个词已进入个人词库'))
+  assert.match(runner, /data\.action === 'getTodayPlan'/)
+  assert.match(runner, /data\.action === 'getConfusionPractice'/)
+  assert.doesNotMatch(runner, /data\.summaryCards/, '错词本已移除旧版裸数字卡')
+  assert.match(runner, /data\.compositionSegments/, '错词本 E2E 应校验当前掌握构成色带')
 })

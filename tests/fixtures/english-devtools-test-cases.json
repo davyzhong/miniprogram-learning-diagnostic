@@ -11,7 +11,7 @@
       "feature": "workbench",
       "name": "英语工作台展示个人词库和双任务入口",
       "route": "/pages/subject-home/subject-home?studentId=student-english-e2e&subject=english&subjectName=%E8%8B%B1%E8%AF%AD&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6",
-      "expectedTexts": ["今日建议", "英语词汇掌握", "开始认词", "开始听写", "个人词库摘要", "505 个词已进入个人词库", "今日待练", "已熟悉", "拼写薄弱", "真正掌握", "最近需要多见几次", "认词练习", "纸面听写", "错词本", "学习记录"],
+      "expectedTexts": ["今日建议", "英语词汇掌握", "开始认词", "开始听写", "个人词库摘要", "505 个词已进入个人词库", "掌握 140", "待练 18", "待复习 16", "未测 120", "最近需要多见几次", "认词练习", "纸面听写", "错词本", "学习记录"],
       "forbiddenTexts": ["拍照诊断", "默认试卷", "学习卡点"],
       "steps": [
         { "action": "assertVisible", "target": "英语词汇掌握" },
@@ -25,7 +25,7 @@
       "feature": "auto-import",
       "name": "英语词库为空时自动导入 PEP 个人词库",
       "route": "/pages/subject-home/subject-home?studentId=student-english-e2e-empty&subject=english&subjectName=%E8%8B%B1%E8%AF%AD&studentName=%E9%92%9F%E9%9D%92%E7%BE%BD&grade=6",
-      "expectedTexts": ["今日建议", "英语词汇掌握", "开始认词", "开始听写", "个人词库摘要", "505", "今日待练", "纸面听写"],
+      "expectedTexts": ["今日建议", "英语词汇掌握", "开始认词", "开始听写", "个人词库摘要", "505 个词已进入个人词库", "掌握 140", "纸面听写"],
       "forbiddenTexts": ["导入个人词库 ›", "词库维护", "拍照诊断", "默认试卷"],
       "steps": [
         { "action": "assertVisible", "target": "个人词库摘要" }

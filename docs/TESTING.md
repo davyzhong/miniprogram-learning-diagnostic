@@ -1,6 +1,6 @@
 # 测试指南（TESTING）
 
-> 更新日期：2026-07-18
+> 更新日期：2026-08-01
 > 适用对象：本项目的开发者与后续维护 agent
 > 配套文档：`docs/TEST_FRAMEWORK_DESIGN.md`、`docs/TEST_STRATEGY_V2.md`、`docs/TEST_MATRIX.md`
 
@@ -30,10 +30,10 @@ CLI E2E 使用：
 
 | 检查 | 结果 |
 | --- | ---: |
-| `npm test` | 1008 / 1008 通过（默认执行 84 个测试文件） |
-| 测试文件库存 | 89 个 `.test.js` |
-| `npm run check` | 313 个 JavaScript 文件通过 |
-| `npm run check:size` | 主包 789 KB / 1200 KB（预算 2026-07-18 由 800 KB 上调） |
+| `npm test` | 1089 / 1089 通过（默认执行 92 个测试文件） |
+| 测试文件库存 | 97 个 `.test.js` |
+| `npm run check` | 342 个 JavaScript 文件通过 |
+| `npm run check:size` | 主包 809 KB / 1200 KB |
 
 未纳入默认离线集的 5 个文件是 `e2e-real-cloud.test.js`、`e2e-real-image.test.js`、`math-bottleneck-hierarchy.test.js`、`math-history-reanalysis.test.js` 和 `math-learning-map-pipeline.test.js`；前两项需要显式环境，后三项按数学专项变更单独回归。
 
@@ -42,7 +42,7 @@ CLI E2E 使用：
 | 命令 | 用途 | 备注 |
 |---|---|---|
 | `npm test` | 运行全部单元自动化测试 | `npm run test:unit` 的别名 |
-| `npm run test:unit` | 运行全部离线测试 | 当前基线 662 个用例 |
+| `npm run test:unit` | 运行全部离线测试 | 当前基线 1089 个用例 |
 | `npm run test:coverage` | 单元测试覆盖率 | 行/函数 80% 门槛 |
 | `npm run check` | JS 语法检查 | 扫描项目 JS 文件 |
 | `npm run verify` | 提交前本地门禁 | `test:unit + check` |
@@ -70,14 +70,30 @@ E2E 套件：
 | `npm run test:e2e:ai-usage` | AI 用量 | 账单页、首页入口、上传授权检查、`aiUsage` 云函数结构 | `tmp/e2e/ai-usage/` |
 | `npm run test:e2e:family-density` | 家庭首页 | 两个孩子的首屏密度、操作区边界、内部编码和脱敏截图 | `tmp/e2e/family-density/` |
 | `npm run test:e2e:upload-history-layout` | 学习记录 | 紧凑时间线、验证卷编号、证据预览上限、窄屏布局截图 | `tmp/e2e/upload-history-layout/` |
-| `npm run test:e2e:all` | 聚合套件 | core + math + chinese + english + 聚合报告 | `tmp/e2e/aggregate/` |
+| `npm run test:e2e:all` | 聚合套件 | core + math + chinese + english + family-density + upload-history-layout + 聚合报告 | `tmp/e2e/aggregate/` |
 | `npm run test:e2e:real-data` | 真实数据烟测 | 指定真实学生页面打开和截图 | `tmp/e2e/real-data/` |
 | `npm run test:e2e:real-image` | 真实图片链路 | mock、单图或 manifest 图片诊断 | `tmp/e2e-real-image-report.json` |
 | `npm run test:e2e:real-cloud` | 真实云函数 | 真实云端 analyzeBatch 结构校验 | 需要 `RUN_REAL_CLOUD=1` |
 
 核心 E2E 对首页设置 `cloudCallCount <= 1` 的回归预算。`perf:baseline` 每个样本先切换到无云请求的中性页面，再重新进入首页，避免开发者工具启动时旧页面的异步请求污染调用数和载荷统计。
 
-截图型 E2E 使用匿名 mock 数据，输出仅用于本地核对和更新图文文档。`test:e2e:family-density` 会校验开发者工具模拟器是否为 `390x844` 或 `430x932`；若当前模拟器尺寸不匹配，会给出明确失败信息，并在尺寸断言前保留诊断截图，便于调整模拟器后复跑。
+截图型 E2E 使用匿名 mock 数据，输出仅用于本地核对和更新图文文档。`test:e2e:family-density` 接受 `360x800`、`375x812`、`390x844` 或 `430x932` 的小程序窗口；`test:e2e:upload-history-layout` 固定要求 `375x812`。开发者工具内置 iPhone X 的系统栏会压缩小程序窗口，本机回归使用自定义 `375x880` 屏幕（对应 `375x812` 小程序窗口）。两组布局结果都会写入 `tmp/e2e/<suite>/report.json` 并纳入聚合报告。
+
+### 2026-08-01 DevTools E2E 收口结果
+
+| 套件 | 结果 |
+| --- | ---: |
+| 核心页面 | 23 / 23 |
+| 数学数据驱动 | 4 / 4 |
+| 数学知识地图 | 10 / 10 |
+| 语文 | 3 / 3 |
+| 英语 | 7 / 7 |
+| 家庭端密度 | 通过（375 × 812） |
+| 上传历史布局 | 通过（375 × 812） |
+
+本轮同时重新生成并人工抽查 14 张匿名用户导览截图。真机主流程验收由项目负责人完成，结论为无重大问题；该结论与自动化 E2E 分开记录。
+
+真实数据烟测是可选套件，不由默认 `test:e2e:all` 触发，也不会把历史 `tmp/e2e/real-data/report.json` 误计入本轮聚合。确实在同一轮执行过真实数据烟测时，可用 `E2E_INCLUDE_OPTIONAL=1 node scripts/e2e-report-aggregator.js` 将它加入报告。
 
 兼容旧命令：
 

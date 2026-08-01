@@ -336,9 +336,9 @@ test('family workbench CSS keeps compact dimensions and a single composition bar
   assert.doesNotMatch(wxss, /\.child-status-grid|\.child-status-cell|\.child-status-num|\.child-status-label|\.family-hero-stat/)
 
   assert.match(rule('.child-subject-list'), /grid-template-columns:\s*repeat\(3,\s*1fr\)/)
-  assert.match(rule('.child-subject-row'), /min-height:\s*48rpx/)
+  assert.match(rule('.child-subject-row'), /min-height:\s*86rpx/)
   assert.match(rule('.child-quick-grid'), /grid-template-columns:\s*repeat\(4,\s*1fr\)/)
-  assert.match(rule('.child-quick-link'), /min-height:\s*56rpx/)
+  assert.match(rule('.child-quick-link'), /min-height:\s*86rpx/)
   assert.doesNotMatch(rule('.quick-link-title'), /text-overflow:\s*ellipsis/)
 })
 

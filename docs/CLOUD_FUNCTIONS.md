@@ -1,6 +1,6 @@
 # 云函数 API 参考文档
 
-> 更新日期：2026-07-18。本文档基于项目 `cloudfunctions/` 目录下 14 个业务云函数的实际实现整理，包含入参、出参、错误处理、依赖与调用关系。`_shared-templates` 是模板目录，不计作业务云函数。所有云函数均部署在微信云开发环境，通过 `wx.cloud.callFunction` 调用。
+> 更新日期：2026-08-01。本文档基于项目 `cloudfunctions/` 目录下 15 个业务云函数的实际实现整理，包含入参、出参、错误处理、依赖与调用关系。`_shared-templates` 是模板目录，不计作业务云函数。项目负责人已确认本周期云函数部署完成；小程序通过 `wx.cloud.callFunction` 调用。
 
 > **目录结构说明（2026-06-17 重构后）**
 > 微信开发者工具上传云函数时会跳过下划线前缀的子目录（如 `_shared/`），导致云端 `require('./_shared/...')` 失败、预览/真机空白。因此所有共享文件（`access.js`、`constants.js`、`bottleneck-name.js`、`math-bottleneck-hierarchy.js`）现在直接放在各云函数根目录下，用 `require('./access')` 引用。顶层 `cloudfunctions/_shared/` 已删除。守护测试 `cloudfunctions 下不再有 _shared 目录` 防止回退。
@@ -23,6 +23,7 @@
 - [getAnalysisProgress](#getanalysisprogress)
 - [learningResource](#learningresource)
 - [aiUsage](#aiusage)
+- [microValidation](#microvalidation)
 - [辅助模块](#辅助模块)
   - [result-normalizer.js](#result-normalizerjs)
   - [photo-dedup.js](#photo-dedupjs)
@@ -726,7 +727,7 @@ wx.cloud.callFunction({
 
 ### 功能描述
 
-单批次分析：将 fileID 转为临时 URL，调用 CloudBase AI（hy3-preview 多模态模型）进行 OCR + 错题根因分析，返回结构化 JSON。当前由 `analyzePhotos` 按单图批次调用。
+单图分析：将 fileID 转为临时 URL，调用 CloudBase AI `qwen3.5-plus`（`enable_thinking: false`）进行 OCR + 错题根因分析，返回结构化 JSON。当前由 `analyzePhotos` 按单图批次调用。
 
 ### 调用方式
 
@@ -829,7 +830,7 @@ wx.cloud.callFunction({
 ### 依赖的外部服务
 
 - 微信云存储（`cloud.getTempFileURL` 获取临时访问链接）
-- CloudBase AI（模型：`hy3-preview`，多模态）
+- CloudBase AI（模型：`qwen3.5-plus`，多模态视觉）
 - 微信云数据库（无直接读写，但通过 reportId 关联）
 
 ### 内部调用关系
@@ -1358,6 +1359,30 @@ AI 用量与成本估算账本、数据删除请求和内测授权。读操作�
 - 账单页强制显示"当前为内测成本估算，不代表应付款项"。
 - `uploadAndAnalyze` 会在服务端校验 `userConsents.betaConsented=true`，不能只依赖前端弹窗。
 - 详见设计文档 §5（账本）、§6（账单页）、§9（合规）。
+
+---
+
+## microValidation
+
+**位置**：`cloudfunctions/microValidation/index.js`
+
+### 功能描述
+
+围绕一个数学细卡点生成 3–6 道当场小题，家长逐题标记结果后，系统判定该疑似卡点是否通过，并把 `verificationPassed` 或 `verificationFailed` 事件写入 `studentNodeMastery`。提交过程使用事务把会话从 `in_progress` 占位为 `completing`，避免双击或重试造成掌握状态重复累计。
+
+### Actions
+
+| action | 输入 | 输出 | 说明 |
+| --- | --- | --- | --- |
+| `generateMicroValidation` | `studentId`, `targetCode` / `bottleneckId`, `questionCount?` | `{ success, sessionId, bottleneckId, nodeId, bnTitle, questions }` | 使用 `deepseek-v4-flash` 生成 3–6 道可判定短题，并创建 `microValidations` 会话 |
+| `submitMicroValidation` | `sessionId`, `verdicts[]` | `{ success, passVerdict, correctCount, totalCount, nodeId, bottleneckId }` | 答对数达到总题数的 2/3（向上取整）即通过，并写入节点掌握事件；重复提交返回已完成结果 |
+| `getMicroValidation` | `sessionId` | `{ success, session }` | 在学生访问权限校验后读取会话 |
+
+### 依赖与数据
+
+- 集合：`microValidations`、`studentNodeMastery`、`students`、`studentMembers`、`aiUsageEvents`。
+- 题目生成会记录 `micro_validation_generation` AI 用量事件。
+- 只允许档案拥有者或具备学习操作权限的共同家长生成、提交和读取。
 
 ---
 

@@ -242,6 +242,12 @@ async function installEnglishMocks(miniProgram) {
 
       if (name === 'englishVocabulary') {
         if (data.action === 'getVocabularySummary') return { result: vocabularyFor(data.studentId) }
+        if (data.action === 'getTodayPlan') {
+          return { result: { success: true, primaryAction: { kind: 'recognition', taskSize: 10, title: '先认词 10 个待复测单词', estimatedMinutes: 5 }, stats: {}, featuredWords: ['science', 'museum'] } }
+        }
+        if (data.action === 'getConfusionPractice') {
+          return { result: { success: true, items: [] } }
+        }
         if (data.action === 'seedPersonalVocabulary') {
           globalThis.__englishE2EState.seedCount += 1
           return { result: { success: true, importedWordCount: 505, importedPatternCount: 0 } }
@@ -310,6 +316,12 @@ async function runCase(miniProgram, caseDef, outputDir) {
   const started = Date.now()
   const page = await miniProgram.reLaunch(caseDef.route)
   await page.waitFor(1800)
+  if (caseDef.feature === 'auto-import') {
+    await page.waitFor(async () => {
+      const data = await page.data()
+      return data.englishVocabularyStats && data.englishVocabularyStats.totalWords === 505
+    })
+  }
   if (caseDef.feature === 'learning-records') {
     await page.waitFor(async () => {
       const data = await page.data()
@@ -386,10 +398,11 @@ async function runCase(miniProgram, caseDef, outputDir) {
 
   if (caseDef.feature === 'wrong-words') {
     const data = await page.data()
-    assert.equal(data.summaryCards[0].value, 18)
-    assert.equal(data.summaryCards[1].value, 16)
-    assert.equal(data.summaryCards[2].value, 140)
+    assert.equal(data.totalWords, 505)
+    assert.deepEqual(data.compositionSegments.map(item => item.count), [140, 365])
     assert(data.groups.some(group => group.key === 'highFrequency' && group.count === 18))
+    assert(data.groups.some(group => group.key === 'reviewDue' && group.count === 16))
+    assert(data.groups.some(group => group.key === 'stable' && group.count === 140))
     assert(data.weakWords.some(word => word.word === 'science'))
     await tapByText(page, 'button', '去认词练习')
     await page.waitFor(800)

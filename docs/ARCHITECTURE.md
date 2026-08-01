@@ -1,10 +1,10 @@
 # 系统架构文档
 
-> 更新日期：2026-07-18。基于实际代码实现生成，非设计文档。
+> 更新日期：2026-08-01。基于实际代码实现生成，非设计文档。
 
 ## 1. 系统概览
 
-学习诊断小程序是一款面向小学生家长的 AI 错题分析工具。用户在小程序内拍照上传试卷/作业，云函数调用腾讯云混元视觉模型（hy3-preview）进行多模态分析，识别错题并归类到预定义的学习卡点体系，最终生成结构化诊断报告和 PDF。系统还支持根据历史卡点自动生成验证试卷和默认诊断试卷，形成"诊断 → 练习 → 验证"的闭环。整个后端运行在微信云开发平台上，零服务器运维。
+学习诊断小程序是一款面向小学生家长的 AI 错题分析工具。用户在小程序内拍照上传试卷/作业，云函数调用 CloudBase AI `qwen3.5-plus` 进行多模态分析，识别错题并归类到学习卡点与数学知识节点，最终生成结构化诊断报告和 PDF。系统还支持学习任务、微验证、验证试卷、节点掌握六态与复测调度，形成“诊断 → 学习/微验证 → 纸面验证 → 状态更新”的闭环。整个后端运行在微信云开发平台上，零服务器运维。
 
 ### 技术栈
 
@@ -14,9 +14,9 @@
 | 能力层 | `services/skills` | 诊断、报告、学习卡点、验证卷、验证反馈、时间线等 P0 Skill |
 | CLI | `cli/ldx.js` | 面向批量处理、自动化测试和运营调试的命令入口；当前使用 fixture adapter 离线验证 |
 | 后端服务 | 微信云开发 (CloudBase) | 云函数 + 云数据库 + 云存储，零服务器 |
-| AI 模型（图像分析） | CloudBase AI `hy3-preview` | 腾讯云混元视觉模型，多模态图片分析 |
-| AI 模型（题目生成） | CloudBase AI `deepseek-v4-flash` | 用于 generatePaper 生成试卷题目 |
-| 数据库 | 云开发 MongoDB 兼容数据库 | 17 个集合：students / studentMembers / studentInvites / subjectProfiles / reports / papers / analysisTasks / reportFeedback / englishImportBatches / studentEnglishWords / englishPracticeSessions / englishPracticeAttempts / chineseSkillAttempts / learningResourcePacks / aiUsageEvents / dataDeletionRequests / userConsents |
+| AI 模型（图像分析） | CloudBase AI `qwen3.5-plus` | 多模态图片分析，`enable_thinking: false` |
+| AI 模型（文本生成） | CloudBase AI `deepseek-v4-flash` | 试卷、学习资源与微验证题目生成 |
+| 数据库 | 云开发 MongoDB 兼容数据库 | 20 个集合；完整清单见 `DATA_DICTIONARY.md` |
 | 文件存储 | 云开发云存储 | 试卷照片、生成的 PDF 文件 |
 | PDF 生成 | pdfkit（Node.js） | 云函数内生成 A4 试卷/报告 PDF |
 | 中文字体 | 内置 Noto CJK 字体 | `generatePaper` / `generateReportPDF` 随函数部署字体文件，不依赖环境变量 |
@@ -57,13 +57,13 @@
 │                                   │                       │          │
 │  ┌──────────────────┐    ┌────────┴─────────┐    ┌───────┴───────┐  │
 │  │generatePaper     │    │getAnalysisProgress│    │CloudBase AI   │  │
-│  │AI出题+PDF生成     │    │轻量进度查询        │    │hy3-preview    │  │
+│  │AI出题+PDF生成     │    │轻量进度查询        │    │qwen3.5-plus   │  │
 │  └──────────────────┘    └──────────────────┘    │deepseek-v4    │  │
 │                                                   └───────────────┘  │
 │  ┌──────────────────┐                                               │
 │  │generateReportPDF │    ┌──────────────┐  ┌────────────────────┐   │
 │  │报告PDF生成        │    │ 云数据库      │  │ 云存储              │   │
-│  └──────────────────┘    │ 17 个集合      │  │ photos/ papers/    │   │
+│  └──────────────────┘    │ 20 个集合      │  │ photos/ papers/    │   │
 │                           │              │  │ reports/           │   │
 │                           └──────────────┘  └────────────────────┘   │
 │  ┌──────────────────┐    ┌──────────────────┐                       │
@@ -129,7 +129,7 @@ cloud.callUploadAndAnalyze({ fileIDs, studentId, subject, mode:'diagnosis' })
               │       ▼
               │  [analyzeBatch 云函数]
               │       ├── getTempFileURL() → 临时链接
-              │       ├── callAI(hy3-preview) → JSON
+              │       ├── callAI(qwen3.5-plus) → JSON
               │       └── normalizePageResults() → 结构化结果
               │
               ├── 5. markDuplicatePages() → 去重
@@ -575,7 +575,7 @@ poller.start()
 **决策**：analyzePhotos 中 5 张/批串行调用 analyzeBatch；每次云函数调用处理多批（MAX_BATCHES_PER_INVOCATION），随后 fire-and-forget 续跑下一批，不用 Promise.all 并行。
 
 **原因**：
-1. **CloudBase AI 并发限制**：hy3-preview 模型有 QPS 限制，并行调用容易触发限流导致整批失败
+1. **CloudBase AI 并发限制**：`qwen3.5-plus` 视觉调用受平台 QPS 与单次执行时限约束；当前按单图批次顺序续跑，避免并行限流导致整批失败
 2. **云函数内存约束**：每个 analyzeBatch 需要加载图片临时 URL 并传递给 AI，并行会导致内存峰值过高
 3. **进度追踪精度**：串行可以精确更新 `analysisTasks.completedBatches`，客户端能看到真实进度；并行时进度更新变得复杂且不准确
 4. **故障隔离**：某一批失败只影响该批，不会因并行 reject 导致所有批次结果丢失

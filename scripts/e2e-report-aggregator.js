@@ -53,6 +53,19 @@ const SOURCES = [
     script: 'devtools-real-data-smoke',
     output: 'tmp/e2e/real-data',
     type: 'smoke',
+    optional: true,
+  },
+  {
+    name: '家庭端密度 E2E',
+    script: 'devtools-family-density-e2e',
+    output: 'tmp/e2e/family-density',
+    type: 'layout',
+  },
+  {
+    name: '上传历史布局 E2E',
+    script: 'devtools-upload-history-layout',
+    output: 'tmp/e2e/upload-history-layout',
+    type: 'layout',
   },
 ]
 
@@ -96,6 +109,8 @@ function summarizeResult(data) {
 
 function main() {
   fs.mkdirSync(outputDir, { recursive: true })
+  const includeOptional = process.env.E2E_INCLUDE_OPTIONAL === '1'
+  const activeSources = SOURCES.filter(source => !source.optional || includeOptional)
 
   const lines = []
   lines.push('# E2E 测试聚合报告')
@@ -109,7 +124,7 @@ function main() {
   let totalFail = 0
   let noOutput = 0
 
-  for (const src of SOURCES) {
+  for (const src of activeSources) {
     const data = readJsonResult(src.output)
     const summary = summarizeResult(data)
 
@@ -137,12 +152,12 @@ function main() {
   lines.push(`- ✅ 通过的脚本: ${totalPass}`)
   lines.push(`- ❌ 失败的脚本: ${totalFail}`)
   lines.push(`- ⬜ 未跑的脚本: ${noOutput}`)
-  lines.push(`- 📋 总脚本数: ${SOURCES.length}`)
+  lines.push(`- 📋 总脚本数: ${activeSources.length}`)
   lines.push('')
 
   if (totalFail > 0) {
     lines.push('> ⚠️ 有失败的 E2E 脚本，发布前请修复。')
-  } else if (noOutput === SOURCES.length) {
+  } else if (noOutput === activeSources.length) {
     lines.push('> ℹ️ 所有 E2E 脚本都未运行。请先跑 `npm run test:e2e:doctor` 确认环境，再逐个跑 E2E 脚本。')
   } else if (noOutput > 0) {
     lines.push(`> ℹ️ 有 ${noOutput} 个脚本未跑，其余通过。`)

@@ -16,18 +16,18 @@
 <p align="center">
   <img alt="WeChat Mini Program" src="https://img.shields.io/badge/WeChat-Mini_Program-07C160?style=flat-square" />
   <img alt="CloudBase" src="https://img.shields.io/badge/Backend-CloudBase-2F80ED?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/tests-1082_passing-2E8B57?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-1089_passing-2E8B57?style=flat-square" />
   <img alt="Main package" src="https://img.shields.io/badge/main_package-809_KB-F2A900?style=flat-square" />
   <img alt="AI Model" src="https://img.shields.io/badge/AI-Vision-qwen3.5--plus-6366F1?style=flat-square" />
 </p>
 
 <p align="center">
-  <img src="docs/user-guide/images/real/01-subject-home-math.png" alt="数学学科工作台（真实运行数据）" width="270" />
-  <img src="docs/user-guide/images/real/02-diagnosis-report.png" alt="诊断报告（真实运行数据）" width="270" />
-  <img src="docs/user-guide/images/real/04-learning-progress.png" alt="学习进展（真实运行数据）" width="270" />
+  <img src="docs/user-guide/images/01-family-workbench.png" alt="家庭学习工作台" width="270" />
+  <img src="docs/user-guide/images/04-report.png" alt="诊断报告" width="270" />
+  <img src="docs/user-guide/images/12-english-workbench.png" alt="英语工作台" width="270" />
 </p>
 
-> 以上截图来自内测环境的真实运行数据（已确认无敏感信息泄露）。更多界面截图（含 mock 数据生成的完整页面导览）见[图文用户导览](docs/user-guide/README.md)。
+> 以上截图于 2026-08-01 由自动化脚本使用匿名 mock 数据重新生成，不包含真实学生资料。更多界面见[图文用户导览](docs/user-guide/README.md)。
 
 ## 为什么做这个项目
 
@@ -173,18 +173,18 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Client[微信小程序]
-      Pages[27 个注册页面]
+      Pages[26 个注册页面]
       Presenters[Presenter 与状态组件]
       Services[数据层与 P0 Skills]
     end
     subgraph Cloud[微信云开发 CloudBase]
       Functions[15 个业务云函数]
-      Database[17 个数据库集合]
+      Database[20 个数据库集合]
       Storage[试卷图片与 PDF]
       AI[qwen3.5-plus 视觉 + deepseek-v4-flash 文本]
     end
     subgraph Quality[质量体系]
-      Unit[1082 个自动化测试]
+      Unit[1089 个自动化测试]
       CLI[微信开发者工具 CLI E2E]
       Perf[性能与包体基线]
     end
@@ -211,11 +211,11 @@ flowchart TB
 
 ```text
 miniprogram-learning-diagnostic/
-├── miniprogram/              # 小程序页面、组件、服务和本地数据（27 页面）
+├── miniprogram/              # 小程序页面、组件、服务和本地数据（26 页面）
 ├── cloudfunctions/           # 15 个业务云函数与共享模板
 ├── data/                     # 150 个数学知识节点、40 个细卡点、脱敏示例数据
 ├── scripts/                  # 构建、校验、性能、截图和 DevTools E2E
-├── tests/                    # 97 个测试文件，1082 个自动化测试
+├── tests/                    # 97 个测试文件，1089 个自动化测试
 ├── docs/                     # 产品、学科、架构、测试和图文文档
 ├── database/                 # 数据库索引声明
 ├── README.md                 # GitHub 项目主页
@@ -239,7 +239,7 @@ miniprogram-learning-diagnostic/
 git clone <repository-url>
 cd miniprogram-learning-diagnostic
 npm install
-npm run verify          # 1082 个自动化测试 + 341 个 JS 文件语法检查
+npm run verify          # 1089 个自动化测试 + 342 个 JS 文件语法检查
 npm run check:size      # 主包体积预算检查
 ```
 
@@ -248,8 +248,8 @@ npm run check:size      # 主包体积预算检查
 ### 常用命令
 
 ```bash
-npm test                    # 1082 个常规自动化测试
-npm run check               # 检查 341 个 JavaScript 文件
+npm test                    # 1089 个常规自动化测试
+npm run check               # 检查 342 个 JavaScript 文件
 npm run check:size          # 主包体积预算检查
 npm run test:coverage       # 覆盖率门禁
 npm run test:e2e:doctor     # 检查微信开发者工具 CLI 环境
@@ -261,17 +261,17 @@ npm run perf:baseline       # CLI 性能基线
 
 ## 当前质量基线
 
-以下数字来自 2026-07-12 的 `fix/vision-model-qwen35plus` 分支本地验证：
+以下数字来自 2026-08-01 当前工作区的发布收口验证：
 
 | 指标 | 当前结果 | 复现命令 |
 | --- | ---: | --- |
-| 常规自动化测试 | **1082 / 1082 通过** | `npm test` |
-| JavaScript 语法检查 | 341 个文件通过 | `npm run check` |
+| 常规自动化测试 | **1089 / 1089 通过** | `npm test` |
+| JavaScript 语法检查 | 342 个文件通过 | `npm run check` |
 | 主包体积 | **809 KB / 1200 KB**（剩余 391 KB） | `npm run check:size` |
-| 注册页面 | 27 | `miniprogram/app.json` |
+| 注册页面 | 26 | `miniprogram/app.json` |
 | 业务云函数 | 15 | `cloudfunctions/`，不含 `_shared-templates` |
 | 测试文件 | 97 个 | `package.json` |
-| 数据库集合 | 17 | `docs/DATA_DICTIONARY.md` |
+| 数据库集合 | 20 | `docs/DATA_DICTIONARY.md` |
 | 数学知识节点 | 150 | `data/math/knowledge-nodes.seed.json` |
 | 标准细卡点 | 40 | `cloudfunctions/analyzeBatch/taxonomy-bn-list.js` |
 
@@ -298,7 +298,7 @@ npm run perf:baseline       # CLI 性能基线
 
 ## 项目状态
 
-当前项目处于**私有内测和持续迭代阶段**。数学诊断与验证闭环最完整（已实现"诊断→验证→反馈→再诊断"完整迭代闭环展示）；语文具体错项复测和英语词汇双维闭环已经落地，仍需要更多真实样本和真机回归来校准内容质量、兼容范围与长期学习效果。
+当前项目处于**私有内测和持续迭代阶段**。数学诊断、微验证与节点掌握六态闭环，语文具体错项复测，以及英语词汇双维闭环均已落地。2026-08-01 已确认本周期云函数部署完成、主要流程真机验收无重大问题，并完成全部 DevTools E2E 与 14 张用户导览截图刷新。订阅消息发送链路仍未实现；学习资源扩展与订阅消息方案将在本轮收口之后另行设计。
 
 项目的重要变化记录在 [CHANGELOG](CHANGELOG.md)。
 
