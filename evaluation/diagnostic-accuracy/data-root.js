@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('node:fs');
 const path = require('node:path');
 
 const SYNCHRONIZED_SEGMENTS = new Set([
@@ -10,6 +11,37 @@ const SYNCHRONIZED_SEGMENTS = new Set([
   'onedrive',
   'box',
 ]);
+
+function canonicalizeWithExistingAncestor(value) {
+  let existingAncestor = value;
+  const suffix = [];
+
+  while (!fs.existsSync(existingAncestor)) {
+    const parent = path.dirname(existingAncestor);
+    if (parent === existingAncestor) break;
+    suffix.push(path.basename(existingAncestor));
+    existingAncestor = parent;
+  }
+
+  const canonicalAncestor = fs.realpathSync(existingAncestor);
+  return path.join(canonicalAncestor, ...suffix.reverse());
+}
+
+function isInside(root, candidate) {
+  const relative = path.relative(root, candidate);
+  return relative === '' || (
+    !relative.startsWith(`..${path.sep}`)
+    && relative !== '..'
+    && !path.isAbsolute(relative)
+  );
+}
+
+function hasSynchronizedSegment(value) {
+  return value
+    .split(/[\\/]+/u)
+    .filter(Boolean)
+    .some((segment) => SYNCHRONIZED_SEGMENTS.has(segment.toLowerCase()));
+}
 
 function resolveDataRoot({ value, repoRoot, homeDir }) {
   if (typeof value !== 'string' || value.trim() === '') {
@@ -30,16 +62,13 @@ function resolveDataRoot({ value, repoRoot, homeDir }) {
   }
 
   const normalizedRepoRoot = path.normalize(repoRoot);
-  const relativeToRepo = path.relative(normalizedRepoRoot, dataRoot);
-  if (
-    relativeToRepo === ''
-    || (!relativeToRepo.startsWith(`..${path.sep}`) && relativeToRepo !== '..' && !path.isAbsolute(relativeToRepo))
-  ) {
+  const canonicalRepoRoot = canonicalizeWithExistingAncestor(normalizedRepoRoot);
+  const canonicalDataRoot = canonicalizeWithExistingAncestor(dataRoot);
+  if (isInside(normalizedRepoRoot, dataRoot) || isInside(canonicalRepoRoot, canonicalDataRoot)) {
     throw new Error('Diagnostic evaluation data root must be outside the repository.');
   }
 
-  const segments = dataRoot.split(/[\\/]+/u).filter(Boolean);
-  if (segments.some((segment) => SYNCHRONIZED_SEGMENTS.has(segment.toLowerCase()))) {
+  if (hasSynchronizedSegment(dataRoot) || hasSynchronizedSegment(canonicalDataRoot)) {
     throw new Error('Diagnostic evaluation data root must be outside synchronized folders.');
   }
 

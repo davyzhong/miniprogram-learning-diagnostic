@@ -7,8 +7,8 @@
   "required": ["schemaVersion", "annotationId", "sampleId", "preLabel", "humanLabel", "lockState", "review", "auditEvents"],
   "properties": {
     "schemaVersion": { "const": "1.0.0" },
-    "annotationId": { "$ref": "#/$defs/id" },
-    "sampleId": { "$ref": "#/$defs/id" },
+    "annotationId": { "$ref": "#/$defs/stableId" },
+    "sampleId": { "$ref": "#/$defs/stableId" },
     "preLabel": { "$ref": "#/$defs/label" },
     "humanLabel": { "$ref": "#/$defs/label" },
     "lockState": {
@@ -18,49 +18,115 @@
       "properties": {
         "status": { "enum": ["unlocked", "locked"] },
         "lockedAt": { "type": "string", "format": "date-time" },
-        "lockedBy": { "$ref": "#/$defs/id" }
-      }
+        "lockedBy": { "$ref": "#/$defs/stableId" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "locked" } }, "required": ["status"] },
+          "then": { "required": ["lockedAt", "lockedBy"] }
+        }
+      ]
     },
     "review": {
       "type": "object",
       "additionalProperties": false,
       "required": ["reviewerIds", "qcStatus", "adjudicationStatus", "disputeStatus"],
       "properties": {
-        "reviewerIds": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+        "reviewerIds": { "type": "array", "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true },
         "qcStatus": { "enum": ["pending", "passed", "failed"] },
-        "qcReviewerId": { "$ref": "#/$defs/id" },
+        "qcReviewerId": { "$ref": "#/$defs/stableId" },
+        "qcReviewedAt": { "type": "string", "format": "date-time" },
         "adjudicationStatus": { "enum": ["not-needed", "pending", "resolved"] },
-        "adjudicatorId": { "$ref": "#/$defs/id" },
+        "adjudicatorId": { "$ref": "#/$defs/stableId" },
         "adjudicationLabel": { "$ref": "#/$defs/label" },
+        "adjudicatedAt": { "type": "string", "format": "date-time" },
         "disputeStatus": { "enum": ["none", "open", "resolved"] },
         "disputeReason": { "type": "string" },
-        "disputeResolution": { "type": "string" }
-      }
+        "disputeResolution": { "type": "string" },
+        "disputeResolvedBy": { "$ref": "#/$defs/stableId" },
+        "disputeResolvedAt": { "type": "string", "format": "date-time" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "qcStatus": { "enum": ["passed", "failed"] } }, "required": ["qcStatus"] },
+          "then": { "required": ["qcReviewerId", "qcReviewedAt"] }
+        },
+        {
+          "if": { "properties": { "adjudicationStatus": { "const": "resolved" } }, "required": ["adjudicationStatus"] },
+          "then": { "required": ["adjudicatorId", "adjudicationLabel", "adjudicatedAt"] }
+        },
+        {
+          "if": { "properties": { "disputeStatus": { "const": "resolved" } }, "required": ["disputeStatus"] },
+          "then": { "required": ["disputeResolution", "disputeResolvedBy", "disputeResolvedAt"] }
+        }
+      ]
     },
     "auditEvents": { "type": "array", "items": { "$ref": "#/$defs/auditEvent" } }
   },
   "$defs": {
-    "id": { "type": "string", "minLength": 1 },
+    "stableId": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
     "label": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["conclusion", "labeledBy", "labeledAt"],
+      "required": ["conclusion", "attribution", "labeledBy", "labeledAt"],
       "properties": {
         "conclusion": { "enum": ["correct", "incorrect", "unreadable", "not-an-item"] },
         "text": { "type": "string" },
-        "attribution": { "type": "object" },
-        "labeledBy": { "$ref": "#/$defs/id" },
+        "attribution": { "$ref": "#/$defs/attribution" },
+        "labeledBy": { "$ref": "#/$defs/stableId" },
         "labeledAt": { "type": "string", "format": "date-time" }
       }
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject"],
+      "properties": {
+        "subject": { "enum": ["math", "chinese", "english"] },
+        "math": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "primaryNodeId": { "$ref": "#/$defs/stableId" },
+            "primaryNodeLabel": { "type": "string" },
+            "bottleneckId": { "$ref": "#/$defs/stableId" },
+            "bottleneckLabel": { "type": "string" }
+          }
+        },
+        "chinese": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "originalItemLocation": { "type": "string" },
+            "errorType": { "type": "string" },
+            "review": { "type": "string" },
+            "migration": { "type": "string" }
+          }
+        },
+        "english": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "wordIdentity": { "type": "string" },
+            "recognitionSpelling": { "type": "string" },
+            "stateUpdate": { "type": "string" }
+          }
+        }
+      },
+      "oneOf": [
+        { "required": ["math"], "properties": { "subject": { "const": "math" }, "math": { "required": ["primaryNodeId", "bottleneckId"] } } },
+        { "required": ["chinese"], "properties": { "subject": { "const": "chinese" }, "chinese": { "required": ["originalItemLocation", "errorType"] } } },
+        { "required": ["english"], "properties": { "subject": { "const": "english" }, "english": { "required": ["wordIdentity"] } } }
+      ]
     },
     "auditEvent": {
       "type": "object",
       "additionalProperties": false,
       "required": ["eventId", "eventType", "actorId", "timestamp"],
       "properties": {
-        "eventId": { "$ref": "#/$defs/id" },
+        "eventId": { "$ref": "#/$defs/stableId" },
         "eventType": { "enum": ["created", "pre-labeled", "human-labeled", "reviewed", "qc-checked", "disputed", "adjudicated", "locked", "unlocked"] },
-        "actorId": { "$ref": "#/$defs/id" },
+        "actorId": { "$ref": "#/$defs/stableId" },
         "timestamp": { "type": "string", "format": "date-time" },
         "details": { "type": "object" }
       }

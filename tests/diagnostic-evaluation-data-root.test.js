@@ -84,6 +84,55 @@ test('accepts a separate local absolute directory without creating it', () => {
   assert.equal(fs.existsSync(value), false);
 });
 
+function withTemporarySymlink(testContext, target, assertion) {
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ldx-eval-symlink-'));
+  const alias = path.join(temporaryRoot, 'alias');
+
+  try {
+    try {
+      fs.symlinkSync(target, alias, 'dir');
+    } catch (error) {
+      if (['EACCES', 'ENOSYS', 'ENOTSUP', 'EPERM'].includes(error.code)) {
+        testContext.skip(`directory symlinks unavailable: ${error.code}`);
+        return;
+      }
+      throw error;
+    }
+    assertion(alias, temporaryRoot);
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+}
+
+test('rejects an outside symlink alias whose target is inside the repository', (t) => {
+  withTemporarySymlink(t, repoRoot, (alias) => {
+    assert.throws(
+      () => resolveDataRoot({ value: path.join(alias, 'evaluation-data'), repoRoot, homeDir }),
+      /repository/i,
+    );
+  });
+});
+
+test('rejects a symlink alias whose canonical target has a synchronized segment', (t) => {
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ldx-eval-sync-target-'));
+  const syncTarget = path.join(temporaryRoot, 'Dropbox');
+  fs.mkdirSync(syncTarget);
+
+  try {
+    withTemporarySymlink(t, syncTarget, (alias) => {
+      const value = path.join(alias, 'evaluation');
+      assert.equal(fs.existsSync(value), false);
+      assert.throws(
+        () => resolveDataRoot({ value, repoRoot, homeDir }),
+        /synchronized/i,
+      );
+      assert.equal(fs.existsSync(value), false);
+    });
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
 test('exports the exact immutable evaluation constants', () => {
   assert.equal(constants.DATASET_SCHEMA_VERSION, '1.0.0');
   assert.equal(constants.SCORER_VERSION, '1.0.0');
@@ -135,6 +184,75 @@ test('dataset, annotation, and system output share required sampleId linkage', (
   assert.equal(Object.hasOwn(annotationSchema.properties, 'itemId'), false);
   assert.ok(systemOutputSchema.required.includes('sampleId'));
   assert.equal(Object.hasOwn(systemOutputSchema.properties, 'itemId'), false);
+});
+
+test('linked identifiers use the same non-whitespace stable-ID contract', () => {
+  const stablePattern = datasetSchema.$defs.stableId.pattern;
+  assert.equal(stablePattern, '^[A-Za-z0-9][A-Za-z0-9._:-]*$');
+  assert.equal(annotationSchema.$defs.stableId.pattern, stablePattern);
+  assert.equal(systemOutputSchema.$defs.stableId.pattern, stablePattern);
+
+  assert.equal(datasetSchema.$defs.item.properties.sampleId.$ref, '#/$defs/stableId');
+  assert.equal(datasetSchema.$defs.document.properties.documentId.$ref, '#/$defs/stableId');
+  assert.equal(datasetSchema.$defs.page.properties.pageId.$ref, '#/$defs/stableId');
+  assert.equal(datasetSchema.$defs.item.properties.annotationRefs.items.$ref, '#/$defs/stableId');
+  assert.equal(annotationSchema.properties.sampleId.$ref, '#/$defs/stableId');
+  assert.equal(systemOutputSchema.properties.sampleId.$ref, '#/$defs/stableId');
+  assert.equal(new RegExp(stablePattern).test('   '), false);
+});
+
+test('system outputs distinguish successful predictions from terminal failures', () => {
+  assert.ok(systemOutputSchema.required.includes('status'));
+  assert.equal(systemOutputSchema.required.includes('prediction'), false);
+  assert.equal(systemOutputSchema.oneOf.length, 2);
+
+  const success = systemOutputSchema.oneOf.find((branch) => branch.properties.status.const === 'success');
+  const failure = systemOutputSchema.oneOf.find((branch) => branch.properties.status.const === 'failed');
+  assert.ok(success.required.includes('prediction'));
+  assert.equal(success.properties.failures.maxItems, 0);
+  assert.equal(failure.required.includes('failures'), true);
+  assert.equal(failure.properties.failures.minItems, 1);
+  assert.equal(failure.required.includes('prediction'), false);
+  assert.deepEqual(failure.not, { required: ['prediction'] });
+});
+
+test('gold and predicted attribution share subject-specific contract shapes', () => {
+  assert.deepEqual(annotationSchema.$defs.attribution, systemOutputSchema.$defs.attribution);
+  assert.equal(annotationSchema.$defs.label.properties.attribution.$ref, '#/$defs/attribution');
+
+  const attribution = annotationSchema.$defs.attribution;
+  assert.ok(attribution.required.includes('subject'));
+  assert.equal(attribution.oneOf.length, 3);
+  assert.deepEqual(
+    Object.keys(attribution.properties.math.properties).sort(),
+    ['bottleneckId', 'bottleneckLabel', 'primaryNodeId', 'primaryNodeLabel'],
+  );
+  assert.deepEqual(
+    Object.keys(attribution.properties.chinese.properties).sort(),
+    ['errorType', 'migration', 'originalItemLocation', 'review'],
+  );
+  assert.deepEqual(
+    Object.keys(attribution.properties.english.properties).sort(),
+    ['recognitionSpelling', 'stateUpdate', 'wordIdentity'],
+  );
+});
+
+test('annotation locked and resolved states require auditable actors and timestamps', () => {
+  const lockRule = annotationSchema.properties.lockState.allOf[0];
+  assert.deepEqual(lockRule.if.properties.status, { const: 'locked' });
+  assert.deepEqual(lockRule.then.required.sort(), ['lockedAt', 'lockedBy']);
+
+  const reviewRules = annotationSchema.properties.review.allOf;
+  assert.equal(reviewRules.length, 3);
+  assert.deepEqual(reviewRules[0].then.required.sort(), ['qcReviewedAt', 'qcReviewerId']);
+  assert.deepEqual(
+    reviewRules[1].then.required.sort(),
+    ['adjudicatedAt', 'adjudicationLabel', 'adjudicatorId'],
+  );
+  assert.deepEqual(
+    reviewRules[2].then.required.sort(),
+    ['disputeResolution', 'disputeResolvedAt', 'disputeResolvedBy'],
+  );
 });
 
 test('dataset import contract only permits verified redaction', () => {

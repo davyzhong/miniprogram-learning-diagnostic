@@ -4,13 +4,14 @@
   "title": "Diagnostic Accuracy System Output",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "runId", "documentId", "pageId", "sampleId", "prediction", "failures"],
+  "required": ["schemaVersion", "runId", "documentId", "pageId", "sampleId", "status", "failures"],
   "properties": {
     "schemaVersion": { "const": "1.0.0" },
-    "runId": { "$ref": "#/$defs/id" },
-    "documentId": { "$ref": "#/$defs/id" },
-    "pageId": { "$ref": "#/$defs/id" },
-    "sampleId": { "$ref": "#/$defs/id" },
+    "runId": { "$ref": "#/$defs/stableId" },
+    "documentId": { "$ref": "#/$defs/stableId" },
+    "pageId": { "$ref": "#/$defs/stableId" },
+    "sampleId": { "$ref": "#/$defs/stableId" },
+    "status": { "enum": ["success", "failed"] },
     "prediction": {
       "type": "object",
       "additionalProperties": false,
@@ -25,8 +26,25 @@
     },
     "failures": { "type": "array", "items": { "$ref": "#/$defs/failure" } }
   },
+  "oneOf": [
+    {
+      "required": ["prediction"],
+      "properties": {
+        "status": { "const": "success" },
+        "failures": { "maxItems": 0 }
+      }
+    },
+    {
+      "required": ["failures"],
+      "not": { "required": ["prediction"] },
+      "properties": {
+        "status": { "const": "failed" },
+        "failures": { "minItems": 1 }
+      }
+    }
+  ],
   "$defs": {
-    "id": { "type": "string", "minLength": 1 },
+    "stableId": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
     "localization": {
       "type": "object",
       "additionalProperties": false,
@@ -42,13 +60,17 @@
     "attribution": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["subject"],
       "properties": {
+        "subject": { "enum": ["math", "chinese", "english"] },
         "math": {
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "nodeId": { "type": "string" },
-            "bottleneckId": { "type": "string" }
+            "primaryNodeId": { "$ref": "#/$defs/stableId" },
+            "primaryNodeLabel": { "type": "string" },
+            "bottleneckId": { "$ref": "#/$defs/stableId" },
+            "bottleneckLabel": { "type": "string" }
           }
         },
         "chinese": {
@@ -56,7 +78,9 @@
           "additionalProperties": false,
           "properties": {
             "originalItemLocation": { "type": "string" },
-            "errorType": { "type": "string" }
+            "errorType": { "type": "string" },
+            "review": { "type": "string" },
+            "migration": { "type": "string" }
           }
         },
         "english": {
@@ -64,10 +88,16 @@
           "additionalProperties": false,
           "properties": {
             "wordIdentity": { "type": "string" },
-            "recognitionSpelling": { "type": "string" }
+            "recognitionSpelling": { "type": "string" },
+            "stateUpdate": { "type": "string" }
           }
         }
-      }
+      },
+      "oneOf": [
+        { "required": ["math"], "properties": { "subject": { "const": "math" }, "math": { "required": ["primaryNodeId", "bottleneckId"] } } },
+        { "required": ["chinese"], "properties": { "subject": { "const": "chinese" }, "chinese": { "required": ["originalItemLocation", "errorType"] } } },
+        { "required": ["english"], "properties": { "subject": { "const": "english" }, "english": { "required": ["wordIdentity"] } } }
+      ]
     },
     "failure": {
       "type": "object",
