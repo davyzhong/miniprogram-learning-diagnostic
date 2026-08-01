@@ -1,0 +1,174 @@
+{
+  "schemaVersion": "1.0.0",
+  "datasetId": "fixture-v1",
+  "annotations": [
+    {
+      "schemaVersion": "1.0.0",
+      "annotationId": "annotation.math.correct",
+      "sampleId": "fixture.math.correct",
+      "preLabel": {
+        "conclusion": "correct",
+        "attribution": { "subject": "math", "math": { "primaryNodeId": "math.arithmetic.addition", "primaryNodeLabel": "Addition", "bottleneckId": "math.calculation.accuracy", "bottleneckLabel": "Calculation accuracy" } },
+        "labeledBy": "fixture.prelabeler",
+        "labeledAt": "2026-01-01T02:00:00.000Z"
+      },
+      "humanLabel": {
+        "conclusion": "correct",
+        "attribution": { "subject": "math", "math": { "primaryNodeId": "math.arithmetic.addition", "primaryNodeLabel": "Addition", "bottleneckId": "math.calculation.accuracy", "bottleneckLabel": "Calculation accuracy" } },
+        "labeledBy": "fixture.annotator",
+        "labeledAt": "2026-01-01T02:10:00.000Z"
+      },
+      "lockState": { "status": "locked", "lockedAt": "2026-01-01T02:30:00.000Z", "lockedBy": "fixture.qc" },
+      "review": { "reviewerIds": ["fixture.reviewer"], "qcStatus": "passed", "qcReviewerId": "fixture.qc", "qcReviewedAt": "2026-01-01T02:20:00.000Z", "adjudicationStatus": "not-needed", "disputeStatus": "none" },
+      "auditEvents": [
+        { "eventId": "audit.math.correct.created", "eventType": "created", "actorId": "fixture.annotator", "timestamp": "2026-01-01T02:00:00.000Z" },
+        { "eventId": "audit.math.correct.qc", "eventType": "qc-checked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:20:00.000Z" },
+        { "eventId": "audit.math.correct.locked", "eventType": "locked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:30:00.000Z" }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "annotationId": "annotation.math.fraction",
+      "sampleId": "fixture.math.fraction",
+      "preLabel": {
+        "conclusion": "incorrect",
+        "attribution": { "subject": "math", "math": { "primaryNodeId": "math.fraction.equivalence", "primaryNodeLabel": "Fraction equivalence", "bottleneckId": "math.fraction.common-denominator", "bottleneckLabel": "Common denominator" } },
+        "labeledBy": "fixture.prelabeler",
+        "labeledAt": "2026-01-01T02:00:00.000Z"
+      },
+      "humanLabel": {
+        "conclusion": "incorrect",
+        "attribution": { "subject": "math", "math": { "primaryNodeId": "math.fraction.equivalence", "primaryNodeLabel": "Fraction equivalence", "bottleneckId": "math.fraction.common-denominator", "bottleneckLabel": "Common denominator" } },
+        "labeledBy": "fixture.annotator",
+        "labeledAt": "2026-01-01T02:10:00.000Z"
+      },
+      "lockState": { "status": "locked", "lockedAt": "2026-01-01T02:30:00.000Z", "lockedBy": "fixture.qc" },
+      "review": { "reviewerIds": ["fixture.reviewer"], "qcStatus": "passed", "qcReviewerId": "fixture.qc", "qcReviewedAt": "2026-01-01T02:20:00.000Z", "adjudicationStatus": "not-needed", "disputeStatus": "none" },
+      "auditEvents": [
+        { "eventId": "audit.math.fraction.created", "eventType": "created", "actorId": "fixture.annotator", "timestamp": "2026-01-01T02:00:00.000Z" },
+        { "eventId": "audit.math.fraction.qc", "eventType": "qc-checked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:20:00.000Z" },
+        { "eventId": "audit.math.fraction.locked", "eventType": "locked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:30:00.000Z" }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "annotationId": "annotation.chinese.character",
+      "sampleId": "fixture.chinese.character",
+      "preLabel": {
+        "conclusion": "incorrect",
+        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-1", "errorType": "character-form", "review": "review-character-form", "migration": "migration-character-practice" } },
+        "labeledBy": "fixture.prelabeler",
+        "labeledAt": "2026-01-01T02:00:00.000Z"
+      },
+      "humanLabel": {
+        "conclusion": "incorrect",
+        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-1", "errorType": "character-form", "review": "review-character-form", "migration": "migration-character-practice" } },
+        "labeledBy": "fixture.annotator",
+        "labeledAt": "2026-01-01T02:10:00.000Z"
+      },
+      "lockState": { "status": "locked", "lockedAt": "2026-01-01T02:30:00.000Z", "lockedBy": "fixture.qc" },
+      "review": { "reviewerIds": ["fixture.reviewer"], "qcStatus": "passed", "qcReviewerId": "fixture.qc", "qcReviewedAt": "2026-01-01T02:20:00.000Z", "adjudicationStatus": "not-needed", "disputeStatus": "none" },
+      "auditEvents": [
+        { "eventId": "audit.chinese.character.created", "eventType": "created", "actorId": "fixture.annotator", "timestamp": "2026-01-01T02:00:00.000Z" },
+        { "eventId": "audit.chinese.character.qc", "eventType": "qc-checked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:20:00.000Z" },
+        { "eventId": "audit.chinese.character.locked", "eventType": "locked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:30:00.000Z" }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "annotationId": "annotation.chinese.blank",
+      "sampleId": "fixture.chinese.blank",
+      "preLabel": {
+        "conclusion": "not-an-item",
+        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-2", "errorType": "blank", "review": "review-completion", "migration": "migration-completion-practice" } },
+        "labeledBy": "fixture.prelabeler",
+        "labeledAt": "2026-01-01T02:00:00.000Z"
+      },
+      "humanLabel": {
+        "conclusion": "not-an-item",
+        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-2", "errorType": "blank", "review": "review-completion", "migration": "migration-completion-practice" } },
+        "labeledBy": "fixture.annotator",
+        "labeledAt": "2026-01-01T02:10:00.000Z"
+      },
+      "lockState": { "status": "locked", "lockedAt": "2026-01-01T02:30:00.000Z", "lockedBy": "fixture.qc" },
+      "review": { "reviewerIds": ["fixture.reviewer"], "qcStatus": "passed", "qcReviewerId": "fixture.qc", "qcReviewedAt": "2026-01-01T02:20:00.000Z", "adjudicationStatus": "not-needed", "disputeStatus": "none" },
+      "auditEvents": [
+        { "eventId": "audit.chinese.blank.created", "eventType": "created", "actorId": "fixture.annotator", "timestamp": "2026-01-01T02:00:00.000Z" },
+        { "eventId": "audit.chinese.blank.qc", "eventType": "qc-checked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:20:00.000Z" },
+        { "eventId": "audit.chinese.blank.locked", "eventType": "locked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:30:00.000Z" }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "annotationId": "annotation.english.correct",
+      "sampleId": "fixture.english.correct",
+      "preLabel": {
+        "conclusion": "correct",
+        "attribution": { "subject": "english", "english": { "wordIdentity": "planet", "recognitionSpelling": "recognized-correctly", "stateUpdate": "recognition-mastered-spelling-mastered" } },
+        "labeledBy": "fixture.prelabeler",
+        "labeledAt": "2026-01-01T02:00:00.000Z"
+      },
+      "humanLabel": {
+        "conclusion": "correct",
+        "attribution": { "subject": "english", "english": { "wordIdentity": "planet", "recognitionSpelling": "recognized-correctly", "stateUpdate": "recognition-mastered-spelling-mastered" } },
+        "labeledBy": "fixture.annotator",
+        "labeledAt": "2026-01-01T02:10:00.000Z"
+      },
+      "lockState": { "status": "locked", "lockedAt": "2026-01-01T02:30:00.000Z", "lockedBy": "fixture.qc" },
+      "review": { "reviewerIds": ["fixture.reviewer"], "qcStatus": "passed", "qcReviewerId": "fixture.qc", "qcReviewedAt": "2026-01-01T02:20:00.000Z", "adjudicationStatus": "not-needed", "disputeStatus": "none" },
+      "auditEvents": [
+        { "eventId": "audit.english.correct.created", "eventType": "created", "actorId": "fixture.annotator", "timestamp": "2026-01-01T02:00:00.000Z" },
+        { "eventId": "audit.english.correct.qc", "eventType": "qc-checked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:20:00.000Z" },
+        { "eventId": "audit.english.correct.locked", "eventType": "locked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:30:00.000Z" }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "annotationId": "annotation.english.misspelled",
+      "sampleId": "fixture.english.misspelled",
+      "preLabel": {
+        "conclusion": "incorrect",
+        "attribution": { "subject": "english", "english": { "wordIdentity": "bridge", "recognitionSpelling": "recognized-but-misspelled", "stateUpdate": "recognition-mastered-spelling-needs-practice" } },
+        "labeledBy": "fixture.prelabeler",
+        "labeledAt": "2026-01-01T02:00:00.000Z"
+      },
+      "humanLabel": {
+        "conclusion": "incorrect",
+        "attribution": { "subject": "english", "english": { "wordIdentity": "bridge", "recognitionSpelling": "recognized-but-misspelled", "stateUpdate": "recognition-mastered-spelling-needs-practice" } },
+        "labeledBy": "fixture.annotator",
+        "labeledAt": "2026-01-01T02:10:00.000Z"
+      },
+      "lockState": { "status": "locked", "lockedAt": "2026-01-01T02:30:00.000Z", "lockedBy": "fixture.qc" },
+      "review": { "reviewerIds": ["fixture.reviewer"], "qcStatus": "passed", "qcReviewerId": "fixture.qc", "qcReviewedAt": "2026-01-01T02:20:00.000Z", "adjudicationStatus": "not-needed", "disputeStatus": "none" },
+      "auditEvents": [
+        { "eventId": "audit.english.misspelled.created", "eventType": "created", "actorId": "fixture.annotator", "timestamp": "2026-01-01T02:00:00.000Z" },
+        { "eventId": "audit.english.misspelled.qc", "eventType": "qc-checked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:20:00.000Z" },
+        { "eventId": "audit.english.misspelled.locked", "eventType": "locked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:30:00.000Z" }
+      ]
+    },
+    {
+      "schemaVersion": "1.0.0",
+      "annotationId": "annotation.english.unreadable",
+      "sampleId": "fixture.english.unreadable",
+      "preLabel": {
+        "conclusion": "unreadable",
+        "attribution": { "subject": "english", "english": { "wordIdentity": "unknown", "recognitionSpelling": "unreadable", "stateUpdate": "no-state-update" } },
+        "labeledBy": "fixture.prelabeler",
+        "labeledAt": "2026-01-01T02:00:00.000Z"
+      },
+      "humanLabel": {
+        "conclusion": "unreadable",
+        "attribution": { "subject": "english", "english": { "wordIdentity": "unknown", "recognitionSpelling": "unreadable", "stateUpdate": "no-state-update" } },
+        "labeledBy": "fixture.annotator",
+        "labeledAt": "2026-01-01T02:10:00.000Z"
+      },
+      "lockState": { "status": "locked", "lockedAt": "2026-01-01T02:30:00.000Z", "lockedBy": "fixture.qc" },
+      "review": { "reviewerIds": ["fixture.reviewer"], "qcStatus": "passed", "qcReviewerId": "fixture.qc", "qcReviewedAt": "2026-01-01T02:20:00.000Z", "adjudicationStatus": "not-needed", "disputeStatus": "none" },
+      "auditEvents": [
+        { "eventId": "audit.english.unreadable.created", "eventType": "created", "actorId": "fixture.annotator", "timestamp": "2026-01-01T02:00:00.000Z" },
+        { "eventId": "audit.english.unreadable.qc", "eventType": "qc-checked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:20:00.000Z" },
+        { "eventId": "audit.english.unreadable.locked", "eventType": "locked", "actorId": "fixture.qc", "timestamp": "2026-01-01T02:30:00.000Z" }
+      ]
+    }
+  ]
+}

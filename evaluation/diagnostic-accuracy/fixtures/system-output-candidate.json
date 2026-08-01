@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0.0",
+  "runId": "run.fixture.baseline",
+  "records": [
+    {
+      "schemaVersion": "1.0.0", "runId": "run.fixture.baseline", "documentId": "fixture.math.document", "pageId": "fixture.math.page.1", "sampleId": "fixture.math.correct", "status": "success",
+      "prediction": { "localization": { "x": 0.05, "y": 0.1, "width": 0.4, "height": 0.2, "unit": "normalized" }, "text": "fictional-arithmetic-answer", "conclusion": "correct", "attribution": { "subject": "math", "math": { "primaryNodeId": "math.arithmetic.addition", "bottleneckId": "math.calculation.accuracy" } }, "confidence": 0.96 },
+      "failures": []
+    },
+    {
+      "schemaVersion": "1.0.0", "runId": "run.fixture.baseline", "documentId": "fixture.math.document", "pageId": "fixture.math.page.1", "sampleId": "fixture.math.fraction", "status": "success",
+      "prediction": { "localization": { "x": 0.55, "y": 0.1, "width": 0.4, "height": 0.2, "unit": "normalized" }, "text": "fictional-fraction-answer", "conclusion": "incorrect", "attribution": { "subject": "math", "math": { "primaryNodeId": "math.fraction.equivalence", "bottleneckId": "math.fraction.common-denominator" } }, "confidence": 0.93 },
+      "failures": []
+    },
+    {
+      "schemaVersion": "1.0.0", "runId": "run.fixture.baseline", "documentId": "fixture.chinese.document", "pageId": "fixture.chinese.page.1", "sampleId": "fixture.chinese.character", "status": "success",
+      "prediction": { "localization": { "x": 0.1, "y": 0.1, "width": 0.35, "height": 0.2, "unit": "normalized" }, "text": "fictional-character-response", "conclusion": "incorrect", "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-1", "errorType": "character-form", "review": "review-character-form", "migration": "migration-character-practice" } }, "confidence": 0.92 },
+      "failures": []
+    },
+    {
+      "schemaVersion": "1.0.0", "runId": "run.fixture.baseline", "documentId": "fixture.chinese.document", "pageId": "fixture.chinese.page.1", "sampleId": "fixture.chinese.blank", "status": "success",
+      "prediction": { "localization": { "x": 0.55, "y": 0.1, "width": 0.35, "height": 0.2, "unit": "normalized" }, "text": "", "conclusion": "not-an-item", "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-2", "errorType": "blank" } }, "confidence": 0.91 },
+      "failures": []
+    },
+    {
+      "schemaVersion": "1.0.0", "runId": "run.fixture.baseline", "documentId": "fixture.english.document", "pageId": "fixture.english.page.1", "sampleId": "fixture.english.correct", "status": "success",
+      "prediction": { "localization": { "x": 0.05, "y": 0.1, "width": 0.25, "height": 0.2, "unit": "normalized" }, "text": "planet", "conclusion": "correct", "attribution": { "subject": "english", "english": { "wordIdentity": "planet", "recognitionSpelling": "recognized-correctly", "stateUpdate": "recognition-mastered-spelling-mastered" } }, "confidence": 0.97 },
+      "failures": []
+    },
+    {
+      "schemaVersion": "1.0.0", "runId": "run.fixture.baseline", "documentId": "fixture.english.document", "pageId": "fixture.english.page.1", "sampleId": "fixture.english.misspelled", "status": "success",
+      "prediction": { "localization": { "x": 0.375, "y": 0.1, "width": 0.25, "height": 0.2, "unit": "normalized" }, "text": "brige", "conclusion": "incorrect", "attribution": { "subject": "english", "english": { "wordIdentity": "bridge", "recognitionSpelling": "recognized-but-misspelled", "stateUpdate": "recognition-mastered-spelling-needs-practice" } }, "confidence": 0.92 },
+      "failures": []
+    },
+    {
+      "schemaVersion": "1.0.0", "runId": "run.fixture.baseline", "documentId": "fixture.english.document", "pageId": "fixture.english.page.1", "sampleId": "fixture.english.unreadable", "status": "failed",
+      "failures": [{ "code": "FIXTURE_UNREADABLE", "stage": "classify", "message": "Fictional challenge item was unreadable.", "retryable": false }]
+    }
+  ]
+}

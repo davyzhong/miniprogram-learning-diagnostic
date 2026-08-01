@@ -1,0 +1,118 @@
+{
+  "schemaVersion": "1.0.0",
+  "datasetId": "fixture-v1",
+  "profile": "fixture",
+  "createdAt": "2026-01-01T00:00:00.000Z",
+  "documents": [
+    {
+      "documentId": "fixture.math.document",
+      "subject": "math",
+      "grade": 4,
+      "sourceType": "synthetic",
+      "hashes": [{ "algorithm": "sha256", "value": "f4396aa19067ee24446e3986fe30623d829b102c629b9cef84ad06da9b7cc6cd" }],
+      "pages": [{
+        "pageId": "fixture.math.page.1",
+        "pageNumber": 1,
+        "hashes": [{ "algorithm": "sha256", "value": "bda014c58e877be11aa24b74d1c82b9c3b0f91423467565171216ba4890b6472" }],
+        "items": [
+          {
+            "sampleId": "fixture.math.composite",
+            "crop": { "x": 0, "y": 0, "width": 1, "height": 1, "unit": "normalized" },
+            "composite": { "role": "parent", "childSampleIds": ["fixture.math.correct", "fixture.math.fraction"] },
+            "hashes": [{ "algorithm": "sha256", "value": "6cbcaed2da441f24e14d05d05d572ee90bbce742ed177c6f16297581eb0f6f24" }],
+            "annotationRefs": []
+          },
+          {
+            "sampleId": "fixture.math.correct",
+            "crop": { "x": 0.05, "y": 0.1, "width": 0.4, "height": 0.2, "unit": "normalized" },
+            "composite": { "role": "child", "parentSampleId": "fixture.math.composite" },
+            "hashes": [{ "algorithm": "sha256", "value": "4a171626c56b564c21edb32ff9669f1faec6be0c0d201458d76b67c3632bcefc" }],
+            "annotationRefs": ["annotation.math.correct"]
+          },
+          {
+            "sampleId": "fixture.math.fraction",
+            "crop": { "x": 0.55, "y": 0.1, "width": 0.4, "height": 0.2, "unit": "normalized" },
+            "composite": { "role": "child", "parentSampleId": "fixture.math.composite" },
+            "hashes": [{ "algorithm": "sha256", "value": "75937028eb57098ad2092b539479a161a9a4fe359c35bbc03c11e480cd6a0dab" }],
+            "annotationRefs": ["annotation.math.fraction"]
+          }
+        ]
+      }]
+    },
+    {
+      "documentId": "fixture.chinese.document",
+      "subject": "chinese",
+      "grade": 4,
+      "sourceType": "synthetic",
+      "hashes": [{ "algorithm": "sha256", "value": "3f924966d0610f995f4ef7783f84f25a9cd17250bdb36ff2a4a797127231980a" }],
+      "pages": [{
+        "pageId": "fixture.chinese.page.1",
+        "pageNumber": 1,
+        "hashes": [{ "algorithm": "sha256", "value": "8d85f4fb2ed49ff65ca6d88a90638c8a4a2f64d0239958aed3046eab0e5a9549" }],
+        "items": [
+          {
+            "sampleId": "fixture.chinese.character",
+            "crop": { "x": 0.1, "y": 0.1, "width": 0.35, "height": 0.2, "unit": "normalized" },
+            "composite": { "role": "standalone" },
+            "hashes": [{ "algorithm": "sha256", "value": "001bd8ce0e03fb80f2ee083835be6d30c9916da04e602bc61e8dbe19493c022a" }],
+            "annotationRefs": ["annotation.chinese.character"]
+          },
+          {
+            "sampleId": "fixture.chinese.blank",
+            "crop": { "x": 0.55, "y": 0.1, "width": 0.35, "height": 0.2, "unit": "normalized" },
+            "composite": { "role": "standalone" },
+            "hashes": [{ "algorithm": "sha256", "value": "0a9cf49c2adc4510cd1eaef1dc4a1447d09c1a6b4a123548735538c5da4e5853" }],
+            "annotationRefs": ["annotation.chinese.blank"]
+          }
+        ]
+      }]
+    },
+    {
+      "documentId": "fixture.english.document",
+      "subject": "english",
+      "grade": 4,
+      "sourceType": "synthetic",
+      "hashes": [{ "algorithm": "sha256", "value": "1d5ab10a2ae0645aa275cff0abea08c4142f0d4e639575cd7e804cdbe57b7d83" }],
+      "pages": [{
+        "pageId": "fixture.english.page.1",
+        "pageNumber": 1,
+        "hashes": [{ "algorithm": "sha256", "value": "007ed3859e0901b5b2f986734b28bf0eee2fccae52a3db418749a6eb49959ae0" }],
+        "items": [
+          {
+            "sampleId": "fixture.english.correct",
+            "crop": { "x": 0.05, "y": 0.1, "width": 0.25, "height": 0.2, "unit": "normalized" },
+            "composite": { "role": "standalone" },
+            "hashes": [{ "algorithm": "sha256", "value": "591b55c9fb49dad5cd24349e3601c974b3434daa3a9d8f006ec8bee4841bc48c" }],
+            "annotationRefs": ["annotation.english.correct"]
+          },
+          {
+            "sampleId": "fixture.english.misspelled",
+            "crop": { "x": 0.375, "y": 0.1, "width": 0.25, "height": 0.2, "unit": "normalized" },
+            "composite": { "role": "standalone" },
+            "hashes": [{ "algorithm": "sha256", "value": "e925a357724edbab3288734e6bd2b1f6025d8e8025684b95524296d6b623e3e0" }],
+            "annotationRefs": ["annotation.english.misspelled"]
+          },
+          {
+            "sampleId": "fixture.english.unreadable",
+            "crop": { "x": 0.7, "y": 0.1, "width": 0.25, "height": 0.2, "unit": "normalized" },
+            "composite": { "role": "standalone" },
+            "hashes": [{ "algorithm": "sha256", "value": "c8131bdf0be485cf909fdb65f1495fcdc1f80fa5adb90cef8ad695f4d1667196" }],
+            "annotationRefs": ["annotation.english.unreadable"]
+          }
+        ]
+      }]
+    }
+  ],
+  "pageInventoryLock": {
+    "locked": true,
+    "pageIds": ["fixture.math.page.1", "fixture.chinese.page.1", "fixture.english.page.1"],
+    "inventoryHash": { "algorithm": "sha256", "value": "b03cc93e3cb9b3f352d1d8561c71bac4a8c14c0bbae17333489e34de3a9cd9d7" },
+    "lockedAt": "2026-01-01T01:00:00.000Z"
+  },
+  "redactionVerification": {
+    "status": "verified",
+    "verifiedAt": "2026-01-01T01:30:00.000Z",
+    "verifierId": "fixture.verifier",
+    "notes": "Fictional synthetic assets only; image references use the fixture://diagnostic-accuracy namespace."
+  }
+}
