@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ldx.local/schemas/diagnostic-accuracy/system-output-1.0.0.schema.json",
+  "title": "Diagnostic Accuracy System Output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runId", "documentId", "pageId", "sampleId", "prediction", "failures"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "runId": { "$ref": "#/$defs/id" },
+    "documentId": { "$ref": "#/$defs/id" },
+    "pageId": { "$ref": "#/$defs/id" },
+    "sampleId": { "$ref": "#/$defs/id" },
+    "itemId": { "$ref": "#/$defs/id" },
+    "prediction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["localization", "text", "conclusion", "attribution"],
+      "properties": {
+        "localization": { "$ref": "#/$defs/localization" },
+        "text": { "type": "string" },
+        "conclusion": { "enum": ["correct", "incorrect", "unreadable", "not-an-item"] },
+        "attribution": { "$ref": "#/$defs/attribution" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "failures": { "type": "array", "items": { "$ref": "#/$defs/failure" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "localization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y", "width", "height", "unit"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0 },
+        "y": { "type": "number", "minimum": 0 },
+        "width": { "type": "number", "exclusiveMinimum": 0 },
+        "height": { "type": "number", "exclusiveMinimum": 0 },
+        "unit": { "enum": ["pixel", "normalized"] }
+      }
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "math": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "nodeId": { "type": "string" },
+            "bottleneckId": { "type": "string" }
+          }
+        },
+        "chinese": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "originalItemLocation": { "type": "string" },
+            "errorType": { "type": "string" }
+          }
+        },
+        "english": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "wordIdentity": { "type": "string" },
+            "recognitionSpelling": { "type": "string" }
+          }
+        }
+      }
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "stage", "message", "retryable"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "stage": { "enum": ["load", "model", "parse", "localize", "classify", "attribute", "persist"] },
+        "message": { "type": "string" },
+        "retryable": { "type": "boolean" },
+        "details": { "type": "object" }
+      }
+    }
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ldx.local/schemas/diagnostic-accuracy/annotation-1.0.0.schema.json",
+  "title": "Diagnostic Accuracy Annotation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "annotationId", "itemId", "preLabel", "humanLabel", "lockState", "review", "auditEvents"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "annotationId": { "$ref": "#/$defs/id" },
+    "itemId": { "$ref": "#/$defs/id" },
+    "preLabel": { "$ref": "#/$defs/label" },
+    "humanLabel": { "$ref": "#/$defs/label" },
+    "lockState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["unlocked", "locked"] },
+        "lockedAt": { "type": "string", "format": "date-time" },
+        "lockedBy": { "$ref": "#/$defs/id" }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewerIds", "qcStatus", "adjudicationStatus", "disputeStatus"],
+      "properties": {
+        "reviewerIds": { "type": "array", "items": { "$ref": "#/$defs/id" }, "uniqueItems": true },
+        "qcStatus": { "enum": ["pending", "passed", "failed"] },
+        "qcReviewerId": { "$ref": "#/$defs/id" },
+        "adjudicationStatus": { "enum": ["not-needed", "pending", "resolved"] },
+        "adjudicatorId": { "$ref": "#/$defs/id" },
+        "adjudicationLabel": { "$ref": "#/$defs/label" },
+        "disputeStatus": { "enum": ["none", "open", "resolved"] },
+        "disputeReason": { "type": "string" },
+        "disputeResolution": { "type": "string" }
+      }
+    },
+    "auditEvents": { "type": "array", "items": { "$ref": "#/$defs/auditEvent" } }
+  },
+  "$defs": {
+    "id": { "type": "string", "minLength": 1 },
+    "label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conclusion", "labeledBy", "labeledAt"],
+      "properties": {
+        "conclusion": { "enum": ["correct", "incorrect", "unreadable", "not-an-item"] },
+        "text": { "type": "string" },
+        "attribution": { "type": "object" },
+        "labeledBy": { "$ref": "#/$defs/id" },
+        "labeledAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "auditEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eventId", "eventType", "actorId", "timestamp"],
+      "properties": {
+        "eventId": { "$ref": "#/$defs/id" },
+        "eventType": { "enum": ["created", "pre-labeled", "human-labeled", "reviewed", "qc-checked", "disputed", "adjudicated", "locked", "unlocked"] },
+        "actorId": { "$ref": "#/$defs/id" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "details": { "type": "object" }
+      }
+    }
+  }
+}
