@@ -4,11 +4,11 @@
   "title": "Diagnostic Accuracy Annotation",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "annotationId", "itemId", "preLabel", "humanLabel", "lockState", "review", "auditEvents"],
+  "required": ["schemaVersion", "annotationId", "sampleId", "preLabel", "humanLabel", "lockState", "review", "auditEvents"],
   "properties": {
     "schemaVersion": { "const": "1.0.0" },
     "annotationId": { "$ref": "#/$defs/id" },
-    "itemId": { "$ref": "#/$defs/id" },
+    "sampleId": { "$ref": "#/$defs/id" },
     "preLabel": { "$ref": "#/$defs/label" },
     "humanLabel": { "$ref": "#/$defs/label" },
     "lockState": {

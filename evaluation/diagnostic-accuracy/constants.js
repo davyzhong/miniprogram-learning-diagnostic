@@ -16,10 +16,9 @@ const FORMAL_MINIMUMS = Object.freeze({
   challenge: 40,
 });
 
-const guardrail = (pathName, direction) => Object.freeze({
-  version: SCORER_VERSION,
-  path: pathName,
-  direction,
+const guardrail = (key, regression) => Object.freeze({
+  key,
+  regression,
 });
 
 const CORE_GUARDRAILS = Object.freeze([

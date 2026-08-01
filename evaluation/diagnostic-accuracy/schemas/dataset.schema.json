@@ -43,16 +43,16 @@
       "required": ["role"],
       "properties": {
         "role": { "enum": ["standalone", "parent", "child"] },
-        "parentItemId": { "$ref": "#/$defs/stableId" },
-        "childItemIds": { "type": "array", "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true }
+        "parentSampleId": { "$ref": "#/$defs/stableId" },
+        "childSampleIds": { "type": "array", "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true }
       }
     },
     "item": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["itemId", "crop", "composite", "hashes", "annotationRefs"],
+      "required": ["sampleId", "crop", "composite", "hashes", "annotationRefs"],
       "properties": {
-        "itemId": { "$ref": "#/$defs/stableId" },
+        "sampleId": { "$ref": "#/$defs/stableId" },
         "crop": { "$ref": "#/$defs/cropRectangle" },
         "composite": { "$ref": "#/$defs/compositeRelationship" },
         "hashes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/hash" } },
@@ -99,7 +99,7 @@
       "additionalProperties": false,
       "required": ["status", "verifiedAt", "verifierId"],
       "properties": {
-        "status": { "enum": ["verified", "not-required"] },
+        "status": { "enum": ["verified"] },
         "verifiedAt": { "type": "string", "format": "date-time" },
         "verifierId": { "$ref": "#/$defs/stableId" },
         "notes": { "type": "string" }

@@ -11,7 +11,6 @@
     "documentId": { "$ref": "#/$defs/id" },
     "pageId": { "$ref": "#/$defs/id" },
     "sampleId": { "$ref": "#/$defs/id" },
-    "itemId": { "$ref": "#/$defs/id" },
     "prediction": {
       "type": "object",
       "additionalProperties": false,
