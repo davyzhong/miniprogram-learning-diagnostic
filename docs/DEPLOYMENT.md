@@ -1,8 +1,8 @@
 # 部署与烟测手册
 
-> 更新日期：2026-07-18
+> 更新日期：2026-08-01
 
-本文记录小程序本地验证、14 个业务云函数的部署和发布前烟测流程。目标是让每次改动都能按同一套步骤交付，避免漏部署云函数或只在本地测试通过。
+本文记录小程序本地验证、15 个业务云函数的部署和发布前烟测流程。目标是让每次改动都能按同一套步骤交付，避免漏部署云函数或只在本地测试通过。项目负责人已确认 2026-08-01 本周期云函数部署完成。
 
 完整发布门禁、回滚步骤和发布记录模板见 [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md)。
 
@@ -49,6 +49,7 @@ CLOUDBASE_INDEXES_VERIFIED=1 npm run predeploy:check
 | `reportFeedback` | 收集家长对报告、卡点、错题、照片的纠错反馈 |
 | `englishVocabulary` | 英语个人词库、20 词听写、AI 判定和掌握度更新 |
 | `learningResource` | 数学学习卡点任务包生成、读取、完成和验证安排 |
+| `microValidation` | 围绕细卡点生成 3–6 道微验证题、提交判定并更新节点掌握状态 |
 | `regenerateVerificationPaper` | 自动验证卷短任务续跑和 PDF 最终生成 |
 | `reanalyzeMathHistory` | 历史数学报告重算维护工具 |
 | `aiUsage` | 体验版内测授权、AI 用量账本、成本估算和删除请求 |
@@ -69,15 +70,16 @@ CLOUDBASE_INDEXES_VERIFIED=1 npm run predeploy:check
 3. `reportFeedback`
 4. `englishVocabulary`
 5. `learningResource`
-6. `aiUsage`
-7. `uploadAndAnalyze`
-8. `analyzePhotos`
-9. `analyzeBatch`
-10. `generatePaper`
-11. `regenerateVerificationPaper`
-12. `generateReportPDF`
-13. `getAnalysisProgress`
-14. `reanalyzeMathHistory`
+6. `microValidation`
+7. `aiUsage`
+8. `uploadAndAnalyze`
+9. `analyzePhotos`
+10. `analyzeBatch`
+11. `generatePaper`
+12. `regenerateVerificationPaper`
+13. `generateReportPDF`
+14. `getAnalysisProgress`
+15. `reanalyzeMathHistory`
 
 如果只改了单个云函数，可以只部署该函数；但涉及报告结构、卡点更新、反馈或访问权限时，优先部署相关函数组合，避免前后端结构不一致。
 

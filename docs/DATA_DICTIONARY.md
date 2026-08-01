@@ -1,6 +1,6 @@
 # 数据字典
 
-> 更新日期：2026-07-18。基于实际代码实现提取，非设计文档。当前共 17 个集合，所有字段均来自云函数和前端代码中的真实读写操作。
+> 更新日期：2026-08-01。基于实际代码实现提取，非设计文档。当前共 20 个集合，所有字段均来自云函数和前端代码中的真实读写操作。
 
 ## 1. 集合概览
 
@@ -18,6 +18,9 @@
 | `englishPracticeAttempts` | 英语认词/拼写的逐次作答证据，避免会话数组无限增长 | 提交单词作答时 | englishVocabulary 云函数 |
 | `chineseSkillAttempts` | 语文阅读表达微任务的逐次提交证据 | 提交语文能力任务时 | englishVocabulary 云函数的语文 action |
 | `learningResourcePacks` | 数学学习卡点任务包 | 点击“学一下”生成或读取时 | learningResource 云函数 |
+| `studentNodeMastery` | 数学知识节点六态掌握档案 | 诊断、验证、微验证或资源学习产生节点事件时 | analyzePhotos / learningResource / microValidation 等云函数 |
+| `interventionSessions` | 家庭干预会话与 24h/72h 复测安排 | 完成学习任务包时 | learningResource 云函数 |
+| `microValidations` | 3–6 题微验证会话、逐题判定和掌握写回结果 | 生成微验证时 | microValidation 云函数 |
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
 | `analysisTasks` | 异步分析任务进度追踪 | analyzePhotos 启动时 | analyzePhotos 云函数 |
 | `aiUsageEvents` | AI 用量追加事件账本（token、估算成本、状态） | AI 云函数发起调用时 | analyzeBatch / generatePaper / learningResource / englishVocabulary（通过 usage-ledger） |
@@ -715,6 +718,20 @@ MVP 数学卡点当前包含：
 
 ---
 
+## studentNodeMastery
+
+每个学生、学科、知识节点一条聚合记录。核心字段为 `studentId`、`subject`、`nodeId`、`status`（`unobserved / suspected_gap / relearning / partial_mastery / mastered / recurring`）、`confidence`、`evidenceRefs[]`、`activeBottleneckIds[]`、`lastEvidenceAt`、`lastPracticedAt`、`nextReviewAt`、`createdAt`、`updatedAt`。诊断、纸面验证、微验证和学习任务包事件统一通过状态机更新该记录。
+
+## interventionSessions
+
+家庭完成数学学习任务包后沉淀一次干预会话。核心字段为 `sessionId`、`studentId`、`subject`、`date`、`nodeId`、`bottleneckIds[]`、`sourcePackId`、`resourcesUsed[]`、`variantPractice`、`outcome`、`masteryUpdate`、`review24At / review72At`、`review24Status / review72Status`、`createdAt`、`updatedAt`。
+
+## microValidations
+
+保存数学微验证会话。核心字段为 `studentId`、`subject`、`bottleneckId`、`nodeId`、`bnTitle`、`questions[]`、`status`（`in_progress / completing / completed`）、`verdicts[]`、`correctCount`、`passVerdict`、`masteryResult`、`createdAt`、`completedAt`、`updatedAt`。提交时先用事务占位，避免并发重复写入节点掌握事件。
+
+---
+
 ## learningResourcePacks
 
 `learningResourcePacks` 保存从数学学习卡点生成的小程序内学习任务包。它不是外部链接收藏夹，而是孩子可以直接打开完成的结构化学习材料。
@@ -759,7 +776,7 @@ MVP 数学卡点当前包含：
 | `sourceType` | String | `report / paper / resource_pack / english_session` 等 |
 | `cloudFunction` | String | 触发调用的云函数 |
 | `provider` | String | 第一阶段为 `cloudbase_ai` |
-| `model` | String | `hy3-preview`、`deepseek-v4-flash` 等 |
+| `model` | String | `qwen3.5-plus`、`deepseek-v4-flash` 等 |
 | `inputTokens` | Number | 输入 token；没有真实 usage 时为估算 |
 | `outputTokens` | Number | 输出 token；没有真实 usage 时为估算 |
 | `totalTokens` | Number | 输入 + 输出 token |

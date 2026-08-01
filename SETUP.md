@@ -1,6 +1,6 @@
 # 部署指南（SETUP）
 
-> 更新日期：2026-07-18。当前部署单元为 25 个注册页面、15 个业务云函数和 20 个数据库集合；完整发布门禁见 [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md)。
+> 更新日期：2026-08-01。当前部署单元为 26 个注册页面、15 个业务云函数和 20 个数据库集合；本周期云函数已由项目负责人确认部署完成。完整发布门禁见 [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md)。
 
 ## 一、云开发环境配置
 
@@ -63,6 +63,7 @@
    - `regenerateVerificationPaper`
    - `reanalyzeMathHistory`
    - `aiUsage`
+   - `microValidation`
 
 ### 注意：
 - `uploadAndAnalyze` 会先校验内测授权、学生权限、上传模式与 `paperId` 关联，再在服务端创建报告并 fire-and-forget 启动 `analyzePhotos`
@@ -144,9 +145,9 @@
 
 ---
 
-## 六、微信订阅消息配置（尚未实现）
+## 六、微信订阅消息配置（尚未实现，本轮不展开）
 
-PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sendNotification` 仍为空实现。完成订阅授权、模板配置和发送云函数后，再执行以下平台配置：
+PRD 将「分析完成后推送通知」列为目标能力，但当前 `analyzePhotos/sendNotification` 仍为空实现。2026-08-01 的发布收口不包含学习资源扩展或订阅消息设计；完成后续方案、订阅授权、模板配置和发送云函数后，再执行以下平台配置：
 
 1. 登录微信公众平台：https://mp.weixin.qq.com/
 2. 进入「功能」→ 「订阅消息」
@@ -156,6 +157,8 @@ PRD 将「分析完成后推送通知」列为 P0，但当前 `analyzePhotos/sen
 ---
 
 ## 七、真机测试
+
+> 2026-08-01 状态：项目负责人已完成当前版本真机主流程验收，未发现重大问题。以下清单继续作为后续版本回归步骤；订阅消息因功能尚未实现，不计入本轮通过项。
 
 1. 在微信开发者工具里，点击「预览」
 2. 用手机微信扫描二维码
@@ -248,7 +251,7 @@ miniprogram-learning-diagnostic/
 │   └── aiUsage/              ✅
 ├── services/skills/          ✅（P0 Skill 能力内核）
 ├── cli/ldx.js                ✅（本地 CLI 入口）
-├── tests/                    ✅（常规测试文件 + 真实图片 E2E 脚本 + helpers，638 常规用例）
+├── tests/                    ✅（97 个测试文件；默认离线集 1089 个用例）
 ├── scripts/check-js.js       ✅（217 文件语法检查）
 ├── project.config.json        ✅
 ├── package.json              ✅（npm scripts: test / test:coverage / test:e2e:* / check / verify / release:check）

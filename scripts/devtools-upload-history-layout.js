@@ -4,7 +4,8 @@ const { findRenderedInternalCodes } = require('./devtools-family-density-e2e')
 
 const PROJECT_PATH = path.resolve(__dirname, '..')
 const CLI_PATH = process.env.WECHAT_DEVTOOLS_CLI || '/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
-const SCREENSHOT_PATH = '/tmp/learning-record-timeline-narrow.png'
+const OUTPUT_DIR = path.join(PROJECT_PATH, 'tmp', 'e2e', 'upload-history-layout')
+const SCREENSHOT_PATH = path.join(OUTPUT_DIR, 'learning-record-timeline-narrow.png')
 const MAX_NARROW_WIDTH = 430
 const REQUIRED_VIEWPORT_WIDTH = 375
 const REQUIRED_VIEWPORT_HEIGHT = 812
@@ -161,12 +162,15 @@ async function collectLayoutMetrics(miniProgram, page) {
   const pageSize = await page.size()
   const cards = await page.$$('.record-card')
   const filters = await page.$$('.filter-pill')
-  const evidenceRows = await page.$$('.fold-row')
   const paperCard = await page.$('.record-verification-paper')
+  const verificationReportCard = await page.$('.record-verification-report')
   const code = paperCard && await paperCard.$('.paper-code')
   const title = paperCard && await paperCard.$('.event-title')
   const meta = paperCard && await paperCard.$('.event-meta')
-  if (!paperCard || !code || !title || !meta) throw new Error('paper card layout elements not found')
+  if (!paperCard || !verificationReportCard || !code || !title || !meta) {
+    throw new Error('paper/report card layout elements not found')
+  }
+  const evidenceRows = await verificationReportCard.$$('.fold-row')
   if (evidenceRows.length !== 3) throw new Error(`expected 3 inline evidence rows, got ${evidenceRows.length}`)
   if (filters.length < MIN_FILTER_CONTROLS) throw new Error(`expected at least ${MIN_FILTER_CONTROLS} filter controls, got ${filters.length}`)
   if (cards.length < MIN_RECORD_CARDS) throw new Error(`expected at least ${MIN_RECORD_CARDS} record cards, got ${cards.length}`)
@@ -189,7 +193,7 @@ async function main() {
   const automator = loadAutomator()
   let miniProgram
   try {
-    fs.mkdirSync(path.dirname(SCREENSHOT_PATH), { recursive: true })
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true })
     miniProgram = await automator.launch({
       cliPath: CLI_PATH,
       projectPath: PROJECT_PATH,
@@ -213,7 +217,14 @@ async function main() {
     const metrics = await collectLayoutMetrics(miniProgram, page)
     validateLayoutMetrics(metrics)
     await miniProgram.screenshot({ path: SCREENSHOT_PATH })
-    console.log(JSON.stringify({ status: 'PASS', screenshot: SCREENSHOT_PATH, metrics }, null, 2))
+    const report = {
+      status: 'PASS',
+      summary: { total: 1, passed: 1, failed: 0 },
+      screenshot: SCREENSHOT_PATH,
+      metrics
+    }
+    fs.writeFileSync(path.join(OUTPUT_DIR, 'report.json'), JSON.stringify(report, null, 2))
+    console.log(JSON.stringify(report, null, 2))
   } finally {
     if (miniProgram) await miniProgram.close()
   }

@@ -299,6 +299,16 @@ test('E2E test framework V2 package scripts expose unit and subject CLI suites',
   assert.equal(scripts['test:real-cloud'], 'npm run test:e2e:real-cloud')
 })
 
+test('语文 DevTools E2E 断言跟随当前紧凑工作台和自动准备验证卷文案', () => {
+  const source = read('scripts/devtools-e2e-chinese.js')
+
+  assert.doesNotMatch(source, /text:\s*\[[^\]]*'下一步建议'/s, '工作台已用今日主任务取代旧版下一步卡')
+  assert.doesNotMatch(source, /text:\s*\[[^\]]*'验证卷状态'/s, '出卷页已收敛为自动准备状态')
+  assert.match(source, /'开始语文小任务'/)
+  assert.match(source, /'自动准备'/)
+  assert.match(source, /'查看\/下载验证卷'/)
+})
+
 test('core page performance timing waits for usable content instead of a fixed delay', () => {
   const source = read('scripts/devtools-e2e-fullpage.js')
   const start = source.indexOf('async function runPageAssertion')
@@ -331,7 +341,9 @@ test('E2E test framework V2 aggregator reads standardized tmp/e2e suite reports'
     'tmp/e2e/math-knowledge-map',
     'tmp/e2e/chinese',
     'tmp/e2e/english',
-    'tmp/e2e/real-data'
+    'tmp/e2e/real-data',
+    'tmp/e2e/family-density',
+    'tmp/e2e/upload-history-layout'
   ]) {
     assert.match(source, new RegExp(expected.replace(/\//g, '\\/')), `aggregator should read ${expected}`)
   }
@@ -343,6 +355,7 @@ test('E2E test framework V2 aggregator reads standardized tmp/e2e suite reports'
   ]) {
     assert.doesNotMatch(source, new RegExp(historical.replace(/\//g, '\\/')), `aggregator should not depend on historical path ${historical}`)
   }
+  assert.match(source, /E2E_INCLUDE_OPTIONAL/, 'optional real-data reports must not be counted as part of a fresh default run')
 
   assert.match(source, /report\.json/)
   assert.match(source, /results\.json/)

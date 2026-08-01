@@ -1,7 +1,21 @@
 # 发布与回滚清单
 
-> 更新日期：2026-07-18
+> 更新日期：2026-08-01
 > 目标：每次发布都同步代码、云函数、文档、测试和真实数据验收，避免只在本地通过。
+
+## 2026-08-01 当前收口状态
+
+| 项目 | 状态 | 证据 |
+| --- | --- | --- |
+| 本周期云函数部署 | ✅ | 项目负责人确认已完成部署 |
+| 真机主流程验收 | ✅ | 项目负责人确认 Android / iPhone 主流程无重大问题 |
+| DevTools E2E | ✅ | 核心 23/23、数学 4/4 + 10/10、语文 3/3、英语 7/7、家庭密度与上传历史布局通过 |
+| 用户导览截图 | ✅ | 14 张匿名 mock 截图重新生成并抽查 |
+| 离线质量门禁 | ✅ | 1089 项测试、342 个 JS 文件、809 KB / 1200 KB 主包 |
+| 订阅消息 | ⏸ | 尚未实现；不属于本轮验收通过项，后续单独设计 |
+| 学习资源扩展 | ⏸ | 本轮不展开，待发布收口后单独设计 |
+
+详细记录见 [`test-reports/2026-08-01-release-closure.md`](test-reports/2026-08-01-release-closure.md)。
 
 ## 1. 发布前冻结范围
 
@@ -69,6 +83,7 @@ node scripts/sync-cloudfunction-shared.js --check  # 共享文件一致性
 | `reportFeedback` | 家长反馈数据结构或权限逻辑变化 |
 | `englishVocabulary` | 英语词库、20 词听写、AI 判定或掌握度规则变化 |
 | `learningResource` | 学习卡点任务包生成、缓存、状态或 AI 用量写入变化 |
+| `microValidation` | 微验证题目生成、会话提交、节点掌握事件或并发保护变化 |
 | `aiUsage` | 内测授权、AI 用量账本、删除请求或成本聚合变化 |
 | `uploadAndAnalyze` | 上传、报告创建、验证卷作答入口变化 |
 | `analyzePhotos` | 诊断合并、验证证据、报告质量、学习卡点更新变化 |
@@ -77,6 +92,7 @@ node scripts/sync-cloudfunction-shared.js --check  # 共享文件一致性
 | `regenerateVerificationPaper` | 验证卷续跑、补题、最终 PDF 生成变化 |
 | `generateReportPDF` | 诊断报告 PDF 内容变化 |
 | `getAnalysisProgress` | 分析进度轮询或 timeout 状态变化 |
+| `reanalyzeMathHistory` | 数学历史报告回填、节点目录或学习地图迁移变化 |
 
 部署后至少执行一次真实数据烟测：
 

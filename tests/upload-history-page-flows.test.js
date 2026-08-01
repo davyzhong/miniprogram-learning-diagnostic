@@ -977,12 +977,18 @@ test('learning record narrow-layout verifier enforces viewport and geometry boun
   const wxss = fs.readFileSync(path.join(ROOT, 'miniprogram/pages/upload-history/upload-history.wxss'), 'utf8')
   const packageJson = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
   assert.match(source, /超长学科学习验证试卷号-20260712-999/)
-  assert.match(source, /\/tmp\/learning-record-timeline-narrow\.png/)
+  assert.match(source, /upload-history-layout/)
+  assert.match(source, /report\.json/)
   assert.match(source, /\.screenshot\(/)
   assert.match(source, /\.size\(\)/)
   assert.match(source, /\.offset\(\)/)
   assert.match(source, /375 × 812 viewport required/)
   assert.match(source, /MIN_FILTER_CONTROLS/)
+  assert.match(
+    source,
+    /verificationReportCard\.\$\$\('\.fold-row'\)/,
+    'inline evidence count must be scoped to the verification report card'
+  )
   assert.match(wxss, /\.record-verification-paper \.event-topline\s*\{[^}]*flex-wrap:\s*wrap/s)
   assert.match(wxss, /\.record-verification-paper \.event-meta\s*\{[^}]*flex-basis:\s*100%/s)
   assert.match(wxss, /\.paper-code\s*\{[^}]*white-space:\s*nowrap/s)

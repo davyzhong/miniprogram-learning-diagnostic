@@ -1,7 +1,7 @@
 # 学习诊断小程序测试框架设计 V2
 
-> 更新日期：2026-07-18
-> 基线：`npm test` / `npm run test:unit` 当前 1008 个默认离线用例通过；仓库 89 个测试文件，默认脚本执行 84 个
+> 更新日期：2026-08-01
+> 基线：`npm test` / `npm run test:unit` 当前 1089 个默认离线用例通过；仓库 97 个测试文件，默认脚本执行 92 个
 > 配套执行计划：`docs/TEST_STRATEGY_V2.md`
 
 ## 一、设计目标
@@ -35,6 +35,8 @@
     ├── chinese：语文轻量链路
     ├── english：英语完整链路
     ├── ai-usage：AI 用量账本与内测授权
+    ├── family-density：家庭工作台触控、边界与密度
+    ├── upload-history-layout：375×812 学习记录布局
     ├── real-data：真实学生数据烟测
     ├── real-image：真实图片诊断链路
     └── real-cloud：真实云函数可用性

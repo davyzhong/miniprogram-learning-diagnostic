@@ -1,6 +1,6 @@
 # 项目文档中心
 
-> 更新日期：2026-07-18
+> 更新日期：2026-08-01
 > 规则：当前规范以代码和可复现命令为事实来源；带日期的设计、计划、评审和测试报告保留当时结论，不作为当前基线。
 
 ## 第一次了解项目
@@ -24,6 +24,7 @@
 | 常见故障 | [故障排查](TROUBLESHOOTING.md) |
 | CLI 与 Skills | [Skill 与 CLI 设计](SKILL_AND_CLI_DESIGN.md) |
 | emoji 真机兼容 | [兼容白名单](EMOJI_COMPATIBILITY_WHITELIST.md) |
+| 2026-08-01 发布收口证据 | [云部署、真机、E2E 与文档收口报告](test-reports/2026-08-01-release-closure.md) |
 
 ## 学科设计
 

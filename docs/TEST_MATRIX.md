@@ -1,8 +1,8 @@
 # 学习卡点诊断小程序测试矩阵
 
-> 更新日期：2026-07-18
+> 更新日期：2026-08-01
 > 范围：当前小程序 MVP + 数学学习地图升级 + 语文具体错项复习 + 英语词库闭环
-> 当前默认离线基线：`npm test` / `npm run test:unit` 共 1058 个用例通过。仓库有 95 个 `.test.js` 文件，默认脚本执行其中 90 个；真实云、真实图片和专项数学管线测试独立运行。
+> 当前默认离线基线：`npm test` / `npm run test:unit` 共 1089 个用例通过。仓库有 97 个 `.test.js` 文件，默认脚本执行其中 92 个；真实云、真实图片和专项数学管线测试独立运行。
 
 ## 1. 验证命令
 
@@ -16,6 +16,8 @@ npm run test:e2e:math       # 数学页面 E2E，当前最完整
 npm run test:e2e:chinese    # 语文轻量页面 E2E
 npm run test:e2e:english    # 英语页面 E2E
 npm run test:e2e:ai-usage   # AI 用量与内测授权专项 E2E
+npm run test:e2e:family-density        # 家庭工作台密度与触控边界
+npm run test:e2e:upload-history-layout # 375×812 学习记录布局
 ```
 
 ## 2. 核心功能测试矩阵
@@ -29,15 +31,16 @@ npm run test:e2e:ai-usage   # AI 用量与内测授权专项 E2E
 | 诊断报告展示和报告质量 | `report-presenter.test.js`、`report-quality.test.js`、`report-page-flows.test.js` | `test:e2e:core`、`test:e2e:math` | 已覆盖；含轻量进度轮询（进行中只查 getAnalysisProgress）与超时后 operation:completed 自动刷新回归 |
 | 数学细颗粒度学习卡点 | `bottleneck-view.test.js`、`bottleneck-hierarchy-regression.test.js`、`math-bottleneck-hierarchy.test.js` | `test:e2e:math` | 已覆盖 |
 | 数学知识地图和学习资源 | `knowledge-map-*.test.js`、`learning-resource-*.test.js`、`learning-resource-cloud.test.js`、`math-learning-map-*.test.js`、`bottleneck-page-flows.test.js`、`generate-verification-page-flows.test.js` | `test:e2e:math` | 已覆盖；含细 `targetId` 缓存回归 |
+| 数学节点掌握六态与微验证 | `node-mastery*.test.js`、`micro-validation.test.js`、`intervention-session-writer.test.js` | `test:e2e:math` 覆盖知识地图六态和入口 | 已覆盖；微验证生成/提交、并发占位和掌握事件写回有单元回归 |
 | 验证卷自动触发、短任务续跑、分页、PDF、失败状态 | `verification-pack.test.js`、`generate-paper-pdf.test.js`、`auto-verification.test.js`、`report-paper-feedback-loop.test.js`、`cloud-functions.test.js`、`learning-records.test.js`、`paper-page-flows.test.js`、`report-page-flows.test.js` | `test:e2e:math` 覆盖页面入口 | 已覆盖；含覆盖卡点层级展示回归，真实打印需人工验收 |
 | 验证反馈、页面编号、证据回传 | `verification-evidence.test.js`、`report-paper-feedback-loop.test.js`、`analyze-batch-result.test.js` | 后续补数学作答页完整 E2E | 单元层已覆盖 |
 | 语文具体错项复习 | `chinese-review-targets.test.js`、`profile-summary.test.js`、`subject-home-presenter.test.js` | `test:e2e:chinese` | 轻量页面链路已建，完整作答回传待扩展 |
 | 英语个人词库、认词练习、纸面听写、错词本 | `english-vocabulary.test.js`、`english-vocabulary-cloud.test.js`、`english-devtools-cases.test.js` | `test:e2e:english` 覆盖工作台、自动导入、认词、听写、学习记录、错词本、空态 | 已覆盖 |
-| 学习记录和证据时间线 | `learning-records.test.js`、`student-data-access.test.js`、`upload-history-page-flows.test.js` | `test:e2e:core`、`test:e2e:english` | 已覆盖 |
+| 学习记录和证据时间线 | `learning-records.test.js`、`student-data-access.test.js`、`upload-history-page-flows.test.js` | `test:e2e:core`、`test:e2e:english`、`test:e2e:upload-history-layout` | 已覆盖；375×812 布局通过 |
 | 数据归属、参数白名单、无堆栈返回 | `contracts.test.js`、`student-access.test.js`、`student-data-access.test.js` | 第二微信账号需人工验收 | 已覆盖主要入口 |
 | E2E 命令和输出目录契约 | `contracts.test.js` | `scripts/e2e-report-aggregator.js` 聚合 | 已覆盖 |
 | AI 用量账本、成本估算、内测授权、删除请求 | `ai-usage-ledger.test.js`、`ai-usage-presenter.test.js`、`cloud-functions.test.js`、`learning-resource-cloud.test.js`、`index-page-flows.test.js` | `test:e2e:ai-usage` 覆盖账单页、首页入口、上传授权和 aiUsage 云函数结构 | 已覆盖；含三态记账、真实/估算优先级、北京时间月份聚合、服务端授权门禁、账单视图模型 |
-| B1 设计系统、emoji 白名单、可视化接线（热力格 / 三色堆叠条 / 通过率条 / 掌握度条 / 词库构成 / 趋势文案 / learning-progress 入口） | `bplus-design-system.test.js`、`ui-symbols.test.js`、`emoji-candidates.test.js`、`emoji-batch-02.test.js`、`batch3-visualization-wiring.test.js` | Android/iOS 真机兼容测试 + DevTools 360/390px 截图人工核对 | 已覆盖；B01 202 项和 B02 996 项双端通过字形进入白名单，B02 四个 Android 方格项强制排除，详见 `docs/EMOJI_COMPATIBILITY_WHITELIST.md` |
+| B1 设计系统、emoji 白名单、可视化接线（热力格 / 三色堆叠条 / 通过率条 / 掌握度条 / 词库构成 / 趋势文案 / learning-progress 入口） | `bplus-design-system.test.js`、`ui-symbols.test.js`、`emoji-candidates.test.js`、`emoji-batch-02.test.js`、`batch3-visualization-wiring.test.js` | 真机验收 + `test:e2e:family-density` + 14 张导览截图抽查 | 已覆盖当前主流程；iOS 键帽/旗帜等 C14 字形仍不等同于全量系统认证 |
 
 ## 3. 人工验收清单
 

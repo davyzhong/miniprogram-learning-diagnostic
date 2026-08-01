@@ -1,5 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const {
   findRenderedInternalCodes,
@@ -179,4 +181,30 @@ test('rendered internal-code detector rejects backend and opaque identifiers', (
     'cloud://prod/file',
     '665f8c1a2b3c4d5e6f708192'
   ])
+})
+
+test('family density E2E follows the compact latest-diagnosis label', () => {
+  const source = fs.readFileSync(path.join(__dirname, '..', 'scripts/devtools-family-density-e2e.js'), 'utf8')
+  assert.doesNotMatch(source, /'\u6700\u65b0\u6b63\u5f0f\u8bca\u65ad'/u)
+  assert.match(source, /'\u6700\u65b0\u8bca\u65ad'/u)
+  assert.match(source, /report\.json/)
+})
+
+test('family workbench interactive rows keep the 43px touch target at 375px width', () => {
+  const wxss = fs.readFileSync(path.join(__dirname, '..', 'miniprogram/pages/index/index.wxss'), 'utf8')
+  const compactLayer = wxss.slice(wxss.indexOf('Family child card B:'))
+  for (const selector of [
+    '.secondary-action-card',
+    '.child-quick-link',
+    '.child-subject-row',
+    '.child-latest-diagnosis'
+  ]) {
+    const escaped = selector.replace('.', '\\.')
+    assert.match(compactLayer, new RegExp(`${escaped}[^}]*min-height:\\s*86rpx`, 's'), `${selector} must keep an 86rpx touch target`)
+  }
+  assert.match(
+    compactLayer,
+    /\.secondary-action-card[^}]*min-width:\s*0/s,
+    'secondary action cards must be allowed to shrink inside the two-column grid'
+  )
 })

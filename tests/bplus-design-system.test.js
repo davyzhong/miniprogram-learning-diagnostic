@@ -165,6 +165,18 @@ test('application navigation and page backgrounds use the B1 shell colors', () =
   }
 })
 
+test('验证卷配置页的浅色 B1 头卡使用可读的深色文字', () => {
+  const wxss = read('miniprogram/pages/generate-verification/generate-verification.wxss')
+  const hero = wxss.match(/\.config-hero\.b1-paper-header\s*\{([^}]*)\}/)
+  const description = wxss.match(/\.config-hero\.b1-paper-header\s+\.config-desc\s*\{([^}]*)\}/)
+
+  assert.ok(hero, '验证卷配置页必须定义 B1 头卡')
+  assert.match(hero[1], /background:\s*var\(--b1-surface\)/)
+  assert.match(hero[1], /color:\s*var\(--b1-ink\)/, '浅色头卡的标题不能继承旧版白色文字')
+  assert.ok(description, '浅色头卡需要覆盖说明文字颜色')
+  assert.match(description[1], /color:\s*var\(--b1-ink-muted\)/)
+})
+
 test('critical compact symbol controls keep a text label or accessible label', () => {
   for (const page of registeredPages()) {
     const wxml = read(`${page}.wxml`)

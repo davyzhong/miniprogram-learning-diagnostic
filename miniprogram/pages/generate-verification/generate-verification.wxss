@@ -320,8 +320,13 @@
   border-left: 8rpx solid var(--b1-subject-math-fg);
   border-radius: 10rpx;
   box-shadow: none;
+  color: var(--b1-ink);
   margin: 20rpx 28rpx 16rpx;
   padding: 20rpx;
+}
+
+.config-hero.b1-paper-header .config-desc {
+  color: var(--b1-ink-muted);
 }
 
 .config-hero.b1-subject-chinese { border-left-color: var(--b1-subject-chinese-fg); }
