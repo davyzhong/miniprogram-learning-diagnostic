@@ -7,7 +7,7 @@
   "required": ["schemaVersion", "runId", "gitCommit", "versions", "configuration", "timestamps", "counts", "status", "outputReferences", "usage"],
   "properties": {
     "schemaVersion": { "const": "1.0.0" },
-    "runId": { "type": "string", "minLength": 1 },
+    "runId": { "$ref": "#/$defs/stableId" },
     "gitCommit": { "type": "string", "pattern": "^[a-fA-F0-9]{7,64}$" },
     "versions": {
       "type": "object",
@@ -58,5 +58,8 @@
         "providerMetadata": { "type": "object" }
       }
     }
+  },
+  "$defs": {
+    "stableId": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" }
   }
 }

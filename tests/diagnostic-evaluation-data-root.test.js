@@ -238,6 +238,7 @@ test('linked identifiers use the same non-whitespace stable-ID contract', () => 
   const stablePattern = datasetSchema.$defs.stableId.pattern;
   assert.equal(stablePattern, '^[A-Za-z0-9][A-Za-z0-9._:-]*$');
   assert.equal(annotationSchema.$defs.stableId.pattern, stablePattern);
+  assert.equal(runSchema.$defs.stableId.pattern, stablePattern);
   assert.equal(systemOutputSchema.$defs.stableId.pattern, stablePattern);
 
   assert.equal(datasetSchema.$defs.item.properties.sampleId.$ref, '#/$defs/stableId');
@@ -245,8 +246,11 @@ test('linked identifiers use the same non-whitespace stable-ID contract', () => 
   assert.equal(datasetSchema.$defs.page.properties.pageId.$ref, '#/$defs/stableId');
   assert.equal(datasetSchema.$defs.item.properties.annotationRefs.items.$ref, '#/$defs/stableId');
   assert.equal(annotationSchema.properties.sampleId.$ref, '#/$defs/stableId');
+  assert.equal(runSchema.properties.runId.$ref, '#/$defs/stableId');
+  assert.equal(systemOutputSchema.properties.runId.$ref, '#/$defs/stableId');
   assert.equal(systemOutputSchema.properties.sampleId.$ref, '#/$defs/stableId');
   assert.equal(new RegExp(stablePattern).test('   '), false);
+  assert.equal(new RegExp(stablePattern).test('run with spaces'), false);
 });
 
 test('system outputs distinguish successful predictions from terminal failures', () => {
