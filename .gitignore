@@ -14,6 +14,7 @@ project.private.config.json
 *.log
 npm-debug.log*
 .superpowers/
+.worktrees/
 tmp/
 
 # Codemap tool transient outputs (the .md artifacts in docs/CODEMAPS/ are kept)
