@@ -94,9 +94,9 @@
         }
       },
       "oneOf": [
-        { "required": ["math"], "properties": { "subject": { "const": "math" }, "math": { "required": ["primaryNodeId", "bottleneckId"] } } },
-        { "required": ["chinese"], "properties": { "subject": { "const": "chinese" }, "chinese": { "required": ["originalItemLocation", "errorType"] } } },
-        { "required": ["english"], "properties": { "subject": { "const": "english" }, "english": { "required": ["wordIdentity"] } } }
+        { "required": ["math"], "properties": { "subject": { "const": "math" }, "math": { "required": ["primaryNodeId", "bottleneckId"] }, "chinese": false, "english": false } },
+        { "required": ["chinese"], "properties": { "subject": { "const": "chinese" }, "math": false, "chinese": { "required": ["originalItemLocation", "errorType"] }, "english": false } },
+        { "required": ["english"], "properties": { "subject": { "const": "english" }, "math": false, "chinese": false, "english": { "required": ["wordIdentity"] } } }
       ]
     },
     "failure": {

@@ -73,6 +73,36 @@ test('synchronized-folder checks are path-segment aware', () => {
   assert.equal(resolveDataRoot({ value, repoRoot, homeDir }), path.normalize(value));
 });
 
+test('rejects standard macOS CloudStorage and iCloud Drive layouts', () => {
+  const localHome = path.join(os.tmpdir(), 'ldx-eval-layout-home');
+  const synchronizedRoots = [
+    path.join(localHome, 'Library', 'CloudStorage', 'Workspace', 'evaluation'),
+    path.join(localHome, 'Library', 'Mobile Documents', 'com~apple~CloudDocs', 'evaluation'),
+  ];
+
+  for (const value of synchronizedRoots) {
+    assert.throws(
+      () => resolveDataRoot({ value, repoRoot, homeDir: localHome }),
+      /synchronized/i,
+    );
+  }
+});
+
+test('recognizes provider-prefixed mount segments without broad prefix matching', () => {
+  for (const segment of ['GoogleDrive-user@example.com', 'ONEDRIVE-PERSONAL']) {
+    const value = path.join(os.tmpdir(), segment, 'evaluation');
+    assert.throws(
+      () => resolveDataRoot({ value, repoRoot, homeDir }),
+      /synchronized/i,
+    );
+  }
+
+  for (const segment of ['Boxing', 'DropboxNotes', 'GoogleDriver']) {
+    const value = path.join(os.tmpdir(), segment, 'evaluation');
+    assert.equal(resolveDataRoot({ value, repoRoot, homeDir }), path.normalize(value));
+  }
+});
+
 test('accepts a separate local absolute directory without creating it', () => {
   const value = path.join(
     os.tmpdir(),
@@ -127,6 +157,24 @@ test('rejects a symlink alias whose canonical target has a synchronized segment'
         /synchronized/i,
       );
       assert.equal(fs.existsSync(value), false);
+    });
+  } finally {
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('rejects a symlink alias into the canonical macOS CloudStorage tree', (t) => {
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'ldx-eval-cloud-home-'));
+  const localHome = path.join(temporaryRoot, 'home');
+  const cloudTarget = path.join(localHome, 'Library', 'CloudStorage', 'Workspace');
+  fs.mkdirSync(cloudTarget, { recursive: true });
+
+  try {
+    withTemporarySymlink(t, cloudTarget, (alias) => {
+      assert.throws(
+        () => resolveDataRoot({ value: path.join(alias, 'evaluation'), repoRoot, homeDir: localHome }),
+        /synchronized/i,
+      );
     });
   } finally {
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
@@ -235,6 +283,19 @@ test('gold and predicted attribution share subject-specific contract shapes', ()
     Object.keys(attribution.properties.english.properties).sort(),
     ['recognitionSpelling', 'stateUpdate', 'wordIdentity'],
   );
+});
+
+test('subject attribution branches forbid irrelevant subject payloads', () => {
+  for (const schema of [annotationSchema, systemOutputSchema]) {
+    const branches = schema.$defs.attribution.oneOf;
+    for (const subject of ['math', 'chinese', 'english']) {
+      const branch = branches.find((candidate) => candidate.properties.subject.const === subject);
+      const irrelevantSubjects = ['math', 'chinese', 'english'].filter((name) => name !== subject);
+      for (const irrelevantSubject of irrelevantSubjects) {
+        assert.equal(branch.properties[irrelevantSubject], false);
+      }
+    }
+  }
 });
 
 test('annotation locked and resolved states require auditable actors and timestamps', () => {

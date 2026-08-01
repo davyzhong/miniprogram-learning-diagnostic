@@ -11,6 +11,10 @@ const SYNCHRONIZED_SEGMENTS = new Set([
   'onedrive',
   'box',
 ]);
+const SYNCHRONIZED_PREFIX_SEGMENTS = [
+  /^googledrive-.+$/iu,
+  /^onedrive-.+$/iu,
+];
 
 function canonicalizeWithExistingAncestor(value) {
   let existingAncestor = value;
@@ -40,7 +44,27 @@ function hasSynchronizedSegment(value) {
   return value
     .split(/[\\/]+/u)
     .filter(Boolean)
-    .some((segment) => SYNCHRONIZED_SEGMENTS.has(segment.toLowerCase()));
+    .some((segment) => (
+      SYNCHRONIZED_SEGMENTS.has(segment.toLowerCase())
+      || SYNCHRONIZED_PREFIX_SEGMENTS.some((pattern) => pattern.test(segment))
+    ));
+}
+
+function macOsSynchronizedRoots(homeDir) {
+  if (typeof homeDir !== 'string' || !path.isAbsolute(homeDir)) return [];
+
+  const normalizedHomeDir = path.normalize(homeDir);
+  const canonicalHomeDir = canonicalizeWithExistingAncestor(normalizedHomeDir);
+  const relativeRoots = [
+    ['Library', 'CloudStorage'],
+    ['Library', 'Mobile Documents', 'com~apple~CloudDocs'],
+  ];
+
+  return relativeRoots.flatMap((segments) => {
+    const lexicalRoot = path.join(normalizedHomeDir, ...segments);
+    const canonicalRoot = canonicalizeWithExistingAncestor(path.join(canonicalHomeDir, ...segments));
+    return [lexicalRoot, canonicalRoot];
+  });
 }
 
 function resolveDataRoot({ value, repoRoot, homeDir }) {
@@ -68,12 +92,18 @@ function resolveDataRoot({ value, repoRoot, homeDir }) {
     throw new Error('Diagnostic evaluation data root must be outside the repository.');
   }
 
-  if (hasSynchronizedSegment(dataRoot) || hasSynchronizedSegment(canonicalDataRoot)) {
+  const synchronizedRoots = macOsSynchronizedRoots(homeDir);
+  const isUnderSynchronizedRoot = synchronizedRoots.some((root) => (
+    isInside(root, dataRoot) || isInside(root, canonicalDataRoot)
+  ));
+  if (
+    hasSynchronizedSegment(dataRoot)
+    || hasSynchronizedSegment(canonicalDataRoot)
+    || isUnderSynchronizedRoot
+  ) {
     throw new Error('Diagnostic evaluation data root must be outside synchronized folders.');
   }
 
-  // Retained in the explicit API so callers can supply deterministic environment context.
-  void homeDir;
   return dataRoot;
 }
 
