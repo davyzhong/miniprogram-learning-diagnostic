@@ -62,10 +62,12 @@
     "page": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["pageId", "pageNumber", "hashes", "items"],
+      "required": ["pageId", "pageNumber", "imageReference", "inventoryStatus", "hashes", "items"],
       "properties": {
         "pageId": { "$ref": "#/$defs/stableId" },
         "pageNumber": { "type": "integer", "minimum": 1 },
+        "imageReference": { "type": "string", "minLength": 1 },
+        "inventoryStatus": { "enum": ["complete", "crop_only"] },
         "hashes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/hash" } },
         "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
       }
@@ -78,7 +80,8 @@
         "documentId": { "$ref": "#/$defs/stableId" },
         "subject": { "enum": ["math", "chinese", "english"] },
         "grade": { "type": ["string", "integer"] },
-        "sourceType": { "enum": ["camera", "scan", "screenshot", "synthetic", "other"] },
+        "sourceType": { "enum": ["historical", "challenge"], "description": "Benchmark cohort inherited by every page and item in this document." },
+        "captureType": { "enum": ["camera", "scan", "synthetic"] },
         "hashes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/hash" } },
         "pages": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/page" } }
       }
@@ -86,13 +89,18 @@
     "pageInventoryLock": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["locked", "pageIds", "inventoryHash", "lockedAt"],
+      "required": ["locked", "pageIds", "inventoryHash"],
       "properties": {
-        "locked": { "const": true },
+        "locked": { "type": "boolean" },
         "pageIds": { "type": "array", "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true },
         "inventoryHash": { "$ref": "#/$defs/hash" },
         "lockedAt": { "type": "string", "format": "date-time" }
-      }
+      },
+      "allOf": [{
+        "if": { "properties": { "locked": { "const": true } }, "required": ["locked"] },
+        "then": { "required": ["lockedAt"] },
+        "else": { "not": { "required": ["lockedAt"] } }
+      }]
     },
     "redactionVerification": {
       "type": "object",

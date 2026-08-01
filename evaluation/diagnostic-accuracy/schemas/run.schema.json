@@ -35,12 +35,13 @@
     "counts": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["success", "failure", "unresolved", "retry"],
+      "required": ["total", "success", "failure", "unresolved", "retry"],
       "properties": {
+        "total": { "type": "integer", "minimum": 0, "description": "Distinct dataset records represented by success, failure, or unresolved status." },
         "success": { "type": "integer", "minimum": 0 },
         "failure": { "type": "integer", "minimum": 0 },
         "unresolved": { "type": "integer", "minimum": 0 },
-        "retry": { "type": "integer", "minimum": 0 }
+        "retry": { "type": "integer", "minimum": 0, "description": "Phase-one retry attempts; each record may be retried at most once, so retry cannot exceed total." }
       }
     },
     "status": { "enum": ["created", "running", "completed", "completed-with-errors", "failed", "cancelled"] },

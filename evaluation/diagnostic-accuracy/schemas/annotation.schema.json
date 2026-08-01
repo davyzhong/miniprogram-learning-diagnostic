@@ -23,7 +23,8 @@
       "allOf": [
         {
           "if": { "properties": { "status": { "const": "locked" } }, "required": ["status"] },
-          "then": { "required": ["lockedAt", "lockedBy"] }
+          "then": { "required": ["lockedAt", "lockedBy"] },
+          "else": { "not": { "anyOf": [{ "required": ["lockedAt"] }, { "required": ["lockedBy"] }] } }
         }
       ]
     },
@@ -49,15 +50,27 @@
       "allOf": [
         {
           "if": { "properties": { "qcStatus": { "enum": ["passed", "failed"] } }, "required": ["qcStatus"] },
-          "then": { "required": ["qcReviewerId", "qcReviewedAt"] }
+          "then": { "required": ["qcReviewerId", "qcReviewedAt"] },
+          "else": { "not": { "anyOf": [{ "required": ["qcReviewerId"] }, { "required": ["qcReviewedAt"] }] } }
         },
         {
           "if": { "properties": { "adjudicationStatus": { "const": "resolved" } }, "required": ["adjudicationStatus"] },
-          "then": { "required": ["adjudicatorId", "adjudicationLabel", "adjudicatedAt"] }
+          "then": { "required": ["adjudicatorId", "adjudicationLabel", "adjudicatedAt"] },
+          "else": { "not": { "anyOf": [{ "required": ["adjudicatorId"] }, { "required": ["adjudicationLabel"] }, { "required": ["adjudicatedAt"] }] } }
         },
         {
           "if": { "properties": { "disputeStatus": { "const": "resolved" } }, "required": ["disputeStatus"] },
-          "then": { "required": ["disputeResolution", "disputeResolvedBy", "disputeResolvedAt"] }
+          "then": { "required": ["disputeResolution", "disputeResolvedBy", "disputeResolvedAt"] },
+          "else": {
+            "if": { "properties": { "disputeStatus": { "const": "open" } }, "required": ["disputeStatus"] },
+            "then": {
+              "required": ["disputeReason"],
+              "not": { "anyOf": [{ "required": ["disputeResolution"] }, { "required": ["disputeResolvedBy"] }, { "required": ["disputeResolvedAt"] }] }
+            },
+            "else": {
+              "not": { "anyOf": [{ "required": ["disputeReason"] }, { "required": ["disputeResolution"] }, { "required": ["disputeResolvedBy"] }, { "required": ["disputeResolvedAt"] }] }
+            }
+          }
         }
       ]
     },
@@ -108,8 +121,8 @@
           "additionalProperties": false,
           "properties": {
             "wordIdentity": { "type": "string" },
-            "recognitionSpelling": { "type": "string" },
-            "stateUpdate": { "type": "string" }
+            "recognitionSpelling": { "enum": ["recognized-correctly", "recognized-but-misspelled", "unreadable"] },
+            "stateUpdate": { "enum": ["recognition-mastered-spelling-mastered", "recognition-mastered-spelling-needs-practice", "no-state-update"] }
           }
         }
       },

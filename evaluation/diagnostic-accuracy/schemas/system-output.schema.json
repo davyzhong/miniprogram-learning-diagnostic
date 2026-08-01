@@ -88,8 +88,8 @@
           "additionalProperties": false,
           "properties": {
             "wordIdentity": { "type": "string" },
-            "recognitionSpelling": { "type": "string" },
-            "stateUpdate": { "type": "string" }
+            "recognitionSpelling": { "enum": ["recognized-correctly", "recognized-but-misspelled", "unreadable"] },
+            "stateUpdate": { "enum": ["recognition-mastered-spelling-mastered", "recognition-mastered-spelling-needs-practice", "no-state-update"] }
           }
         }
       },

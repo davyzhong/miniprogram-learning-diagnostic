@@ -326,3 +326,21 @@ test('dataset import contract only permits verified redaction', () => {
     ['verified'],
   );
 });
+
+test('dataset schema separates benchmark cohort from capture medium and models page inventory', () => {
+  const document = datasetSchema.$defs.document;
+  assert.deepEqual(document.properties.sourceType.enum, ['historical', 'challenge']);
+  assert.deepEqual(document.properties.captureType.enum, ['camera', 'scan', 'synthetic']);
+  assert.ok(document.required.includes('sourceType'));
+  assert.deepEqual(datasetSchema.$defs.page.properties.inventoryStatus.enum, ['complete', 'crop_only']);
+  assert.ok(datasetSchema.$defs.page.required.includes('imageReference'));
+  assert.ok(datasetSchema.$defs.page.required.includes('inventoryStatus'));
+  assert.equal(datasetSchema.$defs.pageInventoryLock.properties.locked.type, 'boolean');
+});
+
+test('run schema defines exact total and phase-one retry relationships', () => {
+  const counts = runSchema.properties.counts;
+  assert.deepEqual(counts.required.sort(), ['failure', 'retry', 'success', 'total', 'unresolved']);
+  assert.equal(counts.properties.retry.description.includes('at most once'), true);
+  assert.equal(counts.properties.total.type, 'integer');
+});

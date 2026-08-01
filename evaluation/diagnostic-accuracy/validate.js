@@ -5,7 +5,8 @@ const { DATASET_SCHEMA_VERSION, FORMAL_MINIMUMS } = require('./constants');
 
 const SUBJECTS = ['math', 'chinese', 'english'];
 const PROFILES = ['formal', 'exploratory', 'fixture'];
-const SOURCES = ['camera', 'scan', 'screenshot', 'synthetic', 'other'];
+const SOURCES = ['historical', 'challenge'];
+const CAPTURE_TYPES = ['camera', 'scan', 'synthetic'];
 const CONCLUSIONS = ['correct', 'incorrect', 'unreadable', 'not-an-item'];
 const STABLE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/u;
 const HASH = /^[a-f0-9]{64}$/u;
@@ -56,6 +57,10 @@ function enumValue(value, allowed, location, errors) {
   if (!allowed.includes(value)) errors.push(`${location} must be one of: ${allowed.join(', ')}.`);
 }
 
+function stringValue(value, location, errors) {
+  if (typeof value !== 'string') errors.push(`${location} must be a string.`);
+}
+
 function arrayValue(value, location, errors) {
   if (!Array.isArray(value)) {
     errors.push(`${location} must be an array.`);
@@ -100,9 +105,14 @@ function validateCrop(crop, location, errors) {
 function validateDataset(bundle, { profile } = {}) {
   const errors = [];
   const summary = {
-    documents: 0, pages: 0, items: 0, scorableItems: 0, inventoryEligible: 0,
+    documents: 0, pages: 0, items: 0, scorableItems: 0, inventoryEligible: 0, formalEligibleItems: 0,
     documentsBySubject: Object.fromEntries(SUBJECTS.map((subject) => [subject, 0])),
+    documentsBySourceBySubject: Object.fromEntries(SUBJECTS.map((subject) => [subject, { historical: 0, challenge: 0 }])),
     itemsBySubject: Object.fromEntries(SUBJECTS.map((subject) => [subject, 0])),
+    formalDocumentsBySubject: Object.fromEntries(SUBJECTS.map((subject) => [subject, 0])),
+    formalItemsBySubject: Object.fromEntries(SUBJECTS.map((subject) => [subject, 0])),
+    itemsBySourceBySubject: Object.fromEntries(SUBJECTS.map((subject) => [subject, { historical: 0, challenge: 0 }])),
+    formalItemsBySourceBySubject: Object.fromEntries(SUBJECTS.map((subject) => [subject, { historical: 0, challenge: 0 }])),
     bySource: Object.fromEntries(SOURCES.map((source) => [source, 0])),
     byProfile: {},
   };
@@ -118,6 +128,7 @@ function validateDataset(bundle, { profile } = {}) {
 
   const documentIds = new Set();
   const pageIds = new Set();
+  const completePageIds = new Set();
   const sampleIds = new Set();
   const records = new Map();
   const documents = arrayValue(bundle.documents, 'dataset.documents', errors);
@@ -125,30 +136,46 @@ function validateDataset(bundle, { profile } = {}) {
   documents.forEach((document, documentIndex) => {
     const dAt = `dataset.documents[${documentIndex}]`;
     if (!requireObject(document, dAt, errors)) return;
-    allowOnly(document, ['documentId', 'subject', 'grade', 'sourceType', 'hashes', 'pages'], dAt, errors);
+    allowOnly(document, ['documentId', 'subject', 'grade', 'sourceType', 'captureType', 'hashes', 'pages'], dAt, errors);
     requireKeys(document, ['documentId', 'subject', 'grade', 'sourceType', 'hashes', 'pages'], dAt, errors);
     stableId(document.documentId, `${dAt}.documentId`, errors);
     if (documentIds.has(document.documentId)) errors.push(`duplicate documentId: ${document.documentId}.`);
     documentIds.add(document.documentId);
     enumValue(document.subject, SUBJECTS, `${dAt}.subject`, errors);
     enumValue(document.sourceType, SOURCES, `${dAt}.sourceType`, errors);
-    if (document.grade === undefined || !['string', 'number'].includes(typeof document.grade)) errors.push(`${dAt}.grade must be a string or integer.`);
+    if (document.captureType !== undefined) enumValue(document.captureType, CAPTURE_TYPES, `${dAt}.captureType`, errors);
+    if (typeof document.grade !== 'string' && !Number.isInteger(document.grade)) errors.push(`${dAt}.grade must be a string or integer.`);
     if (SUBJECTS.includes(document.subject)) summary.documentsBySubject[document.subject] += 1;
+    // sourceType is inherited by every page/item in a document, so document and item cohort counts are deterministic.
+    if (SUBJECTS.includes(document.subject) && SOURCES.includes(document.sourceType)) summary.documentsBySourceBySubject[document.subject][document.sourceType] += 1;
     if (SOURCES.includes(document.sourceType)) summary.bySource[document.sourceType] += 1;
     validateHashes(document, dAt, errors);
     const pages = arrayValue(document.pages, `${dAt}.pages`, errors);
     if (pages.length === 0) errors.push(`${dAt}.pages must contain at least one full page.`);
+    const documentFormalEligible = bundle.profile === 'formal'
+      && bundle.pageInventoryLock?.locked === true
+      && pages.length > 0
+      && pages.every((page) => page?.inventoryStatus === 'complete' && bundle.pageInventoryLock?.pageIds?.includes(page.pageId));
+    if (documentFormalEligible && SUBJECTS.includes(document.subject)) summary.formalDocumentsBySubject[document.subject] += 1;
     pages.forEach((page, pageIndex) => {
       summary.pages += 1;
       const pAt = `${dAt}.pages[${pageIndex}]`;
       if (!requireObject(page, pAt, errors)) return;
-      allowOnly(page, ['pageId', 'pageNumber', 'hashes', 'items'], pAt, errors);
-      requireKeys(page, ['pageId', 'pageNumber', 'hashes', 'items'], pAt, errors);
+      allowOnly(page, ['pageId', 'pageNumber', 'imageReference', 'inventoryStatus', 'hashes', 'items'], pAt, errors);
+      requireKeys(page, ['pageId', 'pageNumber', 'imageReference', 'inventoryStatus', 'hashes', 'items'], pAt, errors);
       stableId(page.pageId, `${pAt}.pageId`, errors);
       if (pageIds.has(page.pageId)) errors.push(`duplicate pageId: ${page.pageId}.`);
       pageIds.add(page.pageId);
       if (!Number.isInteger(page.pageNumber) || page.pageNumber < 1) errors.push(`${pAt}.pageNumber must be a positive integer.`);
-      if (page.inventoryStatus === 'crop-only' || page.inventoryStatus === 'incomplete') errors.push(`${pAt} has ${page.inventoryStatus} inventory and cannot be formal.`);
+      if (typeof page.imageReference !== 'string' || page.imageReference.trim() === '') errors.push(`${pAt}.imageReference must be a non-empty string.`);
+      if (bundle.profile === 'fixture' && typeof page.imageReference === 'string' && !page.imageReference.startsWith('fixture://')) errors.push(`${pAt}.imageReference must use fixture:// for fixture data.`);
+      enumValue(page.inventoryStatus, ['complete', 'crop_only'], `${pAt}.inventoryStatus`, errors);
+      if (page.inventoryStatus === 'complete') completePageIds.add(page.pageId);
+      if (bundle.profile === 'formal' && page.inventoryStatus !== 'complete') errors.push(`${pAt} has ${page.inventoryStatus} inventory; formal pages require complete inventory.`);
+      const pageFormalEligible = bundle.profile === 'formal'
+        && bundle.pageInventoryLock?.locked === true
+        && page.inventoryStatus === 'complete'
+        && bundle.pageInventoryLock?.pageIds?.includes(page.pageId);
       validateHashes(page, pAt, errors);
       arrayValue(page.items, `${pAt}.items`, errors).forEach((item, itemIndex) => {
         summary.items += 1;
@@ -178,7 +205,15 @@ function validateDataset(bundle, { profile } = {}) {
           if (composite.role === 'parent' && refs.length > 0) errors.push(`${iAt} is a composite parent with annotationRefs and would double-count a parent as scorable.`);
           if (composite.role !== 'parent') {
             summary.scorableItems += 1;
-            if (SUBJECTS.includes(document.subject)) summary.itemsBySubject[document.subject] += 1;
+            if (SUBJECTS.includes(document.subject)) {
+              summary.itemsBySubject[document.subject] += 1;
+              if (SOURCES.includes(document.sourceType)) summary.itemsBySourceBySubject[document.subject][document.sourceType] += 1;
+              if (pageFormalEligible) {
+                summary.formalEligibleItems += 1;
+                summary.formalItemsBySubject[document.subject] += 1;
+                if (SOURCES.includes(document.sourceType)) summary.formalItemsBySourceBySubject[document.subject][document.sourceType] += 1;
+              }
+            }
           }
         }
         records.set(item.sampleId, { item, documentId: document.documentId, pageId: page.pageId, location: iAt });
@@ -223,21 +258,27 @@ function validateDataset(bundle, { profile } = {}) {
   const lock = bundle.pageInventoryLock;
   if (requireObject(lock, 'dataset.pageInventoryLock', errors)) {
     allowOnly(lock, ['locked', 'pageIds', 'inventoryHash', 'lockedAt'], 'dataset.pageInventoryLock', errors);
-    requireKeys(lock, ['locked', 'pageIds', 'inventoryHash', 'lockedAt'], 'dataset.pageInventoryLock', errors);
-    if (lock.locked !== true) errors.push('dataset.pageInventoryLock.locked must be true.');
-    if (!validDate(lock.lockedAt)) errors.push('dataset.pageInventoryLock.lockedAt must be a date-time.');
+    requireKeys(lock, ['locked', 'pageIds', 'inventoryHash'], 'dataset.pageInventoryLock', errors);
+    if (typeof lock.locked !== 'boolean') errors.push('dataset.pageInventoryLock.locked must be boolean.');
+    if (lock.locked === true && !validDate(lock.lockedAt)) errors.push('dataset.pageInventoryLock.lockedAt is required as a date-time when locked.');
+    if (lock.locked === false && lock.lockedAt !== undefined) errors.push('dataset.pageInventoryLock.lockedAt must be absent when unlocked.');
+    if (bundle.profile === 'formal' && lock.locked !== true) errors.push('formal datasets require a locked page inventory.');
+    if (bundle.profile === 'fixture' && lock.locked !== true) errors.push('fixture datasets require a locked page inventory.');
     const lockedPageIds = arrayValue(lock.pageIds, 'dataset.pageInventoryLock.pageIds', errors);
     lockedPageIds.forEach((id, index) => stableId(id, `dataset.pageInventoryLock.pageIds[${index}]`, errors));
     if (new Set(lockedPageIds).size !== lockedPageIds.length) errors.push('dataset.pageInventoryLock.pageIds must be unique.');
-    summary.inventoryEligible = lockedPageIds.filter((id) => pageIds.has(id)).length;
+    summary.inventoryEligible = lock.locked === true ? lockedPageIds.filter((id) => completePageIds.has(id)).length : 0;
     for (const id of pageIds) if (!lockedPageIds.includes(id)) errors.push(`page ${id} is outside the locked full page inventory.`);
     for (const id of lockedPageIds) if (!pageIds.has(id)) errors.push(`locked inventory page ${id} does not exist in documents.`);
     const inventoryHash = lock.inventoryHash;
     if (!requireObject(inventoryHash, 'dataset.pageInventoryLock.inventoryHash', errors)) { /* reported */ }
     else {
+      allowOnly(inventoryHash, ['algorithm', 'value'], 'dataset.pageInventoryLock.inventoryHash', errors);
+      requireKeys(inventoryHash, ['algorithm', 'value'], 'dataset.pageInventoryLock.inventoryHash', errors);
       if (inventoryHash.algorithm !== 'sha256') errors.push('dataset.pageInventoryLock.inventoryHash.algorithm must be sha256.');
       const expected = sha256Canonical(lockedPageIds);
-      if (inventoryHash.value !== expected) errors.push(`dataset.pageInventoryLock.inventoryHash hash mismatch; expected ${expected}.`);
+      if (typeof inventoryHash.value !== 'string' || !HASH.test(inventoryHash.value)) errors.push('dataset.pageInventoryLock.inventoryHash.value must be a lowercase SHA-256 hash.');
+      else if (inventoryHash.value !== expected) errors.push(`dataset.pageInventoryLock.inventoryHash hash mismatch; expected ${expected}.`);
     }
   }
   const redaction = bundle.redactionVerification;
@@ -247,14 +288,15 @@ function validateDataset(bundle, { profile } = {}) {
     if (redaction.status !== 'verified') errors.push('dataset redaction status must be verified before import.');
     if (!validDate(redaction.verifiedAt)) errors.push('dataset.redactionVerification.verifiedAt must be a date-time.');
     stableId(redaction.verifierId, 'dataset.redactionVerification.verifierId', errors);
+    if (redaction.notes !== undefined) stringValue(redaction.notes, 'dataset.redactionVerification.notes', errors);
   }
   if (bundle.profile === 'formal') {
     for (const subject of SUBJECTS) {
-      if (summary.documentsBySubject[subject] < FORMAL_MINIMUMS.documentsPerSubject) errors.push(`formal minimum documents not met for ${subject}.`);
-      if (summary.itemsBySubject[subject] < FORMAL_MINIMUMS.itemsPerSubject) errors.push(`formal minimum items not met for ${subject}.`);
+      if (summary.formalDocumentsBySubject[subject] < FORMAL_MINIMUMS.documentsPerSubject) errors.push(`formal documents minimum not met for ${subject}.`);
+      if (summary.formalItemsBySubject[subject] < FORMAL_MINIMUMS.itemsPerSubject) errors.push(`formal items minimum not met for ${subject}.`);
+      if (summary.formalItemsBySourceBySubject[subject].historical < FORMAL_MINIMUMS.historical) errors.push(`formal historical items minimum not met for ${subject}.`);
+      if (summary.formalItemsBySourceBySubject[subject].challenge < FORMAL_MINIMUMS.challenge) errors.push(`formal challenge items minimum not met for ${subject}.`);
     }
-    errors.push(`formal minimum historical count ${FORMAL_MINIMUMS.historical} cannot be established from this schema.`);
-    errors.push(`formal minimum challenge count ${FORMAL_MINIMUMS.challenge} cannot be established from this schema.`);
   }
   return { valid: errors.length === 0, errors, summary };
 }
@@ -274,12 +316,18 @@ function validateAttribution(attribution, subject, location, errors) {
     requireKeys(payload, ['primaryNodeId', 'bottleneckId'], `${location}.math`, errors);
     stableId(payload.primaryNodeId, `${location}.math.primaryNodeId`, errors);
     stableId(payload.bottleneckId, `${location}.math.bottleneckId`, errors);
+    if (payload.primaryNodeLabel !== undefined) stringValue(payload.primaryNodeLabel, `${location}.math.primaryNodeLabel`, errors);
+    if (payload.bottleneckLabel !== undefined) stringValue(payload.bottleneckLabel, `${location}.math.bottleneckLabel`, errors);
   } else if (own === 'chinese') {
     allowOnly(payload, ['originalItemLocation', 'errorType', 'review', 'migration'], `${location}.chinese`, errors);
     requireKeys(payload, ['originalItemLocation', 'errorType'], `${location}.chinese`, errors);
+    for (const key of ['originalItemLocation', 'errorType', 'review', 'migration']) if (payload[key] !== undefined) stringValue(payload[key], `${location}.chinese.${key}`, errors);
   } else if (own === 'english') {
     allowOnly(payload, ['wordIdentity', 'recognitionSpelling', 'stateUpdate'], `${location}.english`, errors);
     requireKeys(payload, ['wordIdentity'], `${location}.english`, errors);
+    stringValue(payload.wordIdentity, `${location}.english.wordIdentity`, errors);
+    if (payload.recognitionSpelling !== undefined) enumValue(payload.recognitionSpelling, ['recognized-correctly', 'recognized-but-misspelled', 'unreadable'], `${location}.english.recognitionSpelling`, errors);
+    if (payload.stateUpdate !== undefined) enumValue(payload.stateUpdate, ['recognition-mastered-spelling-mastered', 'recognition-mastered-spelling-needs-practice', 'no-state-update'], `${location}.english.stateUpdate`, errors);
   }
 }
 
@@ -296,6 +344,7 @@ function validateLabel(label, subject, location, errors) {
   allowOnly(label, ['conclusion', 'text', 'attribution', 'labeledBy', 'labeledAt'], location, errors);
   requireKeys(label, ['conclusion', 'attribution', 'labeledBy', 'labeledAt'], location, errors);
   enumValue(label.conclusion, CONCLUSIONS, `${location}.conclusion`, errors);
+  if (label.text !== undefined) stringValue(label.text, `${location}.text`, errors);
   stableId(label.labeledBy, `${location}.labeledBy`, errors);
   if (!validDate(label.labeledAt)) errors.push(`${location}.labeledAt must be a date-time.`);
   validateAttribution(label.attribution, subject, `${location}.attribution`, errors);
@@ -350,6 +399,7 @@ function validateAnnotations(bundle, { dataset } = {}) {
       requireKeys(review, ['reviewerIds', 'qcStatus', 'adjudicationStatus', 'disputeStatus'], `${at}.review`, errors);
       const reviewers = arrayValue(review.reviewerIds, `${at}.review.reviewerIds`, errors);
       reviewers.forEach((id, i) => stableId(id, `${at}.review.reviewerIds[${i}]`, errors));
+      if (new Set(reviewers).size !== reviewers.length) errors.push(`${at}.review.reviewerIds must be unique.`);
       enumValue(review.qcStatus, ['pending', 'passed', 'failed'], `${at}.review.qcStatus`, errors);
       enumValue(review.adjudicationStatus, ['not-needed', 'pending', 'resolved'], `${at}.review.adjudicationStatus`, errors);
       enumValue(review.disputeStatus, ['none', 'open', 'resolved'], `${at}.review.disputeStatus`, errors);
@@ -369,8 +419,11 @@ function validateAnnotations(bundle, { dataset } = {}) {
         validateLabel(review.adjudicationLabel, linked?.subject, `${at}.review.adjudicationLabel`, errors);
       }
       if (review.adjudicationStatus === 'pending') isPending = true;
+      if (review.adjudicationStatus !== 'resolved' && ['adjudicatorId', 'adjudicationLabel', 'adjudicatedAt'].some((key) => review[key] !== undefined)) errors.push(`${at}.review has ${review.adjudicationStatus} adjudication and cannot retain resolved adjudication metadata.`);
       if (review.disputeStatus !== 'none') summary.disputed += 1;
       if (review.disputeStatus === 'open' && !(typeof review.disputeReason === 'string' && review.disputeReason.trim())) errors.push(`${at}.review.disputeReason is required for an open dispute.`);
+      if (review.disputeStatus === 'open' && ['disputeResolution', 'disputeResolvedBy', 'disputeResolvedAt'].some((key) => review[key] !== undefined)) errors.push(`${at}.review has an open dispute and cannot retain resolution metadata.`);
+      if (review.disputeStatus === 'none' && ['disputeReason', 'disputeResolution', 'disputeResolvedBy', 'disputeResolvedAt'].some((key) => review[key] !== undefined)) errors.push(`${at}.review disputeStatus none cannot retain dispute metadata.`);
       if (review.disputeStatus === 'resolved') {
         if (!(typeof review.disputeResolution === 'string' && review.disputeResolution.trim())) errors.push(`${at}.review.disputeResolution is required.`);
         stableId(review.disputeResolvedBy, `${at}.review.disputeResolvedBy`, errors);
@@ -389,6 +442,7 @@ function validateAnnotations(bundle, { dataset } = {}) {
       stableId(event.actorId, `${eAt}.actorId`, errors);
       enumValue(event.eventType, ['created', 'pre-labeled', 'human-labeled', 'reviewed', 'qc-checked', 'disputed', 'adjudicated', 'locked', 'unlocked'], `${eAt}.eventType`, errors);
       if (!validDate(event.timestamp)) errors.push(`${eAt}.timestamp must be a date-time.`);
+      if (event.details !== undefined && !isObject(event.details)) errors.push(`${eAt}.details must be an object.`);
       if (eventIds.has(event.eventId)) errors.push(`${at} has duplicate audit eventId ${event.eventId}.`);
       eventIds.add(event.eventId); eventTypes.add(event.eventType);
     });
@@ -396,14 +450,19 @@ function validateAnnotations(bundle, { dataset } = {}) {
     if (lock?.status === 'unlocked' && eventTypes.has('locked') && !eventTypes.has('unlocked')) errors.push(`${at} is unlocked but its audit trail has no later unlocked event.`);
     const lockedEvent = events.find((event) => event?.eventType === 'locked');
     if (lock?.status === 'locked' && lockedEvent && lockedEvent.actorId !== lock.lockedBy) errors.push(`${at} locked audit actor must match lockState.lockedBy.`);
+    if (lock?.status === 'locked' && lockedEvent && lockedEvent.timestamp !== lock.lockedAt) errors.push(`${at} locked audit timestamp must match lockState.lockedAt.`);
     if (review?.qcStatus && review.qcStatus !== 'pending' && !eventTypes.has('qc-checked')) errors.push(`${at} has completed QC but no qc-checked audit event.`);
     if (review?.qcStatus === 'pending' && eventTypes.has('qc-checked')) errors.push(`${at} has pending QC but includes a completed qc-checked audit event.`);
     const qcEvent = events.find((event) => event?.eventType === 'qc-checked');
     if (review?.qcStatus && review.qcStatus !== 'pending' && qcEvent && qcEvent.actorId !== review.qcReviewerId) errors.push(`${at} QC audit actor must match review.qcReviewerId.`);
+    if (review?.qcStatus && review.qcStatus !== 'pending' && qcEvent && qcEvent.timestamp !== review.qcReviewedAt) errors.push(`${at} QC audit timestamp must match review.qcReviewedAt.`);
     if (review?.adjudicationStatus === 'resolved' && !eventTypes.has('adjudicated')) errors.push(`${at} is adjudicated but has no adjudicated audit event.`);
+    if (review?.adjudicationStatus && review.adjudicationStatus !== 'resolved' && eventTypes.has('adjudicated')) errors.push(`${at} has ${review.adjudicationStatus} adjudication but includes an adjudicated audit event.`);
     const adjudicatedEvent = events.find((event) => event?.eventType === 'adjudicated');
     if (review?.adjudicationStatus === 'resolved' && adjudicatedEvent && adjudicatedEvent.actorId !== review.adjudicatorId) errors.push(`${at} adjudication audit actor must match review.adjudicatorId.`);
+    if (review?.adjudicationStatus === 'resolved' && adjudicatedEvent && adjudicatedEvent.timestamp !== review.adjudicatedAt) errors.push(`${at} adjudication audit timestamp must match review.adjudicatedAt.`);
     if (review?.disputeStatus !== 'none' && !eventTypes.has('disputed')) errors.push(`${at} has dispute state but no disputed audit event.`);
+    if (review?.disputeStatus === 'none' && eventTypes.has('disputed')) errors.push(`${at} has disputeStatus none but includes a disputed audit event.`);
     if (isPending) summary.pending += 1;
   });
   return { valid: errors.length === 0, errors, summary };
@@ -435,7 +494,7 @@ function validateRunManifest(manifest) {
     if (validDate(timestamps.createdAt) && validDate(timestamps.startedAt) && Date.parse(timestamps.startedAt) < Date.parse(timestamps.createdAt)) errors.push('run manifest startedAt cannot precede createdAt.');
     if (validDate(timestamps.startedAt) && validDate(timestamps.completedAt) && Date.parse(timestamps.completedAt) < Date.parse(timestamps.startedAt)) errors.push('run manifest completedAt cannot precede startedAt.');
   }
-  const countKeys = ['success', 'failure', 'unresolved', 'retry'];
+  const countKeys = ['total', 'success', 'failure', 'unresolved', 'retry'];
   const counts = manifest.counts;
   if (requireObject(counts, 'run manifest.counts', errors)) {
     requireKeys(counts, countKeys, 'run manifest.counts', errors);
@@ -444,12 +503,16 @@ function validateRunManifest(manifest) {
       if (!Number.isInteger(counts[key]) || counts[key] < 0) errors.push(`run manifest.counts.${key} must be a nonnegative integer.`);
       else summary[key] = counts[key];
     }
-    summary.total = summary.success + summary.failure + summary.unresolved;
+    if (Number.isInteger(counts.total) && Number.isInteger(counts.success) && Number.isInteger(counts.failure) && Number.isInteger(counts.unresolved)
+      && counts.total !== counts.success + counts.failure + counts.unresolved) errors.push('run manifest.counts.total must equal success + failure + unresolved.');
+    if (Number.isInteger(counts.retry) && Number.isInteger(counts.total) && counts.retry > counts.total) errors.push('run manifest.counts.retry cannot exceed total because phase one permits at most one retry per record.');
   }
   enumValue(manifest.status, ['created', 'running', 'completed', 'completed-with-errors', 'failed', 'cancelled'], 'run manifest.status', errors);
   if (manifest.status === 'completed' && (summary.failure > 0 || summary.unresolved > 0)) errors.push('completed run cannot have failure or unresolved counts.');
   if (manifest.status === 'completed-with-errors' && summary.failure + summary.unresolved === 0) errors.push('completed-with-errors run must report failures or unresolved records.');
   if (manifest.status === 'failed' && summary.failure === 0) errors.push('failed run must report a failure count.');
+  if (manifest.status === 'created' && [summary.total, summary.success, summary.failure, summary.unresolved, summary.retry].some((count) => count !== 0)) errors.push('created run status requires all counts to be zero.');
+  if (['created', 'running'].includes(manifest.status) && timestamps?.completedAt !== undefined) errors.push(`${manifest.status} run status cannot include completedAt.`);
   if (['completed', 'completed-with-errors', 'failed', 'cancelled'].includes(manifest.status) && !validDate(timestamps?.completedAt)) errors.push(`terminal status ${manifest.status} requires completedAt.`);
   const refs = arrayValue(manifest.outputReferences, 'run manifest.outputReferences', errors);
   if (new Set(refs).size !== refs.length || refs.some((ref) => typeof ref !== 'string' || ref.trim() === '')) errors.push('run manifest.outputReferences must contain unique non-empty strings.');
@@ -458,8 +521,9 @@ function validateRunManifest(manifest) {
     allowOnly(usage, ['inputTokens', 'outputTokens', 'requests', 'currency', 'estimatedCost', 'providerMetadata'], 'run manifest.usage', errors);
     requireKeys(usage, ['currency', 'estimatedCost'], 'run manifest.usage', errors);
     if (typeof usage.currency !== 'string' || !/^[A-Z]{3}$/u.test(usage.currency)) errors.push('run manifest.usage.currency must be a three-letter uppercase code.');
-    if (typeof usage.estimatedCost !== 'number' || usage.estimatedCost < 0) errors.push('run manifest.usage.estimatedCost must be nonnegative.');
+    if (typeof usage.estimatedCost !== 'number' || !Number.isFinite(usage.estimatedCost) || usage.estimatedCost < 0) errors.push('run manifest.usage.estimatedCost must be nonnegative.');
     for (const key of ['inputTokens', 'outputTokens', 'requests']) if (usage[key] !== undefined && (!Number.isInteger(usage[key]) || usage[key] < 0)) errors.push(`run manifest.usage.${key} must be a nonnegative integer.`);
+    if (usage.providerMetadata !== undefined && !isObject(usage.providerMetadata)) errors.push('run manifest.usage.providerMetadata must be an object.');
   }
   return { valid: errors.length === 0, errors, summary };
 }
@@ -516,6 +580,7 @@ function validateSystemOutput(bundle, { dataset, runManifest } = {}) {
       enumValue(failure.stage, ['load', 'model', 'parse', 'localize', 'classify', 'attribute', 'persist'], `${fAt}.stage`, errors);
       if (typeof failure.message !== 'string') errors.push(`${fAt}.message must be a string.`);
       if (typeof failure.retryable !== 'boolean') errors.push(`${fAt}.retryable must be boolean.`);
+      if (failure.details !== undefined && !isObject(failure.details)) errors.push(`${fAt}.details must be an object.`);
     });
     if (isObject(record.prediction)) {
       const prediction = record.prediction;
@@ -525,11 +590,14 @@ function validateSystemOutput(bundle, { dataset, runManifest } = {}) {
       if (typeof prediction.text !== 'string') errors.push(`${at}.prediction.text must be a string.`);
       enumValue(prediction.conclusion, CONCLUSIONS, `${at}.prediction.conclusion`, errors);
       validateAttribution(prediction.attribution, linked?.subject, `${at}.prediction.attribution`, errors);
-      if (prediction.confidence !== undefined && (typeof prediction.confidence !== 'number' || prediction.confidence < 0 || prediction.confidence > 1)) errors.push(`${at}.prediction.confidence must be between 0 and 1.`);
+      if (prediction.confidence !== undefined && (typeof prediction.confidence !== 'number' || !Number.isFinite(prediction.confidence) || prediction.confidence < 0 || prediction.confidence > 1)) errors.push(`${at}.prediction.confidence must be between 0 and 1.`);
     }
   });
   if (runManifest && Number.isInteger(runManifest.counts?.success) && runManifest.counts.success !== summary.success) errors.push(`system output success count ${summary.success} does not match run manifest ${runManifest.counts.success}.`);
   if (runManifest && Number.isInteger(runManifest.counts?.failure) && runManifest.counts.failure !== summary.failure) errors.push(`system output failure count ${summary.failure} does not match run manifest ${runManifest.counts.failure}.`);
+  if (runManifest && Number.isInteger(runManifest.counts?.unresolved) && runManifest.counts.unresolved !== 0) errors.push('raw phase-one system output cannot represent unresolved records; run manifest unresolved must be 0.');
+  if (runManifest && Number.isInteger(runManifest.counts?.retry) && runManifest.counts.retry !== 0) errors.push('raw phase-one system output has no attempt records; run manifest retry must be 0.');
+  if (runManifest && Number.isInteger(runManifest.counts?.total) && runManifest.counts.total !== records.length) errors.push(`system output total ${records.length} does not match run manifest total ${runManifest.counts.total}.`);
   return { valid: errors.length === 0, errors, summary };
 }
 

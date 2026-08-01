@@ -38,12 +38,86 @@ function validRun(dataset, overrides = {}) {
       startedAt: '2026-01-01T00:00:01.000Z',
       completedAt: '2026-01-01T00:00:02.000Z',
     },
-    counts: { success: 6, failure: 1, unresolved: 0, retry: 0 },
+    counts: { total: 7, success: 6, failure: 1, unresolved: 0, retry: 0 },
     status: 'completed-with-errors',
     outputReferences: ['system-output-baseline.json'],
     usage: { inputTokens: 10, outputTokens: 10, requests: 7, currency: 'USD', estimatedCost: 0 },
     ...overrides,
   };
+}
+
+function rehashDataset(dataset) {
+  for (const document of dataset.documents) {
+    for (const page of document.pages) {
+      for (const item of page.items) {
+        const itemContent = { ...item };
+        delete itemContent.hashes;
+        item.hashes = [{ algorithm: 'sha256', value: sha256Canonical(itemContent) }];
+      }
+      const pageContent = { ...page };
+      delete pageContent.hashes;
+      page.hashes = [{ algorithm: 'sha256', value: sha256Canonical(pageContent) }];
+    }
+    const documentContent = { ...document };
+    delete documentContent.hashes;
+    document.hashes = [{ algorithm: 'sha256', value: sha256Canonical(documentContent) }];
+  }
+  dataset.pageInventoryLock.inventoryHash = {
+    algorithm: 'sha256',
+    value: sha256Canonical(dataset.pageInventoryLock.pageIds),
+  };
+  return dataset;
+}
+
+function formalDataset() {
+  const documents = [];
+  for (const subject of ['math', 'chinese', 'english']) {
+    for (let documentIndex = 0; documentIndex < 20; documentIndex += 1) {
+      const sourceType = documentIndex < 10 ? 'historical' : 'challenge';
+      const itemCount = sourceType === 'historical' ? 10 : 5;
+      const documentId = `formal.${subject}.document.${documentIndex}`;
+      const pageId = `formal.${subject}.page.${documentIndex}`;
+      const items = Array.from({ length: itemCount }, (_, itemIndex) => ({
+        sampleId: `formal.${subject}.sample.${documentIndex}.${itemIndex}`,
+        crop: { x: itemIndex, y: 0, width: 1, height: 1, unit: 'pixel' },
+        composite: { role: 'standalone' },
+        hashes: [],
+        annotationRefs: [],
+      }));
+      documents.push({
+        documentId,
+        subject,
+        grade: 4,
+        sourceType,
+        captureType: 'synthetic',
+        hashes: [],
+        pages: [{
+          pageId,
+          pageNumber: 1,
+          imageReference: `fixture://formal/${subject}/${documentIndex}`,
+          inventoryStatus: 'complete',
+          hashes: [],
+          items,
+        }],
+      });
+    }
+  }
+  const pageIds = documents.flatMap((document) => document.pages.map((page) => page.pageId));
+  return rehashDataset({
+    schemaVersion: '1.0.0',
+    datasetId: 'formal.generated.v1',
+    profile: 'formal',
+    documents,
+    pageInventoryLock: {
+      locked: true,
+      pageIds,
+      inventoryHash: { algorithm: 'sha256', value: '' },
+      lockedAt: '2026-01-01T01:00:00.000Z',
+    },
+    redactionVerification: {
+      status: 'verified', verifiedAt: '2026-01-01T01:30:00.000Z', verifierId: 'fixture.verifier',
+    },
+  });
 }
 
 test('canonical JSON sorts object keys recursively while preserving array order', () => {
@@ -63,6 +137,49 @@ test('fictional fixture dataset and its real canonical hashes validate', () => {
   assert.equal(result.summary.itemsBySubject.chinese >= 2, true);
   assert.equal(result.summary.itemsBySubject.english >= 2, true);
   assert.equal(result.summary.inventoryEligible, dataset.pageInventoryLock.pageIds.length);
+  assert.equal(dataset.documents.every((document) => ['historical', 'challenge'].includes(document.sourceType)), true);
+  assert.equal(dataset.documents.every((document) => document.captureType === 'synthetic'), true);
+  assert.equal(dataset.documents.flatMap((document) => document.pages).every((page) => page.imageReference.startsWith('fixture://')), true);
+  const unreadableId = readFixture('annotations.json').annotations.find((annotation) => annotation.humanLabel.conclusion === 'unreadable').sampleId;
+  const unreadableDocument = dataset.documents.find((document) => document.pages.some((page) => page.items.some((item) => item.sampleId === unreadableId)));
+  assert.equal(unreadableDocument.sourceType, 'challenge');
+});
+
+test('generated formal dataset satisfies document, item, historical, and challenge minima', () => {
+  const result = validateDataset(formalDataset(), { profile: 'formal' });
+  assert.equal(result.valid, true, result.errors.join('\n'));
+  for (const subject of ['math', 'chinese', 'english']) {
+    assert.equal(result.summary.documentsBySubject[subject], 20);
+    assert.equal(result.summary.itemsBySubject[subject], 150);
+    assert.deepEqual(result.summary.documentsBySourceBySubject[subject], { historical: 10, challenge: 10 });
+    assert.equal(result.summary.itemsBySourceBySubject[subject].historical, 100);
+    assert.equal(result.summary.itemsBySourceBySubject[subject].challenge, 50);
+  }
+});
+
+test('formal dataset reports each independent minimum below threshold', () => {
+  const documentShort = formalDataset();
+  const removed = documentShort.documents.splice(19, 1)[0];
+  documentShort.documents[18].pages.push(...removed.pages);
+  rehashDataset(documentShort);
+  assert.match(validateDataset(documentShort, { profile: 'formal' }).errors.join('\n'), /documents.*math|math.*documents/iu);
+
+  const itemShort = formalDataset();
+  itemShort.documents[10].pages[0].items.pop();
+  rehashDataset(itemShort);
+  assert.match(validateDataset(itemShort, { profile: 'formal' }).errors.join('\n'), /items.*math|math.*items/iu);
+
+  const historicalShort = formalDataset();
+  historicalShort.documents[0].sourceType = 'challenge';
+  rehashDataset(historicalShort);
+  assert.match(validateDataset(historicalShort, { profile: 'formal' }).errors.join('\n'), /historical.*math|math.*historical/iu);
+
+  const challengeShort = formalDataset();
+  challengeShort.documents[10].sourceType = 'historical';
+  challengeShort.documents[11].sourceType = 'historical';
+  challengeShort.documents[12].sourceType = 'historical';
+  rehashDataset(challengeShort);
+  assert.match(validateDataset(challengeShort, { profile: 'formal' }).errors.join('\n'), /challenge.*math|math.*challenge/iu);
 });
 
 test('dataset validation accumulates IDs, inventory, redaction, composite, and hash errors', () => {
@@ -99,17 +216,38 @@ test('dataset rejects whitespace IDs, composite cycles, and scorable parents', (
   assert.match(result.errors.join('\n'), /parent.*scorable|double-count/iu);
 });
 
-test('formal inventory rejects crop-only pages while exploratory materials remain outside counts', () => {
+test('dataset validates grade, capture, image-reference, and redaction primitive types', () => {
+  const bad = clone(readFixture('dataset.json'));
+  bad.documents[0].grade = 4.5;
+  bad.documents[0].captureType = 'screenshot';
+  bad.documents[0].pages[0].imageReference = 42;
+  bad.redactionVerification.notes = 42;
+  const result = validateDataset(bad, { profile: 'fixture' });
+  assert.equal(result.valid, false);
+  for (const pattern of [/grade.*integer/iu, /captureType/iu, /imageReference.*string/iu, /notes.*string/iu]) assert.match(result.errors.join('\n'), pattern);
+});
+
+test('formal inventory rejects crop_only pages', () => {
   const bad = clone(readFixture('dataset.json'));
   bad.profile = 'formal';
-  bad.documents[0].pages[0].inventoryStatus = 'crop-only';
+  bad.documents[0].pages[0].inventoryStatus = 'crop_only';
+  rehashDataset(bad);
   const result = validateDataset(bad, { profile: 'formal' });
   assert.equal(result.valid, false);
-  assert.match(result.errors.join('\n'), /crop-only|inventory/iu);
+  assert.match(result.errors.join('\n'), /crop_only|inventory/iu);
+});
 
+test('exploratory crop_only pages may be unlocked and are outside formal counts', () => {
   const exploratory = clone(readFixture('dataset.json'));
   exploratory.profile = 'exploratory';
-  assert.equal(validateDataset(exploratory, { profile: 'exploratory' }).errors.some((e) => /minimum/iu.test(e)), false);
+  exploratory.documents[0].pages[0].inventoryStatus = 'crop_only';
+  exploratory.pageInventoryLock.locked = false;
+  delete exploratory.pageInventoryLock.lockedAt;
+  rehashDataset(exploratory);
+  const result = validateDataset(exploratory, { profile: 'exploratory' });
+  assert.equal(result.valid, true, result.errors.join('\n'));
+  assert.equal(result.summary.formalEligibleItems, 0);
+  assert.equal(result.summary.inventoryEligible, 0);
 });
 
 test('fixture annotations validate and summarize lock and review states', () => {
@@ -159,6 +297,42 @@ test('annotation pending states cannot retain completed lock or QC metadata', ()
   assert.match(result.errors.join('\n'), /pending.*qcReviewerId|qcReviewerId.*pending/iu);
 });
 
+test('annotation validation rejects malformed subject fields and label text types', () => {
+  const dataset = readFixture('dataset.json');
+  const bad = clone(readFixture('annotations.json'));
+  bad.annotations[0].humanLabel.text = 42;
+  bad.annotations[2].humanLabel.attribution.chinese.errorType = false;
+  bad.annotations[4].humanLabel.attribution.english.recognitionSpelling = 'invented-state';
+  bad.annotations[0].auditEvents[0].details = 'not-an-object';
+  const result = validateAnnotations(bad, { dataset });
+  assert.equal(result.valid, false);
+  for (const pattern of [/text.*string/iu, /errorType.*string/iu, /recognitionSpelling/iu, /details.*object/iu]) assert.match(result.errors.join('\n'), pattern);
+});
+
+test('annotation pending review states reject stale adjudication and dispute metadata', () => {
+  const dataset = readFixture('dataset.json');
+  const bad = clone(readFixture('annotations.json'));
+  const annotation = bad.annotations[0];
+  annotation.review.adjudicationStatus = 'pending';
+  annotation.review.adjudicatorId = 'fixture.adjudicator';
+  annotation.review.adjudicationLabel = clone(annotation.humanLabel);
+  annotation.review.adjudicatedAt = '2026-01-01T02:25:00.000Z';
+  annotation.review.disputeStatus = 'none';
+  annotation.review.disputeResolution = 'stale-resolution';
+  annotation.review.disputeResolvedBy = 'fixture.adjudicator';
+  annotation.review.disputeResolvedAt = '2026-01-01T02:25:00.000Z';
+  annotation.auditEvents.push(
+    { eventId: 'audit.stale.adjudicated', eventType: 'adjudicated', actorId: 'fixture.adjudicator', timestamp: '2026-01-01T02:25:00.000Z' },
+    { eventId: 'audit.stale.disputed', eventType: 'disputed', actorId: 'fixture.adjudicator', timestamp: '2026-01-01T02:25:00.000Z' },
+  );
+  const result = validateAnnotations(bad, { dataset });
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join('\n'), /pending.*adjudic|adjudic.*pending/iu);
+  assert.match(result.errors.join('\n'), /dispute.*none|none.*dispute/iu);
+  assert.match(result.errors.join('\n'), /pending.*adjudicated audit|adjudicated audit.*pending/iu);
+  assert.match(result.errors.join('\n'), /none.*disputed audit|disputed audit.*none/iu);
+});
+
 test('valid run manifest and baseline/candidate outputs validate including terminal failures', () => {
   const dataset = readFixture('dataset.json');
   const manifest = validRun(dataset);
@@ -192,6 +366,20 @@ test('system output rejects dishonest branches, duplicates, mismatched subjects,
   }
 });
 
+test('system output validates prediction primitive and subject-specific field types', () => {
+  const dataset = readFixture('dataset.json');
+  const manifest = validRun(dataset);
+  const bad = clone(readFixture('system-output-baseline.json'));
+  bad.records[0].prediction.text = 42;
+  bad.records[0].prediction.confidence = 'high';
+  bad.records[2].prediction.attribution.chinese.originalItemLocation = 1;
+  bad.records[4].prediction.attribution.english.stateUpdate = false;
+  bad.records.find((record) => record.status === 'failed').failures[0].details = 'not-an-object';
+  const result = validateSystemOutput(bad, { dataset, runManifest: manifest });
+  assert.equal(result.valid, false);
+  for (const pattern of [/text.*string/iu, /confidence/iu, /originalItemLocation.*string/iu, /stateUpdate/iu, /details.*object/iu]) assert.match(result.errors.join('\n'), pattern);
+});
+
 test('run manifest rejects whitespace IDs, missing versions, unknown counts, and contradictory totals', () => {
   const dataset = readFixture('dataset.json');
   const bad = validRun(dataset);
@@ -208,6 +396,34 @@ test('run manifest rejects whitespace IDs, missing versions, unknown counts, and
   }
 });
 
+test('run manifest enforces total relationship, retry bound, and object metadata', () => {
+  const dataset = readFixture('dataset.json');
+  const bad = validRun(dataset);
+  bad.counts.total = 8;
+  bad.counts.retry = 9;
+  bad.configuration = 'not-an-object';
+  bad.usage.providerMetadata = 'not-an-object';
+  const result = validateRunManifest(bad);
+  assert.equal(result.valid, false);
+  for (const pattern of [/total/iu, /retry/iu, /configuration.*object/iu, /providerMetadata.*object/iu]) assert.match(result.errors.join('\n'), pattern);
+});
+
+test('system output reconciles total and requires unresolved and retry counts to be zero', () => {
+  const dataset = readFixture('dataset.json');
+  const unresolved = validRun(dataset);
+  unresolved.counts = { total: 8, success: 6, failure: 1, unresolved: 1, retry: 0 };
+  const unresolvedResult = validateSystemOutput(readFixture('system-output-baseline.json'), { dataset, runManifest: unresolved });
+  assert.equal(unresolvedResult.valid, false);
+  assert.match(unresolvedResult.errors.join('\n'), /unresolved/iu);
+  assert.match(unresolvedResult.errors.join('\n'), /total/iu);
+
+  const retried = validRun(dataset);
+  retried.counts.retry = 1;
+  const retriedResult = validateSystemOutput(readFixture('system-output-baseline.json'), { dataset, runManifest: retried });
+  assert.equal(retriedResult.valid, false);
+  assert.match(retriedResult.errors.join('\n'), /retry/iu);
+});
+
 test('run manifest requires RFC 3339 date-time timestamps', () => {
   const dataset = readFixture('dataset.json');
   const bad = validRun(dataset);
@@ -215,6 +431,19 @@ test('run manifest requires RFC 3339 date-time timestamps', () => {
   const result = validateRunManifest(bad);
   assert.equal(result.valid, false);
   assert.match(result.errors.join('\n'), /startedAt.*date-time/iu);
+});
+
+test('nonterminal run states reject contradictory completed metadata and counts', () => {
+  const dataset = readFixture('dataset.json');
+  const created = validRun(dataset, { status: 'created' });
+  const createdResult = validateRunManifest(created);
+  assert.equal(createdResult.valid, false);
+  assert.match(createdResult.errors.join('\n'), /created.*count|count.*created/iu);
+
+  const running = validRun(dataset, { status: 'running', counts: { total: 7, success: 6, failure: 0, unresolved: 1, retry: 0 } });
+  const runningResult = validateRunManifest(running);
+  assert.equal(runningResult.valid, false);
+  assert.match(runningResult.errors.join('\n'), /running.*completedAt|completedAt.*running/iu);
 });
 
 test('import writes canonical JSON exclusively and refuses to overwrite', () => {
