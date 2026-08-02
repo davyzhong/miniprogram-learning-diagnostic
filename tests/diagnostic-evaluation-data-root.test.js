@@ -344,3 +344,7 @@ test('run schema defines exact total and phase-one retry relationships', () => {
   assert.equal(counts.properties.retry.description.includes('at most once'), true);
   assert.equal(counts.properties.total.type, 'integer');
 });
+
+test('dataset SHA-256 schema hashes require lowercase hexadecimal', () => {
+  assert.equal(datasetSchema.$defs.hash.properties.value.pattern, '^[a-f0-9]{64}$');
+});

@@ -12,9 +12,44 @@ const STABLE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/u;
 const HASH = /^[a-f0-9]{64}$/u;
 
 function canonicalJson(value) {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
-  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+  const ancestors = new Set();
+
+  function serialize(current) {
+    if (current === null) return 'null';
+    if (typeof current === 'string' || typeof current === 'boolean') return JSON.stringify(current);
+    if (typeof current === 'number') {
+      if (!Number.isFinite(current)) throw new TypeError('Canonical JSON only supports finite numbers.');
+      return JSON.stringify(current);
+    }
+    if (typeof current !== 'object') throw new TypeError(`Canonical JSON does not support ${typeof current} values.`);
+    if (ancestors.has(current)) throw new TypeError('Canonical JSON does not support cyclic references.');
+    if (Object.getOwnPropertySymbols(current).length > 0) throw new TypeError('Canonical JSON does not support symbol properties.');
+
+    ancestors.add(current);
+    try {
+      if (Array.isArray(current)) {
+        for (let index = 0; index < current.length; index += 1) {
+          if (!Object.hasOwn(current, index)) throw new TypeError('Canonical JSON does not support sparse arrays.');
+          const descriptor = Object.getOwnPropertyDescriptor(current, String(index));
+          if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) throw new TypeError('Canonical JSON does not support array accessors or hidden elements.');
+        }
+        if (Object.keys(current).length !== current.length || Object.getOwnPropertyNames(current).length !== current.length + 1) throw new TypeError('Canonical JSON arrays cannot have custom properties.');
+        return `[${current.map(serialize).join(',')}]`;
+      }
+      if (Object.getPrototypeOf(current) !== Object.prototype) throw new TypeError('Canonical JSON only supports plain object prototypes.');
+      const keys = Object.keys(current);
+      if (Object.getOwnPropertyNames(current).length !== keys.length) throw new TypeError('Canonical JSON does not support hidden object properties.');
+      for (const key of keys) {
+        const descriptor = Object.getOwnPropertyDescriptor(current, key);
+        if (!descriptor?.enumerable || !Object.hasOwn(descriptor, 'value')) throw new TypeError('Canonical JSON does not support object accessors.');
+      }
+      return `{${keys.sort().map((key) => `${JSON.stringify(key)}:${serialize(current[key])}`).join(',')}}`;
+    } finally {
+      ancestors.delete(current);
+    }
+  }
+
+  return serialize(value);
 }
 
 function sha256Canonical(value) {
@@ -26,8 +61,24 @@ function isObject(value) {
 }
 
 function validDate(value) {
-  return typeof value === 'string'
-    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(value)
+  if (typeof value !== 'string') return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(Z|([+-])(\d{2}):(\d{2}))$/u.exec(value);
+  if (!match) return false;
+  const [, yearText, monthText, dayText, hourText, minuteText, secondText, , , offsetHourText, offsetMinuteText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const hour = Number(hourText);
+  const minute = Number(minuteText);
+  const second = Number(secondText);
+  const offsetHour = offsetHourText === undefined ? 0 : Number(offsetHourText);
+  const offsetMinute = offsetMinuteText === undefined ? 0 : Number(offsetMinuteText);
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysByMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return month >= 1 && month <= 12
+    && day >= 1 && day <= daysByMonth[month - 1]
+    && hour <= 23 && minute <= 59 && second <= 59
+    && offsetHour <= 23 && offsetMinute <= 59
     && !Number.isNaN(Date.parse(value));
 }
 
@@ -84,7 +135,12 @@ function withoutKey(value, key) {
 function validateHashes(owner, location, errors) {
   const hashes = arrayValue(owner && owner.hashes, `${location}.hashes`, errors);
   if (hashes.length === 0) errors.push(`${location}.hashes must contain at least one content hash.`);
-  const expected = sha256Canonical(withoutKey(owner, 'hashes'));
+  let expected;
+  try {
+    expected = sha256Canonical(withoutKey(owner, 'hashes'));
+  } catch (error) {
+    errors.push(`${location} cannot be canonicalized for hashing: ${error.message}`);
+  }
   hashes.forEach((hash, index) => {
     const at = `${location}.hashes[${index}]`;
     if (!requireObject(hash, at, errors)) return;
@@ -92,7 +148,7 @@ function validateHashes(owner, location, errors) {
     requireKeys(hash, ['algorithm', 'value'], at, errors);
     if (hash.algorithm !== 'sha256') errors.push(`${at}.algorithm must be sha256.`);
     if (typeof hash.value !== 'string' || !HASH.test(hash.value)) errors.push(`${at}.value must be a lowercase SHA-256 hash.`);
-    else if (hash.value !== expected) errors.push(`${at}.value hash mismatch; expected ${expected}.`);
+    else if (expected !== undefined && hash.value !== expected) errors.push(`${at}.value hash mismatch; expected ${expected}.`);
   });
 }
 
@@ -137,6 +193,8 @@ function validateDataset(bundle, { profile } = {}) {
   const completePageIds = new Set();
   const sampleIds = new Set();
   const records = new Map();
+  const inventoryPageIds = Array.isArray(bundle.pageInventoryLock?.pageIds) ? bundle.pageInventoryLock.pageIds : [];
+  const inventoryPageIdSet = new Set(inventoryPageIds.filter((id) => typeof id === 'string' && STABLE_ID.test(id)));
   const documents = arrayValue(bundle.documents, 'dataset.documents', errors);
   summary.documents = documents.length;
   documents.forEach((document, documentIndex) => {
@@ -161,7 +219,7 @@ function validateDataset(bundle, { profile } = {}) {
     const documentFormalEligible = bundle.profile === 'formal'
       && bundle.pageInventoryLock?.locked === true
       && pages.length > 0
-      && pages.every((page) => page?.inventoryStatus === 'complete' && bundle.pageInventoryLock?.pageIds?.includes(page.pageId));
+      && pages.every((page) => page?.inventoryStatus === 'complete' && inventoryPageIdSet.has(page.pageId));
     if (documentFormalEligible && SUBJECTS.includes(document.subject)) summary.formalDocumentsBySubject[document.subject] += 1;
     pages.forEach((page, pageIndex) => {
       summary.pages += 1;
@@ -181,7 +239,7 @@ function validateDataset(bundle, { profile } = {}) {
       const pageFormalEligible = bundle.profile === 'formal'
         && bundle.pageInventoryLock?.locked === true
         && page.inventoryStatus === 'complete'
-        && bundle.pageInventoryLock?.pageIds?.includes(page.pageId);
+        && inventoryPageIdSet.has(page.pageId);
       validateHashes(page, pAt, errors);
       arrayValue(page.items, `${pAt}.items`, errors).forEach((item, itemIndex) => {
         summary.items += 1;
@@ -273,8 +331,9 @@ function validateDataset(bundle, { profile } = {}) {
     const lockedPageIds = arrayValue(lock.pageIds, 'dataset.pageInventoryLock.pageIds', errors);
     lockedPageIds.forEach((id, index) => stableId(id, `dataset.pageInventoryLock.pageIds[${index}]`, errors));
     if (new Set(lockedPageIds).size !== lockedPageIds.length) errors.push('dataset.pageInventoryLock.pageIds must be unique.');
-    summary.inventoryEligible = lock.locked === true ? lockedPageIds.filter((id) => completePageIds.has(id)).length : 0;
-    for (const id of pageIds) if (!lockedPageIds.includes(id)) errors.push(`page ${id} is outside the locked full page inventory.`);
+    const lockedPageIdSet = new Set(lockedPageIds.filter((id) => typeof id === 'string' && STABLE_ID.test(id)));
+    summary.inventoryEligible = lock.locked === true ? [...lockedPageIdSet].filter((id) => completePageIds.has(id)).length : 0;
+    for (const id of pageIds) if (!lockedPageIdSet.has(id)) errors.push(`page ${id} is outside the locked full page inventory.`);
     for (const id of lockedPageIds) if (!pageIds.has(id)) errors.push(`locked inventory page ${id} does not exist in documents.`);
     const inventoryHash = lock.inventoryHash;
     if (!requireObject(inventoryHash, 'dataset.pageInventoryLock.inventoryHash', errors)) { /* reported */ }
@@ -282,9 +341,14 @@ function validateDataset(bundle, { profile } = {}) {
       allowOnly(inventoryHash, ['algorithm', 'value'], 'dataset.pageInventoryLock.inventoryHash', errors);
       requireKeys(inventoryHash, ['algorithm', 'value'], 'dataset.pageInventoryLock.inventoryHash', errors);
       if (inventoryHash.algorithm !== 'sha256') errors.push('dataset.pageInventoryLock.inventoryHash.algorithm must be sha256.');
-      const expected = sha256Canonical(lockedPageIds);
+      let expected;
+      try {
+        expected = sha256Canonical(lockedPageIds);
+      } catch (error) {
+        errors.push(`dataset.pageInventoryLock.pageIds cannot be canonicalized for hashing: ${error.message}`);
+      }
       if (typeof inventoryHash.value !== 'string' || !HASH.test(inventoryHash.value)) errors.push('dataset.pageInventoryLock.inventoryHash.value must be a lowercase SHA-256 hash.');
-      else if (inventoryHash.value !== expected) errors.push(`dataset.pageInventoryLock.inventoryHash hash mismatch; expected ${expected}.`);
+      else if (expected !== undefined && inventoryHash.value !== expected) errors.push(`dataset.pageInventoryLock.inventoryHash hash mismatch; expected ${expected}.`);
     }
   }
   const redaction = bundle.redactionVerification;
@@ -337,11 +401,44 @@ function validateAttribution(attribution, subject, location, errors) {
   }
 }
 
-function datasetIndex(dataset) {
+function datasetIndex(dataset, errors = []) {
   const index = new Map();
-  for (const document of dataset?.documents || []) for (const page of document.pages || []) for (const item of page.items || []) {
-    index.set(item.sampleId, { documentId: document.documentId, pageId: page.pageId, subject: document.subject, item });
+  if (!isObject(dataset)) {
+    errors.push('linked dataset must be an object.');
+    return index;
   }
+  if (!Array.isArray(dataset.documents)) {
+    errors.push('linked dataset.documents must be an array.');
+    return index;
+  }
+  dataset.documents.forEach((document, documentIndex) => {
+    if (!isObject(document)) {
+      errors.push(`linked dataset.documents[${documentIndex}] must be an object.`);
+      return;
+    }
+    if (!Array.isArray(document.pages)) {
+      errors.push(`linked dataset.documents[${documentIndex}].pages must be an array.`);
+      return;
+    }
+    document.pages.forEach((page, pageIndex) => {
+      if (!isObject(page)) {
+        errors.push(`linked dataset.documents[${documentIndex}].pages[${pageIndex}] must be an object.`);
+        return;
+      }
+      if (!Array.isArray(page.items)) {
+        errors.push(`linked dataset.documents[${documentIndex}].pages[${pageIndex}].items must be an array.`);
+        return;
+      }
+      page.items.forEach((item, itemIndex) => {
+        if (!isObject(item)) {
+          errors.push(`linked dataset.documents[${documentIndex}].pages[${pageIndex}].items[${itemIndex}] must be an object.`);
+          return;
+        }
+        if (index.has(item.sampleId)) errors.push(`linked dataset has duplicate sampleId ${item.sampleId}.`);
+        index.set(item.sampleId, { documentId: document.documentId, pageId: page.pageId, subject: document.subject, item });
+      });
+    });
+  });
   return index;
 }
 
@@ -359,7 +456,7 @@ function validateLabel(label, subject, location, errors) {
 function validateAnnotations(bundle, { dataset } = {}) {
   const errors = [];
   const summary = { total: 0, locked: 0, pending: 0, disputed: 0, qc: 0, adjudication: 0 };
-  const index = datasetIndex(dataset);
+  const index = datasetIndex(dataset, errors);
   if (!requireObject(bundle, 'annotation bundle', errors)) return { valid: false, errors, summary };
   allowOnly(bundle, ['schemaVersion', 'datasetId', 'annotations'], 'annotation bundle', errors);
   requireKeys(bundle, ['schemaVersion', 'datasetId', 'annotations'], 'annotation bundle', errors);
@@ -367,6 +464,7 @@ function validateAnnotations(bundle, { dataset } = {}) {
   if (dataset && bundle.datasetId !== dataset.datasetId) errors.push('annotation bundle.datasetId does not match dataset.');
   const seen = new Set();
   const annotationIds = new Set();
+  const annotationsById = new Map();
   const annotations = arrayValue(bundle.annotations, 'annotation bundle.annotations', errors);
   summary.total = annotations.length;
   annotations.forEach((annotation, annotationIndex) => {
@@ -380,10 +478,14 @@ function validateAnnotations(bundle, { dataset } = {}) {
     stableId(annotation.sampleId, `${at}.sampleId`, errors);
     if (annotationIds.has(annotation.annotationId)) errors.push(`duplicate annotationId: ${annotation.annotationId}.`);
     annotationIds.add(annotation.annotationId);
+    if (!annotationsById.has(annotation.annotationId)) annotationsById.set(annotation.annotationId, []);
+    annotationsById.get(annotation.annotationId).push(annotation);
     if (seen.has(annotation.sampleId)) errors.push(`duplicate annotation sampleId: ${annotation.sampleId}.`);
     seen.add(annotation.sampleId);
     const linked = index.get(annotation.sampleId);
     if (!linked) errors.push(`${at}.sampleId ${annotation.sampleId} does not exist in dataset.`);
+    else if (!Array.isArray(linked.item.annotationRefs)) errors.push(`${at} linked dataset item.annotationRefs must be an array.`);
+    else if (!linked.item.annotationRefs.includes(annotation.annotationId)) errors.push(`${at}.annotationId ${annotation.annotationId} must be declared in the linked item annotationRefs.`);
     validateLabel(annotation.preLabel, linked?.subject, `${at}.preLabel`, errors);
     validateLabel(annotation.humanLabel, linked?.subject, `${at}.humanLabel`, errors);
     const lock = annotation.lockState;
@@ -491,6 +593,21 @@ function validateAnnotations(bundle, { dataset } = {}) {
     }
     if (isPending) summary.pending += 1;
   });
+  for (const [sampleId, linked] of index) {
+    if (!Array.isArray(linked.item.annotationRefs)) {
+      errors.push(`dataset item ${sampleId}.annotationRefs must be an array.`);
+      continue;
+    }
+    const seenRefs = new Set();
+    for (const annotationRef of linked.item.annotationRefs) {
+      if (seenRefs.has(annotationRef)) errors.push(`dataset item ${sampleId} has duplicate annotationRef ${annotationRef}.`);
+      seenRefs.add(annotationRef);
+      const matches = annotationsById.get(annotationRef) || [];
+      if (matches.length === 0) errors.push(`dataset item ${sampleId} has dangling annotationRef ${annotationRef}.`);
+      else if (matches.length !== 1) errors.push(`dataset item ${sampleId} annotationRef ${annotationRef} must resolve to exactly one annotation.`);
+      else if (matches[0].sampleId !== sampleId) errors.push(`dataset item ${sampleId} annotationRef ${annotationRef} is a cross-sample reference; annotations must link to the same sample.`);
+    }
+  }
   return { valid: errors.length === 0, errors, summary };
 }
 
@@ -557,7 +674,7 @@ function validateRunManifest(manifest) {
 function validateSystemOutput(bundle, { dataset, runManifest } = {}) {
   const errors = [];
   const summary = { total: 0, success: 0, failure: 0, bySubject: Object.fromEntries(SUBJECTS.map((s) => [s, { success: 0, failure: 0 }])) };
-  const index = datasetIndex(dataset);
+  const index = datasetIndex(dataset, errors);
   if (!requireObject(bundle, 'system output bundle', errors)) return { valid: false, errors, summary };
   allowOnly(bundle, ['schemaVersion', 'runId', 'records'], 'system output bundle', errors);
   requireKeys(bundle, ['schemaVersion', 'runId', 'records'], 'system output bundle', errors);
@@ -566,6 +683,7 @@ function validateSystemOutput(bundle, { dataset, runManifest } = {}) {
   if (runManifest && bundle.runId !== runManifest.runId) errors.push('system output runId does not match run manifest.');
   const manifestValidation = runManifest ? validateRunManifest(runManifest) : null;
   if (manifestValidation && !manifestValidation.valid) errors.push(...manifestValidation.errors.map((error) => `run manifest: ${error}`));
+  if (runManifest && isObject(dataset) && runManifest.versions?.dataset !== dataset.datasetId) errors.push(`run manifest versions.dataset ${runManifest.versions?.dataset} does not match supplied dataset version ${dataset.datasetId}.`);
   const seen = new Set();
   const records = arrayValue(bundle.records, 'system output bundle.records', errors);
   summary.total = records.length;
@@ -596,7 +714,8 @@ function validateSystemOutput(bundle, { dataset, runManifest } = {}) {
       if (Object.hasOwn(record, 'prediction')) errors.push(`${at} failed but includes a fabricated prediction.`);
       if (failures.length === 0) errors.push(`${at} failed but has no failure details.`);
     }
-    if (linked && (record.status === 'success' || record.status === 'failed')) summary.bySubject[linked.subject][record.status === 'success' ? 'success' : 'failure'] += 1;
+    if (linked && !SUBJECTS.includes(linked.subject)) errors.push(`${at} linked dataset subject ${linked.subject} is invalid.`);
+    else if (linked && (record.status === 'success' || record.status === 'failed')) summary.bySubject[linked.subject][record.status === 'success' ? 'success' : 'failure'] += 1;
     failures.forEach((failure, failureIndex) => {
       const fAt = `${at}.failures[${failureIndex}]`;
       if (!requireObject(failure, fAt, errors)) return;

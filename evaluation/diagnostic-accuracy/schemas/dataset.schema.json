@@ -22,7 +22,7 @@
       "required": ["algorithm", "value"],
       "properties": {
         "algorithm": { "enum": ["sha256"] },
-        "value": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" }
+        "value": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
       }
     },
     "cropRectangle": {

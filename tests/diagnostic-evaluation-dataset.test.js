@@ -19,6 +19,7 @@ const { importDataset } = require('../evaluation/diagnostic-accuracy/importer');
 const fixtureRoot = path.join(__dirname, '..', 'evaluation', 'diagnostic-accuracy', 'fixtures');
 const readFixture = (name) => JSON.parse(fs.readFileSync(path.join(fixtureRoot, name), 'utf8'));
 const clone = (value) => structuredClone(value);
+const allItems = (dataset) => dataset.documents.flatMap((document) => document.pages.flatMap((page) => page.items));
 
 function validRun(dataset, overrides = {}) {
   return {
@@ -126,6 +127,38 @@ test('canonical JSON sorts object keys recursively while preserving array order'
   assert.equal(canonicalJson(first), '{"a":true,"z":[{"a":1,"b":2},3]}');
   assert.equal(sha256Canonical(first), sha256Canonical(second));
   assert.match(sha256Canonical(first), /^[a-f0-9]{64}$/u);
+});
+
+test('canonical JSON rejects non-JSON values, cycles, sparse arrays, and exotic objects', () => {
+  const cycle = {};
+  cycle.self = cycle;
+  const sparse = [];
+  sparse[1] = 'value';
+  const exotic = Object.create(null);
+  exotic.value = 1;
+  const hidden = {};
+  Object.defineProperty(hidden, 'value', { value: 1, enumerable: false });
+  const accessor = {};
+  Object.defineProperty(accessor, 'value', { get: () => 1, enumerable: true });
+  const decoratedArray = [1];
+  decoratedArray.extra = true;
+  const cases = [
+    undefined,
+    () => true,
+    Symbol('value'),
+    1n,
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    { missing: undefined },
+    cycle,
+    sparse,
+    new Date('2026-01-01T00:00:00.000Z'),
+    exotic,
+    hidden,
+    accessor,
+    decoratedArray,
+  ];
+  for (const value of cases) assert.throws(() => canonicalJson(value), /canonical|JSON|unsupported|finite|cycle|sparse|prototype/iu);
 });
 
 test('fictional fixture dataset and its real canonical hashes validate', () => {
@@ -258,6 +291,28 @@ test('fixture annotations validate and summarize lock and review states', () => 
   assert.equal(result.summary.locked, annotations.annotations.length);
   assert.equal(result.summary.pending, 0);
   assert.equal(result.summary.qc, annotations.annotations.length);
+});
+
+test('annotation references reconcile bidirectionally by annotationId and sampleId', () => {
+  const dataset = readFixture('dataset.json');
+  const annotations = readFixture('annotations.json');
+  assert.equal(validateAnnotations(annotations, { dataset }).valid, true);
+
+  const undeclaredDataset = clone(dataset);
+  allItems(undeclaredDataset).find((item) => item.sampleId === 'fixture.math.correct').annotationRefs = [];
+  assert.match(validateAnnotations(annotations, { dataset: undeclaredDataset }).errors.join('\n'), /annotation\.math\.correct.*annotationRefs|annotationRefs.*annotation\.math\.correct/iu);
+
+  const danglingDataset = clone(dataset);
+  allItems(danglingDataset).find((item) => item.sampleId === 'fixture.math.correct').annotationRefs.push('annotation.dangling');
+  assert.match(validateAnnotations(annotations, { dataset: danglingDataset }).errors.join('\n'), /dangling/iu);
+
+  const crossSampleDataset = clone(dataset);
+  allItems(crossSampleDataset).find((item) => item.sampleId === 'fixture.math.fraction').annotationRefs.push('annotation.math.correct');
+  assert.match(validateAnnotations(annotations, { dataset: crossSampleDataset }).errors.join('\n'), /cross-sample|same sample/iu);
+
+  const duplicateDataset = clone(dataset);
+  allItems(duplicateDataset).find((item) => item.sampleId === 'fixture.math.correct').annotationRefs.push('annotation.math.correct');
+  assert.match(validateAnnotations(annotations, { dataset: duplicateDataset }).errors.join('\n'), /duplicate.*annotationRef|annotationRef.*duplicate/iu);
 });
 
 test('annotation validation accumulates duplicates, unknown links, subject, and incomplete audit errors', () => {
@@ -482,6 +537,15 @@ test('system output rejects success/failure and observed-record reconciliation m
   assert.match(result.errors.join('\n'), /record.*success.*failure|success.*failure.*record/iu);
 });
 
+test('system output run manifest dataset version must match supplied dataset', () => {
+  const dataset = readFixture('dataset.json');
+  const manifest = validRun(dataset);
+  manifest.versions.dataset = 'fixture-other-version';
+  const result = validateSystemOutput(readFixture('system-output-baseline.json'), { dataset, runManifest: manifest });
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join('\n'), /dataset.*version|versions\.dataset/iu);
+});
+
 test('run manifest requires RFC 3339 date-time timestamps', () => {
   const dataset = readFixture('dataset.json');
   const bad = validRun(dataset);
@@ -489,6 +553,42 @@ test('run manifest requires RFC 3339 date-time timestamps', () => {
   const result = validateRunManifest(bad);
   assert.equal(result.valid, false);
   assert.match(result.errors.join('\n'), /startedAt.*date-time/iu);
+
+  for (const timestamp of ['2026-02-31T00:00:00Z', '2026-01-01T24:00:00Z', '2026-01-01T00:00:00+24:00']) {
+    const impossible = validRun(dataset);
+    impossible.timestamps.startedAt = timestamp;
+    const impossibleResult = validateRunManifest(impossible);
+    assert.equal(impossibleResult.valid, false, timestamp);
+    assert.match(impossibleResult.errors.join('\n'), /startedAt.*date-time/iu);
+  }
+});
+
+test('validators return aggregate results instead of throwing on malformed shapes', () => {
+  const malformedDataset = clone(readFixture('dataset.json'));
+  malformedDataset.profile = 'formal';
+  malformedDataset.pageInventoryLock.pageIds = {};
+  let datasetResult;
+  assert.doesNotThrow(() => { datasetResult = validateDataset(malformedDataset, { profile: 'formal' }); });
+  assert.equal(datasetResult.valid, false);
+
+  const malformedIndexDataset = { datasetId: 'malformed', documents: {} };
+  let annotationResult;
+  assert.doesNotThrow(() => { annotationResult = validateAnnotations({ schemaVersion: '1.0.0', datasetId: 'malformed', annotations: [] }, { dataset: malformedIndexDataset }); });
+  assert.equal(annotationResult.valid, false);
+
+  let outputResult;
+  assert.doesNotThrow(() => { outputResult = validateSystemOutput({ schemaVersion: '1.0.0', runId: 'run.test', records: [] }, { dataset: malformedIndexDataset }); });
+  assert.equal(outputResult.valid, false);
+
+  const malformedSubjectDataset = clone(readFixture('dataset.json'));
+  malformedSubjectDataset.documents[0].subject = 'not-a-subject';
+  assert.doesNotThrow(() => { outputResult = validateSystemOutput(readFixture('system-output-baseline.json'), { dataset: malformedSubjectDataset }); });
+  assert.equal(outputResult.valid, false);
+
+  for (const validate of [validateDataset, validateAnnotations, validateRunManifest, validateSystemOutput]) {
+    assert.doesNotThrow(() => validate(null));
+    assert.equal(validate(null).valid, false);
+  }
 });
 
 test('nonterminal run states reject contradictory completed metadata and counts', () => {
@@ -537,5 +637,67 @@ test('import rejects aggregate validation errors without mutating the data root'
     assert.equal(fs.existsSync(path.join(temporaryRoot, 'datasets')), false);
   } finally {
     fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+function makeImportRoots(prefix) {
+  return {
+    dataRoot: fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-root-`)),
+    externalRoot: fs.mkdtempSync(path.join(os.tmpdir(), `${prefix}-external-`)),
+  };
+}
+
+function cleanImportRoots(roots) {
+  fs.rmSync(roots.dataRoot, { recursive: true, force: true });
+  fs.rmSync(roots.externalRoot, { recursive: true, force: true });
+}
+
+test('import rejects a datasets symlink without writing outside the data root', () => {
+  const roots = makeImportRoots('ldx-datasets-link');
+  try {
+    fs.symlinkSync(roots.externalRoot, path.join(roots.dataRoot, 'datasets'), 'dir');
+    assert.throws(
+      () => importDataset({ sourceFile: path.join(fixtureRoot, 'dataset.json'), dataRoot: roots.dataRoot, profile: 'fixture' }),
+      /symlink|unsafe|outside/iu,
+    );
+    assert.deepEqual(fs.readdirSync(roots.externalRoot), []);
+  } finally {
+    cleanImportRoots(roots);
+  }
+});
+
+test('import rejects a version-directory symlink without writing outside the data root', () => {
+  const roots = makeImportRoots('ldx-version-link');
+  try {
+    fs.mkdirSync(path.join(roots.dataRoot, 'datasets'));
+    fs.symlinkSync(roots.externalRoot, path.join(roots.dataRoot, 'datasets', 'fixture-v1'), 'dir');
+    assert.throws(
+      () => importDataset({ sourceFile: path.join(fixtureRoot, 'dataset.json'), dataRoot: roots.dataRoot, profile: 'fixture' }),
+      /symlink|unsafe|outside/iu,
+    );
+    assert.deepEqual(fs.readdirSync(roots.externalRoot), []);
+  } finally {
+    cleanImportRoots(roots);
+  }
+});
+
+test('import rejects a final-file symlink injected before exclusive creation', () => {
+  const roots = makeImportRoots('ldx-file-link');
+  const externalFile = path.join(roots.externalRoot, 'redirected.json');
+  const originalMkdirSync = fs.mkdirSync;
+  try {
+    fs.mkdirSync = (target, options) => {
+      const result = originalMkdirSync(target, options);
+      if (path.basename(target) === 'fixture-v1') fs.symlinkSync(externalFile, path.join(target, 'dataset.json'));
+      return result;
+    };
+    assert.throws(
+      () => importDataset({ sourceFile: path.join(fixtureRoot, 'dataset.json'), dataRoot: roots.dataRoot, profile: 'fixture' }),
+      /symlink|unsafe|outside/iu,
+    );
+    assert.equal(fs.existsSync(externalFile), false);
+  } finally {
+    fs.mkdirSync = originalMkdirSync;
+    cleanImportRoots(roots);
   }
 });
