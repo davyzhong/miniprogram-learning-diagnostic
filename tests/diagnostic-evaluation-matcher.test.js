@@ -38,6 +38,7 @@ test('normalization is versioned and subject-safe', () => {
   assert.equal(normalizeText('Rock ’N’ Roll', 'english'), "rock 'n' roll");
   assert.equal(normalizeText(' 学 \n 习，中文。 ', 'chinese'), '学习,中文.');
   assert.equal(normalizeText('Colour', 'english'), 'colour');
+  assert.equal(normalizeText('AΣБ', 'english'), 'aΣБ');
   assert.notEqual(normalizeText('colour', 'english'), normalizeText('color', 'english'));
   assert.notEqual(normalizeText('未', 'chinese'), normalizeText('末', 'chinese'));
   assert.equal(normalizeText(null, 'english'), '');
@@ -187,32 +188,30 @@ test('context conflicts and cross-subject, document, or page candidates are neve
   }
 });
 
-test('missing context is conservative for region matching but compatible for exact ID and text', () => {
-  const regionOnly = matchEvaluationItems(
-    [gold('sample-region', { region: region(0, 0) })],
-    [prediction('prediction-region', { pageId: undefined, region: region(0, 0) })],
-  );
-  assert.deepEqual(regionOnly.matches, []);
-  assert.deepEqual(regionOnly.unresolved, [{
-    reason: 'insufficient-evidence',
-    goldIds: ['sample-region'],
-    predictionIds: ['prediction-region'],
-  }]);
+test('missing subject, document, or page prevents exact-ID, region, and text matching', () => {
+  for (const missingField of ['subject', 'documentId', 'pageId']) {
+    const result = matchEvaluationItems(
+      [gold(`sample-${missingField}`, { text: 'planet', region: region(0, 0) })],
+      [prediction(`prediction-${missingField}`, {
+        sampleId: `sample-${missingField}`,
+        text: 'PLANET',
+        region: region(0, 0),
+        [missingField]: undefined,
+      })],
+    );
 
-  const exact = matchEvaluationItems(
-    [gold('sample-exact')],
-    [prediction('prediction-exact', { sampleId: 'sample-exact', pageId: undefined })],
-  );
-  assert.equal(exact.matches[0].method, 'sampleId');
-
-  const text = matchEvaluationItems(
-    [gold('sample-text', { text: 'planet' })],
-    [prediction('prediction-text', { pageId: undefined, text: 'PLANET' })],
-  );
-  assert.equal(text.matches[0].method, 'text-similarity');
+    assert.deepEqual(result.matches, [], missingField);
+    assert.deepEqual(result.unresolved, [], missingField);
+    assert.deepEqual(result.missed.map((entry) => entry.sampleId), [`sample-${missingField}`], missingField);
+    assert.deepEqual(
+      result.hallucinated.map((entry) => entry.predictionId),
+      [`prediction-${missingField}`],
+      missingField,
+    );
+  }
 });
 
-test('invalid localization and text remain unresolved rather than guessed', () => {
+test('invalid localization and text remain missed and hallucinated rather than unresolved', () => {
   const result = matchEvaluationItems(
     [gold('sample-1', { region: region(0, 0, 0, 10), text: null })],
     [prediction('prediction-1', { region: region(0, 0), text: 42 })],
@@ -220,13 +219,9 @@ test('invalid localization and text remain unresolved rather than guessed', () =
 
   assert.deepEqual(result, {
     matches: [],
-    missed: [],
-    hallucinated: [],
-    unresolved: [{
-      reason: 'insufficient-evidence',
-      goldIds: ['sample-1'],
-      predictionIds: ['prediction-1'],
-    }],
+    missed: [{ sampleId: 'sample-1', subject: 'english', documentId: 'doc-1', pageId: 'page-1' }],
+    hallucinated: [{ predictionId: 'prediction-1', subject: 'english', documentId: 'doc-1', pageId: 'page-1' }],
+    unresolved: [],
   });
 });
 
@@ -250,17 +245,49 @@ test('one-to-one consumption refuses overlapping multi-candidate regions', () =>
 
 test('unrelated leftovers become minimal stable missed and hallucinated entries', () => {
   const result = matchEvaluationItems(
-    [gold('missed', { text: 'gold' })],
-    [prediction('hallucinated', { subject: 'math', documentId: 'doc-2', pageId: 'page-2', text: 'prediction' })],
+    [gold('missed', { text: 'gold', region: region(0, 0) })],
+    [prediction('hallucinated', { text: 'prediction', region: region(100, 100) })],
   );
 
   assert.deepEqual(result.missed, [{
     sampleId: 'missed', subject: 'english', documentId: 'doc-1', pageId: 'page-1',
   }]);
   assert.deepEqual(result.hallucinated, [{
-    predictionId: 'hallucinated', subject: 'math', documentId: 'doc-2', pageId: 'page-2',
+    predictionId: 'hallucinated', subject: 'english', documentId: 'doc-1', pageId: 'page-1',
   }]);
   assert.deepEqual(result.unresolved, []);
+});
+
+test('separate ambiguous components stay separate and exclude unrelated leftovers', () => {
+  const result = matchEvaluationItems(
+    [
+      gold('gold-a', { pageId: 'page-a', text: 'abcdefghij' }),
+      gold('gold-b', { pageId: 'page-b', text: 'klmnopqrst' }),
+      gold('gold-unrelated', { pageId: 'page-c', text: 'gold-only' }),
+    ],
+    [
+      prediction('prediction-a1', { pageId: 'page-a', text: 'abcdefghiX' }),
+      prediction('prediction-a2', { pageId: 'page-a', text: 'abcdefghYj' }),
+      prediction('prediction-b1', { pageId: 'page-b', text: 'klmnopqrsX' }),
+      prediction('prediction-b2', { pageId: 'page-b', text: 'klmnopqrYt' }),
+      prediction('prediction-unrelated', { pageId: 'page-c', text: 'prediction-only' }),
+    ],
+  );
+
+  assert.deepEqual(result.unresolved, [
+    {
+      reason: 'ambiguous-text',
+      goldIds: ['gold-a'],
+      predictionIds: ['prediction-a1', 'prediction-a2'],
+    },
+    {
+      reason: 'ambiguous-text',
+      goldIds: ['gold-b'],
+      predictionIds: ['prediction-b1', 'prediction-b2'],
+    },
+  ]);
+  assert.deepEqual(result.missed.map((entry) => entry.sampleId), ['gold-unrelated']);
+  assert.deepEqual(result.hallucinated.map((entry) => entry.predictionId), ['prediction-unrelated']);
 });
 
 test('empty arrays and non-array inputs are handled safely', () => {

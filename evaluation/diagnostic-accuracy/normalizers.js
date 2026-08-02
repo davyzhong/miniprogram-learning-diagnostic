@@ -28,7 +28,7 @@ function normalizeText(value, subject) {
   let normalized = value
     .normalize('NFKC')
     .replace(PUNCTUATION_PATTERN, (character) => PUNCTUATION_MAP[character])
-    .toLowerCase();
+    .replace(/\p{Script=Latin}/gu, (character) => character.toLowerCase());
 
   if (normalizedSubject === 'math' || normalizedSubject === 'chinese') {
     normalized = normalized.replace(/\s+/gu, '');

@@ -47,14 +47,16 @@ function contextOf(item) {
   };
 }
 
-function contextsCompatible(left, right) {
+function contextsMatch(left, right) {
   return CONTEXT_FIELDS.every((field) => (
-    !supplied(left[field]) || !supplied(right[field]) || left[field] === right[field]
+    supplied(left[field]) && supplied(right[field]) && left[field] === right[field]
   ));
 }
 
-function sameKnownPage(left, right) {
-  return supplied(left.pageId) && supplied(right.pageId) && left.pageId === right.pageId;
+function contextsConflict(left, right) {
+  return CONTEXT_FIELDS.some((field) => (
+    supplied(left[field]) && supplied(right[field]) && left[field] !== right[field]
+  ));
 }
 
 function regionOf(item) {
@@ -207,7 +209,8 @@ function matchEvaluationItems(goldItems, predictions, options) {
     if (goldGroup.length !== 1 || predictionGroup.length !== 1) continue;
     const goldRecord = goldGroup[0];
     const predictionRecord = predictionGroup[0];
-    if (!contextsCompatible(goldRecord.context, predictionRecord.context)) {
+    if (!contextsMatch(goldRecord.context, predictionRecord.context)) {
+      if (!contextsConflict(goldRecord.context, predictionRecord.context)) continue;
       addUnresolved('context-conflict', goldGroup, predictionGroup);
       continue;
     }
@@ -227,8 +230,7 @@ function matchEvaluationItems(goldItems, predictions, options) {
   const regionEdges = [];
   for (const goldRecord of remainingGold()) {
     for (const predictionRecord of remainingPredictions()) {
-      if (!contextsCompatible(goldRecord.context, predictionRecord.context)
-        || !sameKnownPage(goldRecord.context, predictionRecord.context)) continue;
+      if (!contextsMatch(goldRecord.context, predictionRecord.context)) continue;
       const score = regionIou(regionOf(goldRecord.item), regionOf(predictionRecord.item));
       if (score + THRESHOLD_EPSILON >= thresholds.regionIou) {
         const stableScore = score < thresholds.regionIou ? thresholds.regionIou : score;
@@ -260,7 +262,7 @@ function matchEvaluationItems(goldItems, predictions, options) {
   const textEdges = [];
   for (const goldRecord of remainingGold()) {
     for (const predictionRecord of remainingPredictions()) {
-      if (!contextsCompatible(goldRecord.context, predictionRecord.context)) continue;
+      if (!contextsMatch(goldRecord.context, predictionRecord.context)) continue;
       const goldText = textOf(goldRecord.item);
       const predictionText = textOf(predictionRecord.item);
       if (typeof goldText !== 'string' || typeof predictionText !== 'string') continue;
@@ -312,22 +314,6 @@ function matchEvaluationItems(goldItems, predictions, options) {
   for (const component of connectedComponents(ambiguousTextEdges)) {
     addUnresolved(
       'ambiguous-text',
-      goldRecords.filter((record) => component.goldIndexes.has(record.index)),
-      predictionRecords.filter((record) => component.predictionIndexes.has(record.index)),
-    );
-  }
-
-  const insufficientEdges = [];
-  for (const goldRecord of remainingGold()) {
-    for (const predictionRecord of remainingPredictions()) {
-      if (contextsCompatible(goldRecord.context, predictionRecord.context)) {
-        insufficientEdges.push({ gold: goldRecord, prediction: predictionRecord });
-      }
-    }
-  }
-  for (const component of connectedComponents(insufficientEdges)) {
-    addUnresolved(
-      'insufficient-evidence',
       goldRecords.filter((record) => component.goldIndexes.has(record.index)),
       predictionRecords.filter((record) => component.predictionIndexes.has(record.index)),
     );
