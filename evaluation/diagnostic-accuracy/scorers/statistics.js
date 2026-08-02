@@ -48,9 +48,12 @@ function setMetrics(goldValues, predictedValues) {
   const predicted = new Set(Array.isArray(predictedValues) ? predictedValues : []);
   let intersection = 0;
   for (const value of predicted) if (gold.has(value)) intersection += 1;
-  const precision = predicted.size === 0 ? (gold.size === 0 ? 1 : 0) : intersection / predicted.size;
-  const recall = gold.size === 0 ? (predicted.size === 0 ? 1 : 0) : intersection / gold.size;
-  return { precision, recall, f1: f1Score(precision, recall) };
+  return {
+    precision: ratioMetric(intersection, predicted.size),
+    recall: ratioMetric(intersection, gold.size),
+    // F1/Dice is not a binomial proportion, so a Wilson interval would be misleading.
+    f1: ratioMetric(2 * intersection, predicted.size + gold.size, { binomial: false }),
+  };
 }
 
 function confusionMatrix(labels) {

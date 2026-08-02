@@ -38,7 +38,9 @@
       },
       "humanLabel": {
         "conclusion": "incorrect",
-        "attribution": { "subject": "math", "math": { "primaryNodeId": "math.fraction.equivalence", "primaryNodeLabel": "Fraction equivalence", "bottleneckId": "math.fraction.common-denominator", "bottleneckLabel": "Common denominator" } },
+        "text": "fictional-fraction-answer",
+        "acceptedAnswers": ["fictional-fraction-answer", "fictional-equivalent-fraction-answer"],
+        "attribution": { "subject": "math", "math": { "primaryNodeId": "math.fraction.equivalence", "primaryNodeLabel": "Fraction equivalence", "bottleneckId": "math.fraction.common-denominator", "bottleneckLabel": "Common denominator", "ancestorNodeIds": ["math.fraction"], "nodeIds": ["math.fraction.equivalence", "math.fraction.common-denominator"], "bottleneckIds": ["math.fraction.common-denominator"], "errorReason": "common-denominator-error" } },
         "labeledBy": "fixture.annotator",
         "labeledAt": "2026-01-01T02:10:00.000Z"
       },
@@ -56,13 +58,13 @@
       "sampleId": "fixture.chinese.character",
       "preLabel": {
         "conclusion": "incorrect",
-        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-1", "errorType": "character-form", "review": "review-character-form", "migration": "migration-character-practice" } },
+        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-1", "errorType": "character-form", "review": "review-character-form", "migrationType": "migration-character-practice" } },
         "labeledBy": "fixture.prelabeler",
         "labeledAt": "2026-01-01T02:00:00.000Z"
       },
       "humanLabel": {
         "conclusion": "incorrect",
-        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-1", "errorType": "character-form", "review": "review-character-form", "migration": "migration-character-practice" } },
+        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-1", "errorType": "character-form", "review": "review-character-form", "migrationType": "migration-character-practice", "allowedMigrationTypes": ["migration-character-practice", "migration-copy-practice"] } },
         "labeledBy": "fixture.annotator",
         "labeledAt": "2026-01-01T02:10:00.000Z"
       },
@@ -80,13 +82,13 @@
       "sampleId": "fixture.chinese.blank",
       "preLabel": {
         "conclusion": "not-an-item",
-        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-2", "errorType": "blank", "review": "review-completion", "migration": "migration-completion-practice" } },
+        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-2", "errorType": "blank", "review": "review-completion", "migrationType": "migration-completion-practice" } },
         "labeledBy": "fixture.prelabeler",
         "labeledAt": "2026-01-01T02:00:00.000Z"
       },
       "humanLabel": {
         "conclusion": "not-an-item",
-        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-2", "errorType": "blank", "review": "review-completion", "migration": "migration-completion-practice" } },
+        "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-2", "errorType": "blank", "review": "review-completion", "migrationType": "migration-completion-practice", "allowedMigrationTypes": ["migration-completion-practice"] } },
         "labeledBy": "fixture.annotator",
         "labeledAt": "2026-01-01T02:10:00.000Z"
       },

@@ -1,6 +1,8 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 
 const { CORE_GUARDRAILS } = require('../evaluation/diagnostic-accuracy/constants');
@@ -10,6 +12,7 @@ const { scoreMath } = require('../evaluation/diagnostic-accuracy/scorers/math');
 const { highestSeverity, stableTags } = require('../evaluation/diagnostic-accuracy/scorers/common');
 const { ratioMetric, setMetrics } = require('../evaluation/diagnostic-accuracy/scorers/statistics');
 const { scoreEvaluation } = require('../evaluation/diagnostic-accuracy/scorers');
+const { matchEvaluationItems } = require('../evaluation/diagnostic-accuracy/matcher');
 
 function atPath(value, path) {
   return path.split('.').reduce((current, key) => current?.[key], value);
@@ -46,16 +49,20 @@ test('subject scorers distinguish required primary and optional diagnostic check
   assert.equal(math.checks.ancestorHit, true);
   assert.equal(math.checks.bottleneckTop1, true);
   assert.equal(math.checks.errorReason, false);
-  assert.deepEqual(math.sets.nodes, { precision: 0.5, recall: 0.5, f1: 0.5 });
-  assert.deepEqual(math.sets.bottlenecks, { precision: 1, recall: 0.5, f1: 2 / 3 });
+  assert.deepEqual(math.sets.nodes.precision, ratioMetric(1, 2));
+  assert.deepEqual(math.sets.nodes.recall, ratioMetric(1, 2));
+  assert.deepEqual(math.sets.nodes.f1, { numerator: 2, denominator: 4, rate: 0.5, interval95: null });
+  assert.deepEqual(math.sets.bottlenecks.precision, ratioMetric(1, 1));
+  assert.deepEqual(math.sets.bottlenecks.recall, ratioMetric(1, 2));
+  assert.deepEqual(math.sets.bottlenecks.f1, { numerator: 2, denominator: 3, rate: 2 / 3, interval95: null });
 
   const chinese = scoreChinese({
     gold: { attribution: { chinese: {
       originalItemLocation: 'page-1:item-1', errorType: 'character-form', review: 'review-character',
-      migration: 'migration-character', allowedMigrationTypes: ['migration-character', 'migration-copy'],
+      migrationType: 'migration-character', allowedMigrationTypes: ['migration-character', 'migration-copy'],
     } } },
     prediction: { attribution: { chinese: {
-      originalItemLocation: 'page-1:item-1', errorType: 'character-form', review: 'wrong-review', migration: 'migration-copy',
+      originalItemLocation: 'page-1:item-1', errorType: 'character-form', review: 'wrong-review', migrationType: 'migration-copy',
     } } },
   });
   assert.deepEqual(chinese.checks, {
@@ -79,8 +86,13 @@ test('subject scorers distinguish required primary and optional diagnostic check
 });
 
 test('set metrics define empty sets and calculate precision, recall, and F1', () => {
-  assert.deepEqual(setMetrics([], []), { precision: 1, recall: 1, f1: 1 });
-  assert.deepEqual(setMetrics(['a'], []), { precision: 0, recall: 0, f1: 0 });
+  assert.deepEqual(setMetrics([], []), {
+    precision: ratioMetric(0, 0), recall: ratioMetric(0, 0), f1: ratioMetric(0, 0),
+  });
+  assert.deepEqual(setMetrics(['a'], []), {
+    precision: ratioMetric(0, 0), recall: ratioMetric(0, 1),
+    f1: { numerator: 0, denominator: 1, rate: 0, interval95: null },
+  });
 });
 
 test('error tags retain stable detail while severity uses S0 to S3 precedence', () => {
@@ -230,4 +242,125 @@ test('aggregate scoring is input-order independent', () => {
   shuffled.matchResult.matches.reverse();
   shuffled.matchResult.missed.reverse();
   assert.deepEqual(scoreEvaluation(shuffled), forward);
+});
+
+function oneItemInput({ conclusion = 'unreadable', predictionConclusion, disposition = 'matched' } = {}) {
+  const subjectValues = { wordIdentity: 'unknown', recognitionSpelling: 'unreadable', stateUpdate: 'no-state-update' };
+  const dataset = { profile: 'fixture', documents: [{
+    documentId: 'english-doc', subject: 'english', pages: [{ pageId: 'english-page', imageQuality: 'clear', items: [{ sampleId: 'one', composite: { role: 'standalone' } }] }],
+  }] };
+  const annotations = { annotations: [{ sampleId: 'one', lockState: { status: 'locked' }, humanLabel: {
+    conclusion, attribution: { subject: 'english', english: subjectValues },
+  } }] };
+  const successful = { predictionId: 'p-one', sampleId: 'one', documentId: 'english-doc', pageId: 'english-page', status: 'success', prediction: {
+    conclusion: predictionConclusion, text: '', attribution: { subject: 'english', english: subjectValues },
+  } };
+  const failed = { predictionId: 'p-one', sampleId: 'one', documentId: 'english-doc', pageId: 'english-page', status: 'failed' };
+  const matchResult = { matches: [], missed: [], unresolved: [], hallucinated: [] };
+  let counts = { total: 1, success: 1, failure: 0, unresolved: 0, retry: 0 };
+  let systemOutput = { records: [successful] };
+  if (disposition === 'matched') matchResult.matches.push({ sampleId: 'one', predictionId: 'p-one' });
+  if (disposition === 'missed') matchResult.missed.push({ sampleId: 'one' });
+  if (disposition === 'unresolved') {
+    matchResult.unresolved.push({ reason: 'ambiguous-text', goldIds: ['one'], predictionIds: [] });
+    counts = { total: 1, success: 0, failure: 0, unresolved: 1, retry: 0 };
+    systemOutput = { records: [] };
+  }
+  if (disposition === 'failed') {
+    matchResult.missed.push({ sampleId: 'one' });
+    counts = { total: 1, success: 0, failure: 1, unresolved: 0, retry: 0 };
+    systemOutput = { records: [failed] };
+  }
+  return { dataset, annotations, systemOutput, matchResult, runManifest: { counts } };
+}
+
+test('unreadable gold forced to every readable conclusion is S1', () => {
+  for (const predictionConclusion of ['correct', 'incorrect', 'not-an-item']) {
+    const result = scoreEvaluation(oneItemInput({ predictionConclusion }));
+    assert.equal(result.itemResults[0].highestSeverity, 'S1', predictionConclusion);
+    assert.ok(result.itemResults[0].errorTags.includes('unreadable-forced-conclusion'));
+  }
+});
+
+test('undiscovered unreadable gold stays in rejection and discovery denominators without creating S1', () => {
+  for (const disposition of ['missed', 'unresolved', 'failed']) {
+    const result = scoreEvaluation(oneItemInput({ disposition }));
+    assert.deepEqual(result.overall.unreadableCorrectRejection, ratioMetric(0, 1), disposition);
+    assert.deepEqual(result.overall.discoveryRecall, ratioMetric(0, 1), disposition);
+    assert.deepEqual(result.overall.s1Rate, ratioMetric(0, 1), disposition);
+  }
+});
+
+test('contradictory run counts fail clearly', () => {
+  const input = oneItemInput({ predictionConclusion: 'unreadable' });
+  input.runManifest.counts = { total: 2, success: 1, failure: 0, unresolved: 0, retry: 0 };
+  assert.throws(() => scoreEvaluation(input), /contradictory|total/u);
+});
+
+test('optional subject metrics stay inapplicable for missing or empty locked gold fields', () => {
+  const input = aggregateInput();
+  const mathGold = input.annotations.annotations.find(({ sampleId }) => sampleId === 'm-ok').humanLabel.attribution.math;
+  mathGold.nodeIds = [];
+  mathGold.bottleneckIds = [];
+  for (const annotation of input.annotations.annotations.filter(({ sampleId }) => sampleId.startsWith('e-'))) {
+    delete annotation.humanLabel.attribution.english.recognitionSpelling;
+    delete annotation.humanLabel.attribution.english.stateUpdate;
+  }
+  const result = scoreEvaluation(input);
+  for (const key of ['nodeSetPrecision', 'nodeSetRecall', 'nodeSetF1', 'bottleneckSetPrecision', 'bottleneckSetRecall', 'bottleneckSetF1']) {
+    assert.deepEqual(result.math[key], ratioMetric(0, 0), key);
+  }
+  assert.deepEqual(result.math.errorReason, ratioMetric(0, 0));
+  assert.deepEqual(result.math.errorType, ratioMetric(0, 0));
+  assert.deepEqual(result.math.ancestorHit, ratioMetric(0, 0));
+  assert.deepEqual(result.chinese.originalReviewBinding, ratioMetric(0, 0));
+  assert.deepEqual(result.chinese.migrationTypeLegal, ratioMetric(0, 0));
+  assert.deepEqual(result.english.recognition, ratioMetric(0, 0));
+  assert.deepEqual(result.english.spelling, ratioMetric(0, 0));
+  assert.deepEqual(result.english.recognitionSpelling, ratioMetric(0, 0));
+  assert.deepEqual(result.english.stateUpdate, ratioMetric(0, 0));
+});
+
+test('answer scoring uses locked gold variants and never dataset answer-like fallback', () => {
+  const input = oneItemInput({ conclusion: 'correct', predictionConclusion: 'correct' });
+  input.dataset.documents[0].pages[0].items[0].text = 'tempting-dataset-answer';
+  input.dataset.documents[0].pages[0].items[0].acceptedAnswers = ['tempting-dataset-answer'];
+  input.systemOutput.records[0].prediction.text = 'tempting-dataset-answer';
+  let result = scoreEvaluation(input);
+  assert.equal(result.itemResults[0].checks.answer, undefined);
+
+  input.annotations.annotations[0].humanLabel.acceptedAnswers = ['locked-answer', 'LOCKED ANSWER'];
+  result = scoreEvaluation(input);
+  assert.equal(result.itemResults[0].checks.answer, false);
+  input.systemOutput.records[0].prediction.text = 'locked answer';
+  result = scoreEvaluation(input);
+  assert.equal(result.itemResults[0].checks.answer, true);
+});
+
+test('validated fixtures exercise clear-image, answer, hierarchy, multilabel, reason, and migration scoring', () => {
+  const fixture = (name) => JSON.parse(fs.readFileSync(path.join(
+    __dirname, '..', 'evaluation', 'diagnostic-accuracy', 'fixtures', name,
+  ), 'utf8'));
+  const dataset = fixture('dataset.json');
+  const annotations = fixture('annotations.json');
+  const systemOutput = fixture('system-output-candidate.json');
+  const labels = new Map(annotations.annotations.map((annotation) => [annotation.sampleId, annotation.humanLabel]));
+  const goldItems = dataset.documents.flatMap((document) => document.pages.flatMap((page) => page.items
+    .filter((item) => item.composite.role !== 'parent')
+    .map((item) => ({
+      ...item, subject: document.subject, documentId: document.documentId, pageId: page.pageId,
+      text: labels.get(item.sampleId)?.text,
+    }))));
+  const matchResult = matchEvaluationItems(goldItems, systemOutput.records.filter((record) => record.status === 'success'));
+  const result = scoreEvaluation({
+    dataset, annotations, systemOutput, matchResult,
+    runManifest: { counts: { total: 7, success: 6, failure: 1, unresolved: 0, retry: 0 } },
+  });
+
+  assert.deepEqual(result.overall.clearImageDiscoveryRecall, ratioMetric(4, 4));
+  assert.deepEqual(result.math.ancestorHit, ratioMetric(1, 1));
+  assert.deepEqual(result.math.errorReason, ratioMetric(1, 1));
+  assert.deepEqual(result.math.nodeSetF1, { numerator: 4, denominator: 4, rate: 1, interval95: null });
+  assert.deepEqual(result.chinese.migrationTypeLegal, ratioMetric(1, 2));
+  assert.equal(result.itemResults.find(({ sampleId }) => sampleId === 'fixture.math.fraction').checks.answer, true);
 });

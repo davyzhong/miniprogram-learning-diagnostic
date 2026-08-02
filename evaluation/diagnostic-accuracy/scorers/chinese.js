@@ -9,13 +9,13 @@ function equalWhenApplicable(gold, predicted) {
 function scoreChinese({ gold, prediction }) {
   const expected = gold?.attribution?.chinese ?? {};
   const actual = prediction?.attribution?.chinese ?? {};
-  const allowedMigrations = expected.allowedMigrationTypes
-    ?? (expected.migration === undefined ? undefined : [expected.migration]);
+  const allowedMigrations = expected.allowedMigrationTypes;
   const checks = {
     originalItemLocation: equalWhenApplicable(expected.originalItemLocation, actual.originalItemLocation),
     errorType: equalWhenApplicable(expected.errorType, actual.errorType),
     originalReviewBinding: equalWhenApplicable(expected.review, actual.review),
-    migrationTypeLegal: allowedMigrations === undefined ? null : allowedMigrations.includes(actual.migration),
+    migrationTypeLegal: allowedMigrations === undefined || allowedMigrations.length === 0
+      ? null : allowedMigrations.includes(actual.migrationType),
   };
   const answer = textCheck(gold, prediction, 'chinese');
   if (answer !== null) checks.answer = answer;

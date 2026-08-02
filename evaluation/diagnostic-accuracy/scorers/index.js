@@ -11,7 +11,7 @@ const { confusionMatrix, ratioMetric } = require('./statistics');
 
 const SUBJECT_SCORERS = Object.freeze({ math: scoreMath, chinese: scoreChinese, english: scoreEnglish });
 const SUBJECT_METRICS = Object.freeze({
-  math: ['nodeTop1', 'ancestorHit', 'bottleneckTop1', 'errorReason'],
+  math: ['nodeTop1', 'ancestorHit', 'bottleneckTop1', 'errorReason', 'errorType'],
   chinese: ['originalItemLocation', 'errorType', 'originalReviewBinding', 'migrationTypeLegal'],
   english: ['wordIdentity', 'recognition', 'spelling', 'recognitionSpelling', 'stateUpdate'],
 });
@@ -43,7 +43,7 @@ function flattenDataset(dataset) {
           subject: document.subject,
           documentId: document.documentId,
           pageId: page.pageId,
-          imageQuality: item.imageQuality ?? page.imageQuality ?? document.imageQuality,
+          imageQuality: item.imageQuality ?? page.imageQuality,
         });
       }
     }
@@ -107,11 +107,7 @@ function scoreEvaluation({ dataset, annotations, systemOutput, matchResult, runM
     return {
       ...entry,
       imageQuality: entry.imageQuality ?? label.imageQuality,
-      label: {
-        ...label,
-        text: label.text ?? entry.text,
-        acceptedAnswers: label.acceptedAnswers ?? entry.acceptedAnswers,
-      },
+      label: { ...label },
     };
   });
   if (runCounts.total !== goldRecords.length) {
@@ -248,7 +244,7 @@ function scoreEvaluation({ dataset, annotations, systemOutput, matchResult, runM
     const attribution = prediction?.attribution ?? {};
     const claimsAction = Boolean(
       prediction?.actionTarget ?? prediction?.action ?? attribution.actionTarget
-      ?? attribution.chinese?.review ?? attribution.chinese?.migration
+      ?? attribution.chinese?.review ?? attribution.chinese?.migrationType
       ?? (attribution.english?.stateUpdate && attribution.english.stateUpdate !== 'no-state-update'),
     );
     const claimsStudentError = prediction?.conclusion === 'incorrect' || claimsAction;
@@ -316,7 +312,8 @@ function scoreEvaluation({ dataset, annotations, systemOutput, matchResult, runM
     }
     math[`${prefix}SetPrecision`] = ratioMetric(counts.intersection, counts.predicted);
     math[`${prefix}SetRecall`] = ratioMetric(counts.intersection, counts.gold);
-    math[`${prefix}SetF1`] = ratioMetric(2 * counts.intersection, counts.predicted + counts.gold);
+    // Micro-F1 is a Dice ratio, not a binomial proportion; omit Wilson confidence bounds.
+    math[`${prefix}SetF1`] = ratioMetric(2 * counts.intersection, counts.predicted + counts.gold, { binomial: false });
   };
   addSetMetrics('node', mathSetCounts.nodes);
   addSetMetrics('bottleneck', mathSetCounts.bottlenecks);

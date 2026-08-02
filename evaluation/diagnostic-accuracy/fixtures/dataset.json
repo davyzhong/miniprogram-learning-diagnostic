@@ -10,13 +10,14 @@
       "grade": 4,
       "sourceType": "historical",
       "captureType": "synthetic",
-      "hashes": [{ "algorithm": "sha256", "value": "5a0725ec164b9bb8c5e7dc91b0f1665628e3084c9d0dc5766c0505f703d56902" }],
+      "hashes": [{ "algorithm": "sha256", "value": "05c126a1c9293b1b4784c7ac4bc0e7e83645bd2cf280899f416a2f61fa09c3cc" }],
       "pages": [{
         "pageId": "fixture.math.page.1",
         "pageNumber": 1,
         "imageReference": "fixture://diagnostic-accuracy/math/page-1",
         "inventoryStatus": "complete",
-        "hashes": [{ "algorithm": "sha256", "value": "66097b2e8de3511c504d9487ff99d6408c0b468a2a4c81c28a650fe836c7a792" }],
+        "imageQuality": "clear",
+        "hashes": [{ "algorithm": "sha256", "value": "3acdd4e51fe222587f72ee6b2645d33c1dad487e1bf25021af760ffcb756c626" }],
         "items": [
           {
             "sampleId": "fixture.math.composite",
@@ -48,13 +49,14 @@
       "grade": 4,
       "sourceType": "historical",
       "captureType": "synthetic",
-      "hashes": [{ "algorithm": "sha256", "value": "28441ef50fb2ecfb11dc00c5a0660ed35138299a1e6d67ba2497d2b369557687" }],
+      "hashes": [{ "algorithm": "sha256", "value": "4e8a1da4fcb4d5da94a3a77a70b3c2c41d68d87dcbf59601e9a5766148a8d617" }],
       "pages": [{
         "pageId": "fixture.chinese.page.1",
         "pageNumber": 1,
         "imageReference": "fixture://diagnostic-accuracy/chinese/page-1",
         "inventoryStatus": "complete",
-        "hashes": [{ "algorithm": "sha256", "value": "9f6d4200006f49152405f136bb833f1b337055a4541144edcdf24b55cdd8deae" }],
+        "imageQuality": "clear",
+        "hashes": [{ "algorithm": "sha256", "value": "fd80bb89f879a5d056312676ac1265d0ffc92ea51d6d86d0de6c34e1e6168411" }],
         "items": [
           {
             "sampleId": "fixture.chinese.character",
@@ -79,13 +81,14 @@
       "grade": 4,
       "sourceType": "challenge",
       "captureType": "synthetic",
-      "hashes": [{ "algorithm": "sha256", "value": "875076e3796e1b5390c090ff60e60f917dee13fb2338c7208a9fb445307aeede" }],
+      "hashes": [{ "algorithm": "sha256", "value": "c7b1ec636a2b9e0958dab5137ae2bcd765927ec035367765c9a7c148829c2da8" }],
       "pages": [{
         "pageId": "fixture.english.page.1",
         "pageNumber": 1,
         "imageReference": "fixture://diagnostic-accuracy/english/page-1",
         "inventoryStatus": "complete",
-        "hashes": [{ "algorithm": "sha256", "value": "c9c29658a1cb3fff92a38badcf591a61124ac370d41ecc23c5bf902b0a14cb5c" }],
+        "imageQuality": "degraded",
+        "hashes": [{ "algorithm": "sha256", "value": "2ab39b3a8e32c4ce3bd6470725481fce11a90c9b6dc2e81599828207b1f909e3" }],
         "items": [
           {
             "sampleId": "fixture.english.correct",

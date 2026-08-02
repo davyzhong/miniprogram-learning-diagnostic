@@ -18,11 +18,12 @@ function scoreMath({ gold, prediction }) {
   const checks = {
     answer: textCheck(gold, prediction, 'math'),
     nodeTop1: equalWhenApplicable(expected.primaryNodeId, actual.primaryNodeId),
-    ancestorHit: Array.isArray(expected.ancestorNodeIds)
+    ancestorHit: Array.isArray(expected.ancestorNodeIds) && expected.ancestorNodeIds.length > 0
       ? actual.primaryNodeId === expected.primaryNodeId || expected.ancestorNodeIds.includes(actual.primaryNodeId)
       : null,
     bottleneckTop1: equalWhenApplicable(expected.bottleneckId, actual.bottleneckId),
-    errorReason: equalWhenApplicable(expected.errorReason ?? expected.errorType, actual.errorReason ?? actual.errorType),
+    errorReason: equalWhenApplicable(expected.errorReason, actual.errorReason),
+    errorType: equalWhenApplicable(expected.errorType, actual.errorType),
   };
   const sets = {};
   const setCounts = {};
@@ -34,12 +35,13 @@ function scoreMath({ gold, prediction }) {
     sets[name] = setMetrics(goldValues, predictedValues);
     setCounts[name] = { intersection, gold: goldSet.size, predicted: predictedSet.size };
   };
-  if (Array.isArray(expected.nodeIds)) addSet('nodes', expected.nodeIds, list(actual.nodeIds, actual.primaryNodeId));
-  if (Array.isArray(expected.bottleneckIds)) addSet('bottlenecks', expected.bottleneckIds, list(actual.bottleneckIds, actual.bottleneckId));
+  if (Array.isArray(expected.nodeIds) && expected.nodeIds.length > 0) addSet('nodes', expected.nodeIds, list(actual.nodeIds, actual.primaryNodeId));
+  if (Array.isArray(expected.bottleneckIds) && expected.bottleneckIds.length > 0) addSet('bottlenecks', expected.bottleneckIds, list(actual.bottleneckIds, actual.bottleneckId));
   const errorTags = [];
   if (checks.nodeTop1 === false) errorTags.push({ tag: 'math-primary-node-mismatch', severity: 'S2' });
   if (checks.bottleneckTop1 === false) errorTags.push({ tag: 'math-primary-bottleneck-mismatch', severity: 'S2' });
   if (checks.errorReason === false) errorTags.push({ tag: 'math-error-reason-mismatch', severity: 'S2' });
+  if (checks.errorType === false) errorTags.push({ tag: 'math-error-type-mismatch', severity: 'S2' });
   if (checks.answer === false) errorTags.push({ tag: 'answer-text-mismatch', severity: 'S3' });
   return { checks, sets, setCounts, errorTags };
 }

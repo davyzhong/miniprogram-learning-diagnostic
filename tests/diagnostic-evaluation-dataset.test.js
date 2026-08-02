@@ -173,9 +173,69 @@ test('fictional fixture dataset and its real canonical hashes validate', () => {
   assert.equal(dataset.documents.every((document) => ['historical', 'challenge'].includes(document.sourceType)), true);
   assert.equal(dataset.documents.every((document) => document.captureType === 'synthetic'), true);
   assert.equal(dataset.documents.flatMap((document) => document.pages).every((page) => page.imageReference.startsWith('fixture://')), true);
+  assert.equal(dataset.documents.flatMap((document) => document.pages).every((page) => ['clear', 'degraded', 'unreadable'].includes(page.imageQuality)), true);
   const unreadableId = readFixture('annotations.json').annotations.find((annotation) => annotation.humanLabel.conclusion === 'unreadable').sampleId;
   const unreadableDocument = dataset.documents.find((document) => document.pages.some((page) => page.items.some((item) => item.sampleId === unreadableId)));
   assert.equal(unreadableDocument.sourceType, 'challenge');
+});
+
+test('schema-backed optional scoring fields validate end to end', () => {
+  const dataset = readFixture('dataset.json');
+  const annotations = readFixture('annotations.json');
+  const output = readFixture('system-output-candidate.json');
+  const manifest = validRun(dataset);
+
+  assert.equal(validateDataset(dataset, { profile: 'fixture' }).valid, true);
+  assert.equal(validateAnnotations(annotations, { dataset }).valid, true);
+  assert.equal(validateSystemOutput(output, { dataset, runManifest: manifest }).valid, true);
+  const mathGold = annotations.annotations.find(({ sampleId }) => sampleId === 'fixture.math.fraction').humanLabel;
+  assert.ok(mathGold.acceptedAnswers.length > 0);
+  assert.ok(mathGold.attribution.math.ancestorNodeIds.length > 0);
+  assert.ok(mathGold.attribution.math.nodeIds.length > 0);
+  assert.ok(mathGold.attribution.math.bottleneckIds.length > 0);
+  assert.equal(typeof mathGold.attribution.math.errorReason, 'string');
+  const chineseGold = annotations.annotations.find(({ sampleId }) => sampleId === 'fixture.chinese.character').humanLabel.attribution.chinese;
+  assert.ok(chineseGold.allowedMigrationTypes.includes(chineseGold.migrationType));
+});
+
+test('optional scoring contract rejects invalid enums, empty strings, and empty arrays', () => {
+  const baseDataset = readFixture('dataset.json');
+  const badPageQuality = clone(baseDataset);
+  badPageQuality.documents[0].pages[0].imageQuality = 'perfect';
+  rehashDataset(badPageQuality);
+  assert.ok(validateDataset(badPageQuality, { profile: 'fixture' }).errors.some((error) => /imageQuality/u.test(error)));
+
+  const badItemQuality = clone(baseDataset);
+  badItemQuality.documents[0].pages[0].items[1].imageQuality = '';
+  rehashDataset(badItemQuality);
+  assert.ok(validateDataset(badItemQuality, { profile: 'fixture' }).errors.some((error) => /imageQuality/u.test(error)));
+
+  const annotationCases = [
+    (label) => { label.text = ''; },
+    (label) => { label.acceptedAnswers = []; },
+    (label) => { label.acceptedAnswers = ['']; },
+    (label) => { label.attribution.math.ancestorNodeIds = []; },
+    (label) => { label.attribution.math.nodeIds = ['']; },
+    (label) => { label.attribution.math.errorReason = ''; },
+  ];
+  for (const mutate of annotationCases) {
+    const annotations = readFixture('annotations.json');
+    mutate(annotations.annotations[1].humanLabel);
+    assert.equal(validateAnnotations(annotations, { dataset: baseDataset }).valid, false);
+  }
+  const chineseAnnotations = readFixture('annotations.json');
+  chineseAnnotations.annotations[2].humanLabel.attribution.chinese.allowedMigrationTypes = [];
+  assert.equal(validateAnnotations(chineseAnnotations, { dataset: baseDataset }).valid, false);
+  const illegalGoldMigration = readFixture('annotations.json');
+  illegalGoldMigration.annotations[2].humanLabel.attribution.chinese.migrationType = 'migration-not-allowed';
+  assert.equal(validateAnnotations(illegalGoldMigration, { dataset: baseDataset }).valid, false);
+
+  const output = readFixture('system-output-candidate.json');
+  output.records[1].prediction.attribution.math.nodeIds = [];
+  assert.equal(validateSystemOutput(output, { dataset: baseDataset, runManifest: validRun(baseDataset) }).valid, false);
+  const badMigrationOutput = readFixture('system-output-candidate.json');
+  badMigrationOutput.records[2].prediction.attribution.chinese.migrationType = 7;
+  assert.equal(validateSystemOutput(badMigrationOutput, { dataset: baseDataset, runManifest: validRun(baseDataset) }).valid, false);
 });
 
 test('generated formal dataset satisfies document, item, historical, and challenge minima', () => {

@@ -268,25 +268,35 @@ test('system outputs distinguish successful predictions from terminal failures',
   assert.deepEqual(failure.not, { required: ['prediction'] });
 });
 
-test('gold and predicted attribution share subject-specific contract shapes', () => {
-  assert.deepEqual(annotationSchema.$defs.attribution, systemOutputSchema.$defs.attribution);
+test('gold and predicted attribution share canonical fields with explicit gold-only constraints', () => {
   assert.equal(annotationSchema.$defs.label.properties.attribution.$ref, '#/$defs/attribution');
 
   const attribution = annotationSchema.$defs.attribution;
+  const predictionAttribution = systemOutputSchema.$defs.attribution;
   assert.ok(attribution.required.includes('subject'));
   assert.equal(attribution.oneOf.length, 3);
+  assert.deepEqual(attribution.oneOf, predictionAttribution.oneOf);
   assert.deepEqual(
     Object.keys(attribution.properties.math.properties).sort(),
-    ['bottleneckId', 'bottleneckLabel', 'primaryNodeId', 'primaryNodeLabel'],
+    ['ancestorNodeIds', 'bottleneckId', 'bottleneckIds', 'bottleneckLabel', 'errorReason', 'errorType', 'nodeIds', 'primaryNodeId', 'primaryNodeLabel'],
   );
+  assert.deepEqual(attribution.properties.math, predictionAttribution.properties.math);
   assert.deepEqual(
     Object.keys(attribution.properties.chinese.properties).sort(),
-    ['errorType', 'migration', 'originalItemLocation', 'review'],
+    ['allowedMigrationTypes', 'errorType', 'migrationType', 'originalItemLocation', 'review'],
+  );
+  assert.deepEqual(
+    Object.keys(predictionAttribution.properties.chinese.properties).sort(),
+    ['errorType', 'migrationType', 'originalItemLocation', 'review'],
   );
   assert.deepEqual(
     Object.keys(attribution.properties.english.properties).sort(),
     ['recognitionSpelling', 'stateUpdate', 'wordIdentity'],
   );
+  assert.deepEqual(attribution.properties.english, predictionAttribution.properties.english);
+  assert.equal(annotationSchema.$defs.label.properties.acceptedAnswers.minItems, 1);
+  assert.equal(datasetSchema.$defs.page.properties.imageQuality.$ref, '#/$defs/imageQuality');
+  assert.equal(datasetSchema.$defs.item.properties.imageQuality.$ref, '#/$defs/imageQuality');
 });
 
 test('subject attribution branches forbid irrelevant subject payloads', () => {

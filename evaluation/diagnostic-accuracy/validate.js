@@ -7,6 +7,7 @@ const SUBJECTS = ['math', 'chinese', 'english'];
 const PROFILES = ['formal', 'exploratory', 'fixture'];
 const SOURCES = ['historical', 'challenge'];
 const CAPTURE_TYPES = ['camera', 'scan', 'synthetic'];
+const IMAGE_QUALITIES = ['clear', 'degraded', 'unreadable'];
 const CONCLUSIONS = ['correct', 'incorrect', 'unreadable', 'not-an-item'];
 const STABLE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/u;
 const HASH = /^[a-f0-9]{64}$/u;
@@ -110,6 +111,20 @@ function enumValue(value, allowed, location, errors) {
 
 function stringValue(value, location, errors) {
   if (typeof value !== 'string') errors.push(`${location} must be a string.`);
+}
+
+function nonEmptyString(value, location, errors) {
+  if (typeof value !== 'string' || value.length === 0) errors.push(`${location} must be a non-empty string.`);
+}
+
+function nonEmptyUniqueStrings(value, location, errors, { stableIds = false } = {}) {
+  const values = arrayValue(value, location, errors);
+  if (values.length === 0) errors.push(`${location} must contain at least one value.`);
+  values.forEach((entry, index) => {
+    if (stableIds) stableId(entry, `${location}[${index}]`, errors);
+    else nonEmptyString(entry, `${location}[${index}]`, errors);
+  });
+  if (new Set(values).size !== values.length) errors.push(`${location} must contain unique values.`);
 }
 
 function arrayValue(value, location, errors) {
@@ -225,7 +240,7 @@ function validateDataset(bundle, { profile } = {}) {
       summary.pages += 1;
       const pAt = `${dAt}.pages[${pageIndex}]`;
       if (!requireObject(page, pAt, errors)) return;
-      allowOnly(page, ['pageId', 'pageNumber', 'imageReference', 'inventoryStatus', 'hashes', 'items'], pAt, errors);
+      allowOnly(page, ['pageId', 'pageNumber', 'imageReference', 'inventoryStatus', 'imageQuality', 'hashes', 'items'], pAt, errors);
       requireKeys(page, ['pageId', 'pageNumber', 'imageReference', 'inventoryStatus', 'hashes', 'items'], pAt, errors);
       stableId(page.pageId, `${pAt}.pageId`, errors);
       if (pageIds.has(page.pageId)) errors.push(`duplicate pageId: ${page.pageId}.`);
@@ -234,6 +249,7 @@ function validateDataset(bundle, { profile } = {}) {
       if (typeof page.imageReference !== 'string' || page.imageReference.trim() === '') errors.push(`${pAt}.imageReference must be a non-empty string.`);
       if (bundle.profile === 'fixture' && typeof page.imageReference === 'string' && !page.imageReference.startsWith('fixture://')) errors.push(`${pAt}.imageReference must use fixture:// for fixture data.`);
       enumValue(page.inventoryStatus, ['complete', 'crop_only'], `${pAt}.inventoryStatus`, errors);
+      if (page.imageQuality !== undefined) enumValue(page.imageQuality, IMAGE_QUALITIES, `${pAt}.imageQuality`, errors);
       if (page.inventoryStatus === 'complete') completePageIds.add(page.pageId);
       if (bundle.profile === 'formal' && page.inventoryStatus !== 'complete') errors.push(`${pAt} has ${page.inventoryStatus} inventory; formal pages require complete inventory.`);
       const pageFormalEligible = bundle.profile === 'formal'
@@ -245,12 +261,13 @@ function validateDataset(bundle, { profile } = {}) {
         summary.items += 1;
         const iAt = `${pAt}.items[${itemIndex}]`;
         if (!requireObject(item, iAt, errors)) return;
-        allowOnly(item, ['sampleId', 'crop', 'composite', 'hashes', 'annotationRefs'], iAt, errors);
+        allowOnly(item, ['sampleId', 'crop', 'composite', 'imageQuality', 'hashes', 'annotationRefs'], iAt, errors);
         requireKeys(item, ['sampleId', 'crop', 'composite', 'hashes', 'annotationRefs'], iAt, errors);
         stableId(item.sampleId, `${iAt}.sampleId`, errors);
         if (sampleIds.has(item.sampleId)) errors.push(`duplicate sampleId: ${item.sampleId}.`);
         sampleIds.add(item.sampleId);
         validateCrop(item.crop, `${iAt}.crop`, errors);
+        if (item.imageQuality !== undefined) enumValue(item.imageQuality, IMAGE_QUALITIES, `${iAt}.imageQuality`, errors);
         const refs = arrayValue(item.annotationRefs, `${iAt}.annotationRefs`, errors);
         refs.forEach((ref, refIndex) => stableId(ref, `${iAt}.annotationRefs[${refIndex}]`, errors));
         if (new Set(refs).size !== refs.length) errors.push(`${iAt}.annotationRefs must be unique.`);
@@ -371,7 +388,7 @@ function validateDataset(bundle, { profile } = {}) {
   return { valid: errors.length === 0, errors, summary };
 }
 
-function validateAttribution(attribution, subject, location, errors) {
+function validateAttribution(attribution, subject, location, errors, { gold = false } = {}) {
   if (!requireObject(attribution, location, errors)) return;
   allowOnly(attribution, ['subject', 'math', 'chinese', 'english'], location, errors);
   requireKeys(attribution, ['subject'], location, errors);
@@ -382,16 +399,27 @@ function validateAttribution(attribution, subject, location, errors) {
   const payload = attribution[own];
   if (!requireObject(payload, `${location}.${own}`, errors)) return;
   if (own === 'math') {
-    allowOnly(payload, ['primaryNodeId', 'primaryNodeLabel', 'bottleneckId', 'bottleneckLabel'], `${location}.math`, errors);
+    allowOnly(payload, ['primaryNodeId', 'primaryNodeLabel', 'bottleneckId', 'bottleneckLabel', 'ancestorNodeIds', 'nodeIds', 'bottleneckIds', 'errorReason', 'errorType'], `${location}.math`, errors);
     requireKeys(payload, ['primaryNodeId', 'bottleneckId'], `${location}.math`, errors);
     stableId(payload.primaryNodeId, `${location}.math.primaryNodeId`, errors);
     stableId(payload.bottleneckId, `${location}.math.bottleneckId`, errors);
     if (payload.primaryNodeLabel !== undefined) stringValue(payload.primaryNodeLabel, `${location}.math.primaryNodeLabel`, errors);
     if (payload.bottleneckLabel !== undefined) stringValue(payload.bottleneckLabel, `${location}.math.bottleneckLabel`, errors);
+    for (const key of ['ancestorNodeIds', 'nodeIds', 'bottleneckIds']) {
+      if (payload[key] !== undefined) nonEmptyUniqueStrings(payload[key], `${location}.math.${key}`, errors, { stableIds: true });
+    }
+    for (const key of ['errorReason', 'errorType']) if (payload[key] !== undefined) nonEmptyString(payload[key], `${location}.math.${key}`, errors);
   } else if (own === 'chinese') {
-    allowOnly(payload, ['originalItemLocation', 'errorType', 'review', 'migration'], `${location}.chinese`, errors);
+    const allowed = ['originalItemLocation', 'errorType', 'review', 'migrationType'];
+    if (gold) allowed.push('allowedMigrationTypes');
+    allowOnly(payload, allowed, `${location}.chinese`, errors);
     requireKeys(payload, ['originalItemLocation', 'errorType'], `${location}.chinese`, errors);
-    for (const key of ['originalItemLocation', 'errorType', 'review', 'migration']) if (payload[key] !== undefined) stringValue(payload[key], `${location}.chinese.${key}`, errors);
+    for (const key of ['originalItemLocation', 'errorType', 'review', 'migrationType']) if (payload[key] !== undefined) nonEmptyString(payload[key], `${location}.chinese.${key}`, errors);
+    if (payload.allowedMigrationTypes !== undefined) nonEmptyUniqueStrings(payload.allowedMigrationTypes, `${location}.chinese.allowedMigrationTypes`, errors);
+    if (gold && payload.migrationType !== undefined && Array.isArray(payload.allowedMigrationTypes)
+      && !payload.allowedMigrationTypes.includes(payload.migrationType)) {
+      errors.push(`${location}.chinese.migrationType must be included in allowedMigrationTypes.`);
+    }
   } else if (own === 'english') {
     allowOnly(payload, ['wordIdentity', 'recognitionSpelling', 'stateUpdate'], `${location}.english`, errors);
     requireKeys(payload, ['wordIdentity'], `${location}.english`, errors);
@@ -444,13 +472,14 @@ function datasetIndex(dataset, errors = []) {
 
 function validateLabel(label, subject, location, errors) {
   if (!requireObject(label, location, errors)) return;
-  allowOnly(label, ['conclusion', 'text', 'attribution', 'labeledBy', 'labeledAt'], location, errors);
+  allowOnly(label, ['conclusion', 'text', 'acceptedAnswers', 'attribution', 'labeledBy', 'labeledAt'], location, errors);
   requireKeys(label, ['conclusion', 'attribution', 'labeledBy', 'labeledAt'], location, errors);
   enumValue(label.conclusion, CONCLUSIONS, `${location}.conclusion`, errors);
-  if (label.text !== undefined) stringValue(label.text, `${location}.text`, errors);
+  if (label.text !== undefined) nonEmptyString(label.text, `${location}.text`, errors);
+  if (label.acceptedAnswers !== undefined) nonEmptyUniqueStrings(label.acceptedAnswers, `${location}.acceptedAnswers`, errors);
   stableId(label.labeledBy, `${location}.labeledBy`, errors);
   if (!validDate(label.labeledAt)) errors.push(`${location}.labeledAt must be a date-time.`);
-  validateAttribution(label.attribution, subject, `${location}.attribution`, errors);
+  validateAttribution(label.attribution, subject, `${location}.attribution`, errors, { gold: true });
 }
 
 function validateAnnotations(bundle, { dataset } = {}) {

@@ -70,7 +70,12 @@
             "primaryNodeId": { "$ref": "#/$defs/stableId" },
             "primaryNodeLabel": { "type": "string" },
             "bottleneckId": { "$ref": "#/$defs/stableId" },
-            "bottleneckLabel": { "type": "string" }
+            "bottleneckLabel": { "type": "string" },
+            "ancestorNodeIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true },
+            "nodeIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true },
+            "bottleneckIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true },
+            "errorReason": { "type": "string", "minLength": 1 },
+            "errorType": { "type": "string", "minLength": 1 }
           }
         },
         "chinese": {
@@ -80,7 +85,7 @@
             "originalItemLocation": { "type": "string" },
             "errorType": { "type": "string" },
             "review": { "type": "string" },
-            "migration": { "type": "string" }
+            "migrationType": { "type": "string", "minLength": 1 }
           }
         },
         "english": {

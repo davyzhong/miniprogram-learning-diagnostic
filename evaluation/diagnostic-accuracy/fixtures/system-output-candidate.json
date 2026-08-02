@@ -9,12 +9,12 @@
     },
     {
       "schemaVersion": "1.0.0", "runId": "run.fixture.baseline", "documentId": "fixture.math.document", "pageId": "fixture.math.page.1", "sampleId": "fixture.math.fraction", "status": "success",
-      "prediction": { "localization": { "x": 0.55, "y": 0.1, "width": 0.4, "height": 0.2, "unit": "normalized" }, "text": "fictional-fraction-answer", "conclusion": "incorrect", "attribution": { "subject": "math", "math": { "primaryNodeId": "math.fraction.equivalence", "bottleneckId": "math.fraction.common-denominator" } }, "confidence": 0.93 },
+      "prediction": { "localization": { "x": 0.55, "y": 0.1, "width": 0.4, "height": 0.2, "unit": "normalized" }, "text": "fictional-fraction-answer", "conclusion": "incorrect", "attribution": { "subject": "math", "math": { "primaryNodeId": "math.fraction.equivalence", "bottleneckId": "math.fraction.common-denominator", "ancestorNodeIds": ["math.fraction"], "nodeIds": ["math.fraction.equivalence", "math.fraction.common-denominator"], "bottleneckIds": ["math.fraction.common-denominator"], "errorReason": "common-denominator-error" } }, "confidence": 0.93 },
       "failures": []
     },
     {
       "schemaVersion": "1.0.0", "runId": "run.fixture.baseline", "documentId": "fixture.chinese.document", "pageId": "fixture.chinese.page.1", "sampleId": "fixture.chinese.character", "status": "success",
-      "prediction": { "localization": { "x": 0.1, "y": 0.1, "width": 0.35, "height": 0.2, "unit": "normalized" }, "text": "fictional-character-response", "conclusion": "incorrect", "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-1", "errorType": "character-form", "review": "review-character-form", "migration": "migration-character-practice" } }, "confidence": 0.92 },
+      "prediction": { "localization": { "x": 0.1, "y": 0.1, "width": 0.35, "height": 0.2, "unit": "normalized" }, "text": "fictional-character-response", "conclusion": "incorrect", "attribution": { "subject": "chinese", "chinese": { "originalItemLocation": "page-1:item-1", "errorType": "character-form", "review": "review-character-form", "migrationType": "migration-character-practice" } }, "confidence": 0.92 },
       "failures": []
     },
     {
