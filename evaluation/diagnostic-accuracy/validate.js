@@ -69,6 +69,12 @@ function arrayValue(value, location, errors) {
   return value;
 }
 
+function latestAuditEvent(events, eventTypes) {
+  return events
+    .filter((event) => isObject(event) && eventTypes.includes(event.eventType) && validDate(event.timestamp))
+    .reduce((latest, event) => (!latest || Date.parse(event.timestamp) >= Date.parse(latest.timestamp) ? event : latest), null);
+}
+
 function withoutKey(value, key) {
   const copy = { ...value };
   delete copy[key];
@@ -446,23 +452,43 @@ function validateAnnotations(bundle, { dataset } = {}) {
       if (eventIds.has(event.eventId)) errors.push(`${at} has duplicate audit eventId ${event.eventId}.`);
       eventIds.add(event.eventId); eventTypes.add(event.eventType);
     });
-    if (lock?.status === 'locked' && !eventTypes.has('locked')) errors.push(`${at} is locked but has no locked audit event.`);
-    if (lock?.status === 'unlocked' && eventTypes.has('locked') && !eventTypes.has('unlocked')) errors.push(`${at} is unlocked but its audit trail has no later unlocked event.`);
-    const lockedEvent = events.find((event) => event?.eventType === 'locked');
-    if (lock?.status === 'locked' && lockedEvent && lockedEvent.actorId !== lock.lockedBy) errors.push(`${at} locked audit actor must match lockState.lockedBy.`);
-    if (lock?.status === 'locked' && lockedEvent && lockedEvent.timestamp !== lock.lockedAt) errors.push(`${at} locked audit timestamp must match lockState.lockedAt.`);
-    if (review?.qcStatus && review.qcStatus !== 'pending' && !eventTypes.has('qc-checked')) errors.push(`${at} has completed QC but no qc-checked audit event.`);
-    if (review?.qcStatus === 'pending' && eventTypes.has('qc-checked')) errors.push(`${at} has pending QC but includes a completed qc-checked audit event.`);
-    const qcEvent = events.find((event) => event?.eventType === 'qc-checked');
-    if (review?.qcStatus && review.qcStatus !== 'pending' && qcEvent && qcEvent.actorId !== review.qcReviewerId) errors.push(`${at} QC audit actor must match review.qcReviewerId.`);
-    if (review?.qcStatus && review.qcStatus !== 'pending' && qcEvent && qcEvent.timestamp !== review.qcReviewedAt) errors.push(`${at} QC audit timestamp must match review.qcReviewedAt.`);
-    if (review?.adjudicationStatus === 'resolved' && !eventTypes.has('adjudicated')) errors.push(`${at} is adjudicated but has no adjudicated audit event.`);
-    if (review?.adjudicationStatus && review.adjudicationStatus !== 'resolved' && eventTypes.has('adjudicated')) errors.push(`${at} has ${review.adjudicationStatus} adjudication but includes an adjudicated audit event.`);
-    const adjudicatedEvent = events.find((event) => event?.eventType === 'adjudicated');
-    if (review?.adjudicationStatus === 'resolved' && adjudicatedEvent && adjudicatedEvent.actorId !== review.adjudicatorId) errors.push(`${at} adjudication audit actor must match review.adjudicatorId.`);
-    if (review?.adjudicationStatus === 'resolved' && adjudicatedEvent && adjudicatedEvent.timestamp !== review.adjudicatedAt) errors.push(`${at} adjudication audit timestamp must match review.adjudicatedAt.`);
-    if (review?.disputeStatus !== 'none' && !eventTypes.has('disputed')) errors.push(`${at} has dispute state but no disputed audit event.`);
-    if (review?.disputeStatus === 'none' && eventTypes.has('disputed')) errors.push(`${at} has disputeStatus none but includes a disputed audit event.`);
+    const latestLockEvent = latestAuditEvent(events, ['locked', 'unlocked']);
+    if (lock?.status === 'locked') {
+      if (!latestLockEvent || latestLockEvent.eventType !== 'locked') errors.push(`${at} current locked state requires the latest lock lifecycle event to be locked.`);
+      else {
+        if (latestLockEvent.actorId !== lock.lockedBy) errors.push(`${at} latest locked audit actor must match lockState.lockedBy.`);
+        if (latestLockEvent.timestamp !== lock.lockedAt) errors.push(`${at} latest locked audit timestamp must match lockState.lockedAt.`);
+      }
+    }
+    if (lock?.status === 'unlocked' && eventTypes.has('locked') && (!latestLockEvent || latestLockEvent.eventType !== 'unlocked')) errors.push(`${at} latest lock lifecycle event must be unlocked after a prior lock.`);
+
+    const latestQcEvent = latestAuditEvent(events, ['qc-checked']);
+    if (review?.qcStatus && review.qcStatus !== 'pending') {
+      if (!latestQcEvent) errors.push(`${at} has completed QC but no qc-checked audit event.`);
+      else {
+        if (latestQcEvent.actorId !== review.qcReviewerId) errors.push(`${at} latest QC audit actor must match review.qcReviewerId.`);
+        if (latestQcEvent.timestamp !== review.qcReviewedAt) errors.push(`${at} latest QC audit timestamp must match review.qcReviewedAt.`);
+      }
+    }
+    if (review?.qcStatus === 'pending' && latestQcEvent) errors.push(`${at} has pending QC but includes a completed qc-checked audit event.`);
+
+    const latestAdjudicationEvent = latestAuditEvent(events, ['adjudicated']);
+    if (review?.adjudicationStatus === 'resolved') {
+      if (!latestAdjudicationEvent) errors.push(`${at} is adjudicated but has no adjudicated audit event.`);
+      else {
+        if (latestAdjudicationEvent.actorId !== review.adjudicatorId) errors.push(`${at} latest adjudication audit actor must match review.adjudicatorId.`);
+        if (latestAdjudicationEvent.timestamp !== review.adjudicatedAt) errors.push(`${at} latest adjudication audit timestamp must match review.adjudicatedAt.`);
+      }
+    }
+    if (review?.adjudicationStatus && review.adjudicationStatus !== 'resolved' && latestAdjudicationEvent) errors.push(`${at} has ${review.adjudicationStatus} adjudication but includes an adjudicated audit event.`);
+
+    const latestDisputeEvent = latestAuditEvent(events, ['disputed']);
+    if (review?.disputeStatus !== 'none' && !latestDisputeEvent) errors.push(`${at} has dispute state but no disputed audit event.`);
+    if (review?.disputeStatus === 'none' && latestDisputeEvent) errors.push(`${at} has disputeStatus none but includes a disputed audit event.`);
+    if (review?.disputeStatus === 'resolved' && latestDisputeEvent) {
+      if (latestDisputeEvent.actorId !== review.disputeResolvedBy) errors.push(`${at} latest dispute audit actor must match review.disputeResolvedBy.`);
+      if (latestDisputeEvent.timestamp !== review.disputeResolvedAt) errors.push(`${at} latest dispute audit timestamp must match review.disputeResolvedAt.`);
+    }
     if (isPending) summary.pending += 1;
   });
   return { valid: errors.length === 0, errors, summary };
@@ -595,9 +621,10 @@ function validateSystemOutput(bundle, { dataset, runManifest } = {}) {
   });
   if (runManifest && Number.isInteger(runManifest.counts?.success) && runManifest.counts.success !== summary.success) errors.push(`system output success count ${summary.success} does not match run manifest ${runManifest.counts.success}.`);
   if (runManifest && Number.isInteger(runManifest.counts?.failure) && runManifest.counts.failure !== summary.failure) errors.push(`system output failure count ${summary.failure} does not match run manifest ${runManifest.counts.failure}.`);
-  if (runManifest && Number.isInteger(runManifest.counts?.unresolved) && runManifest.counts.unresolved !== 0) errors.push('raw phase-one system output cannot represent unresolved records; run manifest unresolved must be 0.');
-  if (runManifest && Number.isInteger(runManifest.counts?.retry) && runManifest.counts.retry !== 0) errors.push('raw phase-one system output has no attempt records; run manifest retry must be 0.');
-  if (runManifest && Number.isInteger(runManifest.counts?.total) && runManifest.counts.total !== records.length) errors.push(`system output total ${records.length} does not match run manifest total ${runManifest.counts.total}.`);
+  if (runManifest && Number.isInteger(runManifest.counts?.success) && Number.isInteger(runManifest.counts?.failure)) {
+    const expectedRawRecords = runManifest.counts.success + runManifest.counts.failure;
+    if (records.length !== expectedRawRecords) errors.push(`system output record count ${records.length} must equal run manifest success + failure (${expectedRawRecords}).`);
+  }
   return { valid: errors.length === 0, errors, summary };
 }
 

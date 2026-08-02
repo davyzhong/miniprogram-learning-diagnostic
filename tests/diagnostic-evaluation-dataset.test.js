@@ -333,6 +333,62 @@ test('annotation pending review states reject stale adjudication and dispute met
   assert.match(result.errors.join('\n'), /none.*disputed audit|disputed audit.*none/iu);
 });
 
+test('annotation audit reconciliation uses latest chronological lifecycle events', () => {
+  const dataset = readFixture('dataset.json');
+  const source = readFixture('annotations.json');
+
+  const staleLock = clone(source);
+  staleLock.annotations[0].auditEvents.push({
+    eventId: 'audit.lock.later', eventType: 'locked', actorId: 'fixture.other', timestamp: '2026-01-01T02:40:00.000Z',
+  });
+  assert.match(validateAnnotations(staleLock, { dataset }).errors.join('\n'), /latest.*lock|lock.*latest/iu);
+
+  const reversedUnlock = clone(source);
+  reversedUnlock.annotations[0].lockState = { status: 'unlocked' };
+  reversedUnlock.annotations[0].auditEvents.push({
+    eventId: 'audit.unlock.early', eventType: 'unlocked', actorId: 'fixture.annotator', timestamp: '2026-01-01T02:25:00.000Z',
+  });
+  assert.match(validateAnnotations(reversedUnlock, { dataset }).errors.join('\n'), /latest.*unlocked|unlock.*after|chronolog/iu);
+
+  const staleQc = clone(source);
+  staleQc.annotations[0].auditEvents.push({
+    eventId: 'audit.qc.later', eventType: 'qc-checked', actorId: 'fixture.other', timestamp: '2026-01-01T02:40:00.000Z',
+  });
+  assert.match(validateAnnotations(staleQc, { dataset }).errors.join('\n'), /latest.*QC|QC.*latest/iu);
+
+  const staleAdjudication = clone(source);
+  const adjudication = staleAdjudication.annotations[0];
+  adjudication.review.adjudicationStatus = 'resolved';
+  adjudication.review.adjudicatorId = 'fixture.adjudicator';
+  adjudication.review.adjudicationLabel = clone(adjudication.humanLabel);
+  adjudication.review.adjudicatedAt = '2026-01-01T02:40:00.000Z';
+  adjudication.auditEvents.push(
+    { eventId: 'audit.adjudication.match', eventType: 'adjudicated', actorId: 'fixture.adjudicator', timestamp: '2026-01-01T02:40:00.000Z' },
+    { eventId: 'audit.adjudication.later', eventType: 'adjudicated', actorId: 'fixture.other', timestamp: '2026-01-01T02:50:00.000Z' },
+  );
+  assert.match(validateAnnotations(staleAdjudication, { dataset }).errors.join('\n'), /latest.*adjudication|adjudication.*latest/iu);
+
+  const staleDispute = clone(source);
+  const dispute = staleDispute.annotations[0];
+  dispute.review.disputeStatus = 'resolved';
+  dispute.review.disputeResolution = 'fictional-resolution';
+  dispute.review.disputeResolvedBy = 'fixture.adjudicator';
+  dispute.review.disputeResolvedAt = '2026-01-01T02:40:00.000Z';
+  dispute.auditEvents.push(
+    { eventId: 'audit.dispute.match', eventType: 'disputed', actorId: 'fixture.adjudicator', timestamp: '2026-01-01T02:40:00.000Z' },
+    { eventId: 'audit.dispute.later', eventType: 'disputed', actorId: 'fixture.other', timestamp: '2026-01-01T02:50:00.000Z' },
+  );
+  assert.match(validateAnnotations(staleDispute, { dataset }).errors.join('\n'), /latest.*dispute|dispute.*latest/iu);
+
+  const latestWins = clone(source);
+  latestWins.annotations[0].auditEvents.unshift(
+    { eventId: 'audit.lock.older', eventType: 'locked', actorId: 'fixture.other', timestamp: '2026-01-01T02:05:00.000Z' },
+    { eventId: 'audit.qc.older', eventType: 'qc-checked', actorId: 'fixture.other', timestamp: '2026-01-01T02:06:00.000Z' },
+  );
+  const latestWinsResult = validateAnnotations(latestWins, { dataset });
+  assert.equal(latestWinsResult.valid, true, latestWinsResult.errors.join('\n'));
+});
+
 test('valid run manifest and baseline/candidate outputs validate including terminal failures', () => {
   const dataset = readFixture('dataset.json');
   const manifest = validRun(dataset);
@@ -408,20 +464,22 @@ test('run manifest enforces total relationship, retry bound, and object metadata
   for (const pattern of [/total/iu, /retry/iu, /configuration.*object/iu, /providerMetadata.*object/iu]) assert.match(result.errors.join('\n'), pattern);
 });
 
-test('system output reconciles total and requires unresolved and retry counts to be zero', () => {
+test('system output allows manifest unresolved and retry while records reconcile to success plus failure', () => {
   const dataset = readFixture('dataset.json');
-  const unresolved = validRun(dataset);
-  unresolved.counts = { total: 8, success: 6, failure: 1, unresolved: 1, retry: 0 };
-  const unresolvedResult = validateSystemOutput(readFixture('system-output-baseline.json'), { dataset, runManifest: unresolved });
-  assert.equal(unresolvedResult.valid, false);
-  assert.match(unresolvedResult.errors.join('\n'), /unresolved/iu);
-  assert.match(unresolvedResult.errors.join('\n'), /total/iu);
+  const manifest = validRun(dataset);
+  manifest.counts = { total: 9, success: 6, failure: 1, unresolved: 2, retry: 3 };
+  const result = validateSystemOutput(readFixture('system-output-baseline.json'), { dataset, runManifest: manifest });
+  assert.equal(result.valid, true, result.errors.join('\n'));
+});
 
-  const retried = validRun(dataset);
-  retried.counts.retry = 1;
-  const retriedResult = validateSystemOutput(readFixture('system-output-baseline.json'), { dataset, runManifest: retried });
-  assert.equal(retriedResult.valid, false);
-  assert.match(retriedResult.errors.join('\n'), /retry/iu);
+test('system output rejects success/failure and observed-record reconciliation mismatches', () => {
+  const dataset = readFixture('dataset.json');
+  const manifest = validRun(dataset);
+  manifest.counts = { total: 7, success: 5, failure: 1, unresolved: 1, retry: 2 };
+  const result = validateSystemOutput(readFixture('system-output-baseline.json'), { dataset, runManifest: manifest });
+  assert.equal(result.valid, false);
+  assert.match(result.errors.join('\n'), /success count/iu);
+  assert.match(result.errors.join('\n'), /record.*success.*failure|success.*failure.*record/iu);
 });
 
 test('run manifest requires RFC 3339 date-time timestamps', () => {
