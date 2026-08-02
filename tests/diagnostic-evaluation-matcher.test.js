@@ -167,6 +167,31 @@ test('duplicate gold IDs, prediction IDs, and claimed sample IDs are unresolved'
   assert.deepEqual(result.hallucinated, []);
 });
 
+test('overlapping duplicate prediction-ID evidence forms one order-independent component', () => {
+  const goldItems = [gold('shared-gold')];
+  const predictions = [
+    prediction('duplicate-a', { sampleId: 'shared-gold' }),
+    prediction('duplicate-a', { sampleId: 'shared-gold' }),
+    prediction('duplicate-b', { sampleId: 'shared-gold' }),
+    prediction('duplicate-b', { sampleId: 'shared-gold' }),
+  ];
+
+  const forward = matchEvaluationItems(goldItems, predictions);
+  const reversed = matchEvaluationItems([...goldItems].reverse(), [...predictions].reverse());
+
+  assert.deepEqual(reversed, forward);
+  assert.deepEqual(forward, {
+    matches: [],
+    missed: [],
+    hallucinated: [],
+    unresolved: [{
+      reason: 'duplicate-prediction-id',
+      goldIds: ['shared-gold'],
+      predictionIds: ['duplicate-a', 'duplicate-a', 'duplicate-b', 'duplicate-b'],
+    }],
+  });
+});
+
 test('context conflicts and cross-subject, document, or page candidates are never matched', () => {
   for (const differingField of ['subject', 'documentId', 'pageId']) {
     const conflicting = prediction('prediction-1', {

@@ -183,25 +183,106 @@ function matchEvaluationItems(goldItems, predictions, options) {
     });
   };
 
-  for (const duplicateGroup of groupBy(goldRecords, 'sampleId').values()) {
-    if (duplicateGroup.length > 1) addUnresolved('duplicate-gold-id', duplicateGroup, []);
+  const goldById = groupBy(goldRecords, 'sampleId');
+  const predictionsByClaim = groupBy(predictionRecords.filter((record) => record.claimedSampleId), 'claimedSampleId');
+  const exactAdjacency = new Map();
+  const exactReasons = new Map();
+  const goldNode = (record) => `g:${record.index}`;
+  const predictionNode = (record) => `p:${record.index}`;
+  const linkExactEvidence = (leftNode, rightNode, reason) => {
+    for (const [node, neighbor] of [[leftNode, rightNode], [rightNode, leftNode]]) {
+      if (!exactAdjacency.has(node)) exactAdjacency.set(node, new Set());
+      exactAdjacency.get(node).add(neighbor);
+      if (!exactReasons.has(node)) exactReasons.set(node, new Set());
+      exactReasons.get(node).add(reason);
+    }
+  };
+  const linkGroup = (records, nodeFor, reason) => {
+    for (let index = 1; index < records.length; index += 1) {
+      linkExactEvidence(nodeFor(records[0]), nodeFor(records[index]), reason);
+    }
+  };
+  const linkGoldClaims = (goldGroup, predictionGroup, reason) => {
+    for (const goldRecord of goldGroup) {
+      for (const predictionRecord of predictionGroup) {
+        linkExactEvidence(goldNode(goldRecord), predictionNode(predictionRecord), reason);
+      }
+    }
+  };
+
+  for (const duplicateGroup of goldById.values()) {
+    if (duplicateGroup.length <= 1) continue;
+    linkGroup(duplicateGroup, goldNode, 'duplicate-gold-id');
+    linkGoldClaims(
+      duplicateGroup,
+      predictionsByClaim.get(duplicateGroup[0].sampleId) ?? [],
+      'duplicate-gold-id',
+    );
   }
 
   for (const duplicateGroup of groupBy(predictionRecords, 'predictionId').values()) {
     if (duplicateGroup.length <= 1) continue;
-    const claimedIds = new Set(duplicateGroup.map((record) => record.claimedSampleId).filter(Boolean));
-    const relatedGold = goldRecords.filter((record) => claimedIds.has(record.sampleId));
-    addUnresolved('duplicate-prediction-id', relatedGold, duplicateGroup);
+    linkGroup(duplicateGroup, predictionNode, 'duplicate-prediction-id');
+    for (const predictionRecord of duplicateGroup) {
+      linkGoldClaims(
+        goldById.get(predictionRecord.claimedSampleId) ?? [],
+        [predictionRecord],
+        'duplicate-prediction-id',
+      );
+    }
   }
 
-  for (const duplicateGroup of groupBy(predictionRecords.filter((record) => record.claimedSampleId), 'claimedSampleId').values()) {
+  for (const duplicateGroup of predictionsByClaim.values()) {
     if (duplicateGroup.length <= 1) continue;
-    const relatedGold = goldRecords.filter((record) => record.sampleId === duplicateGroup[0].claimedSampleId);
-    addUnresolved('duplicate-sample-claim', relatedGold, duplicateGroup);
+    linkGroup(duplicateGroup, predictionNode, 'duplicate-sample-claim');
+    linkGoldClaims(
+      goldById.get(duplicateGroup[0].claimedSampleId) ?? [],
+      duplicateGroup,
+      'duplicate-sample-claim',
+    );
   }
 
-  const goldById = groupBy(goldRecords, 'sampleId');
-  const predictionsByClaim = groupBy(predictionRecords.filter((record) => record.claimedSampleId), 'claimedSampleId');
+  for (const [sampleId, goldGroup] of goldById) {
+    for (const goldRecord of goldGroup) {
+      for (const predictionRecord of predictionsByClaim.get(sampleId) ?? []) {
+        if (contextsConflict(goldRecord.context, predictionRecord.context)) {
+          linkExactEvidence(goldNode(goldRecord), predictionNode(predictionRecord), 'context-conflict');
+        }
+      }
+    }
+  }
+
+  const exactReasonPriority = [
+    'duplicate-gold-id',
+    'duplicate-prediction-id',
+    'duplicate-sample-claim',
+    'context-conflict',
+  ];
+  const visitedExactNodes = new Set();
+  for (const start of [...exactAdjacency.keys()].sort(stableCompare)) {
+    if (visitedExactNodes.has(start)) continue;
+    const pending = [start];
+    const componentGoldIndexes = new Set();
+    const componentPredictionIndexes = new Set();
+    const componentReasons = new Set();
+    while (pending.length > 0) {
+      const node = pending.pop();
+      if (visitedExactNodes.has(node)) continue;
+      visitedExactNodes.add(node);
+      const [kind, rawIndex] = node.split(':');
+      if (kind === 'g') componentGoldIndexes.add(Number(rawIndex));
+      else componentPredictionIndexes.add(Number(rawIndex));
+      for (const reason of exactReasons.get(node) ?? []) componentReasons.add(reason);
+      for (const neighbor of exactAdjacency.get(node) ?? []) pending.push(neighbor);
+    }
+    const reason = exactReasonPriority.find((candidate) => componentReasons.has(candidate));
+    addUnresolved(
+      reason,
+      goldRecords.filter((record) => componentGoldIndexes.has(record.index)),
+      predictionRecords.filter((record) => componentPredictionIndexes.has(record.index)),
+    );
+  }
+
   for (const sampleId of [...goldById.keys()].sort(stableCompare)) {
     const goldGroup = goldById.get(sampleId).filter((record) => !consumedGold.has(record.index));
     const predictionGroup = (predictionsByClaim.get(sampleId) ?? [])
@@ -209,11 +290,7 @@ function matchEvaluationItems(goldItems, predictions, options) {
     if (goldGroup.length !== 1 || predictionGroup.length !== 1) continue;
     const goldRecord = goldGroup[0];
     const predictionRecord = predictionGroup[0];
-    if (!contextsMatch(goldRecord.context, predictionRecord.context)) {
-      if (!contextsConflict(goldRecord.context, predictionRecord.context)) continue;
-      addUnresolved('context-conflict', goldGroup, predictionGroup);
-      continue;
-    }
+    if (!contextsMatch(goldRecord.context, predictionRecord.context)) continue;
     consumedGold.add(goldRecord.index);
     consumedPredictions.add(predictionRecord.index);
     matches.push({
