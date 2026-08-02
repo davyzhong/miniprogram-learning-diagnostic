@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('node:assert/strict');
+const { performance } = require('node:perf_hooks');
 const test = require('node:test');
 
 const {
@@ -71,6 +72,18 @@ test('region IoU validates coordinates and calculates overlap', () => {
   assert.equal(regionIou({ x: -1, y: 0, width: 10, height: 10 }, region(0, 0)), 0);
   assert.equal(regionIou({ x: NaN, y: 0, width: 10, height: 10 }, region(0, 0)), 0);
   assert.equal(regionIou(null, region(0, 0)), 0);
+});
+
+test('region IoU compares only compatible supported coordinate units', () => {
+  const left = region(0, 0);
+  const right = region(5, 0);
+
+  assert.equal(regionIou(left, right), 1 / 3, 'unitless rectangles remain supported');
+  assert.equal(regionIou({ ...left, unit: 'pixel' }, { ...right, unit: 'pixel' }), 1 / 3);
+  assert.equal(regionIou({ ...left, unit: 'normalized' }, { ...right, unit: 'normalized' }), 1 / 3);
+  assert.equal(regionIou({ ...left, unit: 'pixel' }, { ...right, unit: 'normalized' }), 0);
+  assert.equal(regionIou({ ...left, unit: 'pixel' }, right), 0);
+  assert.equal(regionIou({ ...left, unit: 'points' }, { ...right, unit: 'points' }), 0);
 });
 
 test('exact unambiguous sample ID matching is first and context-compatible', () => {
@@ -353,4 +366,30 @@ test('stable ID sorting uses locale-independent code-unit order', () => {
   );
 
   assert.deepEqual(result.missed.map((entry) => entry.sampleId), ['A', 'a']);
+});
+
+test('dense text candidate matching is deterministic within a large-page budget', () => {
+  const candidateCount = 200;
+  const goldItems = Array.from({ length: candidateCount }, (_, index) => (
+    gold(`dense-gold-${index}`, { text: 'abcdefghij' })
+  ));
+  const predictions = Array.from({ length: candidateCount }, (_, index) => (
+    prediction(`dense-prediction-${index}`, { text: 'abcdefghij' })
+  ));
+  const expectedGoldIds = goldItems.map((item) => item.sampleId).sort();
+  const expectedPredictionIds = predictions.map((item) => item.predictionId).sort();
+
+  const startedAt = performance.now();
+  const result = matchEvaluationItems(goldItems, predictions);
+  const elapsedMs = performance.now() - startedAt;
+
+  assert.deepEqual(result.matches, []);
+  assert.deepEqual(result.missed, []);
+  assert.deepEqual(result.hallucinated, []);
+  assert.deepEqual(result.unresolved, [{
+    reason: 'ambiguous-text',
+    goldIds: expectedGoldIds,
+    predictionIds: expectedPredictionIds,
+  }]);
+  assert.ok(elapsedMs < 2000, `dense 200x200 matching took ${elapsedMs.toFixed(1)}ms`);
 });

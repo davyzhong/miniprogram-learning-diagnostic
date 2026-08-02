@@ -6,6 +6,7 @@ const { normalizeText, textSimilarity } = require('./normalizers');
 const MATCHER_VERSION = '1.0.0';
 const CONTEXT_FIELDS = Object.freeze(['subject', 'documentId', 'pageId']);
 const THRESHOLD_EPSILON = Number.EPSILON * 4;
+const SUPPORTED_REGION_UNITS = Object.freeze(['pixel', 'normalized']);
 
 function validRegion(region) {
   return Boolean(region)
@@ -17,8 +18,16 @@ function validRegion(region) {
     && region.height > 0;
 }
 
+function compatibleRegionUnits(a, b) {
+  const aHasUnit = a?.unit !== undefined;
+  const bHasUnit = b?.unit !== undefined;
+  if (!aHasUnit && !bHasUnit) return true;
+  if (!aHasUnit || !bHasUnit) return false;
+  return SUPPORTED_REGION_UNITS.includes(a.unit) && a.unit === b.unit;
+}
+
 function regionIou(a, b) {
-  if (!validRegion(a) || !validRegion(b)) return 0;
+  if (!validRegion(a) || !validRegion(b) || !compatibleRegionUnits(a, b)) return 0;
   const intersectionWidth = Math.max(0, Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x));
   const intersectionHeight = Math.max(0, Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y));
   if (intersectionWidth === 0 || intersectionHeight === 0) return 0;
@@ -355,23 +364,37 @@ function matchEvaluationItems(goldItems, predictions, options) {
     }
   }
 
-  const rankedFor = (record, side) => textEdges
-    .filter((edge) => edge[side].index === record.index)
-    .sort((left, right) => right.score - left.score
-      || stableCompare(left.gold.sampleId, right.gold.sampleId)
-      || stableCompare(left.prediction.predictionId, right.prediction.predictionId));
-  const decisiveTop = (record, side) => {
-    const ranked = rankedFor(record, side);
-    if (ranked.length === 0) return undefined;
-    const runnerUpScore = ranked[1]?.score ?? -Infinity;
-    return ranked[0].score - runnerUpScore + THRESHOLD_EPSILON >= thresholds.ambiguityMargin
-      ? ranked[0]
-      : undefined;
+  const goldTextAdjacency = new Map();
+  const predictionTextAdjacency = new Map();
+  const addTextEdge = (adjacency, index, edge) => {
+    if (!adjacency.has(index)) adjacency.set(index, []);
+    adjacency.get(index).push(edge);
   };
+  for (const edge of textEdges) {
+    addTextEdge(goldTextAdjacency, edge.gold.index, edge);
+    addTextEdge(predictionTextAdjacency, edge.prediction.index, edge);
+  }
+  const compareTextEdges = (left, right) => right.score - left.score
+    || stableCompare(left.gold.sampleId, right.gold.sampleId)
+    || stableCompare(left.prediction.predictionId, right.prediction.predictionId);
+  const cacheDecisiveTops = (adjacency) => {
+    const decisiveTops = new Map();
+    for (const [index, edges] of adjacency) {
+      edges.sort(compareTextEdges);
+      const runnerUpScore = edges[1]?.score ?? -Infinity;
+      const winner = edges[0].score - runnerUpScore + THRESHOLD_EPSILON >= thresholds.ambiguityMargin
+        ? edges[0]
+        : undefined;
+      decisiveTops.set(index, winner);
+    }
+    return decisiveTops;
+  };
+  const goldDecisiveTops = cacheDecisiveTops(goldTextAdjacency);
+  const predictionDecisiveTops = cacheDecisiveTops(predictionTextAdjacency);
 
   const selectedTextEdges = textEdges.filter((edge) => (
-    decisiveTop(edge.gold, 'gold') === edge
-    && decisiveTop(edge.prediction, 'prediction') === edge
+    goldDecisiveTops.get(edge.gold.index) === edge
+    && predictionDecisiveTops.get(edge.prediction.index) === edge
   )).sort((left, right) => stableCompare(left.gold.sampleId, right.gold.sampleId));
   for (const edge of selectedTextEdges) {
     if (consumedGold.has(edge.gold.index) || consumedPredictions.has(edge.prediction.index)) continue;
