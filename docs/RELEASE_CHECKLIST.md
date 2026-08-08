@@ -15,7 +15,7 @@
 | 订阅消息 | ⏸ | 尚未实现；不属于本轮验收通过项，后续单独设计 |
 | 学习资源扩展 | ⏸ | 本轮不展开，待发布收口后单独设计 |
 
-详细记录见 [`test-reports/2026-08-01-release-closure.md`](test-reports/2026-08-01-release-closure.md)。
+详细记录见 [`archive/test-reports/2026-08-01-release-closure.md`](archive/test-reports/2026-08-01-release-closure.md)。
 
 ## 1. 发布前冻结范围
 

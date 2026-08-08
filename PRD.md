@@ -202,13 +202,13 @@
 | 底部 | 「预览 PDF」 + 「生成 A4 试卷」 |
 
 **逻辑**：
-- 从学科工作台点击单个卡点进入时，默认只选该卡点
-- 其他入口默认按严重度优先选中最多 5 个卡点
-- 最低选 1 个卡点，最多选 5 个
-- 每个卡点默认生成 5 道题：3 道核心验证题 + 2 道迁移延展题
-- 点击「生成试卷」→ AI 根据卡点 + 年级生成题目 → 生成 A4 PDF → 跳转 Page 9
+- 从学科工作台点击单个卡点进入时，默认只选该卡点（`targetCode` 预选）
+- 其他入口展示待验证卡点勾选列表，用户自由勾选，数量无上限
+- 最低选 1 个卡点
+- 每个卡点的题量按置信度分层：高置信（≥75）3 题、中置信（45-74）2 题、低置信（<45）1 题
+- 点击「生成试卷」→ AI 按卡点 + 年级生成题目 → 生成 A4 PDF → 跳转 Page 9
 
-**实现状态**：✅ 已上线。`generate-verification.js` 限制最多 5 个卡点，支持 `targetCode` 预选，实时生成 `paperConfig`；预览模式调用 `callGeneratePaper({ preview: true })` 直接跳转预览页，正式生成后再写库。
+**实现状态**：✅ 已上线。`generate-verification.js` 卡点选择无数量上限，支持 `targetCode` 预选，实时生成 `paperConfig`（策略文案：按置信度分层：高置信3题、中置信2题、低置信1题）；预览模式调用 `callGeneratePaper({ preview: true })` 直接跳转预览页，正式生成后再写库。诊断完成后的验证卷主链路已改为服务端自动生成（`regenerateVerificationPaper` 异步任务），本页是手动选题出卷入口。
 
 ---
 
@@ -577,7 +577,7 @@ cloudfunctions/
 | 验证报告对比（improved/worsened/new/persisting） | ✅ | `analyzePhotos/comparison.js` |
 | 学科主页 / 报告页轮询分析状态 | ✅ | `utils/poller.js`，每 10s，最多 30 次 |
 | 分析任务缺失时手动重试 | ✅ | `report.onRetryAnalysis()` |
-| 验证试卷出卷配置（≤5 卡点 × 5 题） | ✅ | 每个卡点 3 道核心验证题 + 2 道迁移延展题，支持 targetCode 预选和 paperConfig |
+| 验证试卷出卷配置（自由选卡点 × 置信度分层出题） | ✅ | 每卡点题量按置信度分层（高 3 / 中 2 / 低 1），支持 targetCode 预选和实时 paperConfig；诊断后验证卷由服务端自动生成 |
 | 默认诊断试卷（1-6 年级 A/B 卷 + 同学生缓存） | ✅ | `default-paper.js` + `generatePaper` paperKey 查询 |
 | 报告 PDF 生成与下载 | ✅ | `generateReportPDF/index.js` + `report.onDownloadPDF()` |
 | 试卷预览/打印/分享 | ✅ | `paper-preview.js` 支持 paperId 与 fileId 两种模式，并记录已下载状态 |

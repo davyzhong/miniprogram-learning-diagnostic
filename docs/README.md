@@ -1,6 +1,6 @@
 # 项目文档中心
 
-> 更新日期：2026-08-01
+> 更新日期：2026-08-08
 > 规则：当前规范以代码和可复现命令为事实来源；带日期的设计、计划、评审和测试报告保留当时结论，不作为当前基线。
 
 ## 第一次了解项目
@@ -24,7 +24,7 @@
 | 常见故障 | [故障排查](TROUBLESHOOTING.md) |
 | CLI 与 Skills | [Skill 与 CLI 设计](SKILL_AND_CLI_DESIGN.md) |
 | emoji 真机兼容 | [兼容白名单](EMOJI_COMPATIBILITY_WHITELIST.md) |
-| 2026-08-01 发布收口证据 | [云部署、真机、E2E 与文档收口报告](test-reports/2026-08-01-release-closure.md) |
+| 2026-08-01 发布收口证据 | [云部署、真机、E2E 与文档收口报告](archive/test-reports/2026-08-01-release-closure.md) |
 
 ## 学科设计
 
@@ -40,10 +40,11 @@
 
 | 目录 | 内容 |
 | --- | --- |
-| `superpowers/specs/` | 已确认的设计规格 |
-| `superpowers/plans/` | 对应实施计划 |
-| `test-reports/` | 某个提交或日期下的测试结论 |
-| `CODEMAPS/` | 代码结构快照 |
+| `superpowers/specs/` | 已确认的设计规格（`CLOUD_FUNCTIONS.md` 等现行文档仍有引用，保留原位） |
+| `archive/superpowers-plans/` | specs 对应的历史实施计划 |
+| `archive/test-reports/` | 某个提交或日期下的测试结论 |
+| `archive/CODEMAPS-2026-07-02/` | 代码结构快照（2026-07-02 生成；当前结构以 `ARCHITECTURE.md` 为准） |
+| `archive/` 其他带日期文档 | 已完结的代码评审 TODO、自标过时的性能评估、历史测试收敛计划 |
 | `subject-design/legacy/` | 已被替代或仅供背景参考的学科方案 |
 
 判断某项能力是否已经实现时，优先查看当前代码、[CHANGELOG](../CHANGELOG.md)、[测试矩阵](TEST_MATRIX.md)和最近测试结果，不要只依据历史计划中的勾选状态。
