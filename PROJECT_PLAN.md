@@ -109,14 +109,14 @@ miniprogram-learning-diagnostic/
 │       ├── paper-preview/           # Page 9：试卷预览/打印
 │       └── ai-usage/                # AI 用量账本、内测授权和数据删除入口
 │
-├── cloudfunctions/                  # 云函数（后端，14 个）
+├── cloudfunctions/                  # 云函数（后端，15 个）
 │   ├── uploadAndAnalyze/            # 入口：校验参数、创建 reports、后台触发 analyzePhotos
 │   ├── analyzePhotos/               # 主控：拆分批次、串行分析、去重、合并、对比、落库
 │   │   ├── index.js                 #   主流程
 │   │   ├── comparison.js            #   验证报告对比逻辑
 │   │   └── photo-dedup.js           #   OCR 摘要去重
 │   ├── analyzeBatch/                # 单批次分析（≤5张）
-│   │   ├── index.js                 #   调 CloudBase AI hy3-preview
+│   │   ├── index.js                 #   调 CloudBase AI qwen3.5-plus 视觉模型
 │   │   └── result-normalizer.js     #   AI 返回结构化归一
 │   ├── getAnalysisProgress/         # 轻量查询 analysisTasks 进度
 │   ├── studentAccess/               # 家长成员、邀请和加入管理
@@ -127,6 +127,7 @@ miniprogram-learning-diagnostic/
 │   ├── reportFeedback/              # 家长反馈入口，记录报告/卡点/错题/照片纠错
 │   ├── englishVocabulary/           # 英语个人词库、20 词听写、AI 判定和掌握度更新
 │   ├── learningResource/            # 学习卡点任务包生成和状态更新
+│   ├── microValidation/             # 3-6 题微验证会话、逐题判定和掌握写回
 │   ├── reanalyzeMathHistory/        # 历史数学报告重算维护工具
 │   └── aiUsage/                     # AI 用量账本、内测授权、删除请求
 │
@@ -139,30 +140,31 @@ miniprogram-learning-diagnostic/
 │   │   ├── page-harness.js          # 执行真实小程序页面控制器
 │   │   └── cloud-function-harness.js# 执行真实云函数并模拟依赖
 │   ├── analyze-batch-result.test.js # analyzeBatch 结果标准化
+│   ├── analyze-photos-pipeline.test.js # 分析流水线：分批、验证对比、OCR 去重
 │   ├── cloud-functions.test.js      # 云函数集成流程、权限、边界
-│   ├── comparison.test.js           # 验证报告对比算法
 │   ├── contracts.test.js            # 跨模块契约与回归保护
 │   ├── coverage-gap.test.js         # 覆盖缺口补全
 │   ├── data-layer.test.js           # 统一数据访问层
 │   ├── e2e-real-image.test.js       # 端到端真实图片测试脚本（独立运行，不计入 npm test）
-│   ├── page-flows.test.js           # 页面主流程与错误恢复
+│   ├── *-page-flows.test.js         # 页面主流程与错误恢复（按页面拆分，每页一个文件）
 │   ├── english-vocabulary.test.js   # 英语词库抽题、AI 判定和间隔复测规则
 │   ├── english-vocabulary-cloud.test.js # 英语词库云函数流程
-│   ├── photo-dedup.test.js          # OCR 去重算法
+│   ├── deployment-readiness.test.js # 页面四件套与发布就绪检查
 │   ├── poller.test.js               # 通用轮询器
-│   ├── project-integrity.test.js    # 页面四件套与 WXML 事件绑定
 │   ├── report-presenter.test.js     # 报告视图预计算
 │   └── util.test.js                 # 工具函数
 │
 ├── scripts/
-│   └── check-js.js                  # node --check 语法检查
+│   ├── check-js.js                  # node --check 语法检查
+│   └── ...                          # DevTools E2E、截图、种子数据构建、统计等 20+ 脚本
 │
 └── docs/
     ├── TEST_MATRIX.md               # 测试矩阵与验收清单
-    └── superpowers/plans/           # 规划辅助材料
+    ├── superpowers/specs/           # 已确认的设计规格
+    └── archive/                     # 归档的一次性文档（测试报告、历史计划、结构快照）
 ```
 
-**工程基线**: 313 个 JavaScript 文件（`npm run check` 校验）；仓库有 89 个 `.test.js` 文件，默认离线集显式执行其中 84 个并通过 1008 个用例。其余为真实云/真实图片 E2E 和专项数学管线测试，按需单独运行。
+**工程基线**: 342 个 JavaScript 文件（`npm run check` 校验）；仓库有 97 个 `.test.js` 文件，默认离线集显式执行其中 92 个并通过 1089 个用例。其余为真实云/真实图片 E2E 和专项数学管线测试，按需单独运行。
 
 ### 2.2 相关文件索引
 

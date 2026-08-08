@@ -138,7 +138,7 @@ Collections: `englishImportBatches`, `studentEnglishWords` (personal word librar
 
 ### Database collections
 
-`students`, `studentMembers` (owner/co-parent access, revocable), `studentInvites` (one-time join tokens), `subjectProfiles` (per-subject bottleneck tracking + analysis status), `reports` (diagnosis/verification, with `bottlenecks[]`, `errorDetails[]`, `pdfFileId`, `verificationPaperStatus`), `papers` (generated/default, with `paperKey` for default-paper caching, `generationStatus: generating|ready|failed`), `analysisTasks` (async job progress), `reportFeedback` (parent feedback), `englishImportBatches` (vocabulary import staging), `studentEnglishWords` / personal vocabulary (PEP base ~505 words + per-student mastery), `englishPracticeSessions` (recognition/dictation sessions, per-attempt `durationMs`), `englishPracticeAttempts` (per-word attempt records), `chineseSkillAttempts` (Chinese micro-task submissions), `learningResources` (per-subject generated resources: math map nodes, english word packs — links/metadata only, no content mirroring), `mathHistoryReanalysisTasks` (reanalysis job progress). Full schema in `docs/DATA_DICTIONARY.md`.
+`students`, `studentMembers` (owner/co-parent access, revocable), `studentInvites` (one-time join tokens), `subjectProfiles` (per-subject bottleneck tracking + analysis status), `reports` (diagnosis/verification, with `bottlenecks[]`, `errorDetails[]`, `pdfFileId`, `verificationPaperStatus`), `papers` (generated/default, with `paperKey` for default-paper caching, `generationStatus: generating|ready|failed`), `analysisTasks` (async job progress), `reportFeedback` (parent feedback), `englishImportBatches` (vocabulary import staging), `studentEnglishWords` / personal vocabulary (PEP base ~505 words + per-student mastery), `englishPracticeSessions` (recognition/dictation sessions, per-attempt `durationMs`), `englishPracticeAttempts` (per-word attempt records), `chineseSkillAttempts` (Chinese micro-task submissions), `learningResourcePacks` (per-bottleneck generated task packs — links/metadata only, no content mirroring), `studentNodeMastery` (math knowledge-node six-state mastery), `interventionSessions` (family intervention sessions + 24h/72h review scheduling), `microValidations` (3-6 question micro-validation sessions with per-question verdicts), `aiUsageEvents` (append-only AI usage ledger), `dataDeletionRequests` (user deletion requests), `userConsents` (beta authorization consents). Full schema in `docs/DATA_DICTIONARY.md`.
 
 ## Conventions
 
@@ -208,14 +208,14 @@ Authoritative in `docs/product/learning-diagnostic-product-brief.md` §7 and `do
 
 ### 资源与隐私边界
 
-- **只存链接/摘要/评价/适用场景，不下载、不复制平台内容** — `learningResources` 集合存的是指引，不是内容镜像。B站/小红书等外部资源只跳转，不内嵌。
+- **只存链接/摘要/评价/适用场景，不下载、不复制平台内容** — `learningResourcePacks` 集合存的是指引，不是内容镜像。B站/小红书等外部资源只跳转，不内嵌。
 - **孩子不直接浏览平台推荐流** — 家长 + AI 过滤后定向使用（`docs/product/family-learning-workflow.md`）。
-- **只提交脱敏样本 + 结构化种子数据** — 真实学生原始材料（姓名、照片、原始作答）不入库、不进 GitHub（`00-总项目知识库/04-小程序文档迁移记录` 明确说明）。
+- **只提交脱敏样本 + 结构化种子数据** — 真实学生原始材料（姓名、照片、原始作答）不入库、不进 GitHub（`00-总项目知识库/99-归档与工具资料/小程序文档迁移记录` 明确说明）。
 - **官方教材资源只作验证/兜底** — 不以官方为唯一来源（`docs/product/mvp-roadmap-and-boundaries.md`）。
 
 ### WeChat 平台硬约束（英语口语/听音相关，动前必查）
 
-任何涉及录音/语音识别的工作，先确认这些限制（来源 `99-待补与决策/资料缺口与补全计划-v0.1.md` §6.3，标注为"动前必查"）：
+任何涉及录音/语音识别的工作，先确认这些限制（来源 `08-待补与决策/资料缺口与补全计划-v0.1.md` §6.3，标注为"动前必查"）：
 
 - `RecorderManager` 单次录音默认 **60s** 上限；企业版有条件可到 **300s**。
 - 录音输出默认 aac/mp3，**不支持 wav**；部分 ASR 服务（如有道）要求 pcm/wav，需服务端 ffmpeg 转码。
