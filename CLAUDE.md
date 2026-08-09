@@ -56,7 +56,7 @@ Deferred (not yet done): E2E common-helper extraction, adding CLI E2E to `releas
 ## Architecture
 
 ```
-Mini Program (25 pages + status-view component, WXML/WXSS/JS)
+Mini Program (27 pages + status-view component, WXML/WXSS/JS)
     │  wx.cloud.callFunction()  /  direct wx.cloud.database() reads
     ▼
 CloudBase (serverless, 15 cloud functions)
