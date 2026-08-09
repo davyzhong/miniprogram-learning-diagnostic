@@ -320,6 +320,10 @@ test('subject home shows learning workflow tools for co-parent access', async ()
 
   page.onTaskTap({ currentTarget: { dataset: { code: 'LP-001' } } })
   assert.match(wx.calls.find(call => call.name === 'navigateTo').payload.url, /bottleneck-detail/)
+
+  page.onToolTap({ currentTarget: { dataset: { key: 'repairMetrics' } } })
+  assert.ok(wx.calls.filter(call => call.name === 'navigateTo').at(-1).payload.url.startsWith('/pages/repair-metrics/repair-metrics?studentId='))
+  assert.match(wx.calls.filter(call => call.name === 'navigateTo').at(-1).payload.url, /studentName=/)
 })
 
 
