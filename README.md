@@ -16,7 +16,7 @@
 <p align="center">
   <img alt="WeChat Mini Program" src="https://img.shields.io/badge/WeChat-Mini_Program-07C160?style=flat-square" />
   <img alt="CloudBase" src="https://img.shields.io/badge/Backend-CloudBase-2F80ED?style=flat-square" />
-  <img alt="Tests" src="https://img.shields.io/badge/tests-1089_passing-2E8B57?style=flat-square" />
+  <img alt="Tests" src="https://img.shields.io/badge/tests-1110_passing-2E8B57?style=flat-square" />
   <img alt="Main package" src="https://img.shields.io/badge/main_package-809_KB-F2A900?style=flat-square" />
   <img alt="AI Model" src="https://img.shields.io/badge/AI-Vision-qwen3.5--plus-6366F1?style=flat-square" />
 </p>
@@ -184,7 +184,7 @@ flowchart TB
       AI[qwen3.5-plus 视觉 + deepseek-v4-flash 文本]
     end
     subgraph Quality[质量体系]
-      Unit[1089 个自动化测试]
+      Unit[1110 个自动化测试]
       CLI[微信开发者工具 CLI E2E]
       Perf[性能与包体基线]
     end
@@ -215,7 +215,7 @@ miniprogram-learning-diagnostic/
 ├── cloudfunctions/           # 15 个业务云函数与共享模板
 ├── data/                     # 150 个数学知识节点、40 个细卡点、脱敏示例数据
 ├── scripts/                  # 构建、校验、性能、截图和 DevTools E2E
-├── tests/                    # 97 个测试文件，1089 个自动化测试
+├── tests/                    # 99 个测试文件，1110 个自动化测试
 ├── docs/                     # 产品、学科、架构、测试和图文文档
 ├── database/                 # 数据库索引声明
 ├── README.md                 # GitHub 项目主页
@@ -239,7 +239,7 @@ miniprogram-learning-diagnostic/
 git clone <repository-url>
 cd miniprogram-learning-diagnostic
 npm install
-npm run verify          # 1089 个自动化测试 + 342 个 JS 文件语法检查
+npm run verify          # 1110 个自动化测试 + 347 个 JS 文件语法检查
 npm run check:size      # 主包体积预算检查
 ```
 
@@ -248,8 +248,8 @@ npm run check:size      # 主包体积预算检查
 ### 常用命令
 
 ```bash
-npm test                    # 1089 个常规自动化测试
-npm run check               # 检查 342 个 JavaScript 文件
+npm test                    # 1110 个常规自动化测试
+npm run check               # 检查 347 个 JavaScript 文件
 npm run check:size          # 主包体积预算检查
 npm run test:coverage       # 覆盖率门禁
 npm run test:e2e:doctor     # 检查微信开发者工具 CLI 环境
@@ -265,12 +265,12 @@ npm run perf:baseline       # CLI 性能基线
 
 | 指标 | 当前结果 | 复现命令 |
 | --- | ---: | --- |
-| 常规自动化测试 | **1089 / 1089 通过** | `npm test` |
-| JavaScript 语法检查 | 342 个文件通过 | `npm run check` |
-| 主包体积 | **809 KB / 1200 KB**（剩余 391 KB） | `npm run check:size` |
+| 常规自动化测试 | **1110 / 1110 通过** | `npm test` |
+| JavaScript 语法检查 | 347 个文件通过 | `npm run check` |
+| 主包体积 | **810 KB / 1200 KB**（剩余 390 KB） | `npm run check:size` |
 | 注册页面 | 27 | `miniprogram/app.json` |
 | 业务云函数 | 15 | `cloudfunctions/`，不含 `_shared-templates` |
-| 测试文件 | 97 个 | `package.json` |
+| 测试文件 | 99 个 | `package.json` |
 | 数据库集合 | 20 | `docs/DATA_DICTIONARY.md` |
 | 数学知识节点 | 150 | `data/math/knowledge-nodes.seed.json` |
 | 标准细卡点 | 40 | `cloudfunctions/analyzeBatch/taxonomy-bn-list.js` |
