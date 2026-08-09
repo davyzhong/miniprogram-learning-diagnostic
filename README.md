@@ -173,7 +173,7 @@ flowchart LR
 ```mermaid
 flowchart TB
     subgraph Client[微信小程序]
-      Pages[26 个注册页面]
+      Pages[27 个注册页面]
       Presenters[Presenter 与状态组件]
       Services[数据层与 P0 Skills]
     end
@@ -211,7 +211,7 @@ flowchart TB
 
 ```text
 miniprogram-learning-diagnostic/
-├── miniprogram/              # 小程序页面、组件、服务和本地数据（26 页面）
+├── miniprogram/              # 小程序页面、组件、服务和本地数据（27 页面）
 ├── cloudfunctions/           # 15 个业务云函数与共享模板
 ├── data/                     # 150 个数学知识节点、40 个细卡点、脱敏示例数据
 ├── scripts/                  # 构建、校验、性能、截图和 DevTools E2E
@@ -268,7 +268,7 @@ npm run perf:baseline       # CLI 性能基线
 | 常规自动化测试 | **1089 / 1089 通过** | `npm test` |
 | JavaScript 语法检查 | 342 个文件通过 | `npm run check` |
 | 主包体积 | **809 KB / 1200 KB**（剩余 391 KB） | `npm run check:size` |
-| 注册页面 | 26 | `miniprogram/app.json` |
+| 注册页面 | 27 | `miniprogram/app.json` |
 | 业务云函数 | 15 | `cloudfunctions/`，不含 `_shared-templates` |
 | 测试文件 | 97 个 | `package.json` |
 | 数据库集合 | 20 | `docs/DATA_DICTIONARY.md` |

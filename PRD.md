@@ -578,6 +578,7 @@ cloudfunctions/
 | 学科主页 / 报告页轮询分析状态 | ✅ | `utils/poller.js`，每 10s，最多 30 次 |
 | 分析任务缺失时手动重试 | ✅ | `report.onRetryAnalysis()` |
 | 验证试卷出卷配置（自由选卡点 × 置信度分层出题） | ✅ | 每卡点题量按置信度分层（高 3 / 中 2 / 低 1），支持 targetCode 预选和实时 paperConfig；诊断后验证卷由服务端自动生成 |
+| 学习修复指标页（验证覆盖率 + 严格修复率） | ✅ | `studentData.getRepairMetrics` 只读聚合 + `pages/repair-metrics`，数学限定，分母 <5 标注小样本 |
 | 默认诊断试卷（1-6 年级 A/B 卷 + 同学生缓存） | ✅ | `default-paper.js` + `generatePaper` paperKey 查询 |
 | 报告 PDF 生成与下载 | ✅ | `generateReportPDF/index.js` + `report.onDownloadPDF()` |
 | 试卷预览/打印/分享 | ✅ | `paper-preview.js` 支持 paperId 与 fileId 两种模式，并记录已下载状态 |
