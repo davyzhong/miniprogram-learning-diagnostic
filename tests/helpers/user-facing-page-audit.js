@@ -587,6 +587,50 @@ async function aiUsageStates() {
   ]
 }
 
+async function repairMetricsStates() {
+  const modulePath = 'miniprogram/pages/repair-metrics/repair-metrics.js'
+  const metricsFixture = {
+    metrics: {
+      empty: false,
+      totals: { bottlenecks: 1, verified: 1, repaired: 1, repairing: 0, verifiedNotPassed: 0, unverified: 0 },
+      coverageRate: { numerator: 1, denominator: 1, percent: 100, smallSample: true },
+      repairRate: { numerator: 0, denominator: 0, percent: 0, smallSample: true },
+      buckets: {
+        repaired: [{ lpCode: 'LP-001', name: '计算基础' }],
+        repairing: [], verifiedNotPassed: [], unverified: []
+      },
+      timeline: [{ date: '2026-07-03', passedTotal: 1, verifiedTotal: 1 }]
+    }
+  }
+  const loadWith = (cloud, studentId) => runController(modulePath, cloud, async page => {
+    page.setData({ studentId })
+    await page.loadData()
+  })
+  return [
+    state('normal', await loadWith({ getRepairMetrics: async () => metricsFixture }, 'student-1')),
+    state('empty', await loadWith({
+      getRepairMetrics: async () => ({ metrics: { empty: true } })
+    }, 'student-1')),
+    state('legacy-id-only', await loadWith({
+      getRepairMetrics: async () => ({ metrics: {
+        empty: false,
+        totals: { bottlenecks: 2, verified: 1, repaired: 1, repairing: 0, verifiedNotPassed: 0, unverified: 1 },
+        coverageRate: { numerator: 1, denominator: 2, percent: 50, smallSample: true },
+        repairRate: { numerator: 1, denominator: 1, percent: 100, smallSample: true },
+        buckets: {
+          repaired: [{ lpCode: 'LP-AUDIT-LEAK-01', name: INTERNAL_SUMMARY }],
+          repairing: [], verifiedNotPassed: [],
+          unverified: [{ lpCode: OPAQUE_ID, name: BACKEND_ERROR }]
+        },
+        timeline: []
+      } })
+    }, 'student-1')),
+    state('error', await loadWith({
+      getRepairMetrics: async () => { throw new Error(BACKEND_ERROR) }
+    }, 'student-route-id'))
+  ]
+}
+
 async function addStudentStates() {
   const modulePath = 'miniprogram/pages/add-student/add-student.js'
   const failedSave = async message => runController(modulePath, {
@@ -922,6 +966,7 @@ const RAW_PAGE_AUDIT_REGISTRY = {
   'pages/parent-management/parent-management': controllerAdapter('miniprogram/pages/parent-management/parent-management.js', parentManagementStates),
   'pages/join-student/join-student': controllerAdapter('miniprogram/pages/join-student/join-student.js', joinStudentStates),
   'pages/ai-usage/ai-usage': presenterAdapter('miniprogram/pages/ai-usage/ai-usage-presenter.js', aiUsageStates, true),
+  'pages/repair-metrics/repair-metrics': presenterAdapter('miniprogram/pages/repair-metrics/repair-metrics-presenter.js', repairMetricsStates, true),
   'pages/icon-compatibility/icon-compatibility': controllerAdapter('miniprogram/pages/icon-compatibility/icon-compatibility.js', iconCompatibilityStates)
 }
 
