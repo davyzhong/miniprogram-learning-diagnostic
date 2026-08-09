@@ -154,6 +154,7 @@ wx.cloud.callFunction({
 | `getPaperDetail` | `paperId` | student、paper |
 | `getActiveVerificationPaper` | `studentId`、`subject` | paper、status（ready/generating/failed/none）。验证卷自动生成场景的状态查询 |
 | `cleanupStaleLearningRecords` | `studentId`；`subject` 可选；`dryRun` 可选 | owner 清理长时间中断的分析记录；`dryRun=true` 只返回可清理数量和记录 ID，不写库 |
+| `getRepairMetrics` | `studentId` | `metrics`：验证覆盖率与严格修复率（分子/分母/百分比/小样本标记）、卡点去向四档、时间快照。纯只读聚合，不写集合 |
 
 ### 统一返回字段
 

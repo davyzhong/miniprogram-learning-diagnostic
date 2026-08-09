@@ -449,6 +449,12 @@ Page({
       this.importEnglishVocabulary()
       return
     }
+    if (actionType === 'repairMetrics') {
+      wx.navigateTo({
+        url: `/pages/repair-metrics/repair-metrics?studentId=${encodeURIComponent(this.data.studentId || '')}&studentName=${encodeURIComponent(this.data.studentName || '')}`
+      })
+      return
+    }
     if (actionType === 'latestReport' && payload.reportId) {
       wx.navigateTo({ url: `/pages/report/report?id=${payload.reportId}` })
     }

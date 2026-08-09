@@ -23,6 +23,10 @@
       "pages": ["knowledge-map"]
     },
     {
+      "root": "pages/repair-metrics",
+      "pages": ["repair-metrics"]
+    },
+    {
       "root": "pages/micro-validation",
       "pages": ["micro-validation"]
     },

@@ -1,6 +1,6 @@
 # Learning Diagnostic MVP 产品设计文档（PRD）
 
-> 版本：v3.2 | 日期：2026-08-01 | 状态：私有内测持续迭代；数学节点掌握六态与微验证、语文具体错项复测、英语词汇双维闭环均已落地。常规自动化测试 1089/1089 通过，JS 语法检查 342 个文件通过，主包 809 KB/1200 KB；本周期 15 个业务云函数已确认部署，真机主流程验收无重大问题，DevTools E2E 全套通过并刷新 14 张用户导览图
+> 版本：v3.2 | 日期：2026-08-01 | 状态：私有内测持续迭代；数学节点掌握六态与微验证、语文具体错项复测、英语词汇双维闭环均已落地。常规自动化测试 1110/1110 通过，JS 语法检查 347 个文件通过，主包 810 KB/1200 KB；本周期 15 个业务云函数已确认部署，真机主流程验收无重大问题，DevTools E2E 全套通过并刷新 14 张用户导览图
 >
 > 历史版本：v2.9（2026-07-02，638 测试基线）
 
@@ -47,7 +47,7 @@
 
 ---
 
-## 3. 页面设计（当前 app.json 注册 26 页，以下按业务页面组说明）
+## 3. 页面设计（当前 app.json 注册 27 页，以下按业务页面组说明）
 
 ### Page 1：首页 / 家庭学习工作台
 
@@ -513,7 +513,7 @@ cloudfunctions/
 }
 ```
 
-共 26 个注册页面（主包 8 + 分包 18）。`app.json` 中已按上述顺序注册。
+共 27 个注册页面（主包 8 + 分包 19）。`app.json` 中已按上述顺序注册。
 
 ---
 
@@ -563,7 +563,7 @@ cloudfunctions/
 
 | 能力 | 状态 | 备注 |
 |------|------|------|
-| 26 个页面 + 四件套文件 | ✅ | `deployment-readiness.test.js` 校验 |
+| 27 个页面 + 四件套文件 | ✅ | `deployment-readiness.test.js` 校验 |
 | 家庭工作台 + 个人学习工作台 | ✅ | `index` 处理 0/1/多孩子分流；多孩子显示家庭行动总览和孩子行动卡，单孩子与 `student-profile` 共享个人工作台 |
 | 家长成员管理 | ✅ | owner 可邀请/移除共同家长，viewer 除成员管理外可参与学习流程 |
 | 添加学生并同步创建三条学科档案 | ✅ | `cloud.createStudentWithProfiles()` |
@@ -578,6 +578,7 @@ cloudfunctions/
 | 学科主页 / 报告页轮询分析状态 | ✅ | `utils/poller.js`，每 10s，最多 30 次 |
 | 分析任务缺失时手动重试 | ✅ | `report.onRetryAnalysis()` |
 | 验证试卷出卷配置（自由选卡点 × 置信度分层出题） | ✅ | 每卡点题量按置信度分层（高 3 / 中 2 / 低 1），支持 targetCode 预选和实时 paperConfig；诊断后验证卷由服务端自动生成 |
+| 学习修复指标页（验证覆盖率 + 严格修复率） | ✅ | `studentData.getRepairMetrics` 只读聚合 + `pages/repair-metrics`，数学限定，分母 <5 标注小样本 |
 | 默认诊断试卷（1-6 年级 A/B 卷 + 同学生缓存） | ✅ | `default-paper.js` + `generatePaper` paperKey 查询 |
 | 报告 PDF 生成与下载 | ✅ | `generateReportPDF/index.js` + `report.onDownloadPDF()` |
 | 试卷预览/打印/分享 | ✅ | `paper-preview.js` 支持 paperId 与 fileId 两种模式，并记录已下载状态 |
@@ -590,8 +591,8 @@ cloudfunctions/
 | 数据归属校验（openID）+ 参数白名单 | ✅ | 各云函数入口 |
 | 自动化测试覆盖（1089 个默认离线用例全绿） | ✅ | `npm test`；真实图片、真实云按需单独运行 |
 | DevTools E2E | ✅ | 核心 23/23、数学 4/4 + 10/10、语文 3/3、英语 7/7、家庭密度与上传历史布局通过 |
-| JS 语法检查 | ✅ | `npm run check`（342 个文件） |
-| 主包体积预算 | ✅ | `npm run check:size`（809 KB / 1200 KB） |
+| JS 语法检查 | ✅ | `npm run check`（347 个文件） |
+| 主包体积预算 | ✅ | `npm run check:size`（810 KB / 1200 KB） |
 | 微信订阅消息推送 | ⚠️ | `sendNotification()` 仍为空实现，待申请模板 |
 | 上传与分析解耦 | ✅ | `uploadAndAnalyze` 不等待 `analyzePhotos` 完成 |
 | 默认试卷跨学生共享模板 | ⚠️ | 仅同学生复用 |
