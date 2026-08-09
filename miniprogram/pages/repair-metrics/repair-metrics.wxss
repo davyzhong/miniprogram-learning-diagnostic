@@ -1,0 +1,14 @@
+.page { padding: 24rpx 32rpx 24rpx; box-sizing: border-box; }
+.empty { padding: 80rpx 40rpx; text-align: center; color: var(--b1-ink-subtle); font-size: 26rpx; line-height: 1.6; }
+.metric-cards { display: flex; gap: 12rpx; }
+.metric-card { flex: 1; background: var(--b1-surface); border-radius: 16rpx; padding: 18rpx; box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04); }
+.metric-title { font-size: 26rpx; color: var(--b1-ink-muted); }
+.metric-value { margin-top: 10rpx; font-size: 40rpx; font-weight: 600; color: var(--b1-ink-strong); }
+.small-sample-note { margin-top: 12rpx; padding: 12rpx 18rpx; background: var(--b1-waiting-bg); border-radius: 12rpx; color: var(--b1-waiting-fg); font-size: 24rpx; line-height: 1.5; }
+.section-title { margin: 14rpx 0 10rpx; font-size: 28rpx; font-weight: 600; color: var(--b1-ink-strong); }
+.caliber-line { font-size: 24rpx; color: var(--b1-ink-muted); line-height: 1.6; }
+.bucket-group { margin-bottom: 12rpx; background: var(--b1-surface); border-radius: 16rpx; padding: 18rpx; }
+.bucket-title { font-size: 26rpx; font-weight: 600; color: var(--b1-ink-strong); }
+.bucket-empty { margin-top: 8rpx; font-size: 24rpx; color: var(--b1-ink-subtle); }
+.bucket-row { margin-top: 8rpx; font-size: 26rpx; color: var(--b1-ink); line-height: 1.5; }
+.timeline-row { font-size: 24rpx; color: var(--b1-ink-muted); line-height: 1.8; }

@@ -1,0 +1,45 @@
+<view class="page b1-page">
+  <status-view wx:if="{{loading}}" state="loading" text="加载修复指标..." />
+
+  <status-view wx:elif="{{errorText}}" state="error" text="{{errorText}}" retryText="重试" bind:retry="onRetryTap" />
+
+  <view wx:elif="{{view.empty}}" class="empty">
+    还没有数学诊断记录。先上传试卷照片，诊断出学习卡点后，这里会展示验证覆盖率和修复率。
+  </view>
+
+  <block wx:elif="{{view}}">
+    <view class="metric-cards">
+      <view class="metric-card">
+        <view class="metric-title">验证覆盖率</view>
+        <view class="metric-value">{{view.coverageCard.text}}</view>
+      </view>
+      <view class="metric-card">
+        <view class="metric-title">严格修复率</view>
+        <view class="metric-value">{{view.repairCard.text}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{view.smallSample}}" class="small-sample-note">
+      当前样本较少（分母不足 5 个卡点），数字仅供参考，还不能作为稳定结论。
+    </view>
+
+    <view class="caliber">
+      <view class="section-title">口径说明</view>
+      <view wx:for="{{view.caliberLines}}" wx:key="*this" class="caliber-line">{{item}}</view>
+    </view>
+
+    <view class="buckets">
+      <view class="section-title">卡点去向</view>
+      <view wx:for="{{view.bucketGroups}}" wx:for-item="group" wx:key="key" class="bucket-group">
+        <view class="bucket-title">{{group.title}}（{{group.rows.length}}）</view>
+        <view wx:if="{{group.rows.length === 0}}" class="bucket-empty">暂无</view>
+        <view wx:for="{{group.rows}}" wx:for-item="row" wx:key="rowKey" class="bucket-row">{{row.name}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{view.timelineRows.length > 0}}" class="timeline">
+      <view class="section-title">时间快照</view>
+      <view wx:for="{{view.timelineRows}}" wx:key="*this" class="timeline-row">{{item}}</view>
+    </view>
+  </block>
+</view>

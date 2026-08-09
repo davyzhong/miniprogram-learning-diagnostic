@@ -6,6 +6,15 @@
 
 ## [Unreleased]
 
+### 2026-08-09 学习修复指标页：验证覆盖率与严格修复率
+
+#### Added
+
+- 新增 `pages/repair-metrics` 分包页：数学验证覆盖率与严格修复率双指标、卡点去向四档、时间快照；分母 <5 标注小样本。
+- `studentData` 新增只读 action `getRepairMetrics`：从 subjectProfiles / learningResourcePacks / interventionSessions / microValidations 现算，不新增、不写入任何集合。
+- 数学学科工作台与家庭工作台新增修复指标入口。
+- 口径依据 `docs/superpowers/specs/2026-08-09-repair-metrics-and-case-validation-design.md`。
+
 ## [0.4.0] - 2026-08-08
 
 本版本覆盖 2026-07-11 ~ 2026-08-01 的迭代：数学学习地图 V3（节点掌握六态闭环、微验证、干预会话复测调度）、语文/英语学习闭环、B1 设计体系与信息密度重构、emoji 与可视化体系、可靠性修复，以及发布收口（15 个业务云函数云端部署确认、全量 DevTools E2E、文档基线刷新至 26 页面 / 20 集合 / 1089 测试）。
