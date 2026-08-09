@@ -176,4 +176,33 @@ function buildRepairMetricsView(snapshot = {}) {
   };
 }
 
-module.exports = { buildRepairMetricsView };
+const { isMissingCollectionError } = require('./access');
+
+async function safeGet(collectionRef) {
+  try {
+    const res = await collectionRef.get();
+    return res.data || [];
+  } catch (error) {
+    if (isMissingCollectionError(error)) return [];
+    throw error;
+  }
+}
+
+// 读取双指标所需的全部现有数据；集合不存在按空处理（首次使用容错）
+async function loadRepairMetricsSnapshot(db, studentId) {
+  const where = { studentId, subject: 'math' };
+  const [profiles, packs, sessions, validations] = await Promise.all([
+    safeGet(db.collection('subjectProfiles').where(where).limit(1)),
+    safeGet(db.collection('learningResourcePacks').where(where).limit(500)),
+    safeGet(db.collection('interventionSessions').where(where).limit(500)),
+    safeGet(db.collection('microValidations').where(where).limit(500))
+  ]);
+  return {
+    profile: profiles[0] || null,
+    packs,
+    interventionSessions: sessions,
+    microValidations: validations
+  };
+}
+
+module.exports = { buildRepairMetricsView, loadRepairMetricsSnapshot };

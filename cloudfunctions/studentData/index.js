@@ -5,7 +5,7 @@ const {
   permissionsForRole,
   isMissingCollectionError,
 } = require('./access');
-const { publicStudent } = require('./student-dto');
+const { publicStudent, stripReportDebugFields } = require('./student-dto');
 const { createHomeDashboard } = require('./home-dashboard');
 const {
   REPORT_TIMELINE_FIELDS,
@@ -26,6 +26,7 @@ const {
 const { loadLatestFormalDiagnoses } = require('./formal-diagnosis');
 const { taskFor, verdict } = require('./chinese-skill-tasks');
 const { createRecentImageFileNames } = require('./recent-image-file-names');
+const { buildRepairMetricsView, loadRepairMetricsSnapshot } = require('./repair-metrics');
 // 验证卷续跑链每一步都会写 updatedAt；超过该阈值无写入视为调度中断（卡死）
 const VERIFICATION_STALE_MS = 10 * 60 * 1000;
 
@@ -46,6 +47,7 @@ const ACTIONS = new Set([
   'cleanupStaleLearningRecords',
   'getChineseSkillTask',
   'submitChineseSkillTask',
+  'getRepairMetrics',
 ]);
 
 const STATUS_REPORT_STATES = new Set(['pending', 'uploading', 'analyzing', 'failed', 'timeout']);
@@ -477,20 +479,6 @@ async function getReportFeedbackItems(report) {
   }
 }
 
-// 报告详情 DTO：剥离 report 页不消费的调试/原始 AI 字段
-const REPORT_DETAIL_STRIP_FIELDS = new Set([
-  'pageResults', 'rawPages', 'aiRaw', 'rawResponse',
-]);
-
-function stripReportDebugFields(report) {
-  if (!report || typeof report !== 'object') return report;
-  const out = {};
-  for (const key of Object.keys(report)) {
-    if (!REPORT_DETAIL_STRIP_FIELDS.has(key)) out[key] = report[key];
-  }
-  return out;
-}
-
 async function getReportDetail(openId, reportId) {
   if (!reportId) return failure('缺少 reportId');
   const reportRes = await db.collection('reports').doc(reportId).get();
@@ -637,6 +625,14 @@ async function getActiveVerificationPaper(openId, studentId, subject, reportId) 
   }
 
   return withAccess(access, { paper: null, status: 'none' });
+}
+
+async function getRepairMetrics(openId, studentId) {
+  if (!studentId) return failure('缺少 studentId');
+  const access = await getAccess(studentId, openId);
+  if (!access.allowed) return failure('无权访问该学生');
+  const snapshot = await loadRepairMetricsSnapshot(db, studentId);
+  return success({ metrics: buildRepairMetricsView(snapshot) });
 }
 
 async function getLearningProgress(openId, studentId, subject) {
@@ -787,6 +783,9 @@ exports.main = async (event = {}) => {
     }
     if (action === 'getLearningProgress') {
       return getLearningProgress(openId, event.studentId, event.subject);
+    }
+    if (action === 'getRepairMetrics') {
+      return getRepairMetrics(openId, event.studentId);
     }
     if (action === 'cleanupStaleLearningRecords') {
       return cleanupStaleLearningRecords(openId, event.studentId, event.subject, event.dryRun === true);
