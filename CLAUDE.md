@@ -35,7 +35,7 @@ The test framework is **V2 (two categories)** — see `docs/TEST_STRATEGY_V2.md`
 | Pre-deployment readiness | `npm run check:deployment` |
 | Full pre-release gate | `npm run release:check` (deployment + verify + coverage) |
 
-`npm test` is an alias of `npm run test:unit`. The repository holds 97 `.test.js` files; the default offline script explicitly runs 92 of them and currently passes **1089 tests** (342 JS files checked by `npm run check`). The five excluded files are real-cloud, real-image, and three specialized math pipeline suites. Add new default tests to both `test:unit` and `test:coverage` in `package.json`.
+`npm test` is an alias of `npm run test:unit`. The repository holds 99 `.test.js` files; the default offline script explicitly runs 94 of them and currently passes **1110 tests** (347 JS files checked by `npm run check`). The five excluded files are real-cloud, real-image, and three specialized math pipeline suites. Add new default tests to both `test:unit` and `test:coverage` in `package.json`.
 
 **CLI E2E** (WeChat DevTools CLI + `miniprogram-automator`, organized **by subject**, output → `tmp/e2e/<suite>/report.json`). Not in `npm test`; require a running DevTools instance. Run `npm run test:e2e:doctor` first to verify the environment.
 
