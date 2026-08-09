@@ -52,7 +52,7 @@ test('repair-metrics 缺 studentId 进入错误态且不请求后端', async () 
   await page._loadPromise
   assert.equal(called, false)
   assert.equal(page.data.loading, false)
-  assert.match(page.data.errorText, /缺少孩子档案/)
+  assert.equal(page.data.errorText, '缺少孩子档案信息')
 })
 
 test('repair-metrics 后端失败可重试', async () => {
@@ -66,7 +66,7 @@ test('repair-metrics 后端失败可重试', async () => {
   })
   page.onLoad({ studentId: 'student-1' })
   await page._loadPromise
-  assert.match(page.data.errorText, /加载失败/)
+  assert.equal(page.data.errorText, '指标加载失败，请稍后重试')
   page.onRetryTap()
   await page._loadPromise
   assert.equal(page.data.errorText, '')
