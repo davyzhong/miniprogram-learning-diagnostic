@@ -33,6 +33,8 @@ function buildRepairMetricsPageView(result) {
   if (!metrics || metrics.empty) {
     return { empty: true, caliberLines: CALIBER_LINES }
   }
+  // rowKey 供 wxml wx:key 使用：lpCode 非空用 lpCode，否则用全页递增序号兜底，避免空键碰撞。
+  let rowSeq = 0
   return {
     empty: false,
     coverageCard: cardOf(metrics.coverageRate),
@@ -41,10 +43,14 @@ function buildRepairMetricsPageView(result) {
     bucketGroups: BUCKET_TITLES.map(([key, title]) => ({
       key,
       title,
-      rows: ((metrics.buckets || {})[key] || []).map(row => ({
-        lpCode: row.lpCode,
-        name: safeName(row.name)
-      }))
+      rows: ((metrics.buckets || {})[key] || []).map(row => {
+        rowSeq += 1
+        return {
+          rowKey: row.lpCode || `row-${rowSeq}`,
+          lpCode: row.lpCode,
+          name: safeName(row.name)
+        }
+      })
     })),
     timelineRows: (metrics.timeline || []).map(item =>
       `${item.date} · 累计验证 ${item.verifiedTotal} 个 · 通过 ${item.passedTotal} 个`),

@@ -30,6 +30,7 @@ Page({
       const view = buildRepairMetricsPageView(result)
       this.setData({ loading: false, view, errorText: '' })
     } catch (err) {
+      console.error('修复指标加载失败', err)
       this.setData({ loading: false, view: null, errorText: '指标加载失败，请稍后重试' })
     }
   },
