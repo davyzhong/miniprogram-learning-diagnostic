@@ -338,6 +338,7 @@ async function getSubjectDashboard(studentId, subject, options = {}) {
 async function getChineseSkillTask(studentId) { return callFunction('studentData', { action: 'getChineseSkillTask', studentId }) }
 async function submitChineseSkillTask(payload = {}) { return callFunction('studentData', { action: 'submitChineseSkillTask', ...payload }) }
 async function getNodeMasteryMap(studentId, subject = 'math') { return callFunction('studentData', { action: 'getNodeMasteryMap', studentId, subject }) }
+async function getRepairMetrics(studentId) { return callFunction('studentData', { action: 'getRepairMetrics', studentId }) }
 async function generateMicroValidation(payload = {}) { return callFunction('microValidation', { action: 'generateMicroValidation', ...payload }, { timeout: 60000 }) }
 async function submitMicroValidation(payload = {}) { return callFunction('microValidation', { action: 'submitMicroValidation', ...payload }) }
 async function getMicroValidation(sessionId) { return callFunction('microValidation', { action: 'getMicroValidation', sessionId }) }
@@ -526,6 +527,7 @@ module.exports = {
   getSubjectDashboard,
   getChineseSkillTask,
   submitChineseSkillTask,
+  getRepairMetrics,
   getLearningTimeline,
   listRecentImageFileNames,
   cleanupStaleLearningRecords,
