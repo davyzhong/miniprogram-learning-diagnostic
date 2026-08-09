@@ -191,3 +191,55 @@ test('pack 缺 progress.completedAt 时降级用 updatedAt 作为修复完成时
   assert.equal(view.repairRate.denominator, 1)
   assert.equal(view.repairRate.numerator, 1)
 })
+
+const {
+  createCloudMock,
+  createDatabase,
+  loadModule
+} = require('./helpers/cloud-function-harness')
+
+function loadStudentData(db, openId = 'owner-1') {
+  return loadModule('cloudfunctions/studentData/index.js', {
+    'wx-server-sdk': createCloudMock({ db, openId })
+  })
+}
+
+test('getRepairMetrics：无权限拒绝、缺参拒绝、有权限返回双指标', async () => {
+  const db = createDatabase({
+    students: [
+      { _id: 'student-1', _openid: 'owner-1', name: '小明', grade: 4 }
+    ],
+    studentMembers: [
+      { _id: 'member-1', studentId: 'student-1', ownerOpenId: 'owner-1', memberOpenId: 'owner-1', role: 'owner', status: 'active' }
+    ],
+    subjectProfiles: [
+      {
+        _id: 'profile-math', studentId: 'student-1', subject: 'math',
+        currentBottlenecks: [
+          { lpCode: 'LP-001', lpName: '计算基础', status: 'persisting', verificationPassCount: 1, lastVerifiedAt: '2026-07-01T10:00:00Z', lastPassedAt: '2026-07-05T10:00:00Z' }
+        ],
+        improvedBottlenecks: []
+      }
+    ],
+    learningResourcePacks: [
+      { _id: 'pack-1', studentId: 'student-1', subject: 'math', targetId: 'LP-001', status: 'completed', progress: { completedAt: '2026-07-01T09:00:00Z' } }
+    ],
+    interventionSessions: [],
+    microValidations: []
+  })
+
+  const mod = loadStudentData(db)
+
+  const missing = await mod.main({ action: 'getRepairMetrics' })
+  assert.equal(missing.success, false)
+
+  const result = await mod.main({ action: 'getRepairMetrics', studentId: 'student-1' })
+  assert.equal(result.success, true)
+  assert.equal(result.metrics.coverageRate.numerator, 1)
+  assert.equal(result.metrics.repairRate.numerator, 1)
+  assert.equal(result.metrics.repairRate.denominator, 1)
+
+  const stranger = loadStudentData(db, 'stranger-9')
+  const denied = await stranger.main({ action: 'getRepairMetrics', studentId: 'student-1' })
+  assert.equal(denied.success, false)
+})
