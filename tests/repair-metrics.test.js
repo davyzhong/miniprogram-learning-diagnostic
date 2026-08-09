@@ -243,3 +243,57 @@ test('getRepairMetrics：无权限拒绝、缺参拒绝、有权限返回双指�
   const denied = await stranger.main({ action: 'getRepairMetrics', studentId: 'student-1' })
   assert.equal(denied.success, false)
 })
+
+const { buildRepairMetricsPageView } = require('../miniprogram/pages/repair-metrics/repair-metrics-presenter')
+
+test('presenter：空态与错误态', () => {
+  assert.equal(buildRepairMetricsPageView(null).empty, true)
+  assert.equal(buildRepairMetricsPageView({ metrics: { empty: true } }).empty, true)
+})
+
+test('presenter：双指标卡 + 分档 + 小样本提示 + 口径文案', () => {
+  const view = buildRepairMetricsPageView({
+    metrics: {
+      empty: false,
+      totals: { bottlenecks: 3, verified: 2, repaired: 1, repairing: 1, verifiedNotPassed: 0, unverified: 1 },
+      coverageRate: { numerator: 2, denominator: 3, percent: 67, smallSample: true },
+      repairRate: { numerator: 1, denominator: 1, percent: 100, smallSample: true },
+      buckets: {
+        repaired: [{ lpCode: 'LP-001', name: '计算基础' }],
+        repairing: [{ lpCode: 'LP-002', name: '分数运算' }],
+        verifiedNotPassed: [],
+        unverified: [{ lpCode: 'LP-003', name: '小数百分数' }]
+      },
+      timeline: [{ date: '2026-07-03', passedTotal: 1, verifiedTotal: 2 }]
+    }
+  })
+  assert.equal(view.empty, false)
+  assert.equal(view.coverageCard.text, '67%（2/3）')
+  assert.equal(view.repairCard.text, '100%（1/1）')
+  assert.equal(view.smallSample, true)
+  assert.equal(view.bucketGroups.length, 4)
+  assert.equal(view.bucketGroups[0].title, '已修复')
+  assert.equal(view.bucketGroups[0].rows.length, 1)
+  assert.equal(view.bucketGroups[0].rows[0].name, '计算基础')
+  assert.match(view.bucketGroups[0].rows[0].name, /计算基础/)
+  assert.equal(view.timelineRows.length, 1)
+  assert.match(view.timelineRows[0], /2026-07-03/)
+  assert.ok(view.caliberLines.length >= 2)
+})
+
+test('presenter：分档名称不暴露内部编码', () => {
+  const view = buildRepairMetricsPageView({
+    metrics: {
+      empty: false,
+      totals: { bottlenecks: 1, verified: 0, repaired: 0, repairing: 0, verifiedNotPassed: 0, unverified: 1 },
+      coverageRate: { numerator: 0, denominator: 1, percent: 0, smallSample: true },
+      repairRate: { numerator: 0, denominator: 0, percent: 0, smallSample: true },
+      buckets: { repaired: [], repairing: [], verifiedNotPassed: [], unverified: [{ lpCode: 'LP-009', name: '' }] },
+      timeline: []
+    }
+  })
+  const rows = view.bucketGroups.flatMap(group => group.rows)
+  rows.forEach(row => {
+    assert.doesNotMatch(row.name, /^(LP|BN|CHI|ERR|MATH)-/)
+  })
+})
