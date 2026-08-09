@@ -468,6 +468,13 @@ function buildTools(permissions = {}, options = {}, stats = {}) {
       desc: '照片、报告和试卷',
       icon: symbolOf('learningRecords'),
       actionType: 'history'
+    },
+    {
+      key: 'repairMetrics',
+      title: '修复指标',
+      desc: '验证覆盖率与修复率',
+      icon: symbolOf('report'),
+      actionType: 'repairMetrics'
     }
   ].filter(Boolean)
 }

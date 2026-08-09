@@ -744,9 +744,11 @@ test('learning profile home exposes an actionable personal workbench contract', 
     'bottleneckCenter',
     'uploadEvidence',
     'knowledgeMap',
+    'repairMetrics',
     'learningRecords'
   ])
   assert.ok(view.personalActionQueue.every(item => item.url))
+  assert.ok(view.personalActionQueue.find(item => item.key === 'repairMetrics').url.startsWith('/pages/repair-metrics/repair-metrics?'))
 
   assert.deepEqual(view.subjects.map(item => item.actionText), [
     '进入数学工作台',

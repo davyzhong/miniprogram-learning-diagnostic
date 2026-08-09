@@ -431,6 +431,10 @@ function knowledgeMapUrl(student) {
   return `/pages/knowledge-map/knowledge-map?studentId=${encodeURIComponent(student._id || '')}&studentName=${encodeURIComponent(student.name || '')}&subject=math`
 }
 
+function repairMetricsUrl(student) {
+  return `/pages/repair-metrics/repair-metrics?studentId=${encodeURIComponent(student._id || '')}&studentName=${encodeURIComponent(student.name || '')}`
+}
+
 function generateVerificationUrl(student, subjectKey) {
   return subjectHomeUrl(student, subjectKey)
 }
@@ -541,6 +545,13 @@ function buildPersonalActionQueue(student, nextSubject, bottleneckStats, knowled
     summary: knowledgeMapCard.summary || '查看知识节点、卡点和学习资源。',
     actionText: '看地图',
     url: knowledgeMapUrl(student)
+  }, {
+    key: 'repairMetrics',
+    symbol: symbolOf('report'),
+    title: '数学修复指标',
+    summary: '看验证覆盖率和修复率，了解修复闭环是否有效。',
+    actionText: '看指标',
+    url: repairMetricsUrl(student)
   }, {
     key: 'learningRecords',
     symbol: symbolOf('learningRecords'),
