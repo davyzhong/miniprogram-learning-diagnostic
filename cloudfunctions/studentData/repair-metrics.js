@@ -27,7 +27,7 @@ function hits(ids, targetId) {
   return Boolean(targetId) && ids.has(targetId);
 }
 
-function hitsAny(ids, targetIds = []) {
+function hitsAny(ids, targetIds) {
   return (targetIds || []).some(targetId => ids.has(targetId));
 }
 
@@ -65,6 +65,7 @@ function collectEvidence(entry, snapshot) {
     if (completedAt > repairCompletedAt) repairCompletedAt = completedAt;
   });
 
+  // 干预会话在任务包完成时才创建，记录存在即为修复动作完成，因此不过滤状态
   (snapshot.interventionSessions || []).forEach(session => {
     if (!hitsAny(ids, session.bottleneckIds)) return;
     const time = toTime(session.createdAt) || toTime(session.updatedAt);
@@ -103,6 +104,7 @@ function buildRepairMetricsView(snapshot = {}) {
   const profile = snapshot.profile || {};
   const seen = new Set();
   const universe = [];
+  // improved 侧在前，lpCode 冲突时保留携带 improvedDate 的条目
   [...(profile.improvedBottlenecks || []), ...(profile.currentBottlenecks || [])].forEach(entry => {
     const key = entry.lpCode || `row-${universe.length}`;
     if (seen.has(key)) return;

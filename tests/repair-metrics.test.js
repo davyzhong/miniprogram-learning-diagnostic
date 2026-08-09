@@ -144,3 +144,50 @@ test('timeline 按证据时间累计', () => {
   assert.equal(view.timeline[1].verifiedTotal, 2)
   assert.equal(view.timeline[1].passedTotal, 1)
 })
+
+test('通过与修复完成同一时间戳不计入严格修复率分子', () => {
+  const snapshot = {
+    profile: profileWith([
+      entry({ lpCode: 'LP-001', lastPassedAt: '2026-07-01T10:00:00Z', verificationPassCount: 1 })
+    ]),
+    packs: [
+      { _id: 'pack-1', studentId: 'student-1', subject: 'math', targetId: 'LP-001', status: 'completed', progress: { completedAt: '2026-07-01T10:00:00Z' } }
+    ],
+    interventionSessions: [], microValidations: []
+  }
+  const view = buildRepairMetricsView(snapshot)
+  assert.equal(view.repairRate.denominator, 1)
+  assert.equal(view.repairRate.numerator, 0)
+})
+
+test('微验证 completed 但正确率不足 2/3 算未通过证据', () => {
+  const snapshot = {
+    profile: profileWith([
+      entry({ lpCode: 'LP-001', candidateBottlenecks: [{ bottleneckId: 'BN-A' }] })
+    ]),
+    packs: [], interventionSessions: [],
+    microValidations: [
+      { _id: 'mv-1', studentId: 'student-1', subject: 'math', bottleneckId: 'BN-A', status: 'completed', verdicts: ['correct', 'incorrect', 'incorrect'], correctCount: 1, completedAt: '2026-07-03T10:00:00Z' }
+    ]
+  }
+  const view = buildRepairMetricsView(snapshot)
+  assert.deepEqual(view.buckets.verifiedNotPassed.map(r => r.lpCode), ['LP-001'])
+  assert.equal(view.timeline.length, 1)
+  assert.equal(view.timeline[0].passedTotal, 0)
+  assert.equal(view.timeline[0].verifiedTotal, 1)
+})
+
+test('pack 缺 progress.completedAt 时降级用 updatedAt 作为修复完成时间', () => {
+  const snapshot = {
+    profile: profileWith([
+      entry({ lpCode: 'LP-001', lastPassedAt: '2026-07-05T10:00:00Z', verificationPassCount: 1 })
+    ]),
+    packs: [
+      { _id: 'pack-1', studentId: 'student-1', subject: 'math', targetId: 'LP-001', status: 'completed', progress: {}, updatedAt: '2026-07-01T10:00:00Z' }
+    ],
+    interventionSessions: [], microValidations: []
+  }
+  const view = buildRepairMetricsView(snapshot)
+  assert.equal(view.repairRate.denominator, 1)
+  assert.equal(view.repairRate.numerator, 1)
+})
