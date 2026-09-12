@@ -134,10 +134,10 @@ test('B1 shared primitives, subjects, and semantic classes are global and asset-
   assert.doesNotMatch(rules, /(?:url\s*\(|https?:|data:|\.png|\.jpe?g|\.svg|\.webp|\.gif|\.woff|iconfont)/i)
 })
 
-test('all 26 registered routes use the B1 page shell without redefining it locally', () => {
+test('all 27 registered routes use the B1 page shell without redefining it locally', () => {
   const pages = registeredPages()
   const globalPrimitive = /\.(?:b1-page|b1-card|b1-tag|b1-hit-target)\s*\{/
-  assert.equal(pages.length, 26)
+  assert.equal(pages.length, 27)
 
   for (const page of pages) {
     const wxml = read(`${page}.wxml`)

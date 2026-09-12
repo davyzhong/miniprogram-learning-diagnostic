@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "学习修复指标",
+  "usingComponents": {
+    "status-view": "/components/status-view/status-view"
+  }
+}

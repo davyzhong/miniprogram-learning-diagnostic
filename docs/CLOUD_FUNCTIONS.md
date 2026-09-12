@@ -154,6 +154,7 @@ wx.cloud.callFunction({
 | `getPaperDetail` | `paperId` | student、paper |
 | `getActiveVerificationPaper` | `studentId`、`subject` | paper、status（ready/generating/failed/none）。验证卷自动生成场景的状态查询 |
 | `cleanupStaleLearningRecords` | `studentId`；`subject` 可选；`dryRun` 可选 | owner 清理长时间中断的分析记录；`dryRun=true` 只返回可清理数量和记录 ID，不写库 |
+| `getRepairMetrics` | `studentId` | `metrics`：验证覆盖率与严格修复率（分子/分母/百分比/小样本标记）、卡点去向四档、时间快照。纯只读聚合，不写集合 |
 
 ### 统一返回字段
 
@@ -1330,7 +1331,7 @@ wx.cloud.callFunction({
 
 AI 用量与成本估算账本、数据删除请求和内测授权。读操作按 `_openid` 隔离（用户只能读自己的用量事件）。AI 调用的实际事件写入由各 AI 云函数通过本地 `usage-ledger.js` 副本完成（紧贴真实请求边界，避免重试漏记/重记）；本函数只负责读取、聚合和管理。
 
-设计文档：`docs/superpowers/specs/2026-06-27-private-beta-ai-usage-design.md`
+设计文档：`docs/specs/2026-06-27-private-beta-ai-usage-design.md`
 
 ### Actions
 

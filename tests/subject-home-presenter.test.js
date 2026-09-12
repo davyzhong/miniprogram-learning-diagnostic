@@ -35,7 +35,7 @@ test('builds a subject workbench from current bottlenecks and latest reports', (
     isEffective: true,
     changeSummary: '发现计算基础卡点',
     createdAt: '2026-06-12'
-  }], relative, { subjectName: '数学' })
+  }], relative, { subject: 'math', subjectName: '数学' })
 
   assert.equal(view.subjectTitle, '数学工作台')
   assert.equal(view.heroTitle, '有学习卡点等待验证')
@@ -47,8 +47,10 @@ test('builds a subject workbench from current bottlenecks and latest reports', (
   assert.deepEqual(view.taskQueue.map(item => item.actionText), ['查看/下载验证卷', '查看/下载验证卷'])
   assert.equal(view.taskQueue[0].confidenceText, '●●● 高置信')
   assert.ok(view.taskQueue.every(item => item.status !== 'improved'))
-  assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history'])
-  assert.deepEqual(view.tools.map(item => item.icon), ['📸', '📄', '📚'])
+  assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history', 'repairMetrics'])
+  assert.deepEqual(view.tools.map(item => item.icon), ['📸', '📄', '📚', '📊'])
+  const repairTool = view.tools.find(item => item.key === 'repairMetrics')
+  assert.equal(repairTool.actionType, 'repairMetrics')
   assert.equal(view.knowledgeMapSymbol, '🗺️')
   assert.equal(view.emptyQueueSymbol, '✅')
   assert.equal(view.latestReportId, 'report-1')
@@ -211,10 +213,11 @@ test('Chinese workbench prioritizes concrete review items over coarse bottleneck
   assert.equal(view.chineseReviewQueue[0].displayName, '莺')
   assert.match(view.chineseReviewQueue[0].detailText, /上次写成：鹰/)
   assert.match(view.chineseReviewQueue[0].detailText, /草长莺飞二月天/)
+  assert.ok(view.tools.every(item => item.key !== 'repairMetrics'))
 })
 
 test('empty profile exposes a first-use workbench action', () => {
-  const view = buildSubjectHomeView({}, [], relative, { subjectName: '数学' })
+  const view = buildSubjectHomeView({}, [], relative, { subject: 'math', subjectName: '数学' })
 
   assert.equal(view.hasDiagnosis, false)
   assert.equal(view.isFirstUse, true)
@@ -222,7 +225,7 @@ test('empty profile exposes a first-use workbench action', () => {
   assert.equal(view.primaryTask.actionType, 'diagnosis')
   assert.equal(view.primaryTask.actionText, '拍照诊断')
   assert.equal(view.taskQueue.length, 0)
-  assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history'])
+  assert.deepEqual(view.tools.map(item => item.key), ['diagnosis', 'defaultPaper', 'history', 'repairMetrics'])
   assert.equal(view.subjectIllustration.imageSrc, undefined)
   assert.match(view.subjectIllustration.alt, /数学/)
 })

@@ -10,14 +10,27 @@
 
 #### Changed
 
-- 测试、发布、排障类文档收拢进 `docs/quality/`（TESTING、TEST_MATRIX、TEST_STRATEGY_V2、TEST_CONSOLIDATION_PLAN、TEST_FRAMEWORK_DESIGN、RELEASE_CHECKLIST、TROUBLESHOOTING、METRICS）；一次性评审与性能评估收拢进 `docs/audits/`（PERFORMANCE_ASSESSMENT、CODE_REVIEW_TODO、performance/）；规范类收拢进 `docs/standards/`（INFORMATION_DENSITY、EMOJI_COMPATIBILITY_WHITELIST）。根级四大参考文档（ARCHITECTURE / CLOUD_FUNCTIONS / DATA_DICTIONARY / DEPLOYMENT）位置不变。
-- `docs/superpowers/specs/` 更名 `docs/specs/`（代码注释与测试中的"设计权威"指向同步更新）；历史工作计划 `superpowers/plans/` 移出仓库、归档到本地工作区。
+- 测试、发布、排障类文档收拢进 `docs/quality/`（TESTING、TEST_MATRIX、TEST_STRATEGY_V2、TEST_FRAMEWORK_DESIGN、RELEASE_CHECKLIST、TROUBLESHOOTING、METRICS）；规范类收拢进 `docs/standards/`（INFORMATION_DENSITY、EMOJI_COMPATIBILITY_WHITELIST）；一次性评审、性能评估与历史工作计划沿用并统一到 0.4.0 收口建立的 `docs/archive/`（含 performance/ 与 superpowers-plans/）。根级四大参考文档（ARCHITECTURE / CLOUD_FUNCTIONS / DATA_DICTIONARY / DEPLOYMENT）位置不变。
+- `docs/superpowers/specs/` 更名 `docs/specs/`（代码注释与测试中的"设计权威"指向同步更新）。
 - **案例文档匿名化**：12 个含真实学生姓名的学科设计文档收拢进 `docs/subject-design/case-S1/` 并全部更名（文件名与内文的S1/S2替换为 S1/S2）；`docs/test-cases/S1英语学科测试用例库.md` 更名 `case-S1-英语学科测试用例库.md`。学科通用设计文档（验证卷、知识地图、置信度模型）归位 `subject-design/math/`。
 - `check-docs.js` canonical 白名单、`deployment-readiness` / `contracts` / `math-learning-map-seed` 断言、13 处云函数"设计权威"注释同步更新。
 
 #### Security
 
 - 移除 GitHub 文档库文件名与文档正文中的真实学生姓名（隐私红线）。注意：git 历史中仍保留旧文件名，如需彻底清除需另行决策历史改写；`cloudfunctions` 代码与测试中的姓名引用属代码层匿名化，列为后续任务。
+
+### 2026-08-09 学习修复指标页：验证覆盖率与严格修复率
+
+#### Added
+
+- 新增 `pages/repair-metrics` 分包页：数学验证覆盖率与严格修复率双指标、卡点去向四档、时间快照；分母 <5 标注小样本。
+- `studentData` 新增只读 action `getRepairMetrics`：从 subjectProfiles / learningResourcePacks / interventionSessions / microValidations 现算，不新增、不写入任何集合。
+- 数学学科工作台与家庭工作台新增修复指标入口。
+- 口径依据 `docs/specs/2026-08-09-repair-metrics-and-case-validation-design.md`。
+
+## [0.4.0] - 2026-08-08
+
+本版本覆盖 2026-07-11 ~ 2026-08-01 的迭代：数学学习地图 V3（节点掌握六态闭环、微验证、干预会话复测调度）、语文/英语学习闭环、B1 设计体系与信息密度重构、emoji 与可视化体系、可靠性修复，以及发布收口（15 个业务云函数云端部署确认、全量 DevTools E2E、文档基线刷新至 26 页面 / 20 集合 / 1089 测试）。
 
 ### 2026-08-01 发布收口：云端生效、全量 E2E 与最新文档
 
@@ -70,7 +83,7 @@
 - emoji 兼容描述更新为 B01 202 项和 B02 996 项 Android/iOS 目标设备双端通过；4 个 Android 方格项继续排除。
 - 测试口径区分“89 个测试文件库存”与“默认脚本显式执行 84 个文件”，真实云、真实图片和数学专项管线保持独立运行。
 
-### 2026-07-18 可靠性、可视化与 emoji 全量接入（详细报告见 `docs/test-reports/2026-07-18-visualization-emoji-and-reliability.md`）
+### 2026-07-18 可靠性、可视化与 emoji 全量接入（详细报告见 `docs/archive/test-reports/2026-07-18-visualization-emoji-and-reliability.md`）
 
 #### Added
 
