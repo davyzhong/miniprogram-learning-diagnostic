@@ -6,6 +6,13 @@
 
 ## [Unreleased]
 
+### 2026-09-12 合并诊断准确性评测基础设施（在建）
+
+#### Added
+
+- 合并 `agent/diagnostic-accuracy-evaluation-foundation` 分支全部工作：`evaluation/diagnostic-accuracy/`（数据集导入、确定性匹配、三科评分、JSON Schema、统计）与 4 个测试套件（100 用例）。
+- 当前状态：94/100 通过，6 个失败为 schema 校验器与断言的契约不一致（在建设计决策），暂未接入 `test:unit` 默认门禁；后续对齐契约后接入。
+
 ### 2026-09-12 文档库重构：质量目录归位与案例文档匿名化
 
 #### Changed
