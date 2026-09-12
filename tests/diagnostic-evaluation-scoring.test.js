@@ -364,3 +364,85 @@ test('validated fixtures exercise clear-image, answer, hierarchy, multilabel, re
   assert.deepEqual(result.chinese.migrationTypeLegal, ratioMetric(1, 2));
   assert.equal(result.itemResults.find(({ sampleId }) => sampleId === 'fixture.math.fraction').checks.answer, true);
 });
+
+test('diagnosisFullyCorrect requires every applicable primary subject check', () => {
+  const mathInput = aggregateInput();
+  const mathGold = mathInput.annotations.annotations.find(({ sampleId }) => sampleId === 'm-ok').humanLabel.attribution.math;
+  const mathPrediction = mathInput.systemOutput.records.find(({ predictionId }) => predictionId === 'p-m-ok').prediction.attribution.math;
+  mathGold.errorType = 'fraction-error';
+  mathPrediction.errorType = 'sign-error';
+  assert.equal(scoreEvaluation(mathInput).itemResults.find(({ sampleId }) => sampleId === 'm-ok').diagnosisFullyCorrect, false);
+
+  const chineseInput = aggregateInput();
+  const chineseGold = chineseInput.annotations.annotations.find(({ sampleId }) => sampleId === 'c-blank').humanLabel.attribution.chinese;
+  const chinesePrediction = chineseInput.systemOutput.records.find(({ predictionId }) => predictionId === 'p-c-blank').prediction.attribution.chinese;
+  chineseGold.review = 'review-completion';
+  chinesePrediction.review = 'wrong-review';
+  assert.equal(scoreEvaluation(chineseInput).itemResults.find(({ sampleId }) => sampleId === 'c-blank').diagnosisFullyCorrect, false);
+
+  const englishInput = aggregateInput();
+  const englishPrediction = englishInput.systemOutput.records.find(({ predictionId }) => predictionId === 'p-e-unreadable').prediction.attribution.english;
+  englishPrediction.stateUpdate = 'recognition-mastered-spelling-needs-practice';
+  assert.equal(scoreEvaluation(englishInput).itemResults.find(({ sampleId }) => sampleId === 'e-unreadable').diagnosisFullyCorrect, false);
+});
+
+test('validated unknown conclusion remains a matched classification error', () => {
+  const fixture = (name) => JSON.parse(fs.readFileSync(path.join(
+    __dirname, '..', 'evaluation', 'diagnostic-accuracy', 'fixtures', name,
+  ), 'utf8'));
+  const dataset = fixture('dataset.json');
+  const annotations = fixture('annotations.json');
+  const systemOutput = fixture('system-output-candidate.json');
+  systemOutput.records[0].prediction.conclusion = 'unknown';
+  const matchResult = matchEvaluationItems(
+    dataset.documents.flatMap((document) => document.pages.flatMap((page) => page.items
+      .filter((item) => item.composite.role !== 'parent')
+      .map((item) => ({ ...item, subject: document.subject, documentId: document.documentId, pageId: page.pageId })))),
+    systemOutput.records.filter(({ status }) => status === 'success'),
+  );
+  const result = scoreEvaluation({
+    dataset, annotations, systemOutput, matchResult,
+    runManifest: { counts: { total: 7, success: 6, failure: 1, unresolved: 0, retry: 0 } },
+  });
+  const item = result.itemResults.find(({ sampleId }) => sampleId === 'fixture.math.correct');
+  assert.equal(item.checks.conclusion, false);
+  assert.ok(item.errorTags.includes('invalid-prediction-conclusion'));
+  assert.equal(result.overall.classificationAccuracy.denominator, 6);
+});
+
+test('validated page-scoped hallucinations reach matcher and scorer with severe and benign behavior', () => {
+  const fixture = (name) => JSON.parse(fs.readFileSync(path.join(
+    __dirname, '..', 'evaluation', 'diagnostic-accuracy', 'fixtures', name,
+  ), 'utf8'));
+  const dataset = fixture('dataset.json');
+  const annotations = fixture('annotations.json');
+  const systemOutput = fixture('system-output-candidate.json');
+  const base = systemOutput.records.find(({ sampleId }) => sampleId === 'fixture.english.correct');
+  const hallucination = structuredClone(base);
+  hallucination.predictionId = 'prediction.hallucination';
+  delete hallucination.sampleId;
+  hallucination.prediction.localization = { x: 10, y: 10, width: 1, height: 1, unit: 'normalized' };
+  hallucination.prediction.text = 'ghost';
+  hallucination.prediction.conclusion = 'incorrect';
+  hallucination.prediction.attribution.english.wordIdentity = 'ghost';
+  systemOutput.records.push(hallucination);
+  const goldItems = dataset.documents.flatMap((document) => document.pages.flatMap((page) => page.items
+    .filter((item) => item.composite.role !== 'parent')
+    .map((item) => ({ ...item, subject: document.subject, documentId: document.documentId, pageId: page.pageId }))));
+  let matchResult = matchEvaluationItems(goldItems, systemOutput.records.filter(({ status }) => status === 'success'));
+  assert.ok(matchResult.hallucinated.some(({ predictionId }) => predictionId === 'prediction.hallucination'));
+  let result = scoreEvaluation({
+    dataset, annotations, systemOutput, matchResult,
+    runManifest: { counts: { total: 8, success: 7, failure: 1, unresolved: 0, retry: 0 } },
+  });
+  assert.equal(result.hallucinationResults.find(({ predictionId }) => predictionId === 'prediction.hallucination').highestSeverity, 'S1');
+
+  hallucination.prediction.conclusion = 'correct';
+  hallucination.prediction.attribution.english.stateUpdate = 'no-state-update';
+  matchResult = matchEvaluationItems(goldItems, systemOutput.records.filter(({ status }) => status === 'success'));
+  result = scoreEvaluation({
+    dataset, annotations, systemOutput, matchResult,
+    runManifest: { counts: { total: 8, success: 7, failure: 1, unresolved: 0, retry: 0 } },
+  });
+  assert.equal(result.hallucinationResults.find(({ predictionId }) => predictionId === 'prediction.hallucination').highestSeverity, null);
+});

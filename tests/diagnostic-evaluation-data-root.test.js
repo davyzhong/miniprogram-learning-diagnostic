@@ -225,12 +225,14 @@ test('all evaluation JSON schemas parse and use draft 2020-12', () => {
   }
 });
 
-test('dataset, annotation, and system output share required sampleId linkage', () => {
+test('dataset and annotations require gold sample linkage while outputs use prediction identity and optional claims', () => {
   assert.ok(datasetSchema.$defs.item.required.includes('sampleId'));
   assert.equal(Object.hasOwn(datasetSchema.$defs.item.properties, 'itemId'), false);
   assert.ok(annotationSchema.required.includes('sampleId'));
   assert.equal(Object.hasOwn(annotationSchema.properties, 'itemId'), false);
-  assert.ok(systemOutputSchema.required.includes('sampleId'));
+  assert.equal(systemOutputSchema.required.includes('sampleId'), false);
+  assert.ok(systemOutputSchema.required.includes('predictionId'));
+  assert.ok(systemOutputSchema.required.includes('subject'));
   assert.equal(Object.hasOwn(systemOutputSchema.properties, 'itemId'), false);
 });
 
@@ -249,6 +251,7 @@ test('linked identifiers use the same non-whitespace stable-ID contract', () => 
   assert.equal(runSchema.properties.runId.$ref, '#/$defs/stableId');
   assert.equal(systemOutputSchema.properties.runId.$ref, '#/$defs/stableId');
   assert.equal(systemOutputSchema.properties.sampleId.$ref, '#/$defs/stableId');
+  assert.equal(systemOutputSchema.properties.predictionId.$ref, '#/$defs/stableId');
   assert.equal(new RegExp(stablePattern).test('   '), false);
   assert.equal(new RegExp(stablePattern).test('run with spaces'), false);
 });
@@ -266,6 +269,11 @@ test('system outputs distinguish successful predictions from terminal failures',
   assert.equal(failure.properties.failures.minItems, 1);
   assert.equal(failure.required.includes('prediction'), false);
   assert.deepEqual(failure.not, { required: ['prediction'] });
+});
+
+test('raw prediction conclusion preserves normalized unknown model output for scoring', () => {
+  assert.ok(systemOutputSchema.$defs.predictionConclusion.enum.includes('unknown'));
+  assert.equal(annotationSchema.$defs.label.properties.conclusion.enum.includes('unknown'), false);
 });
 
 test('gold and predicted attribution share canonical fields with explicit gold-only constraints', () => {

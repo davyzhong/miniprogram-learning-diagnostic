@@ -537,6 +537,36 @@ test('system output rejects dishonest branches, duplicates, mismatched subjects,
   }
 });
 
+test('system output permits unknown or absent sample claims but enforces page context and prediction identity', () => {
+  const dataset = readFixture('dataset.json');
+  const source = readFixture('system-output-candidate.json');
+  const record = clone(source.records[4]);
+  record.predictionId = 'prediction.hallucinated';
+  delete record.sampleId;
+  record.prediction.conclusion = 'unknown';
+  const absentClaim = { ...source, records: [record] };
+  const oneRecordRun = validRun(dataset, {
+    counts: { total: 1, success: 1, failure: 0, unresolved: 0, retry: 0 }, status: 'completed',
+  });
+  assert.equal(validateSystemOutput(absentClaim, { dataset, runManifest: oneRecordRun }).valid, true);
+
+  const unknownClaim = clone(absentClaim);
+  unknownClaim.records[0].sampleId = 'unknown.sample';
+  assert.equal(validateSystemOutput(unknownClaim, { dataset, runManifest: oneRecordRun }).valid, true);
+
+  const crossed = clone(absentClaim);
+  crossed.records[0].documentId = 'fixture.math.document';
+  assert.match(validateSystemOutput(crossed, { dataset, runManifest: oneRecordRun }).errors.join('\n'), /document|page.*context/iu);
+
+  const duplicateClaim = clone(source);
+  duplicateClaim.records[1].sampleId = duplicateClaim.records[0].sampleId;
+  assert.equal(validateSystemOutput(duplicateClaim, { dataset, runManifest: validRun(dataset) }).errors.some((error) => /duplicate.*sample/iu.test(error)), false);
+
+  const duplicateIdentity = clone(source);
+  duplicateIdentity.records[1].predictionId = duplicateIdentity.records[0].predictionId;
+  assert.match(validateSystemOutput(duplicateIdentity, { dataset, runManifest: validRun(dataset) }).errors.join('\n'), /duplicate.*predictionId/iu);
+});
+
 test('system output validates prediction primitive and subject-specific field types', () => {
   const dataset = readFixture('dataset.json');
   const manifest = validRun(dataset);
