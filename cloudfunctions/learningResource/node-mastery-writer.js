@@ -1,6 +1,6 @@
 // 节点掌握状态写路径（learningResource 侧）。
 // completePack 完成学习任务包时，把"资源学习 + 当场练习通过"写入 studentNodeMastery。
-// 设计权威：docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md
+// 设计权威：docs/specs/2026-07-17-math-node-mastery-loop-design.md
 const { applyEvent } = require('./node-mastery')
 const { isMissingCollectionError } = require('./access')
 const taxonomySeed = require('./math-seeds/bottleneck-taxonomy-v2.seed.js')

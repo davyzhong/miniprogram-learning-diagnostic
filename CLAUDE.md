@@ -21,7 +21,7 @@ Authoritative in `PRD.md` and `docs/subject-design/README.md`. Current prioritie
 
 There is no CLI build for the mini program itself — compilation, preview, and cloud-function deployment happen in the **WeChat Developer Tools IDE** (compile = 编译, deploy a cloud function = right-click its dir → "上传并部署：云端安装依赖"). Set cloud functions to the platform max timeout of **60s**.
 
-The test framework is **V2 (two categories)** — see `docs/TEST_STRATEGY_V2.md`. The old L0–L4 layered model is retired.
+The test framework is **V2 (two categories)** — see `docs/quality/TEST_STRATEGY_V2.md`. The old L0–L4 layered model is retired.
 
 **Unit automation** (offline, `node:test` + `node:assert/strict`, no `wx`):
 
@@ -108,7 +108,7 @@ Collections: `englishImportBatches`, `studentEnglishWords` (personal word librar
 - **Emoji whitelist**: `miniprogram/utils/ui-symbols.js` is the ONLY source of UI emoji — 205 keys (202 verified candidates across C01–C14 + subject aliases), all verified displayable on the target Android device via the `pages/icon-compatibility` lab. Pages inject symbols through presenters via `symbolOf()`/`subjectSymbolOf()` and render with `{{}}` — never write emoji literals into WXML. Anything outside the whitelist is rejected by `bplus-design-system.test.js`. Bottom line: emoji assist recognition only; every entry and status keeps its text label (body icons 28–32rpx, empty-state decorations 64–96rpx).
 - **Common status component**: `miniprogram/components/status-view/` (loading/empty/error + retry event) — use it for page-level async states instead of hand-rolled dead-end error text.
 - **Status segments**: `miniprogram/utils/status-segments.js` (`buildStatusSegments`) + `.b1-seg-*` classes in `app.wxss` render stacked status-composition bars (child cards, family hero, vocab stats, mastery bars). Pure WXSS, no chart libs — main-package budget is 1200 KB (raised from 800 KB on 2026-07-18; WeChat platform hard limit is 2 MB).
-- **Information density**: `docs/INFORMATION_DENSITY.md` is the project-wide layout standard — one datum per page, single-line stat rows, ≤4 lines per list item, compact headers, whitespace budgets (card padding ≤18rpx etc.), and default-collapsing for long lists. New pages must follow it; legacy pages are being converged per the audit list in its appendix.
+- **Information density**: `docs/standards/INFORMATION_DENSITY.md` is the project-wide layout standard — one datum per page, single-line stat rows, ≤4 lines per list item, compact headers, whitespace budgets (card padding ≤18rpx etc.), and default-collapsing for long lists. New pages must follow it; legacy pages are being converged per the audit list in its appendix.
 - **Presenter split**: Heavy pages keep UI in `<page>.js` and extract testable logic into a plain-JS module with no `wx` dependency so it can be unit-tested directly. Page-specific presenters: `index-presenter`, `report-presenter`, `paper-preview-presenter`, `subject-home-presenter`, `upload-history-presenter`, `knowledge-map-presenter`, `learning-resource-presenter`. Shared view-model modules (no `-presenter` suffix but same role): `utils/child-workbench.js` (family), `utils/bottleneck-view.js`, `utils/paper-display.js`.
 - **Data access layer**: `miniprogram/utils/cloud.js` wraps `wx.cloud.callFunction` (expecting a `{success, data, error}` envelope — `success === false` throws) and also exposes direct DB reads. Pages and other utils call through it rather than hitting `wx.cloud` directly.
 - **PDF generation**: `pdfkit` runs inside cloud functions using a bundled `NotoSansCJKsc-Regular.otf`. A missing font must fail loudly, not produce garbled Chinese.
@@ -238,7 +238,7 @@ Per-change documentation discipline — from `docs/product/mvp-roadmap-and-bound
 - `npm run verify` must pass before pushing implementation changes.
 - **Data schema change → update `docs/DATA_DICTIONARY.md`.**
 - **New cloud function behavior → update `docs/CLOUD_FUNCTIONS.md`.**
-- **New test coverage → reflect in `docs/TEST_MATRIX.md`.**
+- **New test coverage → reflect in `docs/quality/TEST_MATRIX.md`.**
 - **Subject behavior change → update `docs/subject-design/`.**
 
 Doc authority priority (from `00-总项目知识库/00-文档库治理/文档分类与版本规则-v0.1.md`): 已实现工程事实 > 最近正式 PRD > 真实案例/测试报告 > 纯假设. Early vision docs do NOT override current MVP boundary. External facts (竞品/API/平台能力) >30 天未复核的应标 `NEEDS_REVIEW`.
@@ -271,9 +271,9 @@ When the user asks to sync / pull / align with GitHub, **GitHub is the source of
 - `PRD.md` — product requirements (v2.9)
 - `PROJECT_PLAN.md` — architecture, data models, progress tracker
 - `SETUP.md` — deployment (env, DB setup, font upload)
-- `docs/ARCHITECTURE.md`, `docs/CLOUD_FUNCTIONS.md`, `docs/DATA_DICTIONARY.md`, `docs/TROUBLESHOOTING.md`, `docs/TEST_MATRIX.md`
-- **Test framework (V2)**: `docs/TEST_STRATEGY_V2.md` (current — two-category model), `docs/TESTING.md`, `docs/TEST_FRAMEWORK_DESIGN.md` (both rewritten to V2)
+- `docs/ARCHITECTURE.md`, `docs/CLOUD_FUNCTIONS.md`, `docs/DATA_DICTIONARY.md`, `docs/quality/TROUBLESHOOTING.md`, `docs/quality/TEST_MATRIX.md`
+- **Test framework (V2)**: `docs/quality/TEST_STRATEGY_V2.md` (current — two-category model), `docs/quality/TESTING.md`, `docs/quality/TEST_FRAMEWORK_DESIGN.md` (both rewritten to V2)
 - **Product docs** (`docs/product/`): `mvp-roadmap-and-boundaries.md` (priorities P0–P3, scope, quality gates), `learning-diagnostic-product-brief.md` (positioning + 7 product principles), `family-learning-workflow.md` (15–20 min session, evidence sub-states), `prompt-and-agent-design.md` (AI prompt chain + agent roles)
 - **Subject design** (`docs/subject-design/`): `README.md` (总入口), `验证卷完整设计文档.md` + `置信度驱动分层验证模型设计文档.md` (verification + confidence model + 信息一致性全局原则), `math/` (math learning map), `english/` (vocabulary loop, paper-dictation voice flow, written-diagnosis decision), `legacy/` (superseded notes)
 - External knowledge base (NOT in this repo, for traceability only): `../00-总项目知识库/` — vision/governance docs. Implementation specs live in this GitHub repo; the KB keeps conclusions and indices only.
-- `.claude/skills/test-framework/skill.md` — test framework skill (may still describe the old L0–L4 model; `docs/TEST_STRATEGY_V2.md` is authoritative for the current two-category model).
+- `.claude/skills/test-framework/skill.md` — test framework skill (may still describe the old L0–L4 model; `docs/quality/TEST_STRATEGY_V2.md` is authoritative for the current two-category model).

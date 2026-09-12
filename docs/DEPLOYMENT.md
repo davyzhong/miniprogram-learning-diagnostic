@@ -4,7 +4,7 @@
 
 本文记录小程序本地验证、15 个业务云函数的部署和发布前烟测流程。目标是让每次改动都能按同一套步骤交付，避免漏部署云函数或只在本地测试通过。项目负责人已确认 2026-08-01 本周期云函数部署完成。
 
-完整发布门禁、回滚步骤和发布记录模板见 [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md)。
+完整发布门禁、回滚步骤和发布记录模板见 [RELEASE_CHECKLIST.md](./quality/RELEASE_CHECKLIST.md)。
 
 ## 1. 发布前检查
 

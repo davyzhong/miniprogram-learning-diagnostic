@@ -183,8 +183,8 @@ test('deployment workflow is documented and exposed as a package script', () => 
 test('release and rollback workflow is documented and exposed as a package script', () => {
   const pkg = JSON.parse(read('package.json'))
 
-  assert.ok(exists('docs/RELEASE_CHECKLIST.md'), 'release checklist should exist')
-  const checklist = read('docs/RELEASE_CHECKLIST.md')
+  assert.ok(exists('docs/quality/RELEASE_CHECKLIST.md'), 'release checklist should exist')
+  const checklist = read('docs/quality/RELEASE_CHECKLIST.md')
   assert.match(checklist, /npm run verify/)
   assert.match(checklist, /npm run test:coverage/)
   assert.match(checklist, /git diff --check/)
@@ -192,7 +192,7 @@ test('release and rollback workflow is documented and exposed as a package scrip
   assert.match(checklist, /云函数/)
   assert.match(checklist, /回滚/)
   assert.equal(pkg.scripts['release:check'], 'npm run check:deployment && npm run verify && npm run test:coverage')
-  assert.match(read('README.md'), /docs\/RELEASE_CHECKLIST\.md/)
+  assert.match(read('README.md'), /docs\/quality\/RELEASE_CHECKLIST\.md/)
 })
 
 test('analysis task hot query has a machine-checked index and a deploy acknowledgement gate', () => {

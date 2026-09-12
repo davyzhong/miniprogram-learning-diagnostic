@@ -2,7 +2,7 @@
 // completePack 完成学习任务包时，自动沉淀一条 interventionSessions 记录：
 // 资源使用、当场练习结果、掌握状态前后变化、24h/72h 复测安排。
 // 字段对齐 data/math/intervention-sessions.example.json 与干预会话模板。
-// 设计权威：docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md（Phase C 部分）
+// 设计权威：docs/specs/2026-07-17-math-node-mastery-loop-design.md（Phase C 部分）
 const { isMissingCollectionError } = require('./access')
 
 const SESSIONS_COLLECTION = 'interventionSessions'

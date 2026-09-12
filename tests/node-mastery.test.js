@@ -1,6 +1,6 @@
 // tests/node-mastery.test.js
 // 六态掌握状态机：全转移路径 + 守卫规则（不跳级、不降级空转、unobserved 不落库）。
-// 设计权威：docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md
+// 设计权威：docs/specs/2026-07-17-math-node-mastery-loop-design.md
 const test = require('node:test')
 const assert = require('node:assert/strict')
 

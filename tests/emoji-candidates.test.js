@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 
 const ROOT = path.resolve(__dirname, '..')
-const SPEC_PATH = path.join(ROOT, 'docs/superpowers/specs/2026-07-17-practical-emoji-compatibility-lab-design.md')
+const SPEC_PATH = path.join(ROOT, 'docs/specs/2026-07-17-practical-emoji-compatibility-lab-design.md')
 const {
   EMOJI_CATEGORIES,
   EMOJI_CANDIDATE_COUNT,

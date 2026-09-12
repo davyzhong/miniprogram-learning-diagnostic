@@ -18,12 +18,12 @@
 | 云函数入参、出参与错误 | [云函数 API](CLOUD_FUNCTIONS.md) |
 | 集合与字段 | [数据字典](DATA_DICTIONARY.md) |
 | 本地和云环境配置 | [部署指南](../SETUP.md) |
-| 部署、烟测与回滚 | [部署与烟测](DEPLOYMENT.md) · [发布清单](RELEASE_CHECKLIST.md) |
-| 自动化测试与 E2E | [测试指南](TESTING.md) · [测试矩阵](TEST_MATRIX.md) |
-| 指标与运营观测 | [学习指标](METRICS.md) |
-| 常见故障 | [故障排查](TROUBLESHOOTING.md) |
+| 部署、烟测与回滚 | [部署与烟测](DEPLOYMENT.md) · [发布清单(quality/RELEASE_CHECKLIST.md) |
+| 自动化测试与 E2E | [测试指南(quality/TESTING.md) · [测试矩阵(quality/TEST_MATRIX.md) |
+| 指标与运营观测 | [学习指标(quality/METRICS.md) |
+| 常见故障 | [故障排查(quality/TROUBLESHOOTING.md) |
 | CLI 与 Skills | [Skill 与 CLI 设计](SKILL_AND_CLI_DESIGN.md) |
-| emoji 真机兼容 | [兼容白名单](EMOJI_COMPATIBILITY_WHITELIST.md) |
+| emoji 真机兼容 | [兼容白名单(standards/EMOJI_COMPATIBILITY_WHITELIST.md) |
 | 2026-08-01 发布收口证据 | [云部署、真机、E2E 与文档收口报告](test-reports/2026-08-01-release-closure.md) |
 
 ## 学科设计
@@ -46,4 +46,4 @@
 | `CODEMAPS/` | 代码结构快照 |
 | `subject-design/legacy/` | 已被替代或仅供背景参考的学科方案 |
 
-判断某项能力是否已经实现时，优先查看当前代码、[CHANGELOG](../CHANGELOG.md)、[测试矩阵](TEST_MATRIX.md)和最近测试结果，不要只依据历史计划中的勾选状态。
+判断某项能力是否已经实现时，优先查看当前代码、[CHANGELOG](../CHANGELOG.md)、[测试矩阵(quality/TEST_MATRIX.md)和最近测试结果，不要只依据历史计划中的勾选状态。

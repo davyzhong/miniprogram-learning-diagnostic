@@ -158,6 +158,6 @@ test('resource library keeps platform links as parent-reviewed recommendations',
 test('math subject design index links the upgraded docs', () => {
   const index = fs.readFileSync(path.join(root, 'docs/subject-design/README.md'), 'utf8')
 
-  assert.match(index, /S1数学学习地图与资源库升级详细设计\.md/)
-  assert.match(index, /S1数学诊断输出合同v2\.md/)
+  assert.match(index, /case-S1\/数学学习地图与资源库升级详细设计\.md/)
+  assert.match(index, /case-S1\/数学诊断输出合同v2\.md/)
 })

@@ -10,11 +10,11 @@
 ## Active Documents
 
 - [Math Learning Map Roadmap](./math-learning-map-roadmap.md)
-- [Detailed math map and resource design](../S1数学学习地图与资源库升级详细设计.md)
-- [Math subject design](../S1数学学科设计文档.md)
-- [Math diagnosis output contract v2](../S1数学诊断输出合同v2.md)
-- [Math bottleneck hierarchy and verification-resource scheduling](../S1数学学习卡点层级与验证资源调度升级设计文档.md)
-- [Historical report reanalysis runbook](../S1数学历史报告全量重分析执行说明.md)
+- [Detailed math map and resource design](../case-S1/数学学习地图与资源库升级详细设计.md)
+- [Math subject design](../case-S1/数学学科设计.md)
+- [Math diagnosis output contract v2](../case-S1/数学诊断输出合同v2.md)
+- [Math bottleneck hierarchy and verification-resource scheduling](../case-S1/数学卡点层级与验证资源调度升级设计.md)
+- [Historical report reanalysis runbook](../case-S1/数学历史报告全量重分析执行说明.md)
 
 ## Data Sources
 

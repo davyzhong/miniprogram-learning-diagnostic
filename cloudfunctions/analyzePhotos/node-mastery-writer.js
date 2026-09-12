@@ -3,7 +3,7 @@
 // studentNodeMastery 集合的状态事件：
 // - 普通诊断报告：bottlenecks[].nodeIds + candidateBottlenecks[].nodeId → errorEvidence
 // - 验证卷报告：verificationEvidence 按 targetId(BN)→nodeId 映射 → verificationPassed/Failed
-// 设计权威：docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md
+// 设计权威：docs/specs/2026-07-17-math-node-mastery-loop-design.md
 const { applyEvent } = require('./node-mastery')
 const taxonomySeed = require('./math-seeds/bottleneck-taxonomy-v2.seed.js')
 

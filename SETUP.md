@@ -1,6 +1,6 @@
 # 部署指南（SETUP）
 
-> 更新日期：2026-08-01。当前部署单元为 26 个注册页面、15 个业务云函数和 20 个数据库集合；本周期云函数已由项目负责人确认部署完成。完整发布门禁见 [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md)。
+> 更新日期：2026-08-01。当前部署单元为 26 个注册页面、15 个业务云函数和 20 个数据库集合；本周期云函数已由项目负责人确认部署完成。完整发布门禁见 [`docs/quality/RELEASE_CHECKLIST.md`](docs/quality/RELEASE_CHECKLIST.md)。
 
 ## 一、云开发环境配置
 
@@ -258,7 +258,7 @@ miniprogram-learning-diagnostic/
 ├── PROJECT_PLAN.md          ✅
 ├── PRD.md                   ✅（v2.9）
 ├── SETUP.md                ✅（本文件）
-└── docs/TEST_MATRIX.md     ✅
+└── docs/quality/TEST_MATRIX.md     ✅
 ```
 
 ---

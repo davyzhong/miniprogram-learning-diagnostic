@@ -1,7 +1,7 @@
 // 节点掌握状态读路径（studentData 侧）。
 // getNodeMasteryMap：返回学生某学科的全部 studentNodeMastery 记录，
 // 知识地图页将其与前端 150 节点镜像合并渲染六态地图（无记录节点 = unobserved）。
-// 设计权威：docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md
+// 设计权威：docs/specs/2026-07-17-math-node-mastery-loop-design.md
 const { getStudentAccess, isMissingCollectionError } = require('./access')
 
 const MASTERY_COLLECTION = 'studentNodeMastery'

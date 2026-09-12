@@ -257,7 +257,7 @@ npm run test:e2e:all        # 主要页面与学科 CLI E2E
 npm run perf:baseline       # CLI 性能基线
 ```
 
-真实云环境、真实图片和真机测试默认与离线测试隔离，避免误调用 AI 或写入真实数据。完整说明见[测试指南](docs/TESTING.md)。
+真实云环境、真实图片和真机测试默认与离线测试隔离，避免误调用 AI 或写入真实数据。完整说明见[测试指南](docs/quality/TESTING.md)。
 
 ## 当前质量基线
 
@@ -275,7 +275,7 @@ npm run perf:baseline       # CLI 性能基线
 | 数学知识节点 | 150 | `data/math/knowledge-nodes.seed.json` |
 | 标准细卡点 | 40 | `cloudfunctions/analyzeBatch/taxonomy-bn-list.js` |
 
-主包距离 1200 KB 内部预算约有 391 KB 空间，但新增大体积资源仍应优先评估分包，且不得突破微信平台 2 MB 主包限制。发布门禁、真实数据烟测和回滚流程见[发布清单](docs/RELEASE_CHECKLIST.md)。
+主包距离 1200 KB 内部预算约有 391 KB 空间，但新增大体积资源仍应优先评估分包，且不得突破微信平台 2 MB 主包限制。发布门禁、真实数据烟测和回滚流程见[发布清单](docs/quality/RELEASE_CHECKLIST.md)。
 
 ## 文档导航
 
@@ -288,8 +288,8 @@ npm run perf:baseline       # CLI 性能基线
 | 前后端如何协作 | [系统架构](docs/ARCHITECTURE.md) · [云函数 API](docs/CLOUD_FUNCTIONS.md) |
 | 数据存在哪里 | [数据字典](docs/DATA_DICTIONARY.md) |
 | 如何配置和部署 | [部署指南](SETUP.md) · [部署与烟测](docs/DEPLOYMENT.md) |
-| 如何测试和发布 | [测试指南](docs/TESTING.md) · [测试矩阵](docs/TEST_MATRIX.md) · [发布清单](docs/RELEASE_CHECKLIST.md) |
-| 遇到问题如何处理 | [故障排查](docs/TROUBLESHOOTING.md) |
+| 如何测试和发布 | [测试指南](docs/quality/TESTING.md) · [测试矩阵](docs/quality/TEST_MATRIX.md) · [发布清单](docs/quality/RELEASE_CHECKLIST.md) |
+| 遇到问题如何处理 | [故障排查](docs/quality/TROUBLESHOOTING.md) |
 | 全部当前文档与历史资料 | [文档中心](docs/README.md) |
 
 ## 隐私与数据边界

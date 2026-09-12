@@ -6,6 +6,19 @@
 
 ## [Unreleased]
 
+### 2026-09-12 文档库重构：质量目录归位与案例文档匿名化
+
+#### Changed
+
+- 测试、发布、排障类文档收拢进 `docs/quality/`（TESTING、TEST_MATRIX、TEST_STRATEGY_V2、TEST_CONSOLIDATION_PLAN、TEST_FRAMEWORK_DESIGN、RELEASE_CHECKLIST、TROUBLESHOOTING、METRICS）；一次性评审与性能评估收拢进 `docs/audits/`（PERFORMANCE_ASSESSMENT、CODE_REVIEW_TODO、performance/）；规范类收拢进 `docs/standards/`（INFORMATION_DENSITY、EMOJI_COMPATIBILITY_WHITELIST）。根级四大参考文档（ARCHITECTURE / CLOUD_FUNCTIONS / DATA_DICTIONARY / DEPLOYMENT）位置不变。
+- `docs/superpowers/specs/` 更名 `docs/specs/`（代码注释与测试中的"设计权威"指向同步更新）；历史工作计划 `superpowers/plans/` 移出仓库、归档到本地工作区。
+- **案例文档匿名化**：12 个含真实学生姓名的学科设计文档收拢进 `docs/subject-design/case-S1/` 并全部更名（文件名与内文的S1/S2替换为 S1/S2）；`docs/test-cases/S1英语学科测试用例库.md` 更名 `case-S1-英语学科测试用例库.md`。学科通用设计文档（验证卷、知识地图、置信度模型）归位 `subject-design/math/`。
+- `check-docs.js` canonical 白名单、`deployment-readiness` / `contracts` / `math-learning-map-seed` 断言、13 处云函数"设计权威"注释同步更新。
+
+#### Security
+
+- 移除 GitHub 文档库文件名与文档正文中的真实学生姓名（隐私红线）。注意：git 历史中仍保留旧文件名，如需彻底清除需另行决策历史改写；`cloudfunctions` 代码与测试中的姓名引用属代码层匿名化，列为后续任务。
+
 ### 2026-08-01 发布收口：云端生效、全量 E2E 与最新文档
 
 #### Changed
@@ -92,7 +105,7 @@
 - **统一状态感知体系**：新建 `utils/status-store.js`（全局状态 Store + 事件总线）和 `utils/app-status.js`（app 级单例 + `bindPageStatus` 页面混入）。覆盖所有异步操作（诊断分析、验证卷生成、报告 PDF、听写批改），操作状态变更时自动通知所有订阅页面。上传成功后直接跳转报告页轮询（修复"AI 分析中之后无反馈"），首页/学科页/学习记录页收到 `operation:completed` 事件自动刷新。
 - **上传页授权遮罩修复**：内测授权守卫改用页内遮罩（WXML overlay）替代不可靠的 `wx.showModal`，修复"点击上传按钮无反应"。
 - **AI 用量与成本估算账本**（体验版内测）：`aiUsage` 云函数 + `aiUsageEvents` 追加式事件账本。各 AI 云函数（analyzeBatch/generatePaper/learningResource/englishVocabulary）在真实调用边界写入 pending→succeeded/failed 事件，成本优先用真实 token usage，无 usage 时按字符/图片数估算并标记。账单页（`pages/ai-usage`）展示月度汇总、按功能拆分和按天明细，强制标注"内测成本估算，不代表应付款项"。
-- **内测授权与数据删除**：首次上传前展示内测说明弹层（收集内容/用途/风险/删除方式），用户同意后才能继续；`userConsents` 集合记录授权；AI 用量页可发起 `dataDeletionRequests`。设计文档见 `docs/superpowers/specs/2026-06-27-private-beta-ai-usage-design.md`。
+- **内测授权与数据删除**：首次上传前展示内测说明弹层（收集内容/用途/风险/删除方式），用户同意后才能继续；`userConsents` 集合记录授权；AI 用量页可发起 `dataDeletionRequests`。设计文档见 `docs/specs/2026-06-27-private-beta-ai-usage-design.md`。
 - 验证卷预览页“覆盖卡点”层级展示：新增 `paperDisplay.bottleneckHierarchy`，按粗类、卡点家族、细卡点展示覆盖范围，并兼容旧 LP/摘要数据。
 - 验证卷范围页卡点层级提示：数学目标显示“粗类 / 卡点组”，语文具体错项继续显示错项说明。
 - **本地 PDF 预览工具** `scripts/preview-pdf.js`：改完 PDF 渲染代码直接跑，不用上传云函数即可看效果。输出到 `tmp/preview-verification.pdf`

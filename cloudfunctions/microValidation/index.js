@@ -1,7 +1,7 @@
 // 微验证云函数：围绕单个细卡点（BN）生成 3-6 道微验证小题，
 // 家长陪同孩子当场作答并判定对错，系统据此确认或推翻疑似卡点，
 // 结果经 verificationPassed/Failed 事件写入 studentNodeMastery。
-// 设计权威：诊断输出合同 v2 §4 + docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md
+// 设计权威：诊断输出合同 v2 §4 + docs/specs/2026-07-17-math-node-mastery-loop-design.md
 const cloud = require('wx-server-sdk')
 const tcb = require('@cloudbase/node-sdk')
 const { getStudentAccess, canOperateLearning, isMissingCollectionError } = require('./access')

@@ -5,7 +5,7 @@ description: "学习诊断小程序三层测试框架（L1 静态守卫 + L2 逻
 
 # 三层测试框架
 
-> 分层架构详见 `docs/TEST_FRAMEWORK_DESIGN.md`。
+> 分层架构详见 `docs/quality/TEST_FRAMEWORK_DESIGN.md`。
 
 ```
 L1 静态守卫 (check-js / contracts / 部署完整性) — <1s
@@ -138,7 +138,7 @@ test('卡点引用完整性', () => {
 
 1. 创建 `tests/<name>.test.js`
 2. 打开 `package.json`，把文件名加到 `scripts.test` 和 `scripts['test:coverage']`（两个都要加！）
-3. 在 `docs/TEST_MATRIX.md` 对应的 PRD 功能行更新测试覆盖状态
+3. 在 `docs/quality/TEST_MATRIX.md` 对应的 PRD 功能行更新测试覆盖状态
 4. 跑 `npm run verify` 确认通过
 
 ## L3：写 E2E 测试（DevTools）
@@ -209,8 +209,8 @@ L3 不走真实云函数。`installCloudMocks(mp)` 在 `miniProgram.evaluate()` 
 
 ## 相关文档
 
-- `docs/TEST_FRAMEWORK_DESIGN.md` — 完整设计文档（三层架构、测试流程、CI、改进机制）
-- `docs/TESTING.md` — 测试操作指南（命令、文件说明、调试技巧）
-- `docs/TEST_MATRIX.md` — PRD 功能 → 测试文件映射矩阵
+- `docs/quality/TEST_FRAMEWORK_DESIGN.md` — 完整设计文档（三层架构、测试流程、CI、改进机制）
+- `docs/quality/TESTING.md` — 测试操作指南（命令、文件说明、调试技巧）
+- `docs/quality/TEST_MATRIX.md` — PRD 功能 → 测试文件映射矩阵
 - `tests/helpers/cloud-function-harness.js` — 云函数测试 harness 源码
 - `tests/helpers/page-harness.js` — 页面控制器测试 harness 源码

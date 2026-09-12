@@ -63,9 +63,9 @@ test('cloud function timeout configs and active docs use the current 60 second l
     'PRD.md',
     'docs/CLOUD_FUNCTIONS.md',
     'docs/DATA_DICTIONARY.md',
-    'docs/TEST_MATRIX.md',
-    'docs/TESTING.md',
-    'docs/TROUBLESHOOTING.md'
+    'docs/quality/TEST_MATRIX.md',
+    'docs/quality/TESTING.md',
+    'docs/quality/TROUBLESHOOTING.md'
   ]) {
     assert.doesNotMatch(read(relativePath), /900 秒|900s|共同家长只读|viewer 可读不可写|只允许共享读取/)
   }

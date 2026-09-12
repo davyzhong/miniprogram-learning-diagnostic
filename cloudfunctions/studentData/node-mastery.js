@@ -1,5 +1,5 @@
 // 数学节点掌握状态机（纯函数，无云函数依赖，可在多个云函数间复制使用）。
-// 设计权威：docs/superpowers/specs/2026-07-17-math-node-mastery-loop-design.md
+// 设计权威：docs/specs/2026-07-17-math-node-mastery-loop-design.md
 //
 // 六态：unobserved / suspected_gap / relearning / partial_mastery / mastered / recurring
 // 四事件：errorEvidence / verificationFailed / verificationPassed / resourcePracticePassed

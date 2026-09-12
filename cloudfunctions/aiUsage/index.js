@@ -3,7 +3,7 @@
 // 事件写入（pending→succeeded/failed）由各 AI 云函数通过本地 usage-ledger.js 副本完成，
 // 本函数只负责读取、聚合和删除/授权管理。所有读操作按 _openid 隔离（用户只能看自己的）。
 //
-// 设计文档：docs/superpowers/specs/2026-06-27-private-beta-ai-usage-design.md
+// 设计文档：docs/specs/2026-06-27-private-beta-ai-usage-design.md
 
 const cloud = require('wx-server-sdk')
 const {
