@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ldx.local/schemas/diagnostic-accuracy/run-1.0.0.schema.json",
+  "title": "Diagnostic Accuracy Evaluation Run",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runId", "gitCommit", "versions", "configuration", "timestamps", "counts", "status", "outputReferences", "usage"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "runId": { "$ref": "#/$defs/stableId" },
+    "gitCommit": { "type": "string", "pattern": "^[a-fA-F0-9]{7,64}$" },
+    "versions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dataset", "scorer", "model", "prompt", "adapter"],
+      "properties": {
+        "dataset": { "type": "string", "minLength": 1 },
+        "scorer": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "prompt": { "type": "string", "minLength": 1 },
+        "adapter": { "type": "string", "minLength": 1 }
+      }
+    },
+    "configuration": { "type": "object" },
+    "timestamps": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["createdAt", "startedAt"],
+      "properties": {
+        "createdAt": { "type": "string", "format": "date-time" },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total", "success", "failure", "unresolved", "retry"],
+      "properties": {
+        "total": { "type": "integer", "minimum": 0, "description": "Distinct dataset records represented by success, failure, or unresolved status." },
+        "success": { "type": "integer", "minimum": 0 },
+        "failure": { "type": "integer", "minimum": 0 },
+        "unresolved": { "type": "integer", "minimum": 0 },
+        "retry": { "type": "integer", "minimum": 0, "description": "Phase-one retry attempts; each record may be retried at most once, so retry cannot exceed total." }
+      }
+    },
+    "status": { "enum": ["created", "running", "completed", "completed-with-errors", "failed", "cancelled"] },
+    "outputReferences": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["currency", "estimatedCost"],
+      "properties": {
+        "inputTokens": { "type": "integer", "minimum": 0 },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "requests": { "type": "integer", "minimum": 0 },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "estimatedCost": { "type": "number", "minimum": 0 },
+        "providerMetadata": { "type": "object" }
+      }
+    }
+  },
+  "$defs": {
+    "stableId": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" }
+  }
+}

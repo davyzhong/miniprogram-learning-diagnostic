@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ldx.local/schemas/diagnostic-accuracy/annotation-1.0.0.schema.json",
+  "title": "Diagnostic Accuracy Annotation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "annotationId", "sampleId", "preLabel", "humanLabel", "lockState", "review", "auditEvents"],
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "annotationId": { "$ref": "#/$defs/stableId" },
+    "sampleId": { "$ref": "#/$defs/stableId" },
+    "preLabel": { "$ref": "#/$defs/label" },
+    "humanLabel": { "$ref": "#/$defs/label" },
+    "lockState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["unlocked", "locked"] },
+        "lockedAt": { "type": "string", "format": "date-time" },
+        "lockedBy": { "$ref": "#/$defs/stableId" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "locked" } }, "required": ["status"] },
+          "then": { "required": ["lockedAt", "lockedBy"] },
+          "else": { "not": { "anyOf": [{ "required": ["lockedAt"] }, { "required": ["lockedBy"] }] } }
+        }
+      ]
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewerIds", "qcStatus", "adjudicationStatus", "disputeStatus"],
+      "properties": {
+        "reviewerIds": { "type": "array", "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true },
+        "qcStatus": { "enum": ["pending", "passed", "failed"] },
+        "qcReviewerId": { "$ref": "#/$defs/stableId" },
+        "qcReviewedAt": { "type": "string", "format": "date-time" },
+        "adjudicationStatus": { "enum": ["not-needed", "pending", "resolved"] },
+        "adjudicatorId": { "$ref": "#/$defs/stableId" },
+        "adjudicationLabel": { "$ref": "#/$defs/label" },
+        "adjudicatedAt": { "type": "string", "format": "date-time" },
+        "disputeStatus": { "enum": ["none", "open", "resolved"] },
+        "disputeReason": { "type": "string" },
+        "disputeResolution": { "type": "string" },
+        "disputeResolvedBy": { "$ref": "#/$defs/stableId" },
+        "disputeResolvedAt": { "type": "string", "format": "date-time" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "qcStatus": { "enum": ["passed", "failed"] } }, "required": ["qcStatus"] },
+          "then": { "required": ["qcReviewerId", "qcReviewedAt"] },
+          "else": { "not": { "anyOf": [{ "required": ["qcReviewerId"] }, { "required": ["qcReviewedAt"] }] } }
+        },
+        {
+          "if": { "properties": { "adjudicationStatus": { "const": "resolved" } }, "required": ["adjudicationStatus"] },
+          "then": { "required": ["adjudicatorId", "adjudicationLabel", "adjudicatedAt"] },
+          "else": { "not": { "anyOf": [{ "required": ["adjudicatorId"] }, { "required": ["adjudicationLabel"] }, { "required": ["adjudicatedAt"] }] } }
+        },
+        {
+          "if": { "properties": { "disputeStatus": { "const": "resolved" } }, "required": ["disputeStatus"] },
+          "then": { "required": ["disputeResolution", "disputeResolvedBy", "disputeResolvedAt"] },
+          "else": {
+            "if": { "properties": { "disputeStatus": { "const": "open" } }, "required": ["disputeStatus"] },
+            "then": {
+              "required": ["disputeReason"],
+              "not": { "anyOf": [{ "required": ["disputeResolution"] }, { "required": ["disputeResolvedBy"] }, { "required": ["disputeResolvedAt"] }] }
+            },
+            "else": {
+              "not": { "anyOf": [{ "required": ["disputeReason"] }, { "required": ["disputeResolution"] }, { "required": ["disputeResolvedBy"] }, { "required": ["disputeResolvedAt"] }] }
+            }
+          }
+        }
+      ]
+    },
+    "auditEvents": { "type": "array", "items": { "$ref": "#/$defs/auditEvent" } }
+  },
+  "$defs": {
+    "stableId": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$" },
+    "label": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conclusion", "attribution", "labeledBy", "labeledAt"],
+      "properties": {
+        "conclusion": { "enum": ["correct", "incorrect", "unreadable", "not-an-item"] },
+        "text": { "type": "string", "minLength": 1 },
+        "acceptedAnswers": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "attribution": { "$ref": "#/$defs/attribution" },
+        "labeledBy": { "$ref": "#/$defs/stableId" },
+        "labeledAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "attribution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subject"],
+      "properties": {
+        "subject": { "enum": ["math", "chinese", "english"] },
+        "math": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "primaryNodeId": { "$ref": "#/$defs/stableId" },
+            "primaryNodeLabel": { "type": "string" },
+            "bottleneckId": { "$ref": "#/$defs/stableId" },
+            "bottleneckLabel": { "type": "string" },
+            "ancestorNodeIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true },
+            "nodeIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true },
+            "bottleneckIds": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/stableId" }, "uniqueItems": true },
+            "errorReason": { "type": "string", "minLength": 1 },
+            "errorType": { "type": "string", "minLength": 1 }
+          }
+        },
+        "chinese": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "originalItemLocation": { "type": "string" },
+            "errorType": { "type": "string" },
+            "review": { "type": "string" },
+            "migrationType": { "type": "string", "minLength": 1 },
+            "allowedMigrationTypes": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+          }
+        },
+        "english": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "wordIdentity": { "type": "string" },
+            "recognitionSpelling": { "enum": ["recognized-correctly", "recognized-but-misspelled", "unreadable"] },
+            "stateUpdate": { "enum": ["recognition-mastered-spelling-mastered", "recognition-mastered-spelling-needs-practice", "no-state-update"] }
+          }
+        }
+      },
+      "oneOf": [
+        { "required": ["math"], "properties": { "subject": { "const": "math" }, "math": { "required": ["primaryNodeId", "bottleneckId"] }, "chinese": false, "english": false } },
+        { "required": ["chinese"], "properties": { "subject": { "const": "chinese" }, "math": false, "chinese": { "required": ["originalItemLocation", "errorType"] }, "english": false } },
+        { "required": ["english"], "properties": { "subject": { "const": "english" }, "math": false, "chinese": false, "english": { "required": ["wordIdentity"] } } }
+      ]
+    },
+    "auditEvent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["eventId", "eventType", "actorId", "timestamp"],
+      "properties": {
+        "eventId": { "$ref": "#/$defs/stableId" },
+        "eventType": { "enum": ["created", "pre-labeled", "human-labeled", "reviewed", "qc-checked", "disputed", "adjudicated", "locked", "unlocked"] },
+        "actorId": { "$ref": "#/$defs/stableId" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "details": { "type": "object" }
+      }
+    }
+  }
+}
