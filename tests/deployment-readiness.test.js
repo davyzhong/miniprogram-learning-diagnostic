@@ -175,7 +175,8 @@ test('deployment workflow is documented and exposed as a package script', () => 
   assert.ok(
     /tests\/deployment-readiness\.test\.js/.test(pkg.scripts.test) ||
       (pkg.scripts.test === 'npm run test:unit' &&
-        /tests\/deployment-readiness\.test\.js/.test(pkg.scripts['test:unit'] || '')),
+        (/tests\/deployment-readiness\.test\.js/.test(pkg.scripts['test:unit'] || '') ||
+          /\$\(node scripts\/list-unit-tests\.js\)/.test(pkg.scripts['test:unit'] || ''))),
     'npm test or npm run test:unit should include deployment readiness tests'
   )
 })

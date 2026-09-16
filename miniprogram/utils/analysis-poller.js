@@ -3,6 +3,10 @@ const { createPoller } = require('./poller')
 const STALE_ANALYSIS_MS = 10 * 60 * 1000
 const MISSING_TASK_MS = 60 * 1000
 const MISSING_TASK_ATTEMPTS = 2
+// 轮询窗口预算：批次串行下 20 张照片约 6-10 分钟，默认 10s×30=300s 会让用户
+// 在分析完成前失去进度显示（07-17 评审"性能 1"）。90 次 = 15 分钟，覆盖最坏
+// 场景；真正的放弃语义由 STALE_ANALYSIS_MS（任务 10 分钟无 updatedAt 刷新）承担。
+const DEFAULT_MAX_ATTEMPTS = 90
 
 function timeOf(value) {
   const time = value ? new Date(value).getTime() : 0
@@ -86,12 +90,14 @@ function createAnalysisPoller(options = {}) {
     staleMs,
     missingTaskMs,
     missingTaskAttempts,
+    maxAttempts = DEFAULT_MAX_ATTEMPTS,
     createPoller: createBasePoller = createPoller,
     ...pollerOptions
   } = options
 
   return createBasePoller({
     ...pollerOptions,
+    maxAttempts,
     request: async () => {
       let report = await loadReport()
       let progress = null
@@ -147,6 +153,7 @@ function createAnalysisPoller(options = {}) {
 
 module.exports = {
   STALE_ANALYSIS_MS,
+  DEFAULT_MAX_ATTEMPTS,
   classifyAnalysisState,
   createAnalysisPoller
 }

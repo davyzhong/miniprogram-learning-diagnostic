@@ -5,8 +5,14 @@
       "collection": "analysisTasks",
       "name": "report_created_desc",
       "fields": [
-        { "field": "reportId", "order": "asc" },
-        { "field": "createdAt", "order": "desc" }
+        {
+          "field": "reportId",
+          "order": "asc"
+        },
+        {
+          "field": "createdAt",
+          "order": "desc"
+        }
       ],
       "requiredBy": [
         "cloudfunctions/getAnalysisProgress/index.js",
@@ -17,9 +23,18 @@
       "collection": "studentNodeMastery",
       "name": "student_subject_node",
       "fields": [
-        { "field": "studentId", "order": "asc" },
-        { "field": "subject", "order": "asc" },
-        { "field": "nodeId", "order": "asc" }
+        {
+          "field": "studentId",
+          "order": "asc"
+        },
+        {
+          "field": "subject",
+          "order": "asc"
+        },
+        {
+          "field": "nodeId",
+          "order": "asc"
+        }
       ],
       "requiredBy": [
         "cloudfunctions/analyzePhotos/node-mastery-writer.js",
@@ -30,8 +45,14 @@
       "collection": "interventionSessions",
       "name": "student_date",
       "fields": [
-        { "field": "studentId", "order": "asc" },
-        { "field": "date", "order": "desc" }
+        {
+          "field": "studentId",
+          "order": "asc"
+        },
+        {
+          "field": "date",
+          "order": "desc"
+        }
       ],
       "requiredBy": [
         "cloudfunctions/learningResource/intervention-session-writer.js"
@@ -41,11 +62,146 @@
       "collection": "microValidations",
       "name": "student_created_desc",
       "fields": [
-        { "field": "studentId", "order": "asc" },
-        { "field": "createdAt", "order": "desc" }
+        {
+          "field": "studentId",
+          "order": "asc"
+        },
+        {
+          "field": "createdAt",
+          "order": "desc"
+        }
       ],
       "requiredBy": [
         "cloudfunctions/microValidation/index.js"
+      ]
+    },
+    {
+      "collection": "reports",
+      "name": "student_subject_status_created",
+      "fields": [
+        {
+          "field": "studentId",
+          "order": "asc"
+        },
+        {
+          "field": "subject",
+          "order": "asc"
+        },
+        {
+          "field": "status",
+          "order": "asc"
+        },
+        {
+          "field": "createdAt",
+          "order": "desc"
+        }
+      ],
+      "requiredBy": [
+        "cloudfunctions/studentData/index.js",
+        "cloudfunctions/analyzePhotos/index.js"
+      ]
+    },
+    {
+      "collection": "reports",
+      "name": "paper_type_created",
+      "fields": [
+        {
+          "field": "paperId",
+          "order": "asc"
+        },
+        {
+          "field": "type",
+          "order": "asc"
+        },
+        {
+          "field": "createdAt",
+          "order": "desc"
+        }
+      ],
+      "requiredBy": [
+        "cloudfunctions/studentData/index.js"
+      ]
+    },
+    {
+      "collection": "papers",
+      "name": "student_subject_type_created",
+      "fields": [
+        {
+          "field": "studentId",
+          "order": "asc"
+        },
+        {
+          "field": "subject",
+          "order": "asc"
+        },
+        {
+          "field": "type",
+          "order": "asc"
+        },
+        {
+          "field": "createdAt",
+          "order": "desc"
+        }
+      ],
+      "requiredBy": [
+        "cloudfunctions/studentData/index.js"
+      ]
+    },
+    {
+      "collection": "papers",
+      "name": "triggered_report_type_created",
+      "fields": [
+        {
+          "field": "triggeredByReport",
+          "order": "asc"
+        },
+        {
+          "field": "type",
+          "order": "asc"
+        },
+        {
+          "field": "createdAt",
+          "order": "desc"
+        }
+      ],
+      "requiredBy": [
+        "cloudfunctions/studentData/index.js",
+        "cloudfunctions/regenerateVerificationPaper/index.js"
+      ]
+    },
+    {
+      "collection": "reportFeedback",
+      "name": "report_created",
+      "fields": [
+        {
+          "field": "reportId",
+          "order": "asc"
+        },
+        {
+          "field": "createdAt",
+          "order": "desc"
+        }
+      ],
+      "requiredBy": [
+        "cloudfunctions/reportFeedback/index.js",
+        "cloudfunctions/studentData/index.js"
+      ]
+    },
+    {
+      "collection": "aiUsageEvents",
+      "name": "openid_created",
+      "fields": [
+        {
+          "field": "_openid",
+          "order": "asc"
+        },
+        {
+          "field": "createdAt",
+          "order": "desc"
+        }
+      ],
+      "requiredBy": [
+        "cloudfunctions/aiUsage/index.js"
       ]
     }
   ]

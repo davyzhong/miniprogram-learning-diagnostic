@@ -4,7 +4,8 @@ const assert = require('node:assert/strict')
 const { createPoller } = require('../miniprogram/utils/poller')
 const {
   classifyAnalysisState,
-  createAnalysisPoller
+  createAnalysisPoller,
+  DEFAULT_MAX_ATTEMPTS
 } = require('../miniprogram/utils/analysis-poller')
 
 test('poller stops when onValue returns false', async () => {
@@ -250,4 +251,19 @@ test('analysis poller keeps the snapshot report while progress is not terminal',
   assert.deepEqual(loadReportContexts[0], {})
   assert.equal(analyzingState.status, 'analyzing')
   assert.equal(analyzingState.progressPercent, 25)
+})
+
+// ========== 轮询窗口预算（07-17 评审"性能 1"回归） ==========
+
+test('analysis poller defaults to a 15-minute window; caller can override', () => {
+  const captured = []
+  const spy = options => {
+    captured.push(options)
+    return { start: () => {}, stop: () => {}, isRunning: () => false }
+  }
+  createAnalysisPoller({ loadReport: async () => null, createPoller: spy })
+  createAnalysisPoller({ loadReport: async () => null, maxAttempts: 42, createPoller: spy })
+  assert.equal(captured[0].maxAttempts, DEFAULT_MAX_ATTEMPTS)
+  assert.equal(captured[0].maxAttempts, 90)
+  assert.equal(captured[1].maxAttempts, 42)
 })
