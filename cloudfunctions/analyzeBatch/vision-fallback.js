@@ -9,7 +9,6 @@
 
 const https = require('https');
 const http = require('http');
-const { URL } = require('url');
 
 // 智谱 AI API 配置（OpenAI 兼容格式）
 const FALLBACK_ENDPOINT = process.env.FALLBACK_VISION_ENDPOINT || 'https://open.bigmodel.cn/api/paas/v4/chat/completions';

@@ -108,7 +108,7 @@ function cleanLatex(text) {
     // \text{...} → ...
     .replace(/\\text\{([^{}]*)\}/g, '$1')
     // 移除 \(\)、$、\[ \] 等 LaTeX 定界符
-    .replace(/\\[\(\)\[\]]/g, '')
+    .replace(/\\[()[\]]/g, '')
     .replace(/\$+/g, '')
     // 移除剩余的反斜杠命令（\quad, \, 等）
     .replace(/\\[a-zA-Z]+(\{[^{}]*\})?/g, ' ')

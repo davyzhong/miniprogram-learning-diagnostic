@@ -6,7 +6,7 @@ function parseJsonText(text) {
 }
 
 function safeEnglishTarget(value, cleanText) {
-  return cleanText(value, 80).replace(/[^A-Za-z0-9 .,'’!?()\-]/g, '').trim();
+  return cleanText(value, 80).replace(/[^A-Za-z0-9 .,'’!?()-]/g, '').trim();
 }
 
 function normalizeDictationVerdict(value, cleanText) {

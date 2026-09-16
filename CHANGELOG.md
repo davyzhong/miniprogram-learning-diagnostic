@@ -6,6 +6,24 @@
 
 ## [Unreleased]
 
+### 2026-09-12 接入 ESLint 门禁（选型行动项一）
+
+#### Added
+
+- ESLint v10 + flat config（`eslint.config.mjs`）：miniprogram 组配 wx 全局；cloudfunctions 组**刻意不配** wx（云端代码调用 wx 属真实缺陷，由 no-undef 拦截）；tests/scripts 组配 node + wx（合法 mock 面）。空 catch 放行（fire-and-forget 模式）；`no-useless-assignment`、`preserve-caught-error`、`no-unused-vars` 降为 warn（存量债务约 173 处，可见不阻断）。
+- `npm run lint` 接入 `verify` 门禁链（unit + syntax + lint）；首轮即清零全部 9 个 error。
+
+#### Fixed
+
+- `cli/adapters/fixture.js` 局部函数 `valueOf` 遮蔽内置全局，改名 `resolveValue`。
+- `cloudfunctions/analyzeBatch/vision-fallback.js` 冗余 `const { URL } = require('url')` 删除（Node 全局自带）。
+- 7 处正则字符类冗余转义清理（`vision-analysis.js`、`generatePaper/index.js`、`preview-real-paper.js`，语义不变）。
+
+#### Changed
+
+- CLAUDE.md 命令表新增 lint 行与门禁策略说明；README 快速开始同步；测试文件口径更新 99→103。
+- 选型决策依据：知识库《手写实现与行业标准选型对比》v1.1。
+
 ### 2026-09-12 README 视觉重制
 
 #### Changed

@@ -29,7 +29,7 @@ function cleanLatex(text) {
     .replace(/\\leq/g, '≤').replace(/\\geq/g, '≥').replace(/\\neq/g, '≠')
     .replace(/\\cdot/g, '·')
     .replace(/\\text\{([^{}]*)\}/g, '$1')
-    .replace(/\\[\(\)\[\]]/g, '')
+    .replace(/\\[()[\]]/g, '')
     .replace(/\$+/g, '')
     .replace(/\\[a-zA-Z]+(\{[^{}]*\})?/g, ' ')
     .replace(/\(\)/g, '')

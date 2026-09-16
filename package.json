@@ -38,7 +38,8 @@
     "check:deployment": "npm run check:indexes && node --test tests/deployment-readiness.test.js",
     "predeploy:check": "node scripts/check-database-indexes.js --require-live-ack && npm run release:check",
     "release:check": "npm run check:deployment && npm run verify && npm run test:coverage",
-    "verify": "npm run test:unit && npm run check",
+    "verify": "npm run test:unit && npm run check && npm run lint",
+    "lint": "eslint .",
     "check:size": "node scripts/check-main-package-size.js",
     "emoji:batch02:verify": "node scripts/emoji-compatibility/validate-batch-02-manifest.js --verify",
     "emoji:batch02:runtime": "node scripts/emoji-compatibility/generate-batch-02-runtime.js --write",
@@ -47,7 +48,9 @@
     "perf:emoji-compat": "node scripts/devtools-emoji-package-metrics.js"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "adm-zip": "^0.5.16",
+    "eslint": "^10.10.0",
     "fast-xml-parser": "^5.3.4"
   }
 }

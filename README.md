@@ -273,7 +273,7 @@ miniprogram-learning-diagnostic/
 git clone <repository-url>
 cd miniprogram-learning-diagnostic
 npm install
-npm run verify          # 1110 个自动化测试 + 351 个 JS 文件语法检查
+npm run verify          # 1110 个自动化测试 + 351 个 JS 文件语法检查 + ESLint
 npm run check:size      # 主包体积预算检查
 ```
 
@@ -282,6 +282,7 @@ npm run check:size      # 主包体积预算检查
 ```bash
 npm test                    # 1110 个常规自动化测试
 npm run check               # 检查 351 个 JavaScript 文件
+npm run lint                # ESLint（error 阻断 / warning 为可见债务）
 npm run test:coverage       # 覆盖率门禁（80% 行/函数）
 npm run release:check       # 发布前全量门禁
 npm run test:e2e:doctor     # 检查微信开发者工具 CLI 环境
