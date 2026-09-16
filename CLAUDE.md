@@ -36,7 +36,7 @@ The test framework is **V2 (two categories)** — see `docs/quality/TEST_STRATEG
 | Pre-deployment readiness | `npm run check:deployment` |
 | Full pre-release gate | `npm run release:check` (deployment + verify + coverage) |
 
-`npm test` is an alias of `npm run test:unit`. The repository holds 103 `.test.js` files; the default offline script explicitly runs 94 of them and currently passes **1110 tests** (351 JS files checked by `npm run check`). The nine excluded files are real-cloud, real-image, three specialized math pipeline suites, and four in-progress diagnostic-evaluation suites (94/100, contracts pending alignment — see CHANGELOG 2026-09-12). Add new default tests to both `test:unit` and `test:coverage` in `package.json`.
+`npm test` is an alias of `npm run test:unit`. The repository holds 103 `.test.js` files; the default offline script runs all but five of them and currently passes **1216 tests** (351 JS files checked by `npm run check`). The five excluded files are real-cloud, real-image, and three specialized math pipeline suites. The four diagnostic-evaluation suites are now in the default gate (contracts aligned 2026-09-12). Add new default tests to both `test:unit` and `test:coverage` in `package.json`.
 
 **Lint policy** (`eslint.config.mjs`, ESLint v10 flat config): `miniprogram/` gets wx globals; `cloudfunctions/` deliberately has **no** `wx` global (cloud code calling `wx` is a real defect that `no-undef` must catch); tests/scripts get both node and wx globals (legitimate mock surface). Empty catch is allowed (fire-and-forget pattern); `no-useless-assignment`, `preserve-caught-error`, `no-unused-vars` are warnings (existing debt, ~170, do not block). New code must not introduce lint **errors**; reduce warnings opportunistically.
 

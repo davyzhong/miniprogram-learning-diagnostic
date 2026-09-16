@@ -6,6 +6,17 @@
 
 ## [Unreleased]
 
+### 2026-09-12 诊断准确性评测契约对齐并接入默认门禁
+
+#### Fixed
+
+- 以测试为规格对齐四处契约：system output 记录身份（predictionId+subject 必填、sampleId 降级为"声明"：允许缺失/未知/重复，命中样本时页上下文仍须一致）；documentId+pageId 必须为数据集真实页面对；预测结论新增 `unknown`（仅系统输出侧）；scorer 的 run 计数守卫改为 manifest 内部一致性（total = success+failure+unresolved，retry ≤ total），与 gold/记录数解耦。
+- `diagnosisFullyCorrect` 数学必检项扩展条件性 `errorType`；fixtures 迁移至新记录身份。
+
+#### Changed
+
+- 四个 diagnostic-evaluation 套件（100 用例）接入 `test:unit` 默认门禁，排除清单 9→5；默认离线测试 1116→**1216**，JS 文件 351→357。契约细节见 `docs/specs/2026-08-09-repair-metrics-and-case-validation-design.md` 附录。
+
 ### 2026-09-12 速修包与状态体系补完（07-17 评审收尾）
 
 #### Added

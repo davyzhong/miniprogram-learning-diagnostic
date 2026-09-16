@@ -9,6 +9,8 @@ const SOURCES = ['historical', 'challenge'];
 const CAPTURE_TYPES = ['camera', 'scan', 'synthetic'];
 const IMAGE_QUALITIES = ['clear', 'degraded', 'unreadable'];
 const CONCLUSIONS = ['correct', 'incorrect', 'unreadable', 'not-an-item'];
+// 系统输出结论额外允许 unknown：模型无法归一时的保留值，仅评分侧使用，金标不允许
+const SYSTEM_CONCLUSIONS = [...CONCLUSIONS, 'unknown'];
 const STABLE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/u;
 const HASH = /^[a-f0-9]{64}$/u;
 
@@ -714,21 +716,34 @@ function validateSystemOutput(bundle, { dataset, runManifest } = {}) {
   if (manifestValidation && !manifestValidation.valid) errors.push(...manifestValidation.errors.map((error) => `run manifest: ${error}`));
   if (runManifest && isObject(dataset) && runManifest.versions?.dataset !== dataset.datasetId) errors.push(`run manifest versions.dataset ${runManifest.versions?.dataset} does not match supplied dataset version ${dataset.datasetId}.`);
   const seen = new Set();
+  const pageKeys = new Set();
+  if (isObject(dataset) && Array.isArray(dataset.documents)) {
+    for (const document of dataset.documents) {
+      for (const page of document.pages ?? []) pageKeys.add(`${document.documentId}\u0000${page.pageId}`);
+    }
+  }
   const records = arrayValue(bundle.records, 'system output bundle.records', errors);
   summary.total = records.length;
   records.forEach((record, recordIndex) => {
     const at = `records[${recordIndex}]`;
     if (!requireObject(record, at, errors)) return;
-    allowOnly(record, ['schemaVersion', 'runId', 'documentId', 'pageId', 'sampleId', 'status', 'prediction', 'failures'], at, errors);
-    requireKeys(record, ['schemaVersion', 'runId', 'documentId', 'pageId', 'sampleId', 'status', 'failures'], at, errors);
+    allowOnly(record, ['schemaVersion', 'runId', 'documentId', 'pageId', 'predictionId', 'subject', 'sampleId', 'status', 'prediction', 'failures'], at, errors);
+    requireKeys(record, ['schemaVersion', 'runId', 'documentId', 'pageId', 'predictionId', 'subject', 'status', 'failures'], at, errors);
     if (record.schemaVersion !== DATASET_SCHEMA_VERSION) errors.push(`${at}.schemaVersion must be ${DATASET_SCHEMA_VERSION}.`);
-    for (const key of ['runId', 'documentId', 'pageId', 'sampleId']) stableId(record[key], `${at}.${key}`, errors);
+    for (const key of ['runId', 'documentId', 'pageId', 'predictionId']) stableId(record[key], `${at}.${key}`, errors);
+    if (record.sampleId !== undefined) stableId(record.sampleId, `${at}.sampleId`, errors);
+    enumValue(record.subject, SUBJECTS, `${at}.subject`, errors);
     if (record.runId !== bundle.runId) errors.push(`${at}.runId does not match output bundle.`);
-    if (seen.has(record.sampleId)) errors.push(`duplicate prediction/sample record for ${record.sampleId}.`);
-    seen.add(record.sampleId);
-    const linked = index.get(record.sampleId);
-    if (!linked) errors.push(`${at}.sampleId ${record.sampleId} does not exist in dataset.`);
-    else {
+    if (seen.has(record.predictionId)) errors.push(`duplicate predictionId ${record.predictionId} across output records.`);
+    seen.add(record.predictionId);
+    // 页上下文：documentId+pageId 必须是数据集中真实存在的页面对（无论是否声明 sampleId）
+    if (!pageKeys.has(`${record.documentId}\u0000${record.pageId}`)) {
+      errors.push(`${at}.documentId/pageId pair does not exist in dataset; page context is broken.`);
+    }
+    // sampleId 是"声明"而非"外键"：允许缺失（幻觉声明）、允许未知样本、允许重复声明；
+    // 一旦命中数据集样本，documentId/pageId 必须与样本所在页一致
+    const linked = record.sampleId === undefined ? undefined : index.get(record.sampleId);
+    if (linked) {
       if (record.documentId !== linked.documentId) errors.push(`${at}.documentId creates an impossible cross-document link for ${record.sampleId}.`);
       if (record.pageId !== linked.pageId) errors.push(`${at}.pageId does not match dataset page for ${record.sampleId}.`);
     }
@@ -743,8 +758,9 @@ function validateSystemOutput(bundle, { dataset, runManifest } = {}) {
       if (Object.hasOwn(record, 'prediction')) errors.push(`${at} failed but includes a fabricated prediction.`);
       if (failures.length === 0) errors.push(`${at} failed but has no failure details.`);
     }
-    if (linked && !SUBJECTS.includes(linked.subject)) errors.push(`${at} linked dataset subject ${linked.subject} is invalid.`);
-    else if (linked && (record.status === 'success' || record.status === 'failed')) summary.bySubject[linked.subject][record.status === 'success' ? 'success' : 'failure'] += 1;
+    const countedSubject = linked && SUBJECTS.includes(linked.subject) ? linked.subject : record.subject;
+    if (!SUBJECTS.includes(countedSubject)) errors.push(`${at}.subject ${record.subject} is invalid.`);
+    else if (record.status === 'success' || record.status === 'failed') summary.bySubject[countedSubject][record.status === 'success' ? 'success' : 'failure'] += 1;
     failures.forEach((failure, failureIndex) => {
       const fAt = `${at}.failures[${failureIndex}]`;
       if (!requireObject(failure, fAt, errors)) return;
@@ -762,8 +778,8 @@ function validateSystemOutput(bundle, { dataset, runManifest } = {}) {
       requireKeys(prediction, ['localization', 'text', 'conclusion', 'attribution'], `${at}.prediction`, errors);
       validateCrop(prediction.localization, `${at}.prediction.localization`, errors);
       if (typeof prediction.text !== 'string') errors.push(`${at}.prediction.text must be a string.`);
-      enumValue(prediction.conclusion, CONCLUSIONS, `${at}.prediction.conclusion`, errors);
-      validateAttribution(prediction.attribution, linked?.subject, `${at}.prediction.attribution`, errors);
+      enumValue(prediction.conclusion, SYSTEM_CONCLUSIONS, `${at}.prediction.conclusion`, errors);
+      validateAttribution(prediction.attribution, (linked && linked.subject) || record.subject, `${at}.prediction.attribution`, errors);
       if (prediction.confidence !== undefined && (typeof prediction.confidence !== 'number' || !Number.isFinite(prediction.confidence) || prediction.confidence < 0 || prediction.confidence > 1)) errors.push(`${at}.prediction.confidence must be between 0 and 1.`);
     }
   });

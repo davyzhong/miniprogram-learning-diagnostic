@@ -13,11 +13,6 @@ const EXCLUDED = new Set([
   'math-bottleneck-hierarchy.test.js',
   'math-history-reanalysis.test.js',
   'math-learning-map-pipeline.test.js',
-  // 四个诊断准确性评测套件（在建，契约对齐后从此移除即可接入默认门禁）
-  'diagnostic-evaluation-data-root.test.js',
-  'diagnostic-evaluation-dataset.test.js',
-  'diagnostic-evaluation-matcher.test.js',
-  'diagnostic-evaluation-scoring.test.js'
 ])
 
 const dir = path.join(__dirname, '..', 'tests')

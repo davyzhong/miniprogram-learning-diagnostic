@@ -110,8 +110,13 @@ function scoreEvaluation({ dataset, annotations, systemOutput, matchResult, runM
       label: { ...label },
     };
   });
-  if (runCounts.total !== goldRecords.length) {
-    throw new RangeError(`runManifest total ${runCounts.total} does not match ${goldRecords.length} scorable gold items.`);
+  // 只校验 manifest 自身计数一致性；与 gold 数 / 记录数解耦（幻觉记录无 gold、漏检 gold 无记录，
+  // 两者的合法分离正是评测要度量的对象，一致性由 validateSystemOutput 与 run schema 承担）
+  // 与 validateRunManifest 同一口径：total = success + failure + unresolved；retry 是阶段一
+  // 每记录至多一次的重试计数（≤ total，不加法）
+  const runCountSum = (runCounts.success ?? 0) + (runCounts.failure ?? 0) + (runCounts.unresolved ?? 0);
+  if (runCounts.total !== runCountSum || (runCounts.retry ?? 0) > runCounts.total) {
+    throw new RangeError(`contradictory runManifest counts: total ${runCounts.total} does not match success+failure+unresolved ${runCountSum} (retry ${(runCounts.retry ?? 0)} > total).`);
   }
   const goldById = new Map(goldRecords.map((entry) => [entry.sampleId, entry]));
 
@@ -214,7 +219,7 @@ function scoreEvaluation({ dataset, annotations, systemOutput, matchResult, runM
     }
 
     const requiredPrimaryChecks = gold.subject === 'math'
-      ? ['nodeTop1', 'bottleneckTop1', ...(checks.errorReason == null ? [] : ['errorReason'])]
+      ? ['nodeTop1', 'bottleneckTop1', ...(checks.errorReason == null ? [] : ['errorReason']), ...(checks.errorType == null ? [] : ['errorType'])]
       : gold.subject === 'chinese'
         ? ['originalItemLocation', 'errorType', ...['originalReviewBinding', 'migrationTypeLegal']
           .filter((name) => checks[name] != null)]

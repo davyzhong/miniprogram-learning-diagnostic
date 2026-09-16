@@ -107,3 +107,16 @@
 - 不做应用内案例管理模块（案例记录用本地模板，纯线下）。
 - 不做修复率推送/订阅消息（订阅消息本身仍是 Deferred 项）。
 - 招募不投放公开渠道（仅熟人圈）。
+
+---
+
+## 附录：诊断准确性评测契约对齐（2026-09-12）
+
+评测套件接入默认门禁（100/100），四处契约以测试为规格完成对齐：
+
+1. **记录身份**：system output 记录必填 `predictionId`（全局唯一 stableId）与 `subject`；`sampleId` 从必填外键降级为**声明**——允许缺失（幻觉声明）、允许指向未知样本、允许重复声明；命中数据集样本时 documentId/pageId 仍须与样本所在页一致。
+2. **页上下文**：`documentId+pageId` 必须是数据集中真实存在的页面对（无论是否声明 sampleId）。
+3. **结论枚举**：预测结论新增 `unknown`（模型无法归一时的保留值，仅系统输出侧允许；金标仍是四类）。
+4. **run 计数守卫**：scorer 只校验 manifest 内部一致性（`total = success + failure + unresolved`，`retry ≤ total`），与 gold 数 / 记录数解耦——幻觉记录无 gold、漏检 gold 无记录，两者的合法分离正是评测要度量的对象。
+
+fixtures（candidate/baseline）已迁移至新记录身份；`diagnosisFullyCorrect` 的数学必检项扩展至条件性 `errorType`。

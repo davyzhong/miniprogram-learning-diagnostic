@@ -24,7 +24,7 @@ test('list-unit-tests excludes only the documented special suites', () => {
   for (const excluded of [
     'tests/e2e-real-cloud.test.js',
     'tests/e2e-real-image.test.js',
-    'tests/diagnostic-evaluation-scoring.test.js'
+    'tests/math-learning-map-pipeline.test.js'
   ]) {
     assert.equal(listed.has(excluded), false, `${excluded} should stay excluded`)
   }
@@ -34,6 +34,6 @@ test('list-unit-tests excludes only the documented special suites', () => {
   // 排除清单与磁盘一致：既不漏掉新文件，也不引用不存在的文件
   const onDisk = fs.readdirSync(path.join(ROOT, 'tests')).filter(f => f.endsWith('.test.js'))
   const excludedOnDisk = onDisk.filter(f => !listed.has(`tests/${f}`))
-  const KNOWN_EXCLUSIONS = 9
+  const KNOWN_EXCLUSIONS = 5
   assert.equal(excludedOnDisk.length, KNOWN_EXCLUSIONS, `unexpected exclusions: ${excludedOnDisk.join(', ')}`)
 })
