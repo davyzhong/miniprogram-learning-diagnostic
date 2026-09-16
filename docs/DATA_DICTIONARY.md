@@ -21,6 +21,7 @@
 | `studentNodeMastery` | 数学知识节点六态掌握档案 | 诊断、验证、微验证或资源学习产生节点事件时 | analyzePhotos / learningResource / microValidation 等云函数 |
 | `interventionSessions` | 家庭干预会话与 24h/72h 复测安排 | 完成学习任务包时 | learningResource 云函数 |
 | `microValidations` | 3–6 题微验证会话、逐题判定和掌握写回结果 | 生成微验证时 | microValidation 云函数 |
+| `errorEvents` | 云函数错误台账（尽力写入：function/action/message/error/studentId/reportId/paperId/createdAt） | 主流程 catch | analyzePhotos / generatePaper 云函数 |
 | `papers` | 生成的试卷记录 | AI 生成试卷后 | generatePaper 云函数 |
 | `analysisTasks` | 异步分析任务进度追踪 | analyzePhotos 启动时 | analyzePhotos 云函数 |
 | `aiUsageEvents` | AI 用量追加事件账本（token、估算成本、状态） | AI 云函数发起调用时 | analyzeBatch / generatePaper / learningResource / englishVocabulary（通过 usage-ledger） |

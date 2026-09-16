@@ -667,6 +667,16 @@ Page({
     this.setData({ generatingPdf: true })
     wx.showLoading({ title: '生成 PDF...' })
 
+    const report = this.data.report || {}
+    appStatus.registerOperation({
+      studentId: report.studentId || '',
+      subject: report.subject || '',
+      opType: OP_TYPES.REPORT_PDF,
+      status: OP_STATUS.GENERATING,
+      label: '报告 PDF 生成',
+      reportId: this.data.reportId || ''
+    })
+
     try {
       const result = await cloud.callGenerateReportPDF({ reportId: this.data.reportId })
 
@@ -676,8 +686,24 @@ Page({
         const dlRes = await downloadCloudFile(result.pdfFileId)
         await openPdfDocument(dlRes.tempFilePath)
       }
+      appStatus.registerOperation({
+        studentId: report.studentId || '',
+        subject: report.subject || '',
+        opType: OP_TYPES.REPORT_PDF,
+        status: OP_STATUS.COMPLETED,
+        label: '报告 PDF 生成',
+        reportId: this.data.reportId || ''
+      })
     } catch (err) {
       console.error('生成 PDF 失败', err)
+      appStatus.registerOperation({
+        studentId: report.studentId || '',
+        subject: report.subject || '',
+        opType: OP_TYPES.REPORT_PDF,
+        status: OP_STATUS.FAILED,
+        label: '报告 PDF 生成',
+        reportId: this.data.reportId || ''
+      })
       wx.hideLoading()
       wx.showToast({ title: '生成失败', icon: 'none' })
     } finally {

@@ -570,6 +570,11 @@ ${chineseReviewPromptBlock}
 }
 
 // ========== 主函数 ==========
+const { createErrorLedger } = require('./error-ledger');
+const logErrorEvent = createErrorLedger(db);
+
+exports.logErrorEvent = logErrorEvent;
+
 exports.main = async (event) => {
   // PDF 重新生成模式：读取已有 paper 的全部题目，重新生成 PDF
   // 用于追加模式完成后，用合并的完整题目生成最终 PDF
@@ -1010,6 +1015,7 @@ exports.main = async (event) => {
     };
   } catch (err) {
     console.error('generatePaper 失败：', err);
+    await logErrorEvent({ function: 'generatePaper', action: 'main', message: '试卷生成失败', error: err, studentId: event.studentId || '', paperId: event.paperId || '' });
     return { success: false, error: '试卷生成失败，请稍后重试' };
   }
 };

@@ -203,6 +203,20 @@
       "requiredBy": [
         "cloudfunctions/aiUsage/index.js"
       ]
+    },
+    {
+      "collection": "errorEvents",
+      "name": "created_desc",
+      "fields": [
+        {
+          "field": "createdAt",
+          "order": "desc"
+        }
+      ],
+      "requiredBy": [
+        "cloudfunctions/analyzePhotos/index.js",
+        "cloudfunctions/generatePaper/index.js"
+      ]
     }
   ]
 }

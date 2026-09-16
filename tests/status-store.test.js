@@ -172,3 +172,26 @@ test('cache:invalidated event is delivered', () => {
   store.emit(EVENTS.CACHE_INVALIDATED, { studentId: 's1', subject: 'math' })
   assert.deepEqual(payload, { studentId: 's1', subject: 'math' })
 })
+
+// ========== opType 完整性守卫（07-17 评审 S3 回归）==========
+
+test('every OP_TYPES operation is registered somewhere in miniprogram (no dead opTypes)', () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const roots = [path.join(__dirname, '..', 'miniprogram', 'pages'), path.join(__dirname, '..', 'miniprogram', 'utils')]
+  let all = ''
+  const walk = dir => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name)
+      if (entry.isDirectory()) walk(full)
+      else if (entry.name.endsWith('.js')) all += fs.readFileSync(full, 'utf8')
+    }
+  }
+  roots.forEach(walk)
+  for (const constant of Object.keys(OP_TYPES)) {
+    assert.ok(
+      all.includes(`OP_TYPES.${constant}`),
+      `OP_TYPES.${constant}（${OP_TYPES[constant]}）已定义但从未被任何页面/工具注册——要么接线，要么从枚举移除`
+    )
+  }
+})

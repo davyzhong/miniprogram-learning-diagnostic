@@ -6,6 +6,24 @@
 
 ## [Unreleased]
 
+### 2026-09-12 速修包与状态体系补完（07-17 评审收尾）
+
+#### Added
+
+- **云函数错误台账**：新增 `errorEvents` 集合与 `error-ledger.js` 模块（analyzePhotos / generatePaper 各一份相同副本），两条长异步链的主流程 catch 尽力写入失败记录（function/action/error/studentId 等）；台账自身失败只记日志绝不影响主流程。DATA_DICTIONARY / SETUP / CLAUDE.md / indexes.json 同步。
+- 测试守卫三件：OP_TYPES 完整性（每个 opType 必须被某页面/工具注册，防再出现死枚举）、测试清单单源化守卫、错误台账行为测试。
+
+#### Fixed
+
+- **status-store 死枚举补完**（评审 S3）：`REPORT_PDF`（报告页 PDF 下载）与 `DICTATION_GRADING`（英语听写批改）接入全局状态注册，generating→completed/failed 全转移；`VERIFICATION_PAPER` 经核查已在 shared-navigation 完整接线（评审时误记为未接线）。
+- **轮询窗口错配**（评审性能 1）：analysis-poller 默认 maxAttempts 30→90（15 分钟），覆盖 20 张照片串行分析的最坏时长。
+
+#### Changed
+
+- 测试清单单源化：`scripts/list-unit-tests.js` 生成默认清单（排除 9 项特殊套件单一来源），package.json 两份硬编码列表删除。
+- `analyzePhotos/index.js` 抽出 `error-ledger.js` 与 `error-classify.js` 两个兄弟模块（823→772 行，回到 800 行可维护性预算内）。
+- 复合索引声明 4→11：reports×2 / papers×2 / reportFeedback / aiUsageEvents / errorEvents 高频 where+orderBy 组合；PROJECT_PLAN 声明 README 为质量基线唯一来源。
+
 ### 2026-09-12 接入 ESLint 门禁（选型行动项一）
 
 #### Added

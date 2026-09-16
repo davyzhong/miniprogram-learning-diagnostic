@@ -97,6 +97,7 @@
 | `studentNodeMastery` | 云函数访问 | 数学知识节点掌握状态（六态，诊断/验证/资源学习证据驱动） |
 | `interventionSessions` | 云函数访问 | 家庭干预会话记录（资源使用、当场练习、24h/72h 复测安排） |
 | `microValidations` | 云函数访问 | 微验证会话（3-6 道小题当场确认或推翻疑似卡点） |
+| `errorEvents` | 云函数访问 | 云函数错误台账（analyzePhotos / generatePaper 主流程 catch 尽力写入） |
 | `aiUsageEvents` | 仅创建者可读写 | AI 用量追加式事件账本 |
 | `dataDeletionRequests` | 仅创建者可读写 | 用户发起的数据删除请求 |
 | `userConsents` | 仅创建者可读写 | 体验版内测授权记录 |
@@ -130,6 +131,7 @@
 | `studentNodeMastery` | `studentId`, `subject`, `nodeId` | 升序、升序、升序 |
 | `interventionSessions` | `studentId`, `date` | 升序、降序 |
 | `microValidations` | `studentId`, `createdAt` | 升序、降序 |
+| `errorEvents` | `createdAt` | 降序 |
 | `papers` | `studentId`, `subject`, `type`, `grade`, `paperKey`, `_openid` | 全部升序 |
 | `learningResourcePacks` | `studentId`, `subject`, `updatedAt`, `_openid` | 升序、升序、降序、升序 |
 | `aiUsageEvents` | `_openid`, `createdAt` | 升序、降序 |

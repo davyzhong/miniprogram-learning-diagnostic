@@ -1,6 +1,7 @@
 const cloud = require('../../utils/cloud')
 const { buildMeaningText, withDisplayFields: _withDisplayFields, stopPromptAudio, onPlayPromptTap: _onPlayPromptTap } = require('../../utils/english-voice')
 const { symbolOf } = require('../../utils/ui-symbols')
+const { appStatus, OP_TYPES, OP_STATUS } = require('../../utils/app-status')
 
 function withDisplayFields(item) {
   return _withDisplayFields(item, {
@@ -370,6 +371,14 @@ Page({
 
   async uploadDictationPhotos(tempFiles = []) {
     this.setData({ uploading: true, error: '', uploadProgress: '' })
+    appStatus.registerOperation({
+      studentId: this.data.studentId || '',
+      subject: 'english',
+      opType: OP_TYPES.DICTATION_GRADING,
+      status: OP_STATUS.ANALYZING,
+      progress: 10,
+      label: '英语听写批改'
+    })
     try {
       const batchId = `english-dictation-${this.data.sessionId}`
       const photoFileIds = []
@@ -407,10 +416,25 @@ Page({
       } else {
         this.setData({ dictationPhase: 'finished' })
       }
+      appStatus.registerOperation({
+        studentId: this.data.studentId || '',
+        subject: 'english',
+        opType: OP_TYPES.DICTATION_GRADING,
+        status: OP_STATUS.COMPLETED,
+        progress: 100,
+        label: '英语听写批改'
+      })
       this.setData({ uploading: false, uploadProgress: '' })
       wx.showToast({ title: '已上传听写纸', icon: 'success' })
     } catch (error) {
       console.error('听写照片上传失败', error)
+      appStatus.registerOperation({
+        studentId: this.data.studentId || '',
+        subject: 'english',
+        opType: OP_TYPES.DICTATION_GRADING,
+        status: OP_STATUS.FAILED,
+        label: '英语听写批改'
+      })
       this.setData({
         uploading: false,
         uploadProgress: '',
