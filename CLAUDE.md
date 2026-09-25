@@ -1,5 +1,9 @@
 # CLAUDE.md
 
+## Current project plan
+
+The complete mid-freeze review and archival-readiness plan is indexed at [`docs/superpowers/plans/2026-09-25-midfreeze-review-and-archive.md`](docs/superpowers/plans/2026-09-25-midfreeze-review-and-archive.md). Do not begin its cleanup phase until the user approves the proposed plan.
+
 ## Project
 
 WeChat Mini Program for K-12 learning diagnosis. Parents photograph exam papers; a CloudBase serverless backend uses AI to detect errors and classify them into a bottleneck taxonomy. The mini program then generates targeted verification papers and compares follow-up uploads to track improvement.
